@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="platform">AEL DWSS - Safety Inspection Document</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles/main.css">
+    <!-- 在现有的样式表之后添加 -->
+    <script src="scripts/theme-config.js"></script>
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+        <div class="logo">
+            <div class="logo-icon">
+                <i class="fas fa-water"></i>
+            </div>
+            <h2 data-i18n="platform">AEL DWSS</h2>
+        </div>
+
+        <button class="toggle-btn">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+
+        <ul class="menu">
+            <li>
+                <a href="index.html" class="active">
+                    <i class="fas fa-home"></i>
+                    <span class="menu-text" data-i18n="dashboard">Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="sitediary.html">
+                    <i class="fas fa-book"></i>
+                    <span class="menu-text" data-i18n="site.diary">Site Diary</span>
+                </a>
+            </li>
+            <li>
+                <a href="safetyinspect.html">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span class="menu-text" data-i18n="safety.inspection">Safety Inspection</span>
+                </a>
+            </li>
+            <li>
+                <a href="sitelocations.html">
+                    <i class="fas fa-map-marked-alt"></i>
+                    <span class="menu-text" data-i18n="site.locations">Site Locations</span>
+                </a>
+            </li>
+            <li>
+                <a href="labourwage.html">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <span class="menu-text" data-i18n="labour.wage">Labour Wage</span>
+                </a>
+            </li>
+            <li>
+                <a href="settings.html">
+                    <i class="fas fa-cogs"></i>
+                    <span class="menu-text" data-i18n="system.settings">System Settings</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <i class="fas fa-user-circle"></i>
+                    <span class="menu-text" data-i18n="user.management">User Management</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- 主内容区域 -->
+    <div class="main-content">
+        <div class="header">
+            <h1 data-i18n="platform">DWSS Management System</h1>
+            <div class="header-controls">
+                <div class="user-date-row">
+                    <div class="date-display">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span id="current-date">September 17, 2025</span>
+                    </div>
+                    <button class="user-btn">
+                        <i class="fas fa-user"></i>
+                        <span data-i18n="user.name">John Doe</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 文档查看内容 -->
+        <div class="document-view-page">
+            <div class="document-header">
+                <h2>
+                    <i class="fas fa-clipboard-check"></i>
+                    <span id="docTitle" data-i18n="safety.inspection.document">Safety Inspection Document</span>
+                    <span class="doc-status" id="docStatus">Draft</span>
+                </h2>
+                <!-- button with ID-->
+                <div class="document-actions">
+                    <button class="btn" id="export-pdf-btn">
+                        <i class="fas fa-file-pdf"></i>
+                        <span data-i18n="export.pdf">Export PDF</span>
+                    </button>
+                    <button class="btn" id="print-btn">
+                        <i class="fas fa-print"></i>
+                        <span data-i18n="print">Print</span>
+                    </button>
+                    <button class="btn" id="back-to-inspection-btn">
+                        <i class="fas fa-arrow-left"></i>
+                        <span data-i18n="back.to.inspection">Back to Inspection</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="document-meta">
+                <div class="meta-item">
+                    <span class="meta-label" data-i18n="inspection.id">Inspection ID:</span>
+                    <span class="meta-value" id="docId">N/A</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label" data-i18n="site">Site:</span>
+                    <span class="meta-value" id="docSite">N/A</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label" data-i18n="date">Date:</span>
+                    <span class="meta-value" id="docDate">N/A</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label" data-i18n="inspector">Inspector:</span>
+                    <span class="meta-value" id="docInspector">N/A</span>
+                </div>
+            </div>
+            
+            <!-- 检查详情区域 -->
+            <div class="pdf-viewer-container">
+                <iframe id="pdf-viewer" src="" width="100%" height="600px" style="border: 1px solid #ddd;"></iframe>
+                <div class="no-pdf-message" id="no-pdf-message" style="display: none;">
+                    <i class="fas fa-file-pdf" style="font-size: 48px; color: #ccc; margin-bottom: 16px;"></i>
+                    <p data-i18n="no.pdf.available">No PDF document available for this inspection record</p>
+                    <p data-i18n="pdf.preview.will.appear">The PDF preview will appear here when available</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加语言脚本 -->
+    <script src="scripts/language.js"></script>
+    <script src="scripts/safetyinspect.js"></script>
+    <script src="scripts/safetyinspectdocument.js"></script>
+</body>
+</html>

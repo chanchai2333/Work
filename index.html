@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="system.settings">AEL DWSS System</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+        <div class="logo">
+            <div class="logo-icon">
+                <i class="fas fa-water"></i>
+            </div>
+            <h2>AEL DWSS</h2>
+        </div>
+        
+        <button class="toggle-btn">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        
+        <ul class="menu">
+            <li>
+                <a href="index.html" class="active">
+                    <i class="fas fa-home"></i>
+                    <span class="menu-text" data-i18n="dashboard">Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="sitediary.html">
+                    <i class="fas fa-book"></i>
+                    <span class="menu-text" data-i18n="site.diary">Site Diary</span>
+                </a>
+            </li>
+            <li>
+                <a href="safetyinspect.html">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span class="menu-text" data-i18n="safety.inspection">Safety Inspection</span>
+                </a>
+            </li>
+            <li>
+                <a href="sitelocations.html">
+                    <i class="fas fa-map-marked-alt"></i>
+                    <span class="menu-text" data-i18n="site.locations">Site Locations</span>
+                </a>
+            </li>
+            <li>
+                <a href="labourwage.html">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <span class="menu-text" data-i18n="labour.wage">Labour Wage</span>
+                </a>
+            </li>
+            <li>
+                <a href="settings.html">
+                    <i class="fas fa-cogs"></i>
+                    <span class="menu-text" data-i18n="system.settings">System Settings</span>
+                </a>
+            </li>
+            <li>
+                <a href="usermanagement.html">
+                    <i class="fas fa-user-circle"></i>
+                    <span class="menu-text" data-i18n="user.management">User Management</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+    
+    <!-- 主内容区域 -->
+    <div class="main-content">
+        <div class="header">
+            <h1 data-i18n="system.settings">DWSS Management System</h1>
+            <div class="header-controls">
+                <div class="user-date-row">
+                    <div class="date-display">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span id="current-date">September 17, 2025</span>
+                    </div>
+                    <button class="user-btn">
+                        <i class="fas fa-user"></i> <span data-i18n="user.name">John Doe</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="search-buttons">
+            <form id="search-form" action="#" method="get">
+                <input type="text" name="search" data-i18n-placeholder="search.placeholder" placeholder="Search sites, reports, or data..." />
+                <button type="submit" data-i18n="search">Search</button>
+            </form>
+        </div>
+        
+        <div class="dashboard">
+            <h2 data-i18n="system.configuration">System Overview</h2>
+            <p data-i18n="configure.preferences">Welcome to the AEL DWSS management system. This dashboard provides real-time monitoring of system performance, and sanitation metrics across all sites. Use the navigation menu to access detailed reports and management tools.</p>
+            
+            <!-- 并排卡片布局 -->
+            <div class="feature-cards">
+                <!-- Site Diaries 卡片 -->
+                <div class="feature-card site-diary">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon">
+                                <i class="fas fa-book"></i>
+                            </div>
+                            <span data-i18n="site.diary">Site Diaries</span>
+                        </div>
+                        <div class="card-badge">
+                            <i class="fas fa-sync-alt"></i> <span data-i18n="updated.min.ago">Updated 2 min ago</span>
+                        </div>
+                    </div>
+                    
+                    <div class="kpi-data-grid">
+                        <div class="kpi-row">
+                            <div class="kpi-label" data-i18n="process">Process</div>
+                            <div class="kpi-value" data-i18n="site.diary">Site Diary</div>
+                        </div>
+                        <div class="kpi-row">
+                            <div class="kpi-label" data-i18n="total.amount">Total</div>
+                            <div class="kpi-value">95</div>
+                        </div>
+                        <div class="kpi-row">
+                            <div class="kpi-label" data-i18n="closed">Closed</div>
+                            <div class="kpi-value">0</div>
+                        </div>
+                        <div class="kpi-row">
+                            <div class="kpi-label" data-i18n="last.submitted">Last Submitted</div>
+                            <div class="kpi-value">15-Aug-25</div>
+                        </div>
+                        <div class="kpi-row">
+                            <div class="kpi-label" data-i18n="last.passed">Last Passed</div>
+                            <div class="kpi-value">34</div>
+                        </div>
+                        <div class="kpi-row">
+                            <div class="kpi-label" data-i18n="pending.close">Pending Close</div>
+                            <div class="kpi-value">61</div>
+                        </div>
+                        <div class="kpi-row">
+                            <div class="kpi-label" data-i18n="percent.pending.close">% Pending Close</div>
+                            <div class="kpi-value">64%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-section">
+                        <div class="progress-container">
+                            <div class="progress-bar" style="width: 60%;"></div>
+                        </div>
+                        <div class="progress-labels">
+                            <span>0%</span>
+                            <span>25%</span>
+                            <span>75%</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Safety Inspection 卡片 -->
+                <div class="feature-card safety-inspection">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon">
+                                <i class="fas fa-clipboard-check"></i>
+                            </div>
+                            <span data-i18n="safety.inspection">Safety Inspection</span>
+                        </div>
+                        <div class="card-badge">
+                            <i class="fas fa-sync-alt"></i> <span data-i18n="updated.min.ago">Updated 5 min ago</span>
+                        </div>
+                    </div>
+                    
+                    <div class="kpi-data-grid">
+                        <div class="kpi-row">
+                            <div class="kpi-label" data-i18n="process">Process</div>
+                            <div class="kpi-value" data-i18n="safety.inspection">Safety Inspection</div>
+                        </div>
+                        <div class="kpi-row">
+                            <div class="kpi-label" data-i18n="total.amount">Total</div>
+                            <div class="kpi-value">233</div>
+                        </div>
+                        <div class="kpi-row">
+                            <div class="kpi-label" data-i18n="closed">Closed</div>
+                            <div class="kpi-value">183</div>
+                        </div>
+                        <div class="kpi-row">
+                            <div class="kpi-label" data-i18n="last.submitted">Last Submitted</div>
+                            <div class="kpi-value">15-Aug-25</div>
+                        </div>
+                        <div class="kpi-row">
+                            <div class="kpi-label" data-i18n="last.passed">Last Passed</div>
+                            <div class="kpi-value">11</div>
+                        </div>
+                        <div class="kpi-row">
+                            <div class="kpi-label" data-i18n="pending.close">Pending Close</div>
+                            <div class="kpi-value">39</div>
+                        </div>
+                        <div class="kpi-row">
+                            <div class="kpi-label" data-i18n="percent.pending.close">% Pending Close</div>
+                            <div class="kpi-value">21%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-section">
+                        <div class="progress-container">
+                            <div class="progress-bar" style="width: 28%;"></div>
+                        </div>
+                        <div class="progress-labels">
+                            <span>0%</span>
+                            <span>25%</span>
+                            <span>75%</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Labour Wage 卡片 -->
+                <div class="feature-card labour-wage">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon">
+                                <i class="fas fa-money-bill-wave"></i>
+                            </div>
+                            <span data-i18n="labour.wage">Labour Wage</span>
+                        </div>
+                        <div class="card-badge">
+                            <i class="fas fa-sync-alt"></i> <span data-i18n="updated.min.ago">Updated 5 min ago</span>
+                        </div>
+                    </div>
+                    
+                    <div class="kpi-data-grid">
+                        <div class="kpi-row">
+                            <div class="kpi-label" data-i18n="process">Process</div>
+                            <div class="kpi-value" data-i18n="labour.wage">Labour Wage</div>
+                        </div>
+                        <div class="kpi-row">
+                            <div class="kpi-label" data-i18n="total.amount">Total</div>
+                            <div class="kpi-value">33</div>
+                        </div>
+                        <div class="kpi-row">
+                            <div class="kpi-label" data-i18n="closed">Closed</div>
+                            <div class="kpi-value">13</div>
+                        </div>
+                        <div class="kpi-row">
+                            <div class="kpi-label" data-i18n="last.submitted">Last Submitted</div>
+                            <div class="kpi-value">15-Aug-25</div>
+                        </div>
+                        <div class="kpi-row">
+                            <div class="kpi-label" data-i18n="last.passed">Last Passed</div>
+                            <div class="kpi-value">11</div>
+                        </div>
+                        <div class="kpi-row">
+                            <div class="kpi-label" data-i18n="pending.close">Pending Close</div>
+                            <div class="kpi-value">9</div>
+                        </div>
+                        <div class="kpi-row">
+                            <div class="kpi-label" data-i18n="percent.pending.close">% Pending Close</div>
+                            <div class="kpi-value">27%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-section">
+                        <div class="progress-container">
+                            <div class="progress-bar labour-wage" style="width: 35%;"></div>
+                        </div>
+                        <div class="progress-labels">
+                            <span>0%</span>
+                            <span>25%</span>
+                            <span>75%</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="trend-charts">
+                <!-- Site Diary 趨勢圖 -->
+                <div class="trend-card">
+                    <div class="chart-header">
+                        <h3><i class="fas fa-book"></i> <span data-i18n="site.diary">Site Diary</span> - 30 Day Trend</h3>
+                    </div>
+                    <canvas id="siteDiaryChart"></canvas>
+                </div>
+                
+                <!-- Safety Inspection 趨勢圖 -->
+                <div class="trend-card">
+                    <div class="chart-header">
+                        <h3><i class="fas fa-clipboard-check"></i> <span data-i18n="safety.inspection">Safety Inspection</span> - 30 Day Trend</h3>
+                    </div>
+                    <canvas id="safetyInspectionChart"></canvas>
+                </div>
+                
+                <!-- Labour Wage 趨勢圖 -->
+                <div class="trend-card">
+                    <div class="chart-header">
+                        <h3><i class="fas fa-money-bill-wave"></i> <span data-i18n="labour.wage">Labour Wage</span> - 30 Day Trend</h3>
+                    </div>
+                    <canvas id="labourWageChart"></canvas>
+                </div>
+            </div>
+        </div> <!-- 关闭dashboard div -->
+        
+        <footer>
+            <p data-i18n="copyright">&copy; 2025 AEL DWSS System. All rights reserved.</p>
+            <p data-i18n="platform">AEL DWSS Platform</p>
+        </footer>
+    </div> <!-- 关闭main-content div -->
+    
+    <!-- 引入语言配置文件 -->
+    <script src="scripts/language.js"></script>
+    <script src="scripts/app.js"></script>
+</body>
+</html>

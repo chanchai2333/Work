@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEL DWSS - Labour Wage</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="scripts/theme-config.js"></script>
+    <script src="scripts/language.js"></script>
+    <style>
+        /* 基础样式重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            display: flex;
+            min-height: 100vh;
+            background-color: #f5f7fa;
+            color: #333;
+            overflow-x: hidden;
+            flex-direction: row;
+        }
+
+        /* 侧边栏样式 - 与sitediary.html统一 */
+        .sidebar {
+            width: 260px;
+            background: linear-gradient(135deg, #2c3e50, #1a2530);
+            color: white;
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+            box-shadow: 3px 0 15px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 100;
+        }
+
+        .sidebar.collapsed {
+            width: 70px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            padding: 0 20px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .logo h2 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            margin-left: 12px;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar.collapsed .logo h2 {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+        }
+
+        .logo-icon {
+            font-size: 1.8rem;
+            background: #309ce3;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .toggle-btn {
+            position: absolute;
+            top: 25px;
+            right: -12px;
+            background: #3498db;
+            color: white;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar.collapsed .toggle-btn {
+            transform: rotate(180deg);
+        }
+
+        .menu {
+            list-style: none;
+            padding: 0 15px;
+        }
+
+        .menu li {
+            margin-bottom: 5px;
+        }
+
+        .menu a {
+            display: flex;
+            align-items: center;
+            color: #ecf0f1;
+            text-decoration: none;
+            padding: 14px 15px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .menu a:hover, .menu a.active {
+            background: rgba(52, 152, 219, 0.2);
+            color: #fff;
+        }
+
+        .menu a i {
+            font-size: 1.2rem;
+            margin-right: 15px;
+            width: 24px;
+            text-align: center;
+            transition: margin 0.3s ease;
+        }
+
+        .sidebar.collapsed .menu a i {
+            margin-right: 0;
+        }
+
+        .menu-text {
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar.collapsed .menu-text {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+        }
+
+        .menu a:hover .menu-text, .menu a.active .menu-text {
+            transform: translateX(2px);
+        }
+
+        /* 主内容区域 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding: 30px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .main-content {
+            max-width: 1500px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .sidebar.collapsed + .main-content {
+            margin-left: 0;
+        }
+
+        /* 头部样式 */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e0e6ed;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2rem;
+        }
+
+        .search-buttons {
+            display: flex;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        #search-form {
+            display: flex;
+            flex: 1;
+            max-width: 500px;
+            min-width: 250px;
+            margin-right: 24px;
+        }
+
+        #search-form input {
+            flex: 1;
+            padding: 12px 18px;
+            font-size: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px 0 0 8px;
+            outline: none;
+            transition: border 0.3s ease;
+        }
+
+        #search-form input:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        #search-form button {
+            padding: 12px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 0 8px 8px 0;
+            transition: background 0.3s ease;
+        }
+
+        #search-form button:hover {
+            background: #2980b9;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .nav-buttons button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-buttons button i {
+            margin-right: 8px;
+        }
+
+        .nav-buttons button:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 头部控制区域样式 */
+        .header-controls {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            width: auto;
+            gap: 15px;
+            flex-direction: row;
+            margin-left: auto;
+        }
+
+        .date-display {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            white-space: nowrap;
+            color: #308fee;
+            background-color: #eef2f6;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .date-display i {
+            margin-right: 8px;
+            color: #2da0ee;
+        }
+
+        .user-date-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .user-btn {
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 20px;
+            font-weight: 600;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .user-btn:hover {
+            background: #1746a2;
+        }
+
+        /* 劳动工资页面特定样式 */
+        .labour-wage-page {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+            flex: 1;
+        }
+
+        .labour-wage-page h2 {
+            color: #2c3e50;
+            margin-bottom: 25px;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .labour-wage-page h2 i {
+            color: #9b59b6;
+        }
+
+        /* 统计卡片样式 */
+        .wage-stats {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px; /* 添加底部间距 */
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: white;
+            padding: 12px 10px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(155, 89, 182, 0.25);
+            min-width: 120px;
+            width: 140px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(155, 89, 182, 0.35);
+        }
+
+        .stat-card .label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-right: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        /* 筛选器区域 - 修改为与统计卡片并排 */
+        .diary-controls-row {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            margin-bottom: 24px;
+        }
+        
+        .wage-stats {
+            min-width: 160px;
+        }
+        
+        .filters-section {
+            display: flex;
+            gap: 24px;
+        }
+        
+        .filter-group {
+            position: relative;
+            min-width: 140px;
+        }
+        
+        .filter-toggle {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            background: white;
+            border: 1px solid #dce1e6;
+            border-radius: 8px;
+            cursor: pointer;
+            min-width: 140px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-toggle:hover {
+            border-color: #a0b4c0;
+        }
+        
+        .filter-toggle i {
+            margin-left: auto;
+            transition: transform 0.3s ease;
+        }
+        
+        .filter-options {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background: white;
+            border: 1px solid #dce1e6;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-top: 5px;
+            z-index: 10;
+            display: none;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .filter-options.open {
+            display: block;
+        }
+        
+        .filter-option {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        
+        .filter-option:hover {
+            background: #f0f7ff;
+        }
+        
+        .filter-option.active {
+            background: #e6f2ff;
+            color: #0066cc;
+            font-weight: 500;
+        }
+
+        /* 表格区域 */
+        .content-section {
+            background: rgb(255, 255, 255);
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            max-width: 1500px;
+            margin: 0 auto;
+        }
+        
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .table-title {
+            font-size: 1.5rem;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        /* 表格样式 */
+        .wage-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: white;
+        }
+
+        .wage-table th {
+            background: #f8f9fa;
+            padding: 16px 20px;
+            text-align: left;
+            font-weight: 600;
+            color: #2c3e50;
+            border-bottom: 2px solid #eaeaea;
+        }
+
+        .wage-table td {
+            padding: 18px 20px;
+            border-bottom: 1px solid #eaeaea;
+            color: 555;
+            transition: background 0.2s ease;
+        }
+
+        .wage-table tr:hover td {
+            background: #f9fbfd;
+        }
+
+        .wage-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* 状态标签样式 */
+        .status-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: inline-block;
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .status-draft {
+            background: rgba(149, 165, 166, 0.2);
+            color: #848f90;
+        }
+
+        .status-submitted {
+            background: rgba(52, 152, 219, 0.2);
+            color: #2980b9;
+        }
+
+        .status-endorsed {
+            background: rgba(46, 204, 113, 0.2);
+            color: #27ae60;
+        }
+
+        .status-cancelled {
+            background: rgba(231, 76, 60, 0.2);
+            color: #c0392b;
+        }
+
+        .status-confirm {
+            background: rgba(155, 89, 182, 0.2);
+            color: #8e44ad;
+        }
+
+        .status-double-check {
+            background: rgba(243, 156, 18, 0.2);
+            color: #d35400;
+        }
+
+        /* 操作按钮样式 */
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            min-width: 44px;
+            min-height: 44px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .view-btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+        }
+
+        .view-btn:hover {
+            background: linear-gradient(135deg, #2980b9, #2471a3);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 12px rgba(52, 152, 219, 0.3);
+        }
+
+        .edit-btn {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+        }
+
+        .edit-btn:hover {
+            background: linear-gradient(135deg, #27ae60, #219653);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 12px rgba(46, 204, 113, 0.3);
+        }
+
+        .delete-btn {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background: linear-gradient(135deg, #c0392b, #e74c3c);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 12px rgba(231, 76, 60, 0.3);
+        }
+
+        .action-btn i {
+            margin-right: 6px;
+            font-size: 1.1rem;
+        }
+
+        /* 无结果消息 */
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-style: italic;
+            background: #f9f9f9;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        /* 页脚样式 */
+        footer {
+            text-align: center;
+            padding: 30px 0 20px;
+            color: #7f8c8d;
+            margin-top: auto;
+            border-top: 1px solid #e0e6ed;
+            width: 100%;
+        }
+
+        /* 模态框样式 - 与Site Diary保持一致 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+            font-size: 1.5rem;
+        }
+
+        .modal-content label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .modal-content input,
+        .modal-content select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .modal-content input:focus,
+        .modal-content select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .modal-actions .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .modal-actions .btn[type="submit"] {
+            background: #3498db;
+            color: white;
+        }
+
+        .modal-actions .btn[type="submit"]:hover {
+            background: #2980b9;
+        }
+
+        .modal-actions .btn[type="button"] {
+            background: #e0e6ed;
+            color: #2c3e50;
+        }
+
+        .modal-actions .btn[type="button"]:hover {
+            background: #d0d9e3;
+        }
+
+        /* 调整模态框尺寸 */
+        .modal-content {
+            max-width: 450px;
+            padding: 25px;
+        }
+
+        .modal-content input,
+        .modal-content select {
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+
+        .modal-actions .btn {
+            padding: 10px 20px;
+        }
+
+
+        /* 响应式设计 */
+        @media (max-width: 900px) {
+            .sidebar {
+                width: 260px;
+            }
+            
+            .sidebar:not(.collapsed) {
+                width: 260px;
+                position: absolute;
+                height: 100%;
+                z-index: 1000;
+            }
+            
+            .logo h2, .menu-text {
+                opacity: 0;
+                width: 0;
+                overflow: hidden;
+            }
+            
+            .sidebar:not(.collapsed) .logo h2,
+            .sidebar:not(.collapsed) .menu-text {
+                opacity: 1;
+                width: auto;
+            }
+
+            .wage-stats {
+                flex-direction: column;
+            }
+
+            .stat-card {
+                width: 100%;
+            }
+            
+            .diary-controls-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .filters-section {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            .filter-group {
+                width: 100%;
+            }
+            
+            .filter-toggle {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 20px;
+            }
+
+            .search-buttons {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            #search-form {
+                margin-right: 0;
+                margin-bottom: 15px;
+            }
+            
+            .nav-buttons {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .nav-buttons button {
+                padding: 8px 12px;
+                font-size: 0.9rem;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .action-btn {
+                width: 100%;
+                margin-bottom: 5px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .main-content {
+                padding: 15px;
+            }
+
+            .labour-wage-page {
+                padding: 20px;
+            }
+
+            .wage-table {
+                font-size: 0.9rem;
+            }
+
+            .wage-table th,
+            .wage-table td {
+                padding: 12px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 侧边栏 - 与sitediary.html保持一致 -->
+    <div class="sidebar">
+        <div class="logo">
+            <div class="logo-icon">
+                <i class="fas fa-water"></i>
+            </div>
+            <h2>AEL DWSS</h2>
+        </div>
+        
+        <button class="toggle-btn">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        
+        <ul class="menu">
+            <li>
+                <a href="index.html">
+                    <i class="fas fa-home"></i>
+                    <span class="menu-text">Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="sitediary.html">
+                    <i class="fas fa-book"></i>
+                    <span class="menu-text">Site Diary</span>
+                </a>
+            </li>
+            <li>
+                <a href="safetyinspect.html">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span class="menu-text">Safety Inspection</span>
+                </a>
+            </li>
+            <li>
+                <a href="sitelocations.html">
+                    <i class="fas fa-map-marked-alt"></i>
+                    <span class="menu-text">Site Locations</span>
+                </a>
+            </li>
+            <li>
+                <a href="labourwage.html" class="active">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <span class="menu-text">Labour Wage</span>
+                </a>
+            </li>
+            <li>
+                <a href="settings.html">
+                    <i class="fas fa-cogs"></i>
+                    <span class="menu-text">System Settings</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <i class="fas fa-user-circle"></i>
+                    <span class="menu-text">User Management</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+    
+    <!-- 主内容区域 -->
+    <div class="main-content">
+        <div class="header">
+            <h1>DWSS Management System</h1>
+            <div class="header-controls">
+                <div class="user-date-row">
+                    <div class="date-display">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span id="current-date">September 17, 2025</span>
+                    </div>
+                    <button class="user-btn">
+                        <i class="fas fa-user"></i> John Doe
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="search-buttons">
+            <form id="search-form" action="#" method="get">
+                <input type="text" name="search" placeholder="Search labour wage records..." />
+                <button type="submit">Search</button>
+            </form>
+            <div class="nav-buttons">
+                <button id="add-wage-btn"><i class="fas fa-plus"></i> Add New Wage Record</button>
+            </div>
+        </div>
+        
+        <!-- 劳动工资页面内容 -->
+        <div class="labour-wage-page">
+            <h2><i class="fas fa-money-bill-wave"></i> Labour Wage Management</h2>
+            
+            <!-- 修改这里：使用与sitediary.html相同的布局结构 -->
+            <div class="diary-controls-row">
+                <div class="wage-stats">
+                    <div class="stat-card">
+                        <div class="label">Total Records</div>
+                        <div class="value" id="total-records-count">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">This Month</div>
+                        <div class="value" id="month-count">0</div>
+                    </div>
+                </div>
+                
+                <div class="filters-section">
+                    <div class="filter-group" id="type-filter-group">
+                        <div class="filter-toggle">
+                            <span>All Document Types</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="filter-options">
+                            <div class="filter-option active" data-filter="type" data-value="all">All Document Types</div>
+                            <div class="filter-option" data-filter="type" data-value="GF527A">GF527A - Return on Construction Site Employment</div>
+                            <div class="filter-option" data-filter="type" data-value="GF527-2003">GF527 (2003) - Labour Wage</div>
+                            <div class="filter-option" data-filter="type" data-value="GF527-2017">GF527 (2017) - Labour Wage</div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group" id="status-filter-group">
+                        <div class="filter-toggle">
+                            <span>All Statuses</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="filter-options">
+                            <div class="filter-option active" data-filter="status" data-value="all">All Statuses</div>
+                            <div class="filter-option" data-filter="status" data-value="draft">Draft</div>
+                            <div class="filter-option" data-filter="status" data-value="submitted">Submitted</div>
+                            <div class="filter-option" data-filter="status" data-value="endorsed">Endorsed</div>
+                            <div class="filter-option" data-filter="status" data-value="cancelled">Cancelled</div>
+                            <div class="filter-option" data-filter="status" data-value="confirm">Client's Site Representative to Confirm</div>
+                            <div class="filter-option" data-filter="status" data-value="double-check">Contractor/Contractor's Agent Double Check</div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group" id="site-filter-group">
+                        <div class="filter-toggle">
+                            <span>All Sites</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="filter-options">
+                            <div class="filter-option active" data-filter="site" data-value="all">All Sites</div>
+                            <div class="filter-option" data-filter="site" data-value="treatment">Treatment Plant</div>
+                            <div class="filter-option" data-filter="site" data-value="pipeline">Pipeline</div>
+                            <div class="filter-option" data-filter="site" data-value="reservoir">Reservoir</div>
+                            <div class="filter-option" data-filter="site" data-value="distribution">Distribution</div>
+                            <div class="filter-option" data-filter="site" data-value="pump">Pump Station</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+                    
+            <section class="content-section">
+                <div class="table-header">
+                    <h2 class="table-title">Labour Wage Records</h2>
+                </div>
+                
+                <div class="table-container">
+                    <table class="wage-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Document Type</th>
+                                <th>Status</th>
+                                <th>Site</th>
+                                <th>Period</th>
+                                <th>Submitted By</th>
+                                <th>Total Amount</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="wage-table-body">
+                            <!-- 表格内容将通过JavaScript动态生成 -->
+                        </tbody>
+                    </table>
+                    <div id="no-results-message" class="no-results" style="display: none;">
+                        No matching wage records found. Please try different filters.
+                    </div>
+                </div>
+            </section>
+        </div>
+        
+        <footer>
+            <p>&copy; 2025 AEL DWSS System. All rights reserved.</p>
+            <p>AEL DWSS Platform</p>
+        </footer>
+    </div>
+
+    <!-- Add New Wage Modal -->
+    <div class="modal" id="add-wage-modal">
+        <div class="modal-content">
+            <h3>Add New Wage Record</h3>
+            <form id="add-wage-form">
+                <label>Document Type</label>
+                <select id="input-type" required>
+                    <option value="GF527A">GF527A - Return on Construction Site Employment</option>
+                    <option value="GF527-2003">GF527 (2003) - Labour Wage</option>
+                    <option value="GF527-2017">GF527 (2017) - Labour Wage</option>
+                </select>
+                
+                <label>Status</label>
+                <select id="input-status" required>
+                    <option value="draft">Draft</option>
+                    <option value="submitted">Submitted</option>
+                    <option value="endorsed">Endorsed</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="confirm">Client's Site Representative to Confirm</option>
+                    <option value="double-check">Contractor/Contractor's Agent Double Check</option>
+                </select>
+                
+                <label>Site</label>
+                <select id="input-site" required>
+                    <option value="Treatment Plant">Treatment Plant</option>
+                    <option value="Pipeline">Pipeline</option>
+                    <option value="Reservoir">Reservoir</option>
+                    <option value="Distribution">Distribution</option>
+                    <option value="Pump Station">Pump Station</option>
+                </select>
+                
+                <label>Period Start</label>
+                <input type="date" id="input-period-start" required>
+                
+                <label>Period End</label>
+                <input type="date" id="input-period-end" required>
+                
+                <label>Submitted By</label>
+                <input type="text" id="input-submitted-by" required>
+                
+                <label>Total Amount (HKD)</label>
+                <input type="number" id="input-amount" min="0" step="0.01" required>
+                
+                <div class="modal-actions">
+                    <button type="submit" class="btn">Save</button>
+                    <button type="button" class="btn" id="cancel-add-wage">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!--<script src="scripts/app.js"></script>-->
+    <script>
+    // 在其他页面的DOMContentLoaded事件中
+    document.addEventListener('DOMContentLoaded', function() {
+        // 初始化配置（自动应用保存的设置）
+        AppConfig.init();
+        // 更新當前日期（使用配置系統的格式）
+        AppConfig.updateDateDisplay();
+        // 其他页面特定代码...
+    });
+    // 侧边栏折叠功能
+    document.querySelector('.toggle-btn').addEventListener('click', function() {
+        document.querySelector('.sidebar').classList.toggle('collapsed');
+    });
+
+    // 更新当前日期
+    const now = new Date();
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', options);
+
+    // 劳动工资数据
+    let wageData = [];
+
+    // 获取默认数据
+    function getDefaultWageData() {
+        return [
+            { 
+                id: "GF-527A-1", 
+                type: "GF527A", 
+                typeText: "GF527A - Return on Construction Site Employment",
+                status: "draft", 
+                statusText: "Draft",
+                site: "Treatment Plant", 
+                period: "01-Sep-2025 to 07-Sep-2025", 
+                submittedBy: "John Doe",
+                amount: "-",
+                periodStart: "2025-09-01",
+                periodEnd: "2025-09-07"
+            },
+            { 
+                id: "GF527-2003-LW-1", 
+                type: "GF527-2003", 
+                typeText: "GF527 (2003) - Labour Wage",
+                status: "submitted", 
+                statusText: "Submitted",
+                site: "Pipeline", 
+                period: "01-Sep-2025 to 15-Sep-2025", 
+                submittedBy: "Jane Smith",
+                amount: "98,750.00",
+                periodStart: "2025-09-01",
+                periodEnd: "2025-09-15"
+            },
+            { 
+                id: "GF527-2017-LW-1", 
+                type: "GF527-2017", 
+                typeText: "GF527 (2017) - Labour Wage",
+                status: "endorsed", 
+                statusText: "Endorsed",
+                site: "Reservoir", 
+                period: "01-Aug-2025 to 31-Aug-2025", 
+                submittedBy: "Robert Johnson",
+                amount: "215,320.75",
+                periodStart: "2025-08-01",
+                periodEnd: "2025-08-31"
+            },
+            { 
+                id: "GF-527A-2", 
+                type: "GF527A", 
+                typeText: "GF527A - Return on Construction Site Employment",
+                status: "confirm", 
+                statusText: "Client's Site Representative to Confirm",
+                site: "Distribution", 
+                period: "10-Sep-2025 to 16-Sep-2025", 
+                submittedBy: "Sarah Williams",
+                amount: "-",
+                periodStart: "2025-09-10",
+                periodEnd: "2025-09-16"
+            },
+            { 
+                id: "GF527-2003-LW-2", 
+                type: "GF527-2003", 
+                typeText: "GF527 (2003) - Labour Wage",
+                status: "double-check", 
+                statusText: "Contractor/Contractor's Agent Double Check",
+                site: "Pump Station", 
+                period: "05-Sep-2025 to 11-Sep-2025", 
+                submittedBy: "Michael Brown",
+                amount: "64,320.00",
+                periodStart: "2025-09-05",
+                periodEnd: "2025-09-11"
+            }
+        ];
+    }
+
+    // 初始化数据函数
+    function initializeWageData() {
+        console.log('开始初始化工资数据...');
+        
+        const storedWages = sessionStorage.getItem('wageData') || localStorage.getItem('wageData');
+        console.log('从存储中读取的数据:', storedWages);
+
+        if (storedWages && storedWages !== 'null' && storedWages !== '[]') {
+            try {
+                wageData = JSON.parse(storedWages);
+                console.log('成功加载工资数据:', wageData.length, '条记录');
+            } catch (e) {
+                console.error('解析工资数据时出错:', e);
+                wageData = getDefaultWageData();
+                // 保存默认数据
+                sessionStorage.setItem('wageData', JSON.stringify(wageData));
+            }
+        } else {
+            console.log('没有找到存储的数据，使用默认数据');
+            wageData = getDefaultWageData();
+            // 保存默认数据
+            sessionStorage.setItem('wageData', JSON.stringify(wageData));
+        }
+        
+        console.log('初始化后的wageData:', wageData);
+        return wageData;
+    }
+    
+    // 当前筛选状态
+    let currentFilters = {
+        type: "all",
+        status: "all",
+        site: "all"
+    };
+    
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化主题配置
+    ThemeConfig.init();
+    
+    // 初始化语言配置
+    LanguageConfig.init();
+    
+    // 原有的labourwage页面初始化代码保持不变
+    console.log('开始初始化页面...');
+    
+    // 首先初始化数据
+    wageData = initializeWageData();
+    
+    // 初始化表格
+    renderWageTable();
+    
+    // 设置筛选器事件
+    setupFilterEvents();
+    
+    // 设置按钮事件
+    setupButtonEvents();
+    
+    // 更新统计数据
+    updateStats();
+    
+    console.log('页面初始化完成');
+});
+    
+    // 渲染表格函数
+    function renderWageTable() {
+        console.log('渲染表格，数据量:', wageData.length);
+        
+        const tbody = document.getElementById('wage-table-body');
+        const noResults = document.getElementById('no-results-message');
+        
+        // 清空表格
+        tbody.innerHTML = '';
+        
+        // 筛选数据
+        const filteredData = wageData.filter(item => {
+            // 文档类型筛选
+            if (currentFilters.type !== "all" && item.type !== currentFilters.type) {
+                return false;
+            }
+            
+            // 状态筛选
+            if (currentFilters.status !== "all" && item.status !== currentFilters.status) {
+                return false;
+            }
+            
+            // 站点筛选
+            if (currentFilters.site !== "all") {
+                const siteValue = item.site.toLowerCase().includes('treatment') ? 'treatment' : 
+                                 item.site.toLowerCase().includes('pipeline') ? 'pipeline' :
+                                 item.site.toLowerCase().includes('reservoir') ? 'reservoir' :
+                                 item.site.toLowerCase().includes('distribution') ? 'distribution' : 'pump';
+                
+                if (siteValue !== currentFilters.site) return false;
+            }
+            
+            return true;
+        });
+        
+        // 显示无结果消息
+        if (filteredData.length === 0) {
+            noResults.style.display = 'block';
+        } else {
+            noResults.style.display = 'none';
+        }
+        
+        // 填充表格
+        filteredData.forEach(item => {
+            const row = document.createElement('tr');
+            
+            row.innerHTML = `
+                <td>${item.id}</td>
+                <td>${item.typeText}</td>
+                <td><span class="status-badge status-${item.status}">${item.statusText}</span></td>
+                <td>${item.site}</td>
+                <td>${item.period}</td>
+                <td>${item.submittedBy}</td>
+                <td>$${item.amount}</td>
+                <td>
+                    <button class="action-btn view-btn" data-id="${item.id}"><i class="fas fa-eye"></i></button>
+                    <button class="action-btn edit-btn" data-id="${item.id}"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn delete-btn" data-id="${item.id}"><i class="fas fa-trash"></i></button>
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+        
+        // 添加事件监听器
+        attachEventListeners();
+    }
+    
+    // 设置筛选器事件
+    function setupFilterEvents() {
+        document.querySelectorAll('.filter-group').forEach(group => {
+            const toggle = group.querySelector('.filter-toggle');
+            const options = group.querySelector('.filter-options');
+            
+            // Toggle dropdown on click
+            toggle.addEventListener('click', function(e) {
+                e.stopPropagation();
+                // Close other dropdowns
+                document.querySelectorAll('.filter-options').forEach(opt => {
+                    if (opt !== options) opt.classList.remove('open');
+                });
+                options.classList.toggle('open');
+            });
+            
+            // Option click
+            group.querySelectorAll('.filter-option').forEach(option => {
+                option.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    // Remove active from all
+                    group.querySelectorAll('.filter-option').forEach(opt => opt.classList.remove('active'));
+                    option.classList.add('active');
+                    toggle.querySelector('span').textContent = option.textContent;
+                    
+                    const filterType = option.dataset.filter;
+                    const filterValue = option.dataset.value;
+                    currentFilters[filterType] = filterValue;
+                    
+                    renderWageTable();
+                    options.classList.remove('open'); // Close dropdown
+                });
+            });
+        });
+        
+        // Click outside closes all dropdowns
+        document.addEventListener('click', function(e) {
+            document.querySelectorAll('.filter-options').forEach(opt => opt.classList.remove('open'));
+        });
+    }
+    
+    // 设置按钮事件
+    function setupButtonEvents() {
+        // 添加按钮
+        document.getElementById('add-wage-btn').addEventListener('click', function() {
+            document.getElementById('add-wage-modal').style.display = 'flex';
+        });
+        
+        // 取消按钮
+        document.getElementById('cancel-add-wage').addEventListener('click', function() {
+            document.getElementById('add-wage-modal').style.display = 'none';
+        });
+        
+        // 表单提交
+        document.getElementById('add-wage-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 收集表单数据
+            const type = document.getElementById('input-type').value;
+            const status = document.getElementById('input-status').value;
+            const site = document.getElementById('input-site').value;
+            const periodStart = document.getElementById('input-period-start').value;
+            const periodEnd = document.getElementById('input-period-end').value;
+            const submittedBy = document.getElementById('input-submitted-by').value;
+            const amount = document.getElementById('input-amount').value;
+            
+            // 生成ID
+            let newId = "";
+            let typeText = "";
+            
+            if (type === "GF527A") {
+                // 找到最大的GF527A ID
+                const gf527aIds = wageData
+                    .filter(item => item.type === "GF527A")
+                    .map(item => parseInt(item.id.split('-')[2]));
+                
+                const maxId = gf527aIds.length > 0 ? Math.max(...gf527aIds) : 0;
+                newId = `GF-527A-${maxId + 1}`;
+                typeText = "GF527A - Return on Construction Site Employment";
+            } else if (type === "GF527-2003") {
+                // 找到最大的GF527-2003 ID
+                const gf527Ids = wageData
+                    .filter(item => item.type === "GF527-2003")
+                    .map(item => parseInt(item.id.split('-')[3]));
+                
+                const maxId = gf527Ids.length > 0 ? Math.max(...gf527Ids) : 0;
+                newId = `GF527-2003-LW-${maxId + 1}`;
+                typeText = "GF527 (2003) - Labour Wage";
+            } else if (type === "GF527-2017") {
+                // 找到最大的GF527-2017 ID
+                const gf527Ids = wageData
+                    .filter(item => item.type === "GF527-2017")
+                    .map(item => parseInt(item.id.split('-')[3]));
+                
+                const maxId = gf527Ids.length > 0 ? Math.max(...gf527Ids) : 0;
+                newId = `GF527-2017-LW-${maxId + 1}`;
+                typeText = "GF527 (2017) - Labour Wage";
+            }
+            
+            // 状态文本映射
+            const statusTextMap = {
+                "draft": "Draft",
+                "submitted": "Submitted",
+                "endorsed": "Endorsed",
+                "cancelled": "Cancelled",
+                "confirm": "Client's Site Representative to Confirm",
+                "double-check": "Contractor/Contractor's Agent Double Check"
+            };
+            
+            // 创建新记录
+            const newWage = {
+                id: newId,
+                type: type,
+                typeText: typeText,
+                status: status,
+                statusText: statusTextMap[status],
+                site: site,
+                period: `${formatDate(periodStart)} to ${formatDate(periodEnd)}`,
+                submittedBy: submittedBy,
+                amount: parseFloat(amount).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}),
+                periodStart: periodStart,
+                periodEnd: periodEnd
+            };
+            
+            // 添加到数据数组
+            wageData.push(newWage);
+            
+            // 保存到存储
+            sessionStorage.setItem('wageData', JSON.stringify(wageData));
+            
+            // 关闭模态框
+            document.getElementById('add-wage-modal').style.display = 'none';
+            
+            // 重新渲染表格
+            renderWageTable();
+            
+            // 更新统计数据
+            updateStats();
+            
+            // 重置表单
+            document.getElementById('add-wage-form').reset();
+        });
+    }
+    
+    // 格式化日期函数
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = date.toLocaleString('en-US', { month: 'short' });
+        const year = date.getFullYear();
+        return `${day}-${month}-${year}`;
+    }
+    
+    // 附加事件监听器
+    function attachEventListeners() {
+        // 查看按钮
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const wageId = this.getAttribute('data-id');
+                const wageItem = wageData.find(item => item.id === wageId);
+                
+                if (wageItem) {
+                    // 存储当前文档数据到sessionStorage
+                    sessionStorage.setItem('currentWageRecord', JSON.stringify(wageItem));
+                    window.location.href = 'labourwagedocument.html';
+                }
+            });
+        });
+        
+        // 编辑按钮
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const wageId = this.getAttribute('data-id');
+                const wageItem = wageData.find(item => item.id === wageId);
+                
+                if (wageItem) {
+                    // 存储当前文档数据到sessionStorage
+                    sessionStorage.setItem('currentWageRecord', JSON.stringify(wageItem));
+                    window.location.href = 'editlabour.html';
+                }
+            });
+        });
+        
+        // 删除按钮
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const wageId = this.getAttribute('data-id');
+                
+                if (confirm('Are you sure you want to delete this wage record?')) {
+                    // 从数据中删除
+                    const index = wageData.findIndex(item => item.id === wageId);
+                    if (index !== -1) {
+                        wageData.splice(index, 1);
+                        
+                        // 保存到存储
+                        sessionStorage.setItem('wageData', JSON.stringify(wageData));
+                        
+                        // 重新渲染表格
+                        renderWageTable();
+                        
+                        // 更新统计数据
+                        updateStats();
+                    }
+                }
+            });
+        });
+    }
+    
+    // 更新统计数据函数
+    function updateStats() {
+        // 总记录数
+        document.getElementById('total-records-count').textContent = wageData.length;
+
+        // 本月记录数
+        const currentDate = new Date();
+        const currentMonth = currentDate.getMonth(); // 0-11
+        const currentYear = currentDate.getFullYear();
+
+        const monthCount = wageData.filter(item => {
+            // 检查记录是否在当前月份
+            if (item.periodStart) {
+                const periodStart = new Date(item.periodStart);
+                return periodStart.getMonth() === currentMonth && 
+                       periodStart.getFullYear() === currentYear;
+            }
+            return false;
+        }).length;
+
+        document.getElementById('month-count').textContent = monthCount;
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEL DWSS - Edit Labour Wage</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+    <script src="scripts/theme-config.js"></script>
+    <style>
+        /* 基础样式重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            display: flex;
+            min-height: 100vh;
+            background-color: #f5f7fa;
+            color: #333;
+            overflow-x: hidden;
+            flex-direction: row;
+        }
+
+        /* 侧边栏样式 - 与labourwage.html统一 */
+        .sidebar {
+            width: 260px;
+            background: linear-gradient(135deg, #2c3e50, #1a2530);
+            color: white;
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+            box-shadow: 3px 0 15px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 100;
+        }
+
+        .sidebar.collapsed {
+            width: 70px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            padding: 0 20px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .logo h2 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            margin-left: 12px;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar.collapsed .logo h2 {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+        }
+
+        .logo-icon {
+            font-size: 1.8rem;
+            background: #309ce3;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .toggle-btn {
+            position: absolute;
+            top: 25px;
+            right: -12px;
+            background: #3498db;
+            color: white;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar.collapsed .toggle-btn {
+            transform: rotate(180deg);
+        }
+
+        .menu {
+            list-style: none;
+            padding: 0 15px;
+        }
+
+        .menu li {
+            margin-bottom: 5px;
+        }
+
+        .menu a {
+            display: flex;
+            align-items: center;
+            color: #ecf0f1;
+            text-decoration: none;
+            padding: 14px 15px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .menu a:hover, .menu a.active {
+            background: rgba(52, 152, 219, 0.2);
+            color: #fff;
+        }
+
+        .menu a i {
+            font-size: 1.2rem;
+            margin-right: 15px;
+            width: 24px;
+            text-align: center;
+            transition: margin 0.3s ease;
+        }
+
+        .sidebar.collapsed .menu a i {
+            margin-right: 0;
+        }
+
+        .menu-text {
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar.collapsed .menu-text {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+        }
+
+        .menu a:hover .menu-text, .menu a.active .menu-text {
+            transform: translateX(2px);
+        }
+
+        /* 主内容区域 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding: 30px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .main-content {
+            max-width: 1500px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .sidebar.collapsed + .main-content {
+            margin-left: 0;
+        }
+
+        /* 头部样式 */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e0e6ed;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2rem;
+        }
+
+        /* 头部控制区域样式 */
+        .header-controls {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            width: auto;
+            gap: 15px;
+            flex-direction: row;
+            margin-left: auto;
+        }
+
+        .date-display {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            white-space: nowrap;
+            color: #308fee;
+            background-color: #eef2f6;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .date-display i {
+            margin-right: 8px;
+            color: #2da0ee;
+        }
+
+        .user-date-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .user-btn {
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 20px;
+            font-weight: 600;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .user-btn:hover {
+            background: #1746a2;
+        }
+
+        /* 编辑页面内容 */
+        .edit-labour-page {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+            flex: 1;
+        }
+
+        .edit-labour-page h2 {
+            color: #2c3e50;
+            margin-bottom: 25px;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .edit-labour-page h2 i {
+            color: #9b59b6;
+        }
+
+        /* 文档标题部分 */
+        .document-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eaeaea;
+        }
+
+        .document-header h2 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.8rem;
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        /* 状态标签样式 */
+        .doc-status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            min-width: 120px;
+            text-align: center;
+            margin-left: 15px;
+        }
+
+        .status-draft {
+            background: rgba(149, 165, 166, 0.2);
+            color: #848f90;
+        }
+
+        .status-submitted {
+            background: rgba(52, 152, 219, 0.2);
+            color: #2980b9;
+        }
+
+        .status-endorsed {
+            background: rgba(46, 204, 113, 0.2);
+            color: #27ae60;
+        }
+
+        .status-cancelled {
+            background: rgba(231, 76, 60, 0.2);
+            color: #c0392b;
+        }
+
+        .status-confirm {
+            background: rgba(155, 89, 182, 0.2);
+            color: #8e44ad;
+        }
+
+        .status-double-check {
+            background: rgba(243, 156, 18, 0.2);
+            color: #d35400;
+        }
+
+        /* 文档操作按钮 */
+        .document-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .document-actions .btn {
+            background: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            box-shadow: 0 2px 5px rgba(52, 152, 219, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .document-actions .btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(52, 152, 219, 0.4);
+        }
+
+        .document-actions .btn i {
+            margin-right: 0;
+        }
+
+        /* 文档元数据 */
+        .document-meta {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px 30px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .meta-label {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .meta-value {
+            color: #555;
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 编辑表单样式 */
+        .edit-form {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            margin-top: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        /* 页脚样式 */
+        footer {
+            text-align: center;
+            padding: 30px 0 20px;
+            color: #7f8c8d;
+            margin-top: auto;
+            border-top: 1px solid #e0e6ed;
+            width: 100%;
+        }
+
+        /* PDF编辑工具栏样式 */
+        .pdf-toolbar {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .toolbar-section {
+            margin-bottom: 20px;
+        }
+
+        .toolbar-section h3 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+            font-size: 1.1rem;
+        }
+
+        .tool-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tool-btn {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tool-btn.active, .tool-btn:hover {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        .property-controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .property-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .property-group label {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .pdf-editor-container {
+            margin-top: 20px;
+        }
+
+        .pdf-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .nav-btn, .zoom-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .nav-btn:hover, .zoom-btn:hover {
+            background: #2980b9;
+        }
+
+        .page-info {
+            font-weight: 500;
+        }
+
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .zoom-level {
+            font-weight: 500;
+        }
+
+        .pdf-canvas-container {
+            position: relative;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: auto;
+            max-height: 600px;
+            background: #f9f9f9;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+        }
+
+        #pdf-canvas {
+            display: block;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        #annotation-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+
+        /* 标签页样式 */
+        .tabs {
+            margin-top: 20px;
+        }
+
+        .tab-headers {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+
+        .tab-header {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s;
+        }
+
+        .tab-header.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* 页面缩略图样式 */
+        .page-thumbnails {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .page-thumb {
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .page-thumb:hover {
+            border-color: #3498db;
+        }
+
+        .page-thumb.active {
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 900px) {
+            .sidebar {
+                width: 260px;
+            }
+            
+            .sidebar:not(.collapsed) {
+                width: 260px;
+                position: absolute;
+                height: 100%;
+                z-index: 1000;
+            }
+            
+            .logo h2, .menu-text {
+                opacity: 0;
+                width: 0;
+                overflow: hidden;
+            }
+            
+            .sidebar:not(.collapsed) .logo h2,
+            .sidebar:not(.collapsed) .menu-text {
+                opacity: 1;
+                width: auto;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .property-controls {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .pdf-toolbar {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 20px;
+            }
+
+            .document-header {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .document-actions {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .document-meta {
+                grid-template-columns: 1fr;
+                gap: 15px;
+                padding: 15px 20px;
+            }
+            
+            .edit-labour-page {
+                padding: 20px;
+            }
+            
+            .edit-form {
+                padding: 20px;
+            }
+
+            .pdf-controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .tool-buttons {
+                flex-direction: column;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .main-content {
+                padding: 15px;
+            }
+            
+            .tab-headers {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 侧边栏 - 与labourwage.html保持一致 -->
+    <div class="sidebar">
+        <div class="logo">
+            <div class="logo-icon">
+                <i class="fas fa-water"></i>
+            </div>
+            <h2>AEL DWSS</h2>
+        </div>
+        
+        <button class="toggle-btn">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        
+        <ul class="menu">
+            <li>
+                <a href="index.html">
+                    <i class="fas fa-home"></i>
+                    <span class="menu-text">Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="sitediary.html">
+                    <i class="fas fa-book"></i>
+                    <span class="menu-text">Site Diary</span>
+                </a>
+            </li>
+            <li>
+                <a href="safetyinspect.html">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span class="menu-text">Safety Inspection</span>
+                </a>
+            </li>
+            <li>
+                <a href="sitelocations.html">
+                    <i class="fas fa-map-marked-alt"></i>
+                    <span class="menu-text">Site Locations</span>
+                </a>
+            </li>
+            <li>
+                <a href="labourwage.html" class="active">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <span class="menu-text">Labour Wage</span>
+                </a>
+            </li>
+            <li>
+                <a href="settings.html">
+                    <i class="fas fa-cogs"></i>
+                    <span class="menu-text">System Settings</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <i class="fas fa-user-circle"></i>
+                    <span class="menu-text">User Management</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+    
+    <!-- 主内容区域 -->
+    <div class="main-content">
+        <div class="header">
+            <h1>DWSS Management System</h1>
+            <div class="header-controls">
+                <div class="user-date-row">
+                    <div class="date-display">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span id="current-date">September 17, 2025</span>
+                    </div>
+                    <button class="user-btn">
+                        <i class="fas fa-user"></i> John Doe
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 编辑劳动工资内容 -->
+        <div class="edit-labour-page">
+            <!-- 文档标题部分 -->
+            <div class="document-header">
+                <div class="doc-title-section">
+                    <h2>
+                        <i class="fas fa-file-alt"></i>
+                        <span id="docTitle">Edit Labour Wage Record</span>
+                        <span class="doc-status" id="docStatus">Editing</span>
+                    </h2>
+                </div>
+                <div class="document-actions">
+                    <button class="btn" id="save-btn"><i class="fas fa-save"></i> Save Changes</button>
+                    <button class="btn" id="cancel-btn"><i class="fas fa-times"></i> Cancel</button>
+                    <button class="btn" id="back-btn"><i class="fas fa-arrow-left"></i> Back to Labour Wage</button>
+                </div>
+            </div>
+
+            <!-- 文档元数据 -->
+            <div class="document-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Document ID:</span>
+                    <span class="meta-value" id="docId">N/A</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Document Type:</span>
+                    <span class="meta-value" id="docType">N/A</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Site:</span>
+                    <span class="meta-value" id="docSite">N/A</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Period:</span>
+                    <span class="meta-value" id="docPeriod">N/A</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Submitted By:</span>
+                    <span class="meta-value" id="docAuthor">N/A</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Total Amount:</span>
+                    <span class="meta-value" id="docAmount">N/A</span>
+                </div>
+            </div>
+            
+            <!-- 标签页 -->
+            <div class="tabs">
+                <div class="tab-headers">
+                    <button class="tab-header active" data-tab="record-details">Record Details</button>
+                    <button class="tab-header" data-tab="pdf-editor">PDF Editor</button>
+                </div>
+                
+                <div class="tab-contents">
+                    <!-- 记录详情标签页 -->
+                    <div class="tab-content active" id="record-details">
+                        <!-- 编辑表单 -->
+                        <div class="edit-form">
+                            <h3><i class="fas fa-edit"></i> Edit Record Details</h3>
+                            
+                            <form id="edit-labour-form">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="edit-type">Document Type</label>
+                                        <select id="edit-type" disabled>
+                                            <option value="GF527A">GF527A - Return on Construction Site Employment</option>
+                                            <option value="GF527-2003">GF527 (2003) - Labour Wage</option>
+                                            <option value="GF527-2017">GF527 (2017) - Labour Wage</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="edit-status">Status</label>
+                                        <select id="edit-status" required>
+                                            <option value="draft">Draft</option>
+                                            <option value="submitted">Submitted</option>
+                                            <option value="endorsed">Endorsed</option>
+                                            <option value="cancelled">Cancelled</option>
+                                            <option value="confirm">Client's Site Representative to Confirm</option>
+                                            <option value="double-check">Contractor/Contractor's Agent Double Check</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="edit-site">Site</label>
+                                        <select id="edit-site" required>
+                                            <option value="Treatment Plant">Treatment Plant</option>
+                                            <option value="Pipeline">Pipeline</option>
+                                            <option value="Reservoir">Reservoir</option>
+                                            <option value="Distribution">Distribution</option>
+                                            <option value="Pump Station">Pump Station</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="edit-submitted-by">Submitted By</label>
+                                        <input type="text" id="edit-submitted-by" required>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="edit-period-start">Period Start</label>
+                                        <input type="date" id="edit-period-start" required>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="edit-period-end">Period End</label>
+                                        <input type="date" id="edit-period-end" required>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="edit-amount">Total Amount (HKD)</label>
+                                    <input type="text" id="edit-amount" placeholder="e.g., $15,000.00 or 15000" required>
+                                    <small style="color: #666; font-size: 0.85rem;">You can enter numbers, letters, or symbols (e.g., $15,000.00, 15000, or "To be confirmed")</small>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- PDF编辑器标签页 -->
+                    <div class="tab-content" id="pdf-editor">
+                        <!-- PDF编辑工具栏 -->
+                        <div class="pdf-toolbar">
+                            <div class="toolbar-section">
+                                <h3>Annotation Tools</h3>
+                                <div class="tool-buttons">
+                                    <button class="tool-btn active" data-tool="select">
+                                        <i class="fas fa-mouse-pointer"></i>
+                                        <span>Select</span>
+                                    </button>
+                                    <button class="tool-btn" data-tool="text">
+                                        <i class="fas fa-font"></i>
+                                        <span>Text</span>
+                                    </button>
+                                    <button class="tool-btn" data-tool="highlight">
+                                        <i class="fas fa-highlighter"></i>
+                                        <span>Highlight</span>
+                                    </button>
+                                    <button class="tool-btn" data-tool="draw">
+                                        <i class="fas fa-pen"></i>
+                                        <span>Draw</span>
+                                    </button>
+                                    <button class="tool-btn" data-tool="shape">
+                                        <i class="fas fa-square"></i>
+                                        <span>Shapes</span>
+                                    </button>
+                                    <button class="tool-btn" data-tool="stamp">
+                                        <i class="fas fa-stamp"></i>
+                                        <span>Stamp</span>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="toolbar-section">
+                                <h3>Properties</h3>
+                                <div class="property-controls">
+                                    <div class="property-group">
+                                        <label>Color:</label>
+                                        <input type="color" id="color-picker" value="#3498db">
+                                    </div>
+                                    <div class="property-group">
+                                        <label>Size:</label>
+                                        <input type="range" id="size-slider" min="1" max="10" value="3">
+                                        <span id="size-value">3px</span>
+                                    </div>
+                                    <div class="property-group">
+                                        <label>Opacity:</label>
+                                        <input type="range" id="opacity-slider" min="10" max="100" value="100">
+                                        <span id="opacity-value">100%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="toolbar-section">
+                                <h3>Pages</h3>
+                                <div class="page-thumbnails" id="page-thumbnails">
+                                    <!-- 页面缩略图将通过JavaScript生成 -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- PDF编辑区域 -->
+                        <div class="pdf-editor-container">
+                            <div class="pdf-controls">
+                                <button class="nav-btn" id="prev-page">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                <span class="page-info">
+                                    Page <span id="current-page">1</span> of <span id="total-pages">1</span>
+                                </span>
+                                <button class="nav-btn" id="next-page">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                                
+                                <div class="zoom-controls">
+                                    <button class="zoom-btn" id="zoom-out">
+                                        <i class="fas fa-search-minus"></i>
+                                    </button>
+                                    <span class="zoom-level">100%</span>
+                                    <button class="zoom-btn" id="zoom-in">
+                                        <i class="fas fa-search-plus"></i>
+                                    </button>
+                                    <button class="zoom-btn" id="fit-width">
+                                        Fit Width
+                                    </button>
+                                    <button class="zoom-btn" id="fit-page">
+                                        Fit Page
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="pdf-canvas-container">
+                                <canvas id="pdf-canvas"></canvas>
+                                <div id="annotation-layer"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>&copy; 2025 AEL DWSS System. All rights reserved.</p>
+            <p>AEL DWSS Platform</p>
+        </footer>
+    </div>
+
+    <script>
+        // 侧边栏折叠功能
+        document.querySelector('.toggle-btn').addEventListener('click', function() {
+            document.querySelector('.sidebar').classList.toggle('collapsed');
+        });
+
+        // 更新当前日期
+        const now = new Date();
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', options);
+
+        // 标签页切换功能
+        document.querySelectorAll('.tab-header').forEach(header => {
+            header.addEventListener('click', function() {
+                // 移除所有活动状态
+                document.querySelectorAll('.tab-header').forEach(h => h.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // 设置当前活动状态
+                this.classList.add('active');
+                const tabId = this.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+                
+                // 如果是PDF编辑器标签，初始化PDF
+                if (tabId === 'pdf-editor') {
+                    initializePDFEditor();
+                }
+            });
+        });
+
+        // 从sessionStorage获取当前编辑的工资记录
+        document.addEventListener('DOMContentLoaded', function() {
+            const wageRecord = JSON.parse(sessionStorage.getItem('currentWageRecord'));
+            
+            if (wageRecord) {
+                // 填充文档信息
+                document.getElementById('docId').textContent = wageRecord.id || 'N/A';
+                document.getElementById('docTitle').textContent = `Edit Labour Wage Record - ${wageRecord.id}`;
+                document.getElementById('docType').textContent = wageRecord.typeText || 'N/A';
+                document.getElementById('docSite').textContent = wageRecord.site || 'N/A';
+                document.getElementById('docPeriod').textContent = wageRecord.period || 'N/A';
+                document.getElementById('docAuthor').textContent = wageRecord.submittedBy || 'N/A';
+                document.getElementById('docAmount').textContent = wageRecord.amount ? `$${wageRecord.amount}` : 'N/A';
+                
+                // 填充表单字段
+                document.getElementById('edit-type').value = wageRecord.type || 'GF527A';
+                document.getElementById('edit-status').value = wageRecord.status || 'draft';
+                document.getElementById('edit-site').value = wageRecord.site || 'Treatment Plant';
+                document.getElementById('edit-submitted-by').value = wageRecord.submittedBy || '';
+                
+                // 将金额字段改为文本输入，允许输入任何字符
+                document.getElementById('edit-amount').value = wageRecord.amount || '';
+                
+                // 设置日期字段
+                if (wageRecord.periodStart) {
+                    document.getElementById('edit-period-start').value = wageRecord.periodStart;
+                }
+                if (wageRecord.periodEnd) {
+                    document.getElementById('edit-period-end').value = wageRecord.periodEnd;
+                }
+                
+                // 设置状态文本和样式
+                const statusElement = document.getElementById('docStatus');
+                statusElement.textContent = 'Editing';
+                statusElement.className = 'doc-status status-draft';
+            }
+            
+            // 保存按钮事件
+            document.getElementById('save-btn').addEventListener('click', function() {
+                saveChanges();
+            });
+            
+            // 取消按钮事件
+            document.getElementById('cancel-btn').addEventListener('click', function() {
+                if (confirm('Are you sure you want to cancel? All changes will be lost.')) {
+                    goBackToLabourWage();
+                }
+            });
+            
+            // 返回按钮事件
+            document.getElementById('back-btn').addEventListener('click', function() {
+                goBackToLabourWage();
+            });
+        });
+
+        // PDF相关变量
+        let pdfDoc = null;
+        let currentPage = 1;
+        let scale = 1.5;
+
+        // 初始化PDF编辑器
+        function initializePDFEditor() {
+            // 设置PDF.js worker路径
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js';
+            
+            // 加载PDF文档（这里使用示例PDF，实际应用中应该从服务器获取）
+            const pdfUrl = 'pdfs/sample-labour-wage.pdf'; // 示例PDF路径
+            
+            const loadingTask = pdfjsLib.getDocument(pdfUrl);
+            loadingTask.promise.then(function(pdf) {
+                pdfDoc = pdf;
+                document.getElementById('total-pages').textContent = pdf.numPages;
+                
+                // 显示第一页
+                renderPage(1);
+                
+                // 生成页面缩略图
+                generateThumbnails(pdf);
+                
+                // 设置页面导航事件
+                setupPDFNavigation();
+                
+                // 设置工具按钮事件
+                setupToolButtons();
+            }).catch(function(error) {
+                console.error('Error loading PDF:', error);
+                // 如果没有PDF文件，显示提示信息
+                const canvasContainer = document.querySelector('.pdf-canvas-container');
+                canvasContainer.innerHTML = '<div style="text-align: center; padding: 50px; color: #666;">No PDF document available for this record.</div>';
+            });
+        }
+
+        // 渲染PDF页面
+        function renderPage(pageNum) {
+            if (!pdfDoc) return;
+            
+            pdfDoc.getPage(pageNum).then(function(page) {
+                const viewport = page.getViewport({ scale: scale });
+                const canvas = document.getElementById('pdf-canvas');
+                const context = canvas.getContext('2d');
+                
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                
+                // 更新当前页面信息
+                document.getElementById('current-page').textContent = pageNum;
+                currentPage = pageNum;
+                
+                const renderContext = {
+                    canvasContext: context,
+                    viewport: viewport
+                };
+                
+                page.render(renderContext);
+            });
+        }
+
+        // 生成页面缩略图
+        function generateThumbnails(pdf) {
+            const thumbnailsContainer = document.getElementById('page-thumbnails');
+            thumbnailsContainer.innerHTML = '';
+            
+            for (let i = 1; i <= pdf.numPages; i++) {
+                pdf.getPage(i).then(function(page) {
+                    const viewport = page.getViewport({ scale: 0.2 });
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    canvas.className = 'page-thumb';
+                    
+                    if (i === 1) {
+                        canvas.classList.add('active');
+                    }
+                    
+                    canvas.addEventListener('click', function() {
+                        document.querySelectorAll('.page-thumb').forEach(thumb => {
+                            thumb.classList.remove('active');
+                        });
+                        this.classList.add('active');
+                        renderPage(i);
+                    });
+                    
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: viewport
+                    };
+                    
+                    page.render(renderContext);
+                    thumbnailsContainer.appendChild(canvas);
+                });
+            }
+        }
+
+        // 设置PDF页面导航
+        function setupPDFNavigation() {
+            document.getElementById('prev-page').addEventListener('click', function() {
+                if (currentPage > 1) {
+                    renderPage(currentPage - 1);
+                }
+            });
+            
+            document.getElementById('next-page').addEventListener('click', function() {
+                if (currentPage < pdfDoc.numPages) {
+                    renderPage(currentPage + 1);
+                }
+            });
+            
+            // 缩放控制
+            document.getElementById('zoom-in').addEventListener('click', function() {
+                scale += 0.25;
+                renderPage(currentPage);
+                updateZoomLevel();
+            });
+            
+            document.getElementById('zoom-out').addEventListener('click', function() {
+                if (scale > 0.5) {
+                    scale -= 0.25;
+                    renderPage(currentPage);
+                    updateZoomLevel();
+                }
+            });
+            
+            document.getElementById('fit-width').addEventListener('click', function() {
+                // 实现适应宽度功能
+                fitToWidth();
+            });
+            
+            document.getElementById('fit-page').addEventListener('click', function() {
+                // 实现适应页面功能
+                fitToPage();
+            });
+        }
+
+        // 更新缩放级别显示
+        function updateZoomLevel() {
+            document.querySelector('.zoom-level').textContent = Math.round(scale * 100) + '%';
+        }
+
+        // 适应宽度
+        function fitToWidth() {
+            const canvasContainer = document.querySelector('.pdf-canvas-container');
+            const containerWidth = canvasContainer.clientWidth - 40; // 减去内边距
+            
+            if (pdfDoc && currentPage) {
+                pdfDoc.getPage(currentPage).then(function(page) {
+                    const viewport = page.getViewport({ scale: 1 });
+                    scale = (containerWidth - 40) / viewport.width;
+                    renderPage(currentPage);
+                    updateZoomLevel();
+                });
+            }
+        }
+
+        // 适应页面
+        function fitToPage() {
+            const canvasContainer = document.querySelector('.pdf-canvas-container');
+            const containerWidth = canvasContainer.clientWidth - 40;
+            const containerHeight = canvasContainer.clientHeight - 40;
+            
+            if (pdfDoc && currentPage) {
+                pdfDoc.getPage(currentPage).then(function(page) {
+                    const viewport = page.getViewport({ scale: 1 });
+                    const scaleX = (containerWidth - 40) / viewport.width;
+                    const scaleY = (containerHeight - 40) / viewport.height;
+                    scale = Math.min(scaleX, scaleY);
+                    renderPage(currentPage);
+                    updateZoomLevel();
+                });
+            }
+        }
+
+        // 设置工具按钮
+        function setupToolButtons() {
+            const toolButtons = document.querySelectorAll('.tool-btn');
+            
+            toolButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    toolButtons.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const tool = this.dataset.tool;
+                    activateTool(tool);
+                });
+            });
+            
+            // 设置属性控件
+            const sizeSlider = document.getElementById('size-slider');
+            const sizeValue = document.getElementById('size-value');
+            const opacitySlider = document.getElementById('opacity-slider');
+            const opacityValue = document.getElementById('opacity-value');
+            
+            sizeSlider.addEventListener('input', function() {
+                sizeValue.textContent = this.value + 'px';
+            });
+            
+            opacitySlider.addEventListener('input', function() {
+                opacityValue.textContent = this.value + '%';
+            });
+        }
+
+        // 激活工具
+        function activateTool(tool) {
+            const annotationLayer = document.getElementById('annotation-layer');
+            
+            // 清除之前的工具状态
+            annotationLayer.classList.remove('active');
+            
+            // 根据选择的工具设置注释层
+            switch(tool) {
+                case 'select':
+                    // 选择工具逻辑
+                    break;
+                case 'text':
+                    annotationLayer.classList.add('active');
+                    setupTextTool();
+                    break;
+                case 'highlight':
+                    annotationLayer.classList.add('active');
+                    setupHighlightTool();
+                    break;
+                case 'draw':
+                    annotationLayer.classList.add('active');
+                    setupDrawTool();
+                    break;
+                case 'shape':
+                    annotationLayer.classList.add('active');
+                    setupShapeTool();
+                    break;
+                case 'stamp':
+                    annotationLayer.classList.add('active');
+                    setupStampTool();
+                    break;
+            }
+        }
+
+        // 设置文本工具
+        function setupTextTool() {
+            // 实现文本注释功能
+            console.log('Text tool activated');
+        }
+
+        // 设置高亮工具
+        function setupHighlightTool() {
+            // 实现高亮注释功能
+            console.log('Highlight tool activated');
+        }
+
+        // 设置绘图工具
+        function setupDrawTool() {
+            // 实现绘图功能
+            console.log('Draw tool activated');
+        }
+
+        // 设置形状工具
+        function setupShapeTool() {
+            // 实现形状注释功能
+            console.log('Shape tool activated');
+        }
+
+        // 设置印章工具
+        function setupStampTool() {
+            // 实现印章功能
+            console.log('Stamp tool activated');
+        }
+
+        // 保存更改
+        function saveChanges() {
+            // 获取表单数据
+            const wageId = document.getElementById('docId').textContent;
+            const type = document.getElementById('edit-type').value;
+            const status = document.getElementById('edit-status').value;
+            const site = document.getElementById('edit-site').value;
+            const submittedBy = document.getElementById('edit-submitted-by').value;
+            const amount = document.getElementById('edit-amount').value; // 现在是文本输入
+            const periodStart = document.getElementById('edit-period-start').value;
+            const periodEnd = document.getElementById('edit-period-end').value;
+            
+            // 状态文本映射
+            const statusTextMap = {
+                "draft": "Draft",
+                "submitted": "Submitted",
+                "endorsed": "Endorsed",
+                "cancelled": "Cancelled",
+                "confirm": "Client's Site Representative to Confirm",
+                "double-check": "Contractor/Contractor's Agent Double Check"
+            };
+            
+            // 类型文本映射
+            const typeTextMap = {
+                "GF527A": "GF527A - Return on Construction Site Employment",
+                "GF527-2003": "GF527 (2003) - Labour Wage",
+                "GF527-2017": "GF527 (2017) - Labour Wage"
+            };
+            
+            // 格式化日期
+            function formatDate(dateString) {
+                const date = new Date(dateString);
+                const day = date.getDate().toString().padStart(2, '0');
+                const month = date.toLocaleString('en-US', { month: 'short' });
+                const year = date.getFullYear();
+                return `${day}-${month}-${year}`;
+            }
+            
+            // 创建更新后的记录
+            const updatedRecord = {
+                id: wageId,
+                type: type,
+                typeText: typeTextMap[type],
+                status: status,
+                statusText: statusTextMap[status],
+                site: site,
+                period: `${formatDate(periodStart)} to ${formatDate(periodEnd)}`,
+                submittedBy: submittedBy,
+                amount: amount, // 直接保存文本值
+                periodStart: periodStart,
+                periodEnd: periodEnd
+            };
+            
+            // 获取所有工资数据
+            let wageData = JSON.parse(sessionStorage.getItem('wageData') || '[]');
+            
+            // 更新记录
+            const index = wageData.findIndex(item => item.id === wageId);
+            if (index !== -1) {
+                wageData[index] = updatedRecord;
+                
+                // 保存到sessionStorage
+                sessionStorage.setItem('wageData', JSON.stringify(wageData));
+                sessionStorage.setItem('currentWageRecord', JSON.stringify(updatedRecord));
+                
+                alert('Labour wage record updated successfully!');
+                goBackToLabourWage();
+            } else {
+                alert('Error: Record not found!');
+            }
+        }
+        
+        // 返回劳动工资页面
+        function goBackToLabourWage() {
+            window.location.href = 'labourwage.html';
+        }
+    </script>
+</body>
+</html>

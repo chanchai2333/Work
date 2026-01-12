@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="site.diary">AEL DWSS - Site Diary</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <!-- Add New Diary Modal -->
+    <div class="modal" id="add-diary-modal" style="display:none;">
+        <div class="modal-content">
+            <h3 data-i18n="add.new.diary">Add New Diary</h3>
+            <form id="add-diary-form">
+                <label data-i18n="diary.id">Diary ID</label>
+                <input type="text" id="input-diary-id" required>
+                <label data-i18n="status">Status</label>
+                <select id="input-status" required>
+                    <option value="draft" data-i18n="status.draft">Draft</option>
+                    <option value="submitted-wsg" data-i18n="status.submitted.wsg">Submitted to WSG</option>
+                    <option value="submitted-ig" data-i18n="status.submitted.ig">Submitted to IG</option>
+                    <option value="closed" data-i18n="status.closed">Closed</option>
+                    <option value="reopen" data-i18n="status.reopen">Reopen</option>
+                    <option value="cancelled" data-i18n="status.cancelled">Cancelled</option>
+                </select>
+                <label data-i18n="site">Site</label>
+                <input type="text" id="input-site" required>
+                <label data-i18n="date">Date</label>
+                <input type="date" id="input-date" required>
+                <label data-i18n="submitted.by">Submitted By</label>
+                <input type="text" id="input-submitted-by" required>
+                <label data-i18n="document.type">Document Type</label>
+                <select id="input-type" required>
+                    <option value="Contractor Documents" data-i18n="document.type.contractor">Contractor Documents</option>
+                    <option value="Sub Contractor Documents" data-i18n="document.type.subcontractor">Sub Contractor Documents</option>
+                </select>
+                <div class="modal-actions">
+                    <button type="submit" class="btn" data-i18n="save">Save</button>
+                    <button type="button" class="btn" id="cancel-add-diary" data-i18n="cancel">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+        <div class="logo">
+            <div class="logo-icon">
+                <i class="fas fa-water"></i>
+            </div>
+            <h2>AEL DWSS</h2>
+        </div>
+        
+        <button class="toggle-btn">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        
+        <ul class="menu">
+            <li>
+                <a href="index.html">
+                    <i class="fas fa-home"></i>
+                    <span class="menu-text" data-i18n="dashboard">Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="sitediary.html" class="active">
+                    <i class="fas fa-book"></i>
+                    <span class="menu-text" data-i18n="site.diary">Site Diary</span>
+                </a>
+            </li>
+            <li>
+                <a href="safetyinspect.html">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span class="menu-text" data-i18n="safety.inspection">Safety Inspection</span>
+                </a>
+            </li>
+            <li>
+                <a href="sitelocations.html">
+                    <i class="fas fa-map-marked-alt"></i>
+                    <span class="menu-text" data-i18n="site.locations">Site Locations</span>
+                </a>
+            </li>
+            <li>
+                <a href="labourwage.html">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <span class="menu-text" data-i18n="labour.wage">Labour Wage</span>
+                </a>
+            </li>
+            <li>
+                <a href="settings.html">
+                    <i class="fas fa-cogs"></i>
+                    <span class="menu-text" data-i18n="system.settings">System Settings</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <i class="fas fa-user-circle"></i>
+                    <span class="menu-text" data-i18n="user.management">User Management</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+    
+    <!-- 主内容区域 -->
+    <div class="main-content">
+        <div class="header">
+            <h1 data-i18n="system.settings">DWSS Management System</h1>
+            <div class="header-controls">
+                <div class="user-date-row">
+                    <div class="date-display">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span id="current-date">September 17, 2025</span>
+                    </div>
+                    <button class="user-btn">
+                        <i class="fas fa-user"></i> <span data-i18n="user.name">John Doe</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="search-buttons">
+            <form id="search-form" action="#" method="get">
+                <input type="text" name="search" data-i18n-placeholder="search.placeholder" placeholder="Search sites, reports, or data..." />
+                <button type="submit" data-i18n="search">Search</button>
+            </form>
+            <div class="nav-buttons">
+                <button id="add-diary-btn"><i class="fas fa-plus"></i> <span data-i18n="add.new.diary">Add New Diary</span></button>
+            </div>
+        </div>
+        
+        <!-- Site Diary 页面内容 -->
+        <div class="site-diary-page">
+            <h2><i class="fas fa-book"></i> <span data-i18n="site.diary.management">Site Diary Management</span></h2>
+            
+            <div class="diary-controls">
+                <div class="diary-stats">
+                    <div class="stat-card">
+                        <div class="label" data-i18n="total.documents">Total Documents</div>
+                        <div class="value" id="total-documents-count">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label" data-i18n="this.month">This Month</div>
+                        <div class="value" id="month-count">0</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="diary-container">
+                <!-- 筛选器区域 -->
+                <section class="filters-section">
+                    <div class="filter-group" id="site-filter-group">
+                        <div class="filter-toggle">
+                            <span data-i18n="all.sites">All Sites</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="filter-options">
+                            <div class="filter-option active" data-filter="site" data-value="all" data-i18n="all.sites">All Sites</div>
+                            <div class="filter-option" data-filter="site" data-value="treatment" data-i18n="site.treatment">Treatment Plant</div>
+                            <div class="filter-option" data-filter="site" data-value="pipeline" data-i18n="site.pipeline">Pipeline</div>
+                            <div class="filter-option" data-filter="site" data-value="reservoir" data-i18n="site.reservoir">Reservoir</div>
+                            <div class="filter-option" data-filter="site" data-value="distribution" data-i18n="site.distribution">Distribution</div>
+                            <div class="filter-option" data-filter="site" data-value="pump" data-i18n="site.pump">Pump Station</div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group" id="status-filter-group">
+                        <div class="filter-toggle">
+                            <span data-i18n="all.statuses">All Statuses</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="filter-options">
+                            <div class="filter-option active" data-filter="status" data-value="all" data-i18n="all.statuses">All Statuses</div>
+                            <div class="filter-option" data-filter="status" data-value="draft" data-i18n="status.draft">Draft</div>
+                            <div class="filter-option" data-filter="status" data-value="submitted-wsg" data-i18n="status.submitted.wsg">Submitted to WSG</div>
+                            <div class="filter-option" data-filter="status" data-value="submitted-ig" data-i18n="status.submitted.ig">Submitted to IG</div>
+                            <div class="filter-option" data-filter="status" data-value="closed" data-i18n="status.closed">Closed</div>
+                            <div class="filter-option" data-filter="status" data-value="reopen" data-i18n="status.reopen">Reopen</div>
+                            <div class="filter-option" data-filter="status" data-value="cancelled" data-i18n="status.cancelled">Cancelled</div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group" id="type-filter-group">
+                        <div class="filter-toggle">
+                            <span data-i18n="all.document.types">All Document Types</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="filter-options">
+                            <div class="filter-option active" data-filter="type" data-value="all" data-i18n="all.document.types">All Document Types</div>
+                            <div class="filter-option" data-filter="type" data-value="Sub Contractor Documents" data-i18n="document.type.subcontractor">Sub Contractor Documents</div>
+                            <div class="filter-option" data-filter="type" data-value="Contractor Documents" data-i18n="document.type.contractor">Contractor Documents</div>
+                        </div>
+                    </div>
+                </section>        
+            </div>
+            
+            <section class="content-section">
+                <div class="table-header">
+                    <h2 class="table-title" data-i18n="diary.entries">Site Diary Entries</h2>
+                </div>
+                
+                <div class="table-container">
+                    <table class="diary-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="diary.id">Diary ID</th>
+                                <th data-i18n="status">Status</th>
+                                <th data-i18n="site">Site</th>
+                                <th data-i18n="date">Date</th>
+                                <th data-i18n="submitted.by">Submitted By</th>
+                                <th data-i18n="document.type">Document Type</th>
+                                <th data-i18n="actions">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="diary-table-body">
+                            <!-- 表格内容将通过JavaScript动态生成 -->
+                        </tbody>
+                    </table>
+                    <div id="no-results-message" class="no-results" style="display: none;" data-i18n="no.matching.documents">
+                        No matching documents found. Please try different filters.
+                    </div>
+                </div>
+            </section>      
+            
+            <footer>
+                <p data-i18n="copyright">&copy; 2025 AEL DWSS System. All rights reserved.</p>
+                <p data-i18n="platform">AEL DWSS Platform</p>
+            </footer>
+        </div>
+    </div>
+    
+    <!-- 引入语言配置文件 -->
+    <script src="scripts/language.js"></script>
+    <script src="scripts/app.js"></script>
+</body>
+</html>

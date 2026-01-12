@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="platform">AEL DWSS - Safety Inspection</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/safetyinspect.css">
+    <!-- 添加语言配置 -->
+    <script src="scripts/theme-config.js"></script>
+</head>
+<body>
+    <!-- Add New Inspection Modal -->
+    <div class="modal" id="add-inspect-modal" style="display:none;">
+        <div class="modal-content">
+            <h3 data-i18n="add.new.inspection">Add New Inspection</h3>
+            <form id="add-inspect-form">
+                <label data-i18n="inspection.id">Inspection ID</label>
+                <input type="text" id="input-inspect-id" required>
+                <label data-i18n="status">Status</label>
+                <select id="input-inspect-status" required>
+                    <option value="draft" data-i18n="status.draft">Draft</option>
+                    <option value="submitted-wsg" data-i18n="status.submitted.wsg">Submitted to WSG</option>
+                    <option value="submitted-ig" data-i18n="status.submitted.ig">Submitted to IG</option>
+                    <option value="closed" data-i18n="status.closed">Closed</option>
+                    <option value="reopen" data-i18n="status.reopen">Reopen</option>
+                    <option value="cancelled" data-i18n="status.cancelled">Cancelled</option>
+                </select>
+                <label data-i18n="site">Site</label>
+                <input type="text" id="input-inspect-site" required>
+                <label data-i18n="date">Date</label>
+                <input type="date" id="input-inspect-date" required>
+                <label data-i18n="inspector">Inspector</label>
+                <input type="text" id="input-inspect-by" required>
+                <div class="modal-actions">
+                    <button type="submit" class="btn" data-i18n="save">Save</button>
+                    <button type="button" class="btn" id="cancel-add-inspect" data-i18n="cancel">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+        <div class="logo">
+            <div class="logo-icon">
+                <i class="fas fa-water"></i>
+            </div>
+            <h2 data-i18n="platform">AEL DWSS</h2>
+        </div>
+        
+        <button class="toggle-btn">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        
+        <ul class="menu">
+            <li>
+                <a href="index.html" class="active">
+                    <i class="fas fa-home"></i>
+                    <span class="menu-text" data-i18n="dashboard">Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="sitediary.html">
+                    <i class="fas fa-book"></i>
+                    <span class="menu-text" data-i18n="site.diary">Site Diary</span>
+                </a>
+            </li>
+            <li>
+                <a href="safetyinspect.html">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span class="menu-text" data-i18n="safety.inspection">Safety Inspection</span>
+                </a>
+            </li>
+            <li>
+                <a href="sitelocations.html">
+                    <i class="fas fa-map-marked-alt"></i>
+                    <span class="menu-text" data-i18n="site.locations">Site Locations</span>
+                </a>
+            </li>
+            <li>
+                <a href="labourwage.html">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <span class="menu-text" data-i18n="labour.wage">Labour Wage</span>
+                </a>
+            </li>
+            <li>
+                <a href="settings.html">
+                    <i class="fas fa-cogs"></i>
+                    <span class="menu-text" data-i18n="system.settings">System Settings</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <i class="fas fa-user-circle"></i>
+                    <span class="menu-text" data-i18n="user.management">User Management</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+    <!-- 主内容区域 -->
+    <div class="main-content">
+        <div class="header">
+            <h1 data-i18n="platform">DWSS Management System</h1>
+            <div class="header-controls">
+                <div class="user-date-row">
+                    <div class="date-display">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span id="current-date"></span>
+                    </div>
+                    <button class="user-btn">
+                        <i class="fas fa-user"></i>
+                        <span data-i18n="user.name">John Doe</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="search-buttons">
+            <form id="search-form" action="#" method="get">
+                <input type="text" name="search" placeholder="Search inspections, reports, or data..." data-i18n-placeholder="search.inspections" />
+                <button type="submit" data-i18n="search">Search</button>
+            </form>
+            <div class="nav-buttons">
+                <button id="add-inspection-btn">
+                    <i class="fas fa-plus"></i>
+                    <span data-i18n="add.new.inspection">Add New Inspection</span>
+                </button>
+            </div>
+        </div>
+        <div class="site-diary-page">
+            <h2><i class="fas fa-clipboard-check"></i> <span data-i18n="safety.inspection.management">Safety Inspection Management</span></h2>
+            <div class="diary-controls-row">
+                <div class="diary-stats">
+                    <div class="stat-card">
+                        <div class="label" data-i18n="total.inspections">Total Inspections</div>
+                        <div class="value" id="total-inspections-count">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label" data-i18n="this.month">This Month</div>
+                        <div class="value" id="month-count">0</div>
+                    </div>
+                </div>
+                <section class="filters-section">
+                    <div class="filter-group" id="site-filter-group">
+                        <div class="filter-toggle">
+                            <span data-i18n="all.sites">All Sites</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="filter-options">
+                            <div class="filter-option active" data-filter="site" data-value="all" data-i18n="all.sites">All Sites</div>
+                            <div class="filter-option" data-filter="site" data-value="treatment" data-i18n="site.treatment">Treatment Plant</div>
+                            <div class="filter-option" data-filter="site" data-value="pipeline" data-i18n="site.pipeline">Pipeline</div>
+                            <div class="filter-option" data-filter="site" data-value="reservoir" data-i18n="site.reservoir">Reservoir</div>
+                            <div class="filter-option" data-filter="site" data-value="distribution" data-i18n="site.distribution">Distribution</div>
+                            <div class="filter-option" data-filter="site" data-value="pump" data-i18n="site.pump">Pump Station</div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group" id="status-filter-group">
+                        <div class="filter-toggle">
+                            <span data-i18n="all.statuses">All Statuses</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="filter-options">
+                            <div class="filter-option active" data-filter="status" data-value="all" data-i18n="all.statuses">All Statuses</div>
+                            <div class="filter-option" data-filter="status" data-value="draft" data-i18n="status.draft">Draft</div>
+                            <div class="filter-option" data-filter="status" data-value="submitted-wsg" data-i18n="status.submitted.wsg">Submitted to WSG</div>
+                            <div class="filter-option" data-filter="status" data-value="submitted-ig" data-i18n="status.submitted.ig">Submitted to IG</div>
+                            <div class="filter-option" data-filter="status" data-value="closed" data-i18n="status.closed">Closed</div>
+                            <div class="filter-option" data-filter="status" data-value="reopen" data-i18n="status.reopen">Reopen</div>
+                            <div class="filter-option" data-filter="status" data-value="cancelled" data-i18n="status.cancelled">Cancelled</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <section class="content-section">
+                <div class="table-header">
+                    <h2 class="table-title" data-i18n="inspection.entries">Safety Inspection Entries</h2>
+                </div>
+                <div class="table-container">
+                    <table class="diary-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="inspection.id">Inspection ID</th>
+                                <th data-i18n="status">Status</th>
+                                <th data-i18n="site">Site</th>
+                                <th data-i18n="date">Date</th>
+                                <th data-i18n="inspector">Inspector</th>
+                                <th data-i18n="actions">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inspection-table-body">
+                            <!-- 內容由 JS 動態生成 -->
+                        </tbody>
+                    </table>
+                    <div id="no-results-message" class="no-results" style="display: none;" data-i18n="no.matching.documents">
+                        No matching inspections found. Please try different filters.
+                    </div>
+                </div>
+            </section>
+            <footer>
+                <p data-i18n="copyright">© 2025 AEL DWSS System. All rights reserved.</p>
+                <p data-i18n="platform">AEL DWSS Platform</p>
+            </footer>
+        </div>
+    </div>
+    
+    <!-- 添加语言脚本 -->
+    <script src="scripts/language.js"></script>
+    <script src="scripts/app.js"></script>
+    <script src="scripts/safetyinspect.js"></script>
+</body>
+</html>

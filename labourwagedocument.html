@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEL DWSS - Labour Wage Document</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 在现有的样式表之后添加 -->
+    <script src="scripts/theme-config.js"></script>
+    <style>
+  /* 基础样式重置 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* 修复body布局 - 确保侧边栏和主内容正确排列 */
+body {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f5f7fa;
+    color: #333;
+    overflow-x: hidden;
+}
+
+/* 侧边栏样式 - 与sitediary.html保持一致 */
+.sidebar {
+    width: 260px;
+    background: linear-gradient(135deg, #2c3e50, #1a2530);
+    color: white;
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0; /* 防止侧边栏被压缩 */
+    transition: all 0.3s ease;
+    box-shadow: 3px 0 15px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 100;
+}
+
+.sidebar.collapsed {
+    width: 70px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    padding: 0 20px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 20px;
+}
+
+.logo h2 {
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin-left: 12px;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar.collapsed .logo h2 {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+}
+
+.logo-icon {
+    font-size: 1.8rem;
+    background: #309ce3;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.toggle-btn {
+    position: absolute;
+    top: 25px;
+    right: -12px;
+    background: #3498db;
+    color: white;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.sidebar.collapsed .toggle-btn {
+    transform: rotate(180deg);
+}
+
+.menu {
+    list-style: none;
+    padding: 0 15px;
+}
+
+.menu li {
+    margin-bottom: 5px;
+}
+
+.menu a {
+    display: flex;
+    align-items: center;
+    color: #ecf0f1;
+    text-decoration: none;
+    padding: 14px 15px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.menu a:hover, .menu a.active {
+    background: rgba(52, 152, 219, 0.2);
+    color: #fff;
+}
+
+.menu a i {
+    font-size: 1.2rem;
+    margin-right: 15px;
+    width: 24px;
+    text-align: center;
+    transition: margin 0.3s ease;
+}
+
+.sidebar.collapsed .menu a i {
+    margin-right: 0;
+}
+
+.menu-text {
+    transition: opacity 0.3s ease;
+}
+
+.sidebar.collapsed .menu-text {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+}
+
+/* 主内容区域 - 修复布局 */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 30px;
+    overflow-y: auto;
+}
+
+/* 头部样式 */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e0e6ed;
+}
+
+.header h1 {
+    color: #2c3e50;
+    font-size: 2rem;
+}
+
+.header-controls {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 15px;
+}
+
+.date-display {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 8px 15px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    white-space: nowrap;
+    color: #308fee;
+    background-color: #eef2f6;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.date-display i {
+    margin-right: 8px;
+    color: #2da0ee;
+}
+
+.user-date-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.user-btn {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 20px;
+    font-weight: 600;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.user-btn:hover {
+    background: #1746a2;
+}
+
+/* 文档查看页面样式 */
+.document-view-page {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 文档标题部分 - 修复状态标签位置 */
+.document-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start; /* 改为flex-start以对齐顶部 */
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eaeaea;
+    flex-wrap: wrap; /* 允许换行 */
+    gap: 15px; /* 添加间距 */
+}
+
+.doc-title-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1; /* 占据剩余空间 */
+    min-width: 300px; /* 确保有最小宽度 */
+}
+
+.document-header h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.8rem;
+    color: #2c3e50;
+    margin: 0;
+    flex-wrap: wrap; /* 允许标题换行 */
+}
+
+/* 状态标签样式 - 确保所有状态位置一致 */
+.doc-status {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    min-width: 120px;
+    text-align: center;
+    margin-left: 15px;
+    white-space: nowrap; /* 防止状态文本换行 */
+    align-self: flex-start; /* 确保所有状态对齐 */
+}
+
+.status-draft {
+    background: rgba(149, 165, 166, 0.2);
+    color: #848f90;
+}
+
+.status-submitted {
+    background: rgba(52, 152, 219, 0.2);
+    color: #2980b9;
+}
+
+.status-endorsed {
+    background: rgba(46, 204, 113, 0.2);
+    color: #27ae60;
+}
+
+.status-cancelled {
+    background: rgba(231, 76, 60, 0.2);
+    color: #c0392b;
+}
+
+.status-confirm {
+    background: rgba(155, 89, 182, 0.2);
+    color: #8e44ad;
+}
+
+.status-double-check {
+    background: rgba(243, 156, 18, 0.2);
+    color: #d35400;
+}
+
+/* 文档操作按钮 - 减小尺寸 */
+.document-actions {
+    display: flex;
+    gap: 10px; /* 减小间距 */
+    align-items: flex-start; /* 顶部对齐 */
+}
+
+.document-actions .btn {
+    background: #3498db;
+    color: #fff;
+    border: none;
+    border-radius: 6px; /* 减小圆角 */
+    padding: 8px 16px; /* 减小内边距 */
+    font-size: 0.85rem; /* 减小字体大小 */
+    font-weight: 600;
+    box-shadow: 0 2px 5px rgba(52, 152, 219, 0.3);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px; /* 减小图标和文本间距 */
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap; /* 防止按钮文本换行 */
+}
+
+.document-actions .btn:hover {
+    background: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(52, 152, 219, 0.4);
+}
+
+.document-actions .btn i {
+    margin-right: 0;
+    font-size: 0.9rem; /* 减小图标大小 */
+}
+
+/* 文档元数据 */
+.document-meta {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 20px 30px;
+    margin: 20px 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.meta-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.meta-label {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+}
+
+.meta-value {
+    color: #555;
+    font-size: 1rem;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* PDF查看器 */
+.pdf-viewer-container {
+    margin-top: 25px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.pdf-controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.pdf-control-btn {
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.9rem;
+    transition: background 0.3s ease;
+}
+
+.pdf-control-btn:hover {
+    background: #2980b9;
+}
+
+.pdf-viewer-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #eaeaea;
+    min-height: 400px;
+}
+
+.no-pdf-message {
+    text-align: center;
+    color: #666;
+    padding: 40px;
+}
+
+.no-pdf-message i {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    color: #bbb;
+}
+
+/* 页脚样式 */
+footer {
+    text-align: center;
+    padding: 30px 0 20px;
+    color: #7f8c8d;
+    border-top: 1px solid #e0e6ed;
+    width: 100%;
+    background: transparent;
+    margin-top: auto;
+}
+
+/* 响应式设计 */
+@media (max-width: 900px) {
+    .sidebar {
+        width: 260px;
+    }
+    
+    .sidebar:not(.collapsed) {
+        width: 260px;
+        position: absolute;
+        height: 100%;
+        z-index: 1000;
+    }
+    
+    .logo h2, .menu-text {
+        opacity: 0;
+        width: 0;
+        overflow: hidden;
+    }
+    
+    .sidebar:not(.collapsed) .logo h2,
+    .sidebar:not(.collapsed) .menu-text {
+        opacity: 1;
+        width: auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
+    }
+    
+    .document-header {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .document-actions {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .document-meta {
+        grid-template-columns: 1fr;
+        gap: 15px;
+        padding: 15px 20px;
+    }
+    
+    .pdf-viewer-container {
+        padding: 15px;
+    }
+    
+    .doc-title-section {
+        min-width: auto;
+    }
+}
+
+@media (max-width: 600px) {
+    .main-content {
+        padding: 15px;
+    }
+    
+    .document-view-page {
+        padding: 20px;
+    }
+    
+    .pdf-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .pdf-control-btn {
+        justify-content: center;
+    }
+    
+    .document-actions .btn {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+    
+    .document-header h2 {
+        font-size: 1.5rem;
+    }
+    
+    .doc-status {
+        margin-left: 10px;
+        min-width: 100px;
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+}
+    </style>
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+        <div class="logo">
+            <div class="logo-icon">
+                <i class="fas fa-water"></i>
+            </div>
+            <h2>AEL DWSS</h2>
+        </div>
+        
+        <button class="toggle-btn">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        
+        <ul class="menu">
+            <li>
+                <a href="index.html">
+                    <i class="fas fa-home"></i>
+                    <span class="menu-text">Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="sitediary.html">
+                    <i class="fas fa-book"></i>
+                    <span class="menu-text">Site Diary</span>
+                </a>
+            </li>
+            <li>
+                <a href="safetyinspect.html">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span class="menu-text">Safety Inspection</span>
+                </a>
+            </li>
+            <li>
+                <a href="sitelocations.html">
+                    <i class="fas fa-map-marked-alt"></i>
+                    <span class="menu-text">Site Locations</span>
+                </a>
+            </li>
+            <li>
+                <a href="labourwage.html" class="active">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <span class="menu-text">Labour Wage</span>
+                </a>
+            </li>
+            <li>
+                <a href="settings.html">
+                    <i class="fas fa-cogs"></i>
+                    <span class="menu-text">System Settings</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <i class="fas fa-user-circle"></i>
+                    <span class="menu-text">User Management</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+    
+    <!-- 主内容区域 -->
+    <div class="main-content">
+        <div class="header">
+            <h1>DWSS Management System</h1>
+            <div class="header-controls">
+                <div class="user-date-row">
+                    <div class="date-display">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span id="current-date">September 17, 2025</span>
+                    </div>
+                    <button class="user-btn">
+                        <i class="fas fa-user"></i> John Doe
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 文档查看内容 -->
+        <div class="document-view-page">
+            <!-- 修改文档标题部分 -->
+            <div class="document-header">
+                <div class="doc-title-section">
+                    <h2>
+                        <i class="fas fa-file-alt"></i>
+                        <span id="docTitle">Labour Wage Document</span>
+                        <span class="doc-status" id="docStatus">Draft</span>
+                    </h2>
+                </div>
+                <div class="document-actions">
+                    <button class="btn" id="export-pdf-btn"><i class="fas fa-file-pdf"></i> Export PDF</button>
+                    <button class="btn" id="print-btn"><i class="fas fa-print"></i> Print</button>
+                    <button class="btn" id="back-to-wage-btn"><i class="fas fa-arrow-left"></i> Back to Labour Wage</button>
+                </div>
+            </div>
+
+            <!-- 从元数据区域移除 status -->
+            <div class="document-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Document ID:</span>
+                    <span class="meta-value" id="docId">N/A</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Document Type:</span>
+                    <span class="meta-value" id="docType">N/A</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Site:</span>
+                    <span class="meta-value" id="docSite">N/A</span>
+                </div>
+                <!-- 移除 status 项 -->
+                <div class="meta-item">
+                    <span class="meta-label">Period:</span>
+                    <span class="meta-value" id="docPeriod">N/A</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Submitted By:</span>
+                    <span class="meta-value" id="docAuthor">N/A</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Total Amount:</span>
+                    <span class="meta-value" id="docAmount">N/A</span>
+                </div>
+            </div>
+            
+            <!-- PDF 查看器区域 -->
+            <div class="pdf-viewer-container">
+                <div class="pdf-controls">
+                    <button class="pdf-control-btn" id="pdf-zoom-in"><i class="fas fa-search-plus"></i> Zoom In</button>
+                    <button class="pdf-control-btn" id="pdf-zoom-out"><i class="fas fa-search-minus"></i> Zoom Out</button>
+                    <button class="pdf-control-btn" id="pdf-fit-width"><i class="fas fa-arrows-alt-h"></i> Fit Width</button>
+                    <button class="pdf-control-btn" id="pdf-fit-page"><i class="fas fa-expand"></i> Fit Page</button>
+                </div>
+                <div class="pdf-viewer-content" id="pdf-content">
+                    <!-- PDF内容将动态加载 -->
+                    <div class="no-pdf-message">
+                        <i class="fas fa-file-pdf"></i>
+                        <h3>No PDF document available for this wage record</h3>
+                        <p>The PDF preview will appear here when available</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 页脚 -->
+            <footer>
+                <p>&copy; 2025 AEL DWSS System. All rights reserved.</p>
+                <p>AEL DWSS Platform</p>
+            </footer>
+        </div>
+    </div>
+
+    <script>
+        // 侧边栏折叠功能
+        document.querySelector('.toggle-btn').addEventListener('click', function() {
+            document.querySelector('.sidebar').classList.toggle('collapsed');
+        });
+
+        // 更新当前日期
+        const now = new Date();
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', options);
+
+        // 从sessionStorage获取文档数据
+        document.addEventListener('DOMContentLoaded', function() {
+            const wageRecord = JSON.parse(sessionStorage.getItem('currentWageRecord'));
+            
+            // 显示文件资料
+            if (wageRecord) {
+                // 设置文档信息
+                document.getElementById('docId').textContent = wageRecord.id || 'N/A';
+                document.getElementById('docTitle').textContent = `${wageRecord.typeText} - ${wageRecord.site}`;
+                document.getElementById('docType').textContent = wageRecord.typeText || 'N/A';
+                document.getElementById('docSite').textContent = wageRecord.site || 'N/A';
+                document.getElementById('docPeriod').textContent = wageRecord.period || 'N/A';
+                document.getElementById('docAuthor').textContent = wageRecord.submittedBy || 'N/A';
+                document.getElementById('docAmount').textContent = wageRecord.amount ? `$${wageRecord.amount}` : 'N/A';
+                
+                // 设置状态文本和样式
+                const statusElement = document.getElementById('docStatus');
+                statusElement.textContent = wageRecord.statusText || 'Draft';
+
+                // 清除现有样式类
+                statusElement.className = 'doc-status';
+
+                // 添加对应状态的样式类
+                if (wageRecord.status === 'draft') {
+                    statusElement.classList.add('status-draft');
+                } else if (wageRecord.status === 'submitted') {
+                    statusElement.classList.add('status-submitted');
+                } else if (wageRecord.status === 'endorsed') {
+                    statusElement.classList.add('status-endorsed');
+                } else if (wageRecord.status === 'cancelled') {
+                    statusElement.classList.add('status-cancelled');
+                } else if (wageRecord.status === 'confirm') {
+                    statusElement.classList.add('status-confirm');
+                } else if (wageRecord.status === 'double-check') {
+                    statusElement.classList.add('status-double-check');
+                }
+                
+                // 如果有PDF URL，显示PDF预览
+                if (wageRecord.pdfUrl) {
+                    // 在实际应用中，这里会加载PDF
+                    // 现在只是模拟加载
+                    setTimeout(() => {
+                        const pdfContent = document.getElementById('pdf-content');
+                        pdfContent.innerHTML = `
+                            <div style="text-align: center; padding: 20px;">
+                                <i class="fas fa-file-pdf" style="font-size: 4rem; color: #e74c3c; margin-bottom: 15px;"></i>
+                                <h3>PDF Preview: ${wageRecord.id}</h3>
+                                <p>In a real application, the PDF would be displayed here using a PDF viewer library.</p>
+                                <button class="btn" style="margin-top: 15px;">
+                                    <i class="fas fa-download"></i> Download PDF
+                                </button>
+                            </div>
+                        `;
+                    }, 1000);
+                }
+            }
+            
+            // 返回按钮事件
+            document.getElementById('back-to-wage-btn').addEventListener('click', function() {
+                window.location.href = 'labourwage.html';
+            });
+            
+            // 打印功能
+            document.getElementById('print-btn').addEventListener('click', function() {
+                window.print();
+            });
+            
+            // 导出PDF功能
+            document.getElementById('export-pdf-btn').addEventListener('click', function() {
+                alert('PDF export functionality would be implemented here.');
+            });
+            
+            // PDF控制按钮事件
+            document.getElementById('pdf-zoom-in').addEventListener('click', function() {
+                alert('Zoom In functionality would be implemented here.');
+            });
+            
+            document.getElementById('pdf-zoom-out').addEventListener('click', function() {
+                alert('Zoom Out functionality would be implemented here.');
+            });
+            
+            document.getElementById('pdf-fit-width').addEventListener('click', function() {
+                alert('Fit Width functionality would be implemented here.');
+            });
+            
+            document.getElementById('pdf-fit-page').addEventListener('click', function() {
+                alert('Fit Page functionality would be implemented here.');
+            });
+        });
+    </script>
+</body>
+</html>
