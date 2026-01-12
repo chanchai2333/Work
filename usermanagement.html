@@ -93,48 +93,47 @@
                 <button id="add-user-btn">
                     <i class="fas fa-plus"></i> <span data-i18n="add.user">Add New User</span>
                 </button>
-                <button id="export-users-btn">
-                    <i class="fas fa-file-export"></i> <span data-i18n="export.users">Export Users</span>
-                </button>
             </div>
         </div>
         
         <!-- 用户管理主要内容区域 -->
         <div class="user-management-page">
             <div class="user-stats">
-                <div class="stat-card">
-                    <div class="label" data-i18n="total.users">Total Users</div>
-                    <div class="value" id="total-users-count">53</div>
-                </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #2ecc71, #27ae60);">
-                    <div class="label" data-i18n="active.users">Active Users</div>
-                    <div class="value" id="active-users-count">47</div>
-                </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #f39c12, #d35400);">
-                    <div class="label" data-i18n="pending.users">Pending Activation</div>
-                    <div class="value" id="pending-users-count">6</div>
-                </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">
-                    <div class="label" data-i18n="admin.users">Admin Users</div>
-                    <div class="value" id="admin-users-count">12</div>
-                </div>
+            <div class="stat-card">
+                <div class="label" data-i18n="total.users">Total Users</div>
+                <div class="value" id="total-users-count">53</div>
             </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #2ecc71, #27ae60);">
+                <div class="label" data-i18n="online.users">Online Users</div>
+                <div class="value" id="online-users-count">47</div> <!-- 改为 online -->
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #f39c12, #d35400);">
+                <div class="label" data-i18n="offline.users">Offline Users</div>
+                <div class="value" id="offline-users-count">6</div> <!-- 改为 offline -->
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">
+                <div class="label" data-i18n="admin.users">Admin Users</div>
+                <div class="value" id="admin-users-count">12</div>
+            </div>
+        </div>
+        </div>
             
             <!-- 筛选器区域 -->
             <div class="filters-section">
-                <div class="filter-group">
-                    <button class="filter-toggle">
-                        <span>All Roles</span>
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
-                    <div class="filter-options">
-                        <div class="filter-option active" data-filter="role" data-value="all">All Roles</div>
-                        <div class="filter-option" data-filter="role" data-value="admin">Admin</div>
-                        <div class="filter-option" data-filter="role" data-value="officer">Officer</div>
-                        <div class="filter-option" data-filter="role" data-value="inspector">Inspector</div>
-                        <div class="filter-option" data-filter="role" data-value="contractor">Contractor</div>
-                    </div>
+            <div class="filter-group">
+                <button class="filter-toggle">
+                    <span>All Roles</span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="filter-options">
+                    <div class="filter-option active" data-filter="role" data-value="all">All Roles</div>
+                    <div class="filter-option" data-filter="role" data-value="admin">Admin</div>
+                    <div class="filter-option" data-filter="role" data-value="officer">Officer</div>
+                    <div class="filter-option" data-filter="role" data-value="aei">AEI</div> <!-- 添加 AEI 选项 -->
+                    <div class="filter-option" data-filter="role" data-value="inspector">Inspector</div>
+                    <div class="filter-option" data-filter="role" data-value="contractor">Contractor</div>
                 </div>
+            </div>
                 
                 <div class="filter-group">
                     <button class="filter-toggle">
@@ -143,12 +142,11 @@
                     </button>
                     <div class="filter-options">
                         <div class="filter-option active" data-filter="status" data-value="all">All Status</div>
-                        <div class="filter-option" data-filter="status" data-value="active">Active</div>
-                        <div class="filter-option" data-filter="status" data-value="inactive">Inactive</div>
-                        <div class="filter-option" data-filter="status" data-value="pending">Pending</div>
+                        <div class="filter-option" data-filter="status" data-value="online">Online</div>
+                        <div class="filter-option" data-filter="status" data-value="offline">Offline</div>
                     </div>
                 </div>
-                
+
                 <div class="filter-group">
                     <button class="filter-toggle">
                         <span>Sort by Name</span>
@@ -164,33 +162,30 @@
             </div>
             
             <!-- 用户列表表格 -->
-            <div class="content-section">
-                <div class="table-header">
-                    <div class="table-title">
-                        <i class="fas fa-users"></i> <span data-i18n="user.list">User List</span>
-                    </div>
-                    <div class="table-controls">
-                        <button class="action-btn refresh-btn">
-                            <i class="fas fa-sync-alt"></i> <span data-i18n="refresh">Refresh</span>
-                        </button>
-                    </div>
+                    <div class="content-section">
+            <div class="table-header">
+                <div class="table-title">
+                    <i class="fas fa-users"></i> <span data-i18n="user.list">User List</span>
                 </div>
-                
-                <div class="table-container">
-                    <table class="diary-table" id="users-table">
-                        <thead>
-                            <tr>
-                                <th width="5%">
-                                    <input type="checkbox" id="select-all-users">
-                                </th>
-                                <th width="35%" data-i18n="user.role.name">User Role / Name</th>
-                                <th width="25%" data-i18n="email.address">Email Address</th>
-                                <th width="15%" data-i18n="user.role">Role</th>
-                                <th width="10%" data-i18n="status">Status</th>
-                                <th width="10%" data-i18n="actions">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="users-table-body">
+                <div class="table-controls">
+                    <button class="action-btn refresh-btn">
+                        <i class="fas fa-sync-alt"></i> <span data-i18n="refresh">Refresh</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="diary-table" id="users-table">
+                    <thead>
+                        <tr>
+                            <th width="40%" data-i18n="user.role.name">User Role / Name</th>
+                            <th width="25%" data-i18n="email.address">Email Address</th>
+                            <th width="15%" data-i18n="user.role">Role</th>
+                            <th width="10%" data-i18n="status">Status</th>
+                            <th width="10%" data-i18n="actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body">
                             <!-- 用户数据将通过JavaScript动态加载 -->
                         </tbody>
                     </table>
@@ -229,57 +224,57 @@
                 </div>
             </div>
         </div>
-        
-        <footer>
-            <p data-i18n="copyright">&copy; 2025 AEL DWSS System. All rights reserved.</p>
-            <p data-i18n="platform">AEL DWSS Platform</p>
-        </footer>
     </div>
     
     <!-- 添加用户模态框 -->
     <div id="add-user-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <h3><i class="fas fa-user-plus"></i> <span data-i18n="add.new.user">Add New User</span></h3>
-            <form id="add-user-form">
-                <div class="form-group">
-                    <label for="input-user-name" data-i18n="full.name">Full Name</label>
-                    <input type="text" id="input-user-name" required>
-                </div>
-                <div class="form-group">
-                    <label for="input-user-email" data-i18n="email.address">Email Address</label>
-                    <input type="email" id="input-user-email" required>
-                </div>
-                <div class="form-group">
-                    <label for="input-user-role" data-i18n="user.role">Role</label>
-                    <select id="input-user-role" required>
-                        <option value="" data-i18n="select.role">Select Role</option>
-                        <option value="admin" data-i18n="role.admin">Administrator</option>
-                        <option value="officer" data-i18n="role.officer">Administration Officer</option>
-                        <option value="aei" data-i18n="role.aei">AEI</option>
-                        <option value="inspector" data-i18n="role.inspector">Inspector</option>
-                        <option value="contractor" data-i18n="role.contractor">Contractor</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="input-user-department" data-i18n="department">Department</label>
-                    <input type="text" id="input-user-department">
-                </div>
-                <div class="form-group">
-                    <label for="input-user-status" data-i18n="status">Status</label>
-                    <select id="input-user-status" required>
-                        <option value="active" data-i18n="status.active">Active</option>
-                        <option value="pending" data-i18n="status.pending">Pending Activation</option>
-                        <option value="inactive" data-i18n="status.inactive">Inactive</option>
-                    </select>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn btn-secondary" id="cancel-add-user" data-i18n="cancel">Cancel</button>
-                    <button type="submit" class="btn" data-i18n="add.user">Add User</button>
-                </div>
-            </form>
-        </div>
+    <div class="modal-content">
+        <h3><i class="fas fa-user-plus"></i> <span data-i18n="add.new.user">Add New User</span></h3>
+        <form id="add-user-form">
+            <div class="form-group">
+                <label for="input-user-name" data-i18n="full.name">Full Name</label>
+                <input type="text" id="input-user-name" required>
+            </div>
+            <div class="form-group">
+                <label for="input-user-email" data-i18n="email.address">Email Address</label>
+                <input type="email" id="input-user-email" required>
+            </div>
+            <div class="form-group">
+                <label for="input-user-role" data-i18n="user.role">Role</label>
+                <select id="input-user-role" required>
+                    <option value="" data-i18n="select.role">Select Role</option>
+                    <option value="admin" data-i18n="role.admin">Administrator</option>
+                    <option value="officer" data-i18n="role.officer">Administration Officer</option>
+                    <option value="aei" data-i18n="role.aei">AEI</option>
+                    <option value="inspector" data-i18n="role.inspector">Inspector</option>
+                    <option value="contractor" data-i18n="role.contractor">Contractor</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="input-user-department" data-i18n="department">Department</label>
+                <input type="text" id="input-user-department">
+            </div>
+            <div class="form-group">
+                <label for="input-user-status" data-i18n="status">Status</label>
+                <select id="input-user-status" required>
+                    <option value="online" data-i18n="status.online">Online</option> <!-- 改为 online -->
+                    <option value="offline" data-i18n="status.offline">Offline</option> <!-- 改为 offline -->
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancel-add-user" data-i18n="cancel">Cancel</button>
+                <button type="submit" class="btn" data-i18n="add.user">Add User</button>
+            </div>
+        </form>
     </div>
-    
+</div>
+
+<footer>
+    <div class="footer-content">
+        <p data-i18n="copyright">&copy; 2025 AEL DWSS System. All rights reserved.</p>
+        <p data-i18n="platform">AEL DWSS Platform</p>
+    </div>
+</footer>
     <!-- 引入语言配置文件 -->
     <script src="scripts/language.js"></script>
     <script src="scripts/usermanagement.js"></script>
