@@ -12,7 +12,13 @@
             background-color: #f5f7fa;
             color: #333;
             overflow-x: hidden;
-            flex-direction: row; /* 讓 sidebar 和 main-content 水平排列 */
+            flex-direction: column; /* 讓 sidebar 和 main-content 水平排列 */
+        }
+
+        /* 应用容器 - 包含侧边栏和主内容 */
+        .app-container {
+            display: flex;
+            flex: 1;
         }
 
         /* 侧边栏样式 */
@@ -2074,3 +2080,165 @@ body.dark-theme .form-group select {
         padding: 20px;
     }
 }
+
+/* 修复筛选器问题 */
+.filter-options {
+    display: none;
+    position: absolute;
+    z-index: 1000;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    min-width: 200px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.filter-options.open,
+.filter-options.show {
+    display: block !important;
+}
+
+.filter-group {
+    position: relative;
+}
+
+.filter-toggle {
+    cursor: pointer;
+}
+
+/* 新状态样式 */
+.status-online {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-offline {
+    background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* ===== 需要添加的样式 ===== */
+
+/* 修复筛选器显示问题 */
+.filter-options.open,
+.filter-options.show {
+    display: block !important;
+}
+
+/* 新的状态标签样式 */
+.status-online {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-offline {
+    background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* 修复footer布局 - 将footer移到main-content外部 */
+body {
+    display: flex;
+    flex-direction: column; /* 改为垂直布局 */
+    min-height: 100vh;
+}
+
+.main-content {
+    flex: 1; /* 让主内容区域占据剩余空间 */
+    margin-left: 260px; /* 为侧边栏留出空间 */
+    padding: 30px;
+}
+
+.sidebar.collapsed + .main-content {
+    margin-left: 70px; /* 侧边栏收起时的宽度 */
+}
+
+/* 确保footer在页面底部 */
+footer {
+    text-align: center;
+    padding: 20px 0;
+    color: #7f8c8d;
+    background: transparent;
+    width: 100%;
+    margin-top: auto; /* 确保在底部 */
+}
+
+/* 緊急修復 - 添加在 main.css 末尾 */
+body {
+    display: flex !important;
+}
+
+.sidebar {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    height: 100vh !important;
+}
+
+.main-content {
+    margin-left: 260px !important;
+    width: calc(100% - 260px) !important;
+    margin-right: 0 !important;
+}
+
+.sidebar.collapsed + .main-content {
+    margin-left: 70px !important;
+    width: calc(100% - 70px) !important;
+}
+
+@media (max-width: 900px) {
+    .sidebar:not(.collapsed) {
+        width: 260px !important;
+        position: fixed !important;
+        z-index: 1000 !important;
+    }
+    
+    .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+}
+
+/* 在 main.css 末尾添加，用於覆蓋通用樣式 */
+.user-management-page .content-section {
+    margin: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+}
+
+/* 在 main.css 末尾添加 */
+.user-management-page .table-container {
+    overflow-x: auto;
+    width: 100%;
+}
+
+.user-management-page .diary-table {
+    min-width: 1000px; /* 確保表格足夠寬 */
+}
+
+/* 修正表頭寬度 */
+.user-management-page .diary-table th:nth-child(1) { width: 5%; }
+.user-management-page .diary-table th:nth-child(2) { width: 30%; }
+.user-management-page .diary-table th:nth-child(3) { width: 25%; }
+.user-management-page .diary-table th:nth-child(4) { width: 15%; }
+.user-management-page .diary-table th:nth-child(5) { width: 15%; }
+.user-management-page .diary-table th:nth-child(6) { width: 10%; }
