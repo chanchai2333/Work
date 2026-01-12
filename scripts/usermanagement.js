@@ -7,7 +7,7 @@ const UserManagement = {
             email: "admin@rdrive.io",
             role: "admin",
             department: "System Administration",
-            status: "active",
+            status: "online",  // 改为 online
             addedDate: "2024-01-15"
         },
         { 
@@ -16,7 +16,7 @@ const UserManagement = {
             email: "kenneth.daluz@aster-dsd.com",
             role: "officer",
             department: "Administration",
-            status: "active",
+            status: "online",  // 改为 online
             addedDate: "2024-02-10"
         },
         { 
@@ -25,7 +25,7 @@ const UserManagement = {
             email: "gcifang@dsd.gov.hk",
             role: "aei",
             department: "AEI/NWNT",
-            status: "active",
+            status: "online",  // 改为 online
             addedDate: "2024-02-15"
         },
         { 
@@ -34,7 +34,7 @@ const UserManagement = {
             email: "wcfung04@dsd.gov.hk",
             role: "aei",
             department: "AEI/SWH",
-            status: "active",
+            status: "online",  // 改为 online
             addedDate: "2024-03-01"
         },
         { 
@@ -43,7 +43,7 @@ const UserManagement = {
             email: "ipwong02@dsd.gov.hk",
             role: "aei",
             department: "AEI/SWH/1",
-            status: "active",
+            status: "online",  // 改为 online
             addedDate: "2024-03-05"
         },
         { 
@@ -52,7 +52,7 @@ const UserManagement = {
             email: "cmcha02@dsd.gov.hk",
             role: "aei",
             department: "AMI/TM",
-            status: "active",
+            status: "online",  // 改为 online
             addedDate: "2024-03-10"
         },
         { 
@@ -61,7 +61,7 @@ const UserManagement = {
             email: "john.smith@ael-dwss.com",
             role: "inspector",
             department: "Safety Inspection",
-            status: "active",
+            status: "online",  // 改为 online
             addedDate: "2024-03-15"
         },
         { 
@@ -70,7 +70,7 @@ const UserManagement = {
             email: "sarah.j@ael-dwss.com",
             role: "contractor",
             department: "Contractor Team A",
-            status: "pending",
+            status: "offline",  // 改为 offline (原pending)
             addedDate: "2024-04-01"
         },
         { 
@@ -79,7 +79,7 @@ const UserManagement = {
             email: "robert.chen@dsd.gov.hk",
             role: "officer",
             department: "Documentation",
-            status: "active",
+            status: "online",  // 改为 online
             addedDate: "2024-04-05"
         },
         { 
@@ -88,7 +88,7 @@ const UserManagement = {
             email: "emma.w@ael-dwss.com",
             role: "inspector",
             department: "Quality Control",
-            status: "inactive",
+            status: "offline",  // 改为 offline (原inactive)
             addedDate: "2024-04-10"
         }
     ],
@@ -164,28 +164,21 @@ const UserManagement = {
                 case "contractor": roleText = "Contractor"; break;
             }
             
-            // 获取状态显示文本和样式
+            // 获取状态显示文本和样式 (改为 online/offline)
             let statusText = "";
             let statusClass = "";
             switch(user.status) {
-                case "active":
-                    statusText = "Active";
-                    statusClass = "status-active";
+                case "online":
+                    statusText = "Online";
+                    statusClass = "status-online";  // 更新类名
                     break;
-                case "inactive":
-                    statusText = "Inactive";
-                    statusClass = "status-inactive";
-                    break;
-                case "pending":
-                    statusText = "Pending";
-                    statusClass = "status-pending";
+                case "offline":
+                    statusText = "Offline";
+                    statusClass = "status-offline";  // 更新类名
                     break;
             }
             
             row.innerHTML = `
-                <td>
-                    <input type="checkbox" class="user-checkbox" data-id="${user.id}">
-                </td>
                 <td>
                     <div class="user-info">
                         <div class="user-name">${user.name}</div>
@@ -237,33 +230,54 @@ const UserManagement = {
     },
     
     updateUserStats: function() {
-        const total = this.users.length;
-        const active = this.users.filter(u => u.status === 'active').length;
-        const pending = this.users.filter(u => u.status === 'pending').length;
-        const admin = this.users.filter(u => u.role === 'admin').length;
-        
+    const total = this.users.length;
+    const active = this.users.filter(u => u.status === 'active').length;
+    const pending = this.users.filter(u => u.status === 'pending').length;
+    const admin = this.users.filter(u => u.role === 'admin').length;
+    
+    // 確保 DOM 元素存在
+    if (document.getElementById('total-users-count')) {
         document.getElementById('total-users-count').textContent = total;
+    }
+    if (document.getElementById('active-users-count')) {
         document.getElementById('active-users-count').textContent = active;
+    }
+    if (document.getElementById('pending-users-count')) {
         document.getElementById('pending-users-count').textContent = pending;
+    }
+    if (document.getElementById('admin-users-count')) {
         document.getElementById('admin-users-count').textContent = admin;
-    },
+    }
+},
     
     setupFilterEvents: function() {
         document.querySelectorAll('.filter-group').forEach(group => {
             const toggle = group.querySelector('.filter-toggle');
             const options = group.querySelector('.filter-options');
             
+            // 修复：确保点击切换按钮时能正常打开/关闭
             toggle.addEventListener('click', function(e) {
                 e.stopPropagation();
+                e.preventDefault();  // 防止默认行为
+                
+                // 关闭其他打开的筛选器
                 document.querySelectorAll('.filter-options').forEach(opt => {
-                    if (opt !== options) opt.classList.remove('open');
+                    if (opt !== options) {
+                        opt.classList.remove('open');
+                        opt.classList.remove('show');  // 添加 show 类处理
+                    }
                 });
+                
+                // 切换当前筛选器
                 options.classList.toggle('open');
+                options.classList.toggle('show');  // 添加 show 类处理
             });
             
             group.querySelectorAll('.filter-option').forEach(option => {
                 option.addEventListener('click', function(e) {
                     e.stopPropagation();
+                    e.preventDefault();  // 防止默认行为
+                    
                     group.querySelectorAll('.filter-option').forEach(opt => opt.classList.remove('active'));
                     option.classList.add('active');
                     toggle.querySelector('span').textContent = option.textContent;
@@ -280,12 +294,19 @@ const UserManagement = {
                     
                     UserManagement.renderUserTable();
                     options.classList.remove('open');
+                    options.classList.remove('show');  // 移除 show 类
                 });
             });
         });
         
+        // 点击页面其他地方关闭筛选器
         document.addEventListener('click', function(e) {
-            document.querySelectorAll('.filter-options').forEach(opt => opt.classList.remove('open'));
+            if (!e.target.closest('.filter-group')) {
+                document.querySelectorAll('.filter-options').forEach(opt => {
+                    opt.classList.remove('open');
+                    opt.classList.remove('show');  // 移除 show 类
+                });
+            }
         });
         
         // 搜索表单
@@ -317,13 +338,7 @@ const UserManagement = {
             }
         });
         
-        // 全选/取消全选
-        document.getElementById('select-all-users').addEventListener('change', function() {
-            const checkboxes = document.querySelectorAll('.user-checkbox');
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = this.checked;
-            });
-        });
+        // 移除全选功能，不再需要
     },
     
     setupActionButtons: function() {
@@ -416,6 +431,7 @@ const UserManagement = {
                         user.status = document.getElementById('input-user-status').value;
                         
                         UserManagement.renderUserTable();
+                        UserManagement.updateUserStats();
                         document.getElementById('add-user-modal').style.display = 'none';
                         form.reset();
                         
