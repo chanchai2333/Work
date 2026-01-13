@@ -1,3 +1,9 @@
+// 在 app.js 開頭添加：
+window.addEventListener('error', function(e) {
+    console.error('全局錯誤:', e.error);
+    // 可以顯示用戶友好的錯誤訊息
+    // alert('應用程序發生錯誤，請刷新頁面重試。');
+});
 // ===== 全局配置系统 =====
 const AppConfig = {
     defaults: {
@@ -467,21 +473,36 @@ if (storedDiaries) {
             type: "all"
         };
         
-        // 初始化页面
-        document.addEventListener('DOMContentLoaded', function() {
-            // 初始化表格
-            renderDiaryTable();
-            
-            // 设置筛选器事件
-            setupFilterEvents();
-        });
+        //// 初始化页面
+        //document.addEventListener('DOMContentLoaded', function() {
+        //    // 初始化表格
+        //    renderDiaryTable();
+        //    
+        //    // 设置筛选器事件
+        //    setupFilterEvents();
+        //});
         
         // 渲染表格函数
+        //function renderDiaryTable() {
+        //    const tbody = document.getElementById('diary-table-body');
+        //    const noResults = document.getElementById('no-results-message');
+        //    // 更新總數
+        //    document.getElementById('total-documents-count').textContent = diaryData.length;
         function renderDiaryTable() {
             const tbody = document.getElementById('diary-table-body');
             const noResults = document.getElementById('no-results-message');
-            // 更新總數
-            document.getElementById('total-documents-count').textContent = diaryData.length;
+            const totalCount = document.getElementById('total-documents-count');
+
+            // 如果元素不存在，退出函數
+            if (!tbody) {
+                console.warn('日記表格元素不存在');
+                return;
+            }
+
+            // 更新總數（如果元素存在）
+            if (totalCount) {
+                totalCount.textContent = diaryData.length;
+            }
             // 清空表格
             tbody.innerHTML = '';
             
@@ -671,11 +692,6 @@ document.addEventListener('click', function(e) {
 });
 }
 
-// Make sure to call setupFilterEvents() after DOMContentLoaded
-document.addEventListener('DOMContentLoaded', function() {
-    setupFilterEvents();
-    // ...other init code...
-});
 
 // 在 app.js 的末尾添加
 document.addEventListener('DOMContentLoaded', function() {
@@ -730,9 +746,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // ...existing code...
 
 // 彈窗顯示
-document.querySelector('.nav-buttons button').addEventListener('click', function() {
-    document.getElementById('add-diary-modal').style.display = 'flex';
-});
+//document.querySelector('.nav-buttons button').addEventListener('click', function() {
+//    document.getElementById('add-diary-modal').style.display = 'flex';
+//});
+const addDiaryBtn = document.querySelector('.nav-buttons button');
+if (addDiaryBtn) {
+    addDiaryBtn.addEventListener('click', function() {
+        const modal = document.getElementById('add-diary-modal');
+        if (modal) modal.style.display = 'flex';
+    });
+}
 
 // 彈窗取消
 document.getElementById('cancel-add-diary').addEventListener('click', function() {
@@ -771,3 +794,26 @@ document.getElementById('add-diary-form').addEventListener('submit', function(e)
     });
 });
 
+// 添加到你的app.js文件中
+document.addEventListener('DOMContentLoaded', function() {
+    // ... 其他初始化代码 ...
+    
+    // 处理子菜单展开/折叠
+    const submenuToggles = document.querySelectorAll('.submenu-toggle');
+    submenuToggles.forEach(toggle => {
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            const parentItem = this.closest('.menu-item-with-submenu');
+            parentItem.classList.toggle('active');
+        });
+    });
+    
+    // 如果当前页面在子菜单中，自动展开父菜单
+    const activeSubmenuItem = document.querySelector('.submenu a.active');
+    if (activeSubmenuItem) {
+        const parentMenu = activeSubmenuItem.closest('.menu-item-with-submenu');
+        if (parentMenu) {
+            parentMenu.classList.add('active');
+        }
+    }
+});
