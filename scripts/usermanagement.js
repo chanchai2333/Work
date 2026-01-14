@@ -230,25 +230,40 @@ const UserManagement = {
     },
     
     updateUserStats: function() {
-    const total = this.users.length;
-    const active = this.users.filter(u => u.status === 'active').length;
-    const pending = this.users.filter(u => u.status === 'pending').length;
-    const admin = this.users.filter(u => u.role === 'admin').length;
-    
-    // 確保 DOM 元素存在
-    if (document.getElementById('total-users-count')) {
-        document.getElementById('total-users-count').textContent = total;
-    }
-    if (document.getElementById('active-users-count')) {
-        document.getElementById('active-users-count').textContent = active;
-    }
-    if (document.getElementById('pending-users-count')) {
-        document.getElementById('pending-users-count').textContent = pending;
-    }
-    if (document.getElementById('admin-users-count')) {
-        document.getElementById('admin-users-count').textContent = admin;
-    }
-},
+        const total = this.users.length;
+        const online = this.users.filter(u => u.status === 'online').length;
+        const offline = this.users.filter(u => u.status === 'offline').length;
+        const admin = this.users.filter(u => u.role === 'admin').length;
+
+        // 計算正確的數字（用於調試）
+        console.log(`總用戶: ${total}, 在線: ${online}, 離線: ${offline}, 管理員: ${admin}`);
+
+        // 更新 DOM
+        const totalEl = document.getElementById('total-users-count');
+        const onlineEl = document.getElementById('online-users-count');
+        const offlineEl = document.getElementById('offline-users-count');
+        const adminEl = document.getElementById('admin-users-count');
+
+        if (totalEl) {
+            totalEl.textContent = total;
+            console.log(`更新總用戶數: ${total}`);
+        }
+
+        if (onlineEl) {
+            onlineEl.textContent = online;
+            console.log(`更新在線用戶數: ${online}`);
+        }
+
+        if (offlineEl) {
+            offlineEl.textContent = offline;
+            console.log(`更新離線用戶數: ${offline}`);
+        }
+
+        if (adminEl) {
+            adminEl.textContent = admin;
+            console.log(`更新管理員數: ${admin}`);
+        }
+    },
     
     setupFilterEvents: function() {
         document.querySelectorAll('.filter-group').forEach(group => {
@@ -342,10 +357,19 @@ const UserManagement = {
     },
     
     setupActionButtons: function() {
+        //// 添加用户按钮
+        //document.getElementById('add-user-btn').addEventListener('click', function() {
+        //    document.getElementById('add-user-modal').style.display = 'flex';
+        //});
+
         // 添加用户按钮
-        document.getElementById('add-user-btn').addEventListener('click', function() {
-            document.getElementById('add-user-modal').style.display = 'flex';
-        });
+        const addUserBtn = document.getElementById('add-user-btn');
+        if (addUserBtn) {
+            addUserBtn.addEventListener('click', function() {
+                const modal = document.getElementById('add-user-modal');
+                if (modal) modal.style.display = 'flex';
+            });
+        }
         
         // 取消添加用户
         document.getElementById('cancel-add-user').addEventListener('click', function() {
@@ -353,10 +377,6 @@ const UserManagement = {
             document.getElementById('add-user-form').reset();
         });
         
-        // 导出用户按钮
-        document.getElementById('export-users-btn').addEventListener('click', function() {
-            alert('Exporting user data...');
-        });
         
         // 刷新按钮
         document.querySelector('.refresh-btn').addEventListener('click', function() {
