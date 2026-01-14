@@ -2242,3 +2242,68 @@ body {
 .user-management-page .diary-table th:nth-child(4) { width: 15%; }
 .user-management-page .diary-table th:nth-child(5) { width: 15%; }
 .user-management-page .diary-table th:nth-child(6) { width: 10%; }
+
+/* 添加到你的main.css文件中 */
+
+/* 侧边栏子菜单样式 */
+.menu-item-with-submenu {
+    position: relative;
+}
+
+.menu-item-with-submenu > a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.submenu-arrow {
+    font-size: 0.8em;
+    transition: transform 0.3s ease;
+}
+
+.menu-item-with-submenu.active .submenu-arrow {
+    transform: rotate(180deg);
+}
+
+.submenu {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    padding-left: 1.5rem;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.menu-item-with-submenu.active .submenu {
+    max-height: 500px;
+}
+
+.submenu li {
+    margin: 0.3rem 0;
+}
+
+.submenu a {
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    color: #666;
+}
+
+.submenu a:hover {
+    background-color: rgba(52, 152, 219, 0.1);
+    color: #3498db;
+}
+
+.submenu a.active {
+    background-color: rgba(52, 152, 219, 0.15);
+    color: #3498db;
+    font-weight: 600;
+}
+
+/* 侧边栏折叠时的子菜单样式 */
+.sidebar.collapsed .menu-item-with-submenu > a .submenu-arrow {
+    display: none;
+}
+
+.sidebar.collapsed .submenu {
+    display: none;
+}
