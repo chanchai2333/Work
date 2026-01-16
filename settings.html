@@ -25,43 +25,43 @@
             <li>
                 <a href="index.html">
                     <i class="fas fa-home"></i>
-                    <span class="menu-text">Dashboard</span>
+                    <span class="menu-text" data-i18n="dashboard">Dashboard</span>
                 </a>
             </li>
             <li>
                 <a href="sitediary.html">
                     <i class="fas fa-book"></i>
-                    <span class="menu-text">Site Diary</span>
+                    <span class="menu-text" data-i18n="site.diary">Site Diary</span>
                 </a>
             </li>
             <li>
                 <a href="safetyinspect.html">
                     <i class="fas fa-clipboard-check"></i>
-                    <span class="menu-text">Safety Inspection</span>
+                    <span class="menu-text" data-i18n="safety.inspection">Safety Inspection</span>
                 </a>
             </li>
             <li>
                 <a href="sitelocations.html">
                     <i class="fas fa-map-marked-alt"></i>
-                    <span class="menu-text">Site Locations</span>
+                    <span class="menu-text" data-i18n="site.locations">Site Locations</span>
                 </a>
             </li>
             <li>
                 <a href="labourwage.html">
                     <i class="fas fa-money-bill-wave"></i>
-                    <span class="menu-text">Labour Wage</span>
+                    <span class="menu-text" data-i18n="labour.wage">Labour Wage</span>
                 </a>
             </li>
             <li>
                 <a href="settings.html">
                     <i class="fas fa-cogs"></i>
-                    <span class="menu-text">System Settings</span>
+                    <span class="menu-text" data-i18n="system.settings">System Settings</span>
                 </a>
             </li>
             <li>
                 <a href="usermanagement.html">
                     <i class="fas fa-user-circle"></i>
-                    <span class="menu-text">User Management</span>
+                    <span class="menu-text" data-i18n="user.management">User Management</span>
                 </a>
             </li>
         </ul>
@@ -70,7 +70,7 @@
     <!-- 主内容区域 -->
     <div class="main-content">
         <div class="header">
-            <h1>System Settings</h1>
+            <h1 data-i18n="system.settings">System Settings</h1>
             <div class="header-controls">
                 <div class="user-date-row">
                     <div class="date-display">
@@ -86,14 +86,14 @@
         
         <div class="search-buttons">
             <form id="search-form" action="#" method="get">
-                <input type="text" name="search" placeholder="Search settings..." />
-                <button type="submit">Search</button>
+                <input type="text" name="search" data-i18n-placeholder="search.placeholder" placeholder="Search settings..." />
+                <button type="submit" data-i18n="search">Search</button>
             </form>
         </div>
         
         <div class="dashboard">
             <h2>System Configuration</h2>
-            <p>Configure system preferences, appearance, and integration settings. Changes will be applied system-wide.</p>
+            <p data-i18n="configure.preferences">Configure system preferences, appearance, and integration settings. Changes will be applied system-wide.</p>
             
             <!-- 设置卡片布局 -->
             <div class="feature-cards">
@@ -104,32 +104,32 @@
                             <div class="card-icon">
                                 <i class="fas fa-desktop"></i>
                             </div>
-                            <span>Display Settings</span>
+                            <span data-i18n="display.settings">Display Settings</span>
                         </div>
-                        <div class="card-badge">
+                        <div class="card-badge" data-i18n="active">
                             <i class="fas fa-check-circle"></i> Active
                         </div>
                     </div>
                     
                     <div class="settings-form">
                         <div class="form-group">
-                            <label for="theme">Theme</label>
+                            <label for="theme" data-i18n="theme">Theme</label>
                             <select id="theme" class="form-control">
-                                <option value="light">Light Theme</option>
-                                <option value="dark">Dark Theme</option>
+                                <option value="light" data-i18n="light.theme">Light Theme</option>
+                                <option value="dark" data-i18n="dark.theme">Dark Theme</option>
                             </select>
                         </div>
                         
                         <div class="form-group">
-                            <label for="language">Language</label>
+                            <label for="language" data-i18n="language">Language</label>
                             <select id="language" class="form-control">
-                                <option value="en">English</option>
-                                <option value="zh">中文</option>
+                                <option value="en" data-i18n="english">English</option>
+                                <option value="zh" data-i18n="chinese">中文</option>
                             </select>
                         </div>
                         
                         <div class="form-group">
-                            <label for="date-format">Date Format</label>
+                            <label for="date-format" data-i18n="date.format">Date Format</label>
                             <select id="date-format" class="form-control">
                                 <option value="dd-mm-yyyy">DD-MM-YYYY</option>
                                 <option value="mm-dd-yyyy">MM-DD-YYYY</option>
@@ -137,7 +137,7 @@
                             </select>
                         </div>            
                         <div class="form-group">
-                            <label for="results-per-page">Results Per Page</label>
+                            <label for="results-per-page" data-i18n="results.per.page">Results Per Page</label>
                             <select id="results-per-page" class="form-control">
                                 <option value="10">10</option>
                                 <option value="25">25</option>
@@ -147,10 +147,10 @@
                         </div>
                         
                         <div class="settings-actions">
-                            <button class="btn btn-primary">
+                            <button class="btn btn-primary" id="save-display-settings" data-i18n="save.display.settings">
                                 <i class="fas fa-save"></i> Save Display Settings
                             </button>
-                            <button class="btn btn-secondary">
+                            <button class="btn btn-secondary" id="reset-display-settings" data-i18n="reset.to.default">
                                 <i class="fas fa-undo"></i> Reset to Default
                             </button>
                         </div>
@@ -164,16 +164,17 @@
                             <div class="card-icon">
                                 <i class="fas fa-file-pdf"></i>
                             </div>
-                            <span>Initial PDF Upload</span>
+                            <span data-i18n="initial.pdf.upload">Initial PDF Upload</span>
                         </div>
                         <div class="card-badge">
-                            <i class="fas fa-exclamation-circle"></i> Required
+                            <!--i class="fas fa-exclamation-circle"></i> Required-->
+                            <span class="card-badge" data-i18n="required">Required</span>
                         </div>
                     </div>
                     
                     <div class="settings-form">
                         <div class="form-group">
-                            <label>Current PDF Files</label>
+                            <label data-i18n="current.pdf.files">Current PDF Files</label>
                             <div class="file-list">
                                 <div class="file-item">
                                     <i class="fas fa-file-pdf"></i>
@@ -193,32 +194,32 @@
                         </div>
                         
                         <div class="form-group">
-                            <label for="pdf-upload">Upload New PDF</label>
+                            <label for="pdf-upload" data-i18n="upload.new.pdf">Upload New PDF</label>
                             <div class="upload-area" id="pdf-upload">
                                 <i class="fas fa-cloud-upload-alt"></i>
-                                <p>Drag & drop PDF files here or click to browse</p>
+                                <p data-i18n="drag.drop.pdf">Drag & drop PDF files here or click to browse</p>
                                 <input type="file" accept=".pdf" multiple style="display: none;">
-                                <button class="btn btn-outline">Select Files</button>
+                                <button class="btn btn-outline" data-i18n="select.files">Select Files</button>
                             </div>
                         </div>
                         
                         <div class="form-group">
-                            <label for="auto-process">Auto-process Settings</label>
+                            <label for="auto-process" data-i18n="auto.process.settings">Auto-process Settings</label>
                             <div class="checkbox-group">
                                 <input type="checkbox" id="auto-process" checked>
-                                <label for="auto-process">Automatically process uploaded PDFs</label>
+                                <label for="auto-process" data-i18n="auto.process.pdfs">Automatically process uploaded PDFs</label>
                             </div>
                             <div class="checkbox-group">
                                 <input type="checkbox" id="overwrite-existing">
-                                <label for="overwrite-existing">Overwrite existing files with same name</label>
+                                <label for="overwrite-existing" data-i18n="overwrite.existing">Overwrite existing files with same name</label>
                             </div>
                         </div>
                         
                         <div class="settings-actions">
-                            <button class="btn btn-primary">
+                            <button class="btn btn-primary" data-i18n="upload.process">
                                 <i class="fas fa-upload"></i> Upload & Process
                             </button>
-                            <button class="btn btn-secondary">
+                            <button class="btn btn-secondary" data-i18n="refresh.list">
                                 <i class="fas fa-sync"></i> Refresh List
                             </button>
                         </div>
@@ -232,68 +233,71 @@
                             <div class="card-icon">
                                 <i class="fas fa-envelope"></i>
                             </div>
-                            <span>Email Settings</span>
+                            <span data-i18n="email.settings">Email Settings</span>
                         </div>
                         <div class="card-badge">
-                            <i class="fas fa-check-circle"></i> Configured
+                            <i class="fas fa-check-circle"></i>
+                            <span class="card-badge" data-i18n="configured">Configured</span>
                         </div>
                     </div>
                     
                     <div class="settings-form">
                         <div class="form-group">
-                            <label for="smtp-server">SMTP Server</label>
+                            <label for="smtp-server" data-i18n="smtp.server">SMTP Server</label>
                             <input type="text" id="smtp-server" class="form-control" value="smtp.office365.com">
                         </div>
                         
                         <div class="form-group">
-                            <label for="smtp-port">SMTP Port</label>
+                            <label for="smtp-port" data-i18n="smtp.port">SMTP Port</label>
                             <input type="number" id="smtp-port" class="form-control" value="587">
                         </div>
                         
                         <div class="form-group">
-                            <label for="email-username">Email Username</label>
+                            <label for="email-username" data-i18n="email.username">Email Username</label>
                             <input type="text" id="email-username" class="form-control" value="noreply@aeldwss.com">
                         </div>
                         
                         <div class="form-group">
-                            <label for="email-password">Email Password</label>
+                            <label for="email-password" data-i18n="email.password">Email Password</label>
                             <div class="password-input">
-                                <input type="password" id="email-password" class="form-control" value="••••••••">
-                                <button class="btn-icon toggle-password"><i class="fas fa-eye"></i></button>
+                                <input type="password" id="email-password" class="form-control" value="password123">
+                                <button type="button" class="password-toggle-btn">
+                                    <i class="fas fa-eye"></i>
+                                </button>
                             </div>
                         </div>
                         
                         <div class="form-group">
-                            <label for="from-address">From Address</label>
+                            <label for="from-address" data-i18n="from.address">From Address</label>
                             <input type="email" id="from-address" class="form-control" value="noreply@aeldwss.com">
                         </div>
                         
                         <div class="form-group">
-                            <label for="from-name">From Name</label>
+                            <label for="from-name" data-i18n="from.name">From Name</label>
                             <input type="text" id="from-name" class="form-control" value="AEL DWSS System">
                         </div>
                         
                         <div class="form-group">
-                            <label>Email Notifications</label>
+                            <label data-i18n="email.notifications">Email Notifications</label>
                             <div class="checkbox-group">
                                 <input type="checkbox" id="notify-diary" checked>
-                                <label for="notify-diary">Site diary submissions</label>
+                                <label for="notify-diary" data-i18n="notify.diary">Site diary submissions</label>
                             </div>
                             <div class="checkbox-group">
                                 <input type="checkbox" id="notify-safety" checked>
-                                <label for="notify-safety">Safety inspection alerts</label>
+                                <label for="notify-safety" data-i18n="notify.safety">Safety inspection alerts</label>
                             </div>
                             <div class="checkbox-group">
                                 <input type="checkbox" id="notify-system">
-                                <label for="notify-system">System updates</label>
+                                <label for="notify-system" data-i18n="notify.system">System updates</label>
                             </div>
                         </div>
                         
                         <div class="settings-actions">
-                            <button class="btn btn-primary">
+                            <button class="btn btn-primary" data-i18n="save.email.settings">
                                 <i class="fas fa-save"></i> Save Email Settings
                             </button>
-                            <button class="btn btn-outline">
+                            <button class="btn btn-outline" data-i18n="test.configuration">
                                 <i class="fas fa-paper-plane"></i> Test Configuration
                             </button>
                         </div>
@@ -307,65 +311,65 @@
                             <div class="card-icon">
                                 <i class="fas fa-download"></i>
                             </div>
-                            <span>Download Path Settings</span>
+                            <span data-i18n="download.path.settings">Download Path Settings</span>
                         </div>
-                        <div class="card-badge">
+                        <div class="card-badge" data-i18n="needs.review">
                             <i class="fas fa-exclamation-triangle"></i> Needs Review
                         </div>
                     </div>
                     
                     <div class="settings-form">
                         <div class="form-group">
-                            <label for="default-download-path">Default Download Path</label>
+                            <label for="default-download-path" data-i18n="default.download.path">Default Download Path</label>
                             <div class="path-input">
                                 <input type="text" id="default-download-path" class="form-control" value="C:\Users\JohnDoe\Downloads\AEL_DWSS">
-                                <button class="btn btn-outline browse-btn">Browse</button>
+                                <button class="btn btn-outline browse-btn" data-i18n="browse">Browse</button>
                             </div>
                         </div>
                         
                         <div class="form-group">
-                            <label for="folder-structure">Folder Structure</label>
+                             <label for="folder-structure" data-i18n="folder.structure">Folder Structure</label>
                             <select id="folder-structure" class="form-control">
-                                <option value="flat">Flat Structure (all files in one folder)</option>
-                                <option value="by-date">Organize by Date (YYYY/MM/DD)</option>
-                                <option value="by-type" selected>Organize by Document Type</option>
-                                <option value="by-site">Organize by Site</option>
+                                <option value="flat" data-i18n="folder.structure.flat">Flat Structure (all files in one folder)</option>
+                                <option value="by-date" data-i18n="folder.structure.by.date">Organize by Date (YYYY/MM/DD)</option>
+                                <option value="by-type" selected data-i18n="folder.structure.by.type">Organize by Document Type</option>
+                                <option value="by-site" data-i18n="folder.structure.by.site">Organize by Site</option>
                             </select>
                         </div>
                         
                         <div class="form-group">
-                            <label>File Naming Convention</label>
+                            <label data-i18n="file.naming.convention">File Naming Convention</label>
                             <div class="radio-group">
                                 <input type="radio" id="naming-original" name="naming" checked>
-                                <label for="naming-original">Keep original filename</label>
+                                <label for="naming-original" data-i18n="naming.original">Keep original filename</label>
                             </div>
                             <div class="radio-group">
                                 <input type="radio" id="naming-timestamp" name="naming">
-                                <label for="naming-timestamp">Timestamp prefix (YYYYMMDD_HHMMSS_)</label>
+                                <label for="naming-timestamp" data-i18n="naming.timestamp">Timestamp prefix (YYYYMMDD_HHMMSS_)</label>
                             </div>
                             <div class="radio-group">
                                 <input type="radio" id="naming-site" name="naming">
-                                <label for="naming-site">Site code prefix</label>
+                                <label for="naming-site" data-i18n="naming.site">Site code prefix</label>
                             </div>
                         </div>
                         
                         <div class="form-group">
-                            <label>Automatic Downloads</label>
+                            <label data-i18n="automatic.downloads">Automatic Downloads</label>
                             <div class="checkbox-group">
                                 <input type="checkbox" id="auto-download-reports" checked>
-                                <label for="auto-download-reports">Auto-download generated reports</label>
+                                <label for="auto-download-reports" data-i18n="auto.download.reports">Auto-download generated reports</label>
                             </div>
                             <div class="checkbox-group">
                                 <input type="checkbox" id="auto-download-backups">
-                                <label for="auto-download-backups">Auto-download system backups</label>
+                                <label for="auto-download-backups" data-i18n="auto.download.backups">Auto-download system backups</label>
                             </div>
                         </div>
                         
                         <div class="settings-actions">
-                            <button class="btn btn-primary">
+                            <button class="btn btn-primary" data-i18n="save.path.settings">
                                 <i class="fas fa-save"></i> Save Path Settings
                             </button>
-                            <button class="btn btn-outline">
+                            <button class="btn btn-outline" data-i18n="open.download.folder">
                                 <i class="fas fa-folder-open"></i> Open Download Folder
                             </button>
                         </div>
@@ -382,38 +386,148 @@
 
     <script src="scripts/theme-config.js"></script>
     <script src="scripts/app.js"></script>
+    <script src="scripts/language.js"></script>
+    
     <script>
-        // 设置页面特定功能
+
+        // 设置页面特定功能 - 修复版本
         document.addEventListener('DOMContentLoaded', function() {
-            // 设置当前日期
-            const now = new Date();
-            const options = { year: 'numeric', month: 'long', day: 'numeric' };
-            document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', options);
+            console.log('Settings page initialized');
+
+             if (typeof LanguageConfig !== 'undefined') {
+                LanguageConfig.init();
+            }
+            
+            // 初始化主题配置
+            if (typeof ThemeConfig !== 'undefined') {
+                const config = ThemeConfig.init();
+                console.log('ThemeConfig loaded:', config);
+                
+                // 设置表单的初始值
+                document.getElementById('theme').value = config.theme;
+                document.getElementById('language').value = config.language;
+                document.getElementById('date-format').value = config.dateFormat;
+                
+                // 更新日期显示
+                updateDateDisplay();
+            }
             
             // 侧边栏切换功能
             const toggleBtn = document.querySelector('.toggle-btn');
             const sidebar = document.querySelector('.sidebar');
             
-            toggleBtn.addEventListener('click', function() {
-                sidebar.classList.toggle('collapsed');
-            });
+            if (toggleBtn && sidebar) {
+                toggleBtn.addEventListener('click', function() {
+                    sidebar.classList.toggle('collapsed');
+                });
+            }
             
-            // 密码显示/隐藏切换
-            const togglePasswordBtns = document.querySelectorAll('.toggle-password');
-            togglePasswordBtns.forEach(btn => {
-                btn.addEventListener('click', function() {
+            // 初始化密码显示/隐藏功能
+            initPasswordToggle();
+            
+            // 文件上传区域点击事件
+            initFileUpload();
+            
+            // 设置保存功能
+            initSettingsSave();
+        });
+        
+        // 更新日期显示
+        function updateDateDisplay() {
+            if (typeof ThemeConfig === 'undefined') return;
+            
+            const now = new Date();
+            let formattedDate;
+            
+            switch(ThemeConfig.current.dateFormat) {
+                case 'dd-mm-yyyy':
+                    formattedDate = now.getDate().toString().padStart(2, '0') + '-' + 
+                                  (now.getMonth() + 1).toString().padStart(2, '0') + '-' + 
+                                  now.getFullYear();
+                    break;
+                case 'mm-dd-yyyy':
+                    formattedDate = (now.getMonth() + 1).toString().padStart(2, '0') + '-' + 
+                                  now.getDate().toString().padStart(2, '0') + '-' + 
+                                  now.getFullYear();
+                    break;
+                case 'yyyy-mm-dd':
+                    formattedDate = now.getFullYear() + '-' + 
+                                  (now.getMonth() + 1).toString().padStart(2, '0') + '-' + 
+                                  now.getDate().toString().padStart(2, '0');
+                    break;
+                default:
+                    formattedDate = now.toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    });
+            }
+            
+            const dateElement = document.getElementById('current-date');
+            if (dateElement) {
+                dateElement.textContent = formattedDate;
+            }
+        }
+        
+        // 密码显示/隐藏功能 - 修复版本
+        function initPasswordToggle() {
+            console.log('Initializing password toggle...');
+            
+            // 查找所有密码切换按钮
+            const passwordToggleBtns = document.querySelectorAll('.password-toggle-btn, .toggle-password');
+            console.log('Found password toggle buttons:', passwordToggleBtns.length);
+            
+            passwordToggleBtns.forEach(btn => {
+                console.log('Setting up password toggle for button:', btn);
+                
+                // 确保按钮类型正确
+                btn.type = 'button';
+                
+                // 移除现有的事件监听器（通过克隆替换）
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
+                
+                // 为新按钮添加事件监听器
+                newBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    console.log('Password toggle button clicked');
+                    
+                    // 找到对应的密码输入框
                     const passwordInput = this.parentElement.querySelector('input');
+                    
+                    if (!passwordInput) {
+                        console.error('Password input not found');
+                        return;
+                    }
+                    
+                    console.log('Password input found:', passwordInput);
+                    console.log('Current input type:', passwordInput.type);
+                    
+                    // 切换密码显示/隐藏
                     if (passwordInput.type === 'password') {
                         passwordInput.type = 'text';
                         this.innerHTML = '<i class="fas fa-eye-slash"></i>';
+                        console.log('Password shown');
                     } else {
                         passwordInput.type = 'password';
                         this.innerHTML = '<i class="fas fa-eye"></i>';
+                        console.log('Password hidden');
                     }
                 });
             });
             
-            // 文件上传区域点击事件
+            // 调试信息
+            if (passwordToggleBtns.length === 0) {
+                console.warn('No password toggle buttons found. Checking HTML structure...');
+                console.log('Password input element:', document.getElementById('email-password'));
+                console.log('Password input container:', document.querySelector('.password-input'));
+            }
+        }
+        
+        // 文件上传功能
+        function initFileUpload() {
             const uploadAreas = document.querySelectorAll('.upload-area');
             uploadAreas.forEach(area => {
                 const fileInput = area.querySelector('input[type="file"]');
@@ -433,74 +547,124 @@
                 fileInput.addEventListener('change', function() {
                     if (this.files.length > 0) {
                         area.classList.add('has-file');
-                        area.querySelector('p').textContent = `${this.files.length} file(s) selected`;
+                        const pElement = area.querySelector('p');
+                        if (pElement) {
+                            pElement.textContent = `${this.files.length} file(s) selected`;
+                        }
                     }
                 });
             });
-        });
-
- // 设置保存功能
-document.addEventListener('DOMContentLoaded', function() {
-    // 初始化设置表单的值
-    const config = ThemeConfig.init();
-    document.getElementById('theme').value = config.theme;
-    document.getElementById('language').value = config.language;
-    document.getElementById('date-format').value = config.dateFormat;
-    
-    // 主题切换
-    document.getElementById('theme').addEventListener('change', function() {
-        ThemeConfig.save({ theme: this.value });
-    });
-    
-    // 语言切换
-    document.getElementById('language').addEventListener('change', function() {
-        ThemeConfig.save({ language: this.value });
-        // 更新语言显示
-        ThemeConfig.updateLanguage();
-    });
-    
-    // 日期格式切换
-    document.getElementById('date-format').addEventListener('change', function() {
-        ThemeConfig.save({ dateFormat: this.value });
-    });
-    
-    // 保存设置按钮
-    document.querySelector('.display-settings .btn-primary').addEventListener('click', function() {
-        const settings = {
-            theme: document.getElementById('theme').value,
-            language: document.getElementById('language').value,
-            dateFormat: document.getElementById('date-format').value
-        };
-        ThemeConfig.save(settings);
-        
-        // 显示对应语言的提示
-        const message = settings.language === 'zh' ? '设置已保存！' : 'Settings saved!';
-        alert(message);
-    });
-    
-    // 重置设置按钮
-    document.querySelector('.display-settings .btn-secondary').addEventListener('click', function() {
-        const currentLang = ThemeConfig.current.language;
-        const message = currentLang === 'zh' ? 
-            '确定要重置为默认设置吗？' : 'Are you sure you want to reset to default settings?';
-        const successMessage = currentLang === 'zh' ? 
-            '设置已重置！' : 'Settings reset!';
-            
-        if(confirm(message)) {
-            localStorage.removeItem('ael_dwss_theme');
-            localStorage.removeItem('ael_dwss_language');
-            localStorage.removeItem('ael_dwss_dateFormat');
-            ThemeConfig.init();
-            
-            // 更新表单值
-            document.getElementById('theme').value = ThemeConfig.current.theme;
-            document.getElementById('language').value = ThemeConfig.current.language;
-            document.getElementById('date-format').value = ThemeConfig.current.dateFormat;
-            
-            alert(successMessage);
         }
-    });
-});
+        
+        // 设置保存功能
+        function initSettingsSave() {
+            // 主题切换
+            const themeSelect = document.getElementById('theme');
+            if (themeSelect) {
+                themeSelect.addEventListener('change', function() {
+                    if (typeof ThemeConfig !== 'undefined') {
+                        ThemeConfig.save({ theme: this.value });
+                        updateDateDisplay();
+                    }
+                });
+            }
+            
+            // 语言切换
+            const languageSelect = document.getElementById('language');
+            if (languageSelect) {
+                languageSelect.addEventListener('change', function() {
+                    if (typeof ThemeConfig !== 'undefined') {
+                        ThemeConfig.save({ language: this.value });
+            
+                        // Apply the new language immediately
+                        if (typeof LanguageConfig !== 'undefined') {
+                            LanguageConfig.setLanguage(this.value);
+                        }
+            
+                        updateDateDisplay();
+                    }
+                });
+            }
+            
+            // 日期格式切换
+            const dateFormatSelect = document.getElementById('date-format');
+            if (dateFormatSelect) {
+                dateFormatSelect.addEventListener('change', function() {
+                    if (typeof ThemeConfig !== 'undefined') {
+                        ThemeConfig.save({ dateFormat: this.value });
+                        updateDateDisplay();
+                    }
+                });
+            }
+            
+            // 保存设置按钮
+            const saveBtn = document.getElementById('save-display-settings');
+            if (saveBtn) {
+                saveBtn.addEventListener('click', function() {
+                    if (typeof ThemeConfig === 'undefined') {
+                        alert('ThemeConfig is not available');
+                        return;
+                    }
+                    
+                    const settings = {
+                        theme: document.getElementById('theme').value,
+                        language: document.getElementById('language').value,
+                        dateFormat: document.getElementById('date-format').value
+                    };
+                    
+                    ThemeConfig.save(settings);
+                    
+                    // 显示对应语言的提示
+                    const message = settings.language === 'zh' ? '设置已保存！' : 'Settings saved!';
+                    alert(message);
+                    
+                    // 更新日期显示
+                    updateDateDisplay();
+                });
+            }
+            
+            // 重置设置按钮
+            const resetBtn = document.getElementById('reset-display-settings');
+            if (resetBtn) {
+                resetBtn.addEventListener('click', function() {
+                    if (typeof ThemeConfig === 'undefined') {
+                        alert('ThemeConfig is not available');
+                        return;
+                    }
+                    
+                    const currentLang = ThemeConfig.current.language || 'en';
+                    const message = currentLang === 'zh' ? 
+                        '确定要重置为默认设置吗？' : 'Are you sure you want to reset to default settings?';
+                    const successMessage = currentLang === 'zh' ? 
+                        '设置已重置！' : 'Settings reset!';
+                    
+                    if (confirm(message)) {
+                        localStorage.removeItem('ael_dwss_theme');
+                        localStorage.removeItem('ael_dwss_language');
+                        localStorage.removeItem('ael_dwss_dateFormat');
+                        
+                        ThemeConfig.init();
+                        
+                        // 更新表单值
+                        document.getElementById('theme').value = ThemeConfig.current.theme;
+                        document.getElementById('language').value = ThemeConfig.current.language;
+                        document.getElementById('date-format').value = ThemeConfig.current.dateFormat;
+                        
+                        // 更新日期显示
+                        updateDateDisplay();
+                        
+                        alert(successMessage);
+                    }
+                });
+            }
+        }
+        
+        // 确保页面加载后也调用密码初始化
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initPasswordToggle);
+        } else {
+            setTimeout(initPasswordToggle, 100);
+        }
     </script>
     
     <style>
@@ -511,6 +675,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         .form-group {
             margin-bottom: 20px;
+            position: relative;
         }
         
         .form-group label {
@@ -535,12 +700,47 @@ document.addEventListener('DOMContentLoaded', function() {
             box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
         }
         
-        .password-input, .path-input {
+        .password-input {
+            position: relative;
+            display: flex;
+        }
+        
+        .password-input .form-control {
+            flex: 1;
+            padding-right: 45px; /* 为眼睛图标留出空间 */
+        }
+        
+        .password-toggle-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #7f8c8d;
+            z-index: 2;
+            padding: 8px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            height: 38px;
+            width: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .password-toggle-btn:hover {
+            background: #f0f0f0;
+            color: #3498db;
+        }
+        
+        .path-input {
             display: flex;
             gap: 10px;
         }
         
-        .password-input .form-control, .path-input .form-control {
+        .path-input .form-control {
             flex: 1;
         }
         
@@ -699,7 +899,26 @@ document.addEventListener('DOMContentLoaded', function() {
         
         /* 响应式设计 */
         @media (max-width: 768px) {
-            .password-input, .path-input {
+            .password-input {
+                flex-direction: column;
+            }
+            
+            .password-input .form-control {
+                padding-right: 12px;
+            }
+            
+            .password-toggle-btn {
+                position: relative;
+                right: auto;
+                top: auto;
+                transform: none;
+                align-self: flex-end;
+                margin-top: 8px;
+                width: auto;
+                height: auto;
+            }
+            
+            .path-input {
                 flex-direction: column;
             }
             
@@ -711,6 +930,59 @@ document.addEventListener('DOMContentLoaded', function() {
                 width: 100%;
                 justify-content: center;
             }
+        }
+        
+        /* 暗色主题支持 */
+        body.dark-theme .form-group label {
+            color: #e0e0e0;
+        }
+        
+        body.dark-theme .form-control {
+            background-color: #2a2a2a;
+            color: #ffffff;
+            border-color: #555;
+        }
+        
+        body.dark-theme .form-control:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        
+        body.dark-theme .password-toggle-btn {
+            color: #bbbbbb;
+        }
+        
+        body.dark-theme .password-toggle-btn:hover {
+            background-color: #3a3a3a;
+            color: #3498db;
+        }
+        
+        body.dark-theme .file-list {
+            border-color: #555;
+            background-color: #2a2a2a;
+        }
+        
+        body.dark-theme .file-item {
+            border-bottom-color: #444;
+        }
+        
+        body.dark-theme .upload-area {
+            border-color: #555;
+            background-color: #3a3a3a;
+        }
+        
+        body.dark-theme .upload-area:hover {
+            border-color: #3498db;
+            background-color: #4a4a4a;
+        }
+        
+        body.dark-theme .upload-area.has-file {
+            border-color: #2ecc71;
+            background-color: #3a5a3a;
+        }
+        
+        body.dark-theme .upload-area p {
+            color: #bbbbbb;
         }
     </style>
 </body>

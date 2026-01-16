@@ -59,9 +59,20 @@ const LanguageConfig = {
             'browse': 'Browse',
             'folder.structure': 'Folder Structure',
             'file.naming.convention': 'File Naming Convention',
+            'naming.original': 'Keep original filename',
+            'naming.timestamp': 'Timestamp prefix (YYYYMMDD_HHMMSS_)',
+            'naming.site': 'Site code prefix',
             'automatic.downloads': 'Automatic Downloads',
+            'auto.download.reports': 'Auto-download generated reports',
+            'auto.download.backups': 'Auto-download system backups',
             'save.path.settings': 'Save Path Settings',
             'open.download.folder': 'Open Download Folder',
+
+            // Folder Structure options
+            'folder.structure.flat': 'Flat Structure (all files in one folder)',
+            'folder.structure.by.date': 'Organize by Date (YYYY/MM/DD)',
+            'folder.structure.by.type': 'Organize by Document Type',
+            'folder.structure.by.site': 'Organize by Site',
             
             // 搜索
             'search.placeholder': 'Search settings...',
@@ -77,7 +88,6 @@ const LanguageConfig = {
             'safety.inspection': 'Safety Inspection',
             'site.locations': 'Site Locations',
             'labour.wage': 'Labour Wage',
-            'system.settings': 'System Settings',
             'user.management': 'User Management',
             
             // 通用按钮和文本
@@ -182,7 +192,6 @@ const LanguageConfig = {
             'inspector': 'Inspector',
             'inspection.entries': 'Safety Inspection Entries',
             'total.inspections': 'Total Inspections',
-            'this.month': 'This Month',
             'back.to.inspection': 'Back to Inspection',
             'safety.inspection.document': 'Safety Inspection Document',
             'edit.safety.pdf': 'Edit Safety Inspection PDF',
@@ -195,7 +204,6 @@ const LanguageConfig = {
             'interactive.map': 'Interactive Map Would Appear Here',
             'system.title': 'DWSS Management System',
             'all.rights.reserved': 'All rights reserved.',
-            'platform': 'AEL DWSS Platform',
             'period.start': 'Period Start',
             'period.end': 'Period End',
             'page': 'Page',
@@ -258,9 +266,20 @@ const LanguageConfig = {
             'browse': '浏览',
             'folder.structure': '文件夹结构',
             'file.naming.convention': '文件命名约定',
+            'naming.original': '保留原始文件名',
+            'naming.timestamp': '时间戳前缀 (YYYYMMDD_HHMMSS_)',
+            'naming.site': '站点代码前缀',
             'automatic.downloads': '自动下载',
+            'auto.download.reports': '自动下载生成报告',
+            'auto.download.backups': '自动下载系统备份',
             'save.path.settings': '保存路径设置',
             'open.download.folder': '打开下载文件夹',
+
+            // Folder Structure options - 中文
+            'folder.structure.flat': '扁平结构（所有文件在一个文件夹中）',
+            'folder.structure.by.date': '按日期组织（年/月/日）',
+            'folder.structure.by.type': '按文档类型组织',
+            'folder.structure.by.site': '按站点组织',
             
             // 搜索
             'search.placeholder': '搜索设置...',
@@ -276,7 +295,6 @@ const LanguageConfig = {
             'safety.inspection': '安全检查',
             'site.locations': '站点位置',
             'labour.wage': '劳动工资',
-            'system.settings': '系统设置',
             'user.management': '用户管理',
             
             // 通用按钮和文本
@@ -354,9 +372,7 @@ const LanguageConfig = {
             'back.to.diary': '返回日记',
             'date': '日期',
             'all.document.types': '所有文档类型',
-
-            
-            'site.diary.document': 'Site Diary Document',
+            'no.matching.documents': '未找到匹配的文档。请尝试不同的筛选条件。',
 
             // 站点类型
             'site.treatment': '处理厂',
@@ -383,7 +399,6 @@ const LanguageConfig = {
             'inspector': '检查员',
             'inspection.entries': '安全检查条目',
             'total.inspections': '总检查数',
-            'this.month': '本月',
             'back.to.inspection': '返回检查',
             'safety.inspection.document': '安全检查文档',
             'edit.safety.pdf': '编辑安全检查PDF',
@@ -394,6 +409,12 @@ const LanguageConfig = {
             'search.sites.placeholder': '搜索站点...',
             'last.updated': '最后更新',
             'interactive.map': '交互式地图将在此显示',
+            'system.title': 'DWSS 管理系统',
+            'all.rights.reserved': '保留所有权利。',
+            'period.start': '期间开始',
+            'period.end': '期间结束',
+            'page': '页',
+            'of': '的'
         }
     },
 
@@ -402,8 +423,13 @@ const LanguageConfig = {
 
     // 初始化
     init: function() {
+        console.log('LanguageConfig initializing...');
+        
         // 从 localStorage 加载语言设置
-        this.currentLanguage = localStorage.getItem('ael_dwss_language') || 'en';
+        const savedLang = localStorage.getItem('ael_dwss_language');
+        this.currentLanguage = savedLang || 'en';
+        
+        console.log('Current language loaded:', this.currentLanguage);
         
         // 应用当前语言
         this.applyLanguage();
@@ -413,22 +439,48 @@ const LanguageConfig = {
 
     // 设置语言
     setLanguage: function(lang) {
+        console.log('Attempting to set language to:', lang);
+        
         if (this.translations[lang]) {
             this.currentLanguage = lang;
             localStorage.setItem('ael_dwss_language', lang);
+            
+            console.log('Language set successfully:', lang);
+            
+            // 应用新语言
             this.applyLanguage();
+            
+            // 触发自定义事件，通知其他组件语言已更改
+            const event = new CustomEvent('languageChanged', { 
+                detail: { language: lang } 
+            });
+            document.dispatchEvent(event);
+            
             return true;
         }
+        
+        console.error('Language not found:', lang);
         return false;
     },
 
     // 应用语言到页面
     applyLanguage: function() {
+        console.log('Applying language:', this.currentLanguage);
+        
         const texts = this.translations[this.currentLanguage];
-        if (!texts) return;
+        if (!texts) {
+            console.error('No translations found for language:', this.currentLanguage);
+            return;
+        }
 
-        // 更新所有带有 data-i18n 属性的元素
-        document.querySelectorAll('[data-i18n]').forEach(element => {
+        // 记录翻译数量
+        console.log('Available translations:', Object.keys(texts).length);
+
+        // 1. 更新所有带有 data-i18n 属性的元素
+        const elements = document.querySelectorAll('[data-i18n]');
+        console.log('Found elements with data-i18n:', elements.length);
+        
+        elements.forEach(element => {
             const key = element.getAttribute('data-i18n');
             if (texts[key]) {
                 let text = texts[key];
@@ -438,10 +490,12 @@ const LanguageConfig = {
                     text = text.replace('{minutes}', minutes);
                 }
                 element.textContent = text;
+            } else {
+                console.warn('Missing translation for key:', key, 'in', this.currentLanguage);
             }
         });
 
-        // 更新所有带有 data-i18n-placeholder 属性的元素
+        // 2. 更新所有带有 data-i18n-placeholder 属性的元素
         document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
             const key = element.getAttribute('data-i18n-placeholder');
             if (texts[key]) {
@@ -449,7 +503,7 @@ const LanguageConfig = {
             }
         });
 
-        // 更新所有带有 data-i18n-title 属性的元素
+        // 3. 更新所有带有 data-i18n-title 属性的元素
         document.querySelectorAll('[data-i18n-title]').forEach(element => {
             const key = element.getAttribute('data-i18n-title');
             if (texts[key]) {
@@ -457,7 +511,7 @@ const LanguageConfig = {
             }
         });
 
-        // 更新所有带有 data-i18n-value 属性的元素
+        // 4. 更新所有带有 data-i18n-value 属性的元素
         document.querySelectorAll('[data-i18n-value]').forEach(element => {
             const key = element.getAttribute('data-i18n-value');
             if (texts[key]) {
@@ -465,9 +519,19 @@ const LanguageConfig = {
             }
         });
 
+        // 5. 更新所有带有 data-i18n-html 属性的元素
+        document.querySelectorAll('[data-i18n-html]').forEach(element => {
+            const key = element.getAttribute('data-i18n-html');
+            if (texts[key]) {
+                element.innerHTML = texts[key];
+            }
+        });
+
         // 更新页面方向（RTL/LTR）
         document.documentElement.dir = this.currentLanguage === 'ar' ? 'rtl' : 'ltr';
         document.documentElement.lang = this.currentLanguage;
+        
+        console.log('Language applied successfully');
     },
 
     // 获取翻译文本
@@ -484,11 +548,24 @@ const LanguageConfig = {
     // 获取可用语言列表
     getAvailableLanguages: function() {
         return Object.keys(this.translations);
+    },
+    
+    // 动态更新翻译
+    updateTranslations: function(newTranslations, lang) {
+        if (this.translations[lang] && newTranslations) {
+            this.translations[lang] = { ...this.translations[lang], ...newTranslations };
+            if (this.currentLanguage === lang) {
+                this.applyLanguage();
+            }
+            return true;
+        }
+        return false;
     }
 };
 
 // 页面加载时自动初始化语言配置
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing LanguageConfig...');
     LanguageConfig.init();
 });
 
@@ -503,4 +580,36 @@ window.getCurrentLanguage = function() {
 
 window.getText = function(key) {
     return LanguageConfig.getText(key);
+};
+
+// 监听主题变化，重新应用语言（如果主题改变了语言）
+document.addEventListener('themeChanged', function(e) {
+    if (e.detail && e.detail.language) {
+        LanguageConfig.setLanguage(e.detail.language);
+    }
+});
+
+// 监听语言选择器的变化
+document.addEventListener('languageSelectorChange', function(e) {
+    if (e.detail && e.detail.language) {
+        LanguageConfig.setLanguage(e.detail.language);
+    }
+});
+
+// 添加调试函数
+window.debugLanguage = function() {
+    console.log('=== Language Debug Info ===');
+    console.log('Current language:', LanguageConfig.getCurrentLanguage());
+    console.log('Available languages:', LanguageConfig.getAvailableLanguages());
+    console.log('Translations count:', Object.keys(LanguageConfig.translations[LanguageConfig.currentLanguage] || {}).length);
+    
+    // 检查特定键
+    const testKeys = ['system.settings', 'display.settings', 'initial.pdf.upload', 'email.settings'];
+    testKeys.forEach(key => {
+        console.log(`${key}:`, LanguageConfig.getText(key));
+    });
+    
+    // 检查元素数量
+    console.log('data-i18n elements:', document.querySelectorAll('[data-i18n]').length);
+    console.log('data-i18n-placeholder elements:', document.querySelectorAll('[data-i18n-placeholder]').length);
 };
