@@ -7,6 +7,47 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="scripts/theme-config.js"></script>
     <script src="scripts/language.js"></script>
+    
+    
+    <script>
+    // 确保在页面加载时初始化语言
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Labour wage page loading...');
+        
+        
+        // 首先初始化语言配置 - 非常重要！
+        if (typeof LanguageConfig !== 'undefined') {
+            console.log('Initializing LanguageConfig...');
+            LanguageConfig.init();
+            
+            // 确保语言立即应用
+            setTimeout(function() {
+                LanguageConfig.applyLanguage();
+            }, 100);
+        }
+        
+        // 原有的页面初始化代码
+        console.log('开始初始化页面...');
+        wageData = initializeWageData();
+        renderWageTable();
+        setupFilterEvents();
+        setupButtonEvents();
+        updateStats();
+        console.log('页面初始化完成');
+    });
+    
+    // 监听语言变化事件
+    document.addEventListener('languageChanged', function(e) {
+        console.log('Language changed to:', e.detail.language);
+        // 重新应用语言
+        if (typeof LanguageConfig !== 'undefined') {
+            setTimeout(function() {
+                LanguageConfig.applyLanguage();
+            }, 50);
+        }
+    });
+    </script>
+
     <style>
         /* 基础样式重置 */
         * {
@@ -37,6 +78,7 @@
             box-shadow: 3px 0 15px rgba(0, 0, 0, 0.1);
             position: relative;
             z-index: 100;
+            min-height: 100vh;
         }
 
         .sidebar.collapsed {
@@ -875,43 +917,43 @@
             <li>
                 <a href="index.html">
                     <i class="fas fa-home"></i>
-                    <span class="menu-text">Dashboard</span>
+                    <span class="menu-text" data-i18n="dashboard">Dashboard</span>
                 </a>
             </li>
             <li>
                 <a href="sitediary.html">
                     <i class="fas fa-book"></i>
-                    <span class="menu-text">Site Diary</span>
+                    <span class="menu-text" data-i18n="site.diary">Site Diary</span>
                 </a>
             </li>
             <li>
                 <a href="safetyinspect.html">
                     <i class="fas fa-clipboard-check"></i>
-                    <span class="menu-text">Safety Inspection</span>
+                    <span class="menu-text" data-i18n="safety.inspection">Safety Inspection</span>
                 </a>
             </li>
             <li>
                 <a href="sitelocations.html">
                     <i class="fas fa-map-marked-alt"></i>
-                    <span class="menu-text">Site Locations</span>
+                    <span class="menu-text" data-i18n="site.locations">Site Locations</span>
                 </a>
             </li>
             <li>
                 <a href="labourwage.html" class="active">
                     <i class="fas fa-money-bill-wave"></i>
-                    <span class="menu-text">Labour Wage</span>
+                    <span class="menu-text" data-i18n="labour.wage">Labour Wage</span>
                 </a>
             </li>
             <li>
                 <a href="settings.html">
                     <i class="fas fa-cogs"></i>
-                    <span class="menu-text">System Settings</span>
+                    <span class="menu-text" data-i18n="system.settings">System Settings</span>
                 </a>
             </li>
             <li>
                 <a href="usermanagement.html">
                     <i class="fas fa-user-circle"></i>
-                    <span class="menu-text">User Management</span>
+                    <span class="menu-text" data-i18n="user.management">User Management</span>
                 </a>
             </li>
         </ul>
@@ -920,7 +962,7 @@
     <!-- 主内容区域 -->
     <div class="main-content">
         <div class="header">
-            <h1>DWSS Management System</h1>
+            <h1 data-i18n="system.title">DWSS Management System</h1>
             <div class="header-controls">
                 <div class="user-date-row">
                     <div class="date-display">
@@ -936,11 +978,11 @@
         
         <div class="search-buttons">
             <form id="search-form" action="#" method="get">
-                <input type="text" name="search" placeholder="Search labour wage records..." />
+                <input type="text" name="search" data-i18n-placeholder="search.wage.records" placeholder="Search labour wage records..." />
                 <button type="submit">Search</button>
             </form>
             <div class="nav-buttons">
-                <button id="add-wage-btn"><i class="fas fa-plus"></i> Add New Wage Record</button>
+                <button id="add-wage-btn"><i class="fas fa-plus"></i> <span data-i18n="add.new.wage">Add New Wage Record</span></button>
             </div>
         </div>
         
@@ -952,11 +994,11 @@
             <div class="diary-controls-row">
                 <div class="wage-stats">
                     <div class="stat-card">
-                        <div class="label">Total Records</div>
+                        <div class="label" data-i18n="total.documents">Total Records</div>
                         <div class="value" id="total-records-count">0</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">This Month</div>
+                        <div class="label" data-i18n="this.month">This Month</div>
                         <div class="value" id="month-count">0</div>
                     </div>
                 </div>
@@ -964,7 +1006,7 @@
                 <div class="filters-section">
                     <div class="filter-group" id="type-filter-group">
                         <div class="filter-toggle">
-                            <span>All Document Types</span>
+                            <span data-i18n="all.document.types">All Document Types</span>
                             <i class="fas fa-chevron-down"></i>
                         </div>
                         <div class="filter-options">
@@ -977,7 +1019,7 @@
                     
                     <div class="filter-group" id="status-filter-group">
                         <div class="filter-toggle">
-                            <span>All Statuses</span>
+                            <span data-i18n="all.statuses">All Statuses</span>
                             <i class="fas fa-chevron-down"></i>
                         </div>
                         <div class="filter-options">
@@ -993,7 +1035,7 @@
                     
                     <div class="filter-group" id="site-filter-group">
                         <div class="filter-toggle">
-                            <span>All Sites</span>
+                            <span data-i18n="all.sites">All Sites</span>
                             <i class="fas fa-chevron-down"></i>
                         </div>
                         <div class="filter-options">
@@ -1010,28 +1052,28 @@
                     
             <section class="content-section">
                 <div class="table-header">
-                    <h2 class="table-title">Labour Wage Records</h2>
+                    <h2 class="table-title" data-i18n="labour.wage.management">Labour Wage Records</h2>
                 </div>
                 
                 <div class="table-container">
                     <table class="wage-table">
                         <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Document Type</th>
-                                <th>Status</th>
-                                <th>Site</th>
-                                <th>Period</th>
-                                <th>Submitted By</th>
-                                <th>Total Amount</th>
-                                <th>Actions</th>
+                                <th data-i18n="document.id">ID</th>
+                                <th data-i18n="document.type">Document Type</th>
+                                <th data-i18n="status">Status</th>
+                                <th data-i18n="site">Site</th>
+                                <th data-i18n="period">Period</th>
+                                <th data-i18n="submitted.by">Submitted By</th>
+                                <th data-i18n="total.amount">Total Amount</th>
+                                <th data-i18n="actions">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="wage-table-body">
                             <!-- 表格内容将通过JavaScript动态生成 -->
                         </tbody>
                     </table>
-                    <div id="no-results-message" class="no-results" style="display: none;">
+                    <div id="no-results-message" class="no-results" style="display: none;" data-i18n="no.matching.documents">
                         No matching wage records found. Please try different filters.
                     </div>
                 </div>
@@ -1047,16 +1089,16 @@
     <!-- Add New Wage Modal -->
     <div class="modal" id="add-wage-modal">
         <div class="modal-content">
-            <h3>Add New Wage Record</h3>
+            <h3 data-i18n="add.new.wage">Add New Wage Record</h3>
             <form id="add-wage-form">
-                <label>Document Type</label>
+                <label data-i18n="document.type">Document Type</label>
                 <select id="input-type" required>
                     <option value="GF527A">GF527A - Return on Construction Site Employment</option>
                     <option value="GF527-2003">GF527 (2003) - Labour Wage</option>
                     <option value="GF527-2017">GF527 (2017) - Labour Wage</option>
                 </select>
                 
-                <label>Status</label>
+                <label data-i18n="status">Status</label>
                 <select id="input-status" required>
                     <option value="draft">Draft</option>
                     <option value="submitted">Submitted</option>
@@ -1066,7 +1108,7 @@
                     <option value="double-check">Contractor/Contractor's Agent Double Check</option>
                 </select>
                 
-                <label>Site</label>
+                <label data-i18n="site">Site</label>
                 <select id="input-site" required>
                     <option value="Treatment Plant">Treatment Plant</option>
                     <option value="Pipeline">Pipeline</option>
@@ -1075,21 +1117,21 @@
                     <option value="Pump Station">Pump Station</option>
                 </select>
                 
-                <label>Period Start</label>
+                <label data-i18n="period.start">Period Start</label>
                 <input type="date" id="input-period-start" required>
                 
-                <label>Period End</label>
+                <label data-i18n="period.end">Period End</label>
                 <input type="date" id="input-period-end" required>
                 
-                <label>Submitted By</label>
+                <label data-i18n="submitted.by">Submitted By</label>
                 <input type="text" id="input-submitted-by" required>
                 
-                <label>Total Amount (HKD)</label>
+                <label data-i18n="total.amount">Total Amount (HKD)</label>
                 <input type="number" id="input-amount" min="0" step="0.01" required>
                 
                 <div class="modal-actions">
-                    <button type="submit" class="btn">Save</button>
-                    <button type="button" class="btn" id="cancel-add-wage">Cancel</button>
+                    <button type="submit" class="btn" data-i18n="save">Save</button>
+                    <button type="button" class="btn" id="cancel-add-wage" data-i18n="cancel">Cancel</button>
                 </div>
             </form>
         </div>
@@ -1104,6 +1146,21 @@
         // 更新當前日期（使用配置系統的格式）
         AppConfig.updateDateDisplay();
         // 其他页面特定代码...
+
+        // 首先初始化语言配置 - 非常重要！
+        if (typeof LanguageConfig !== 'undefined') {
+            console.log('Initializing LanguageConfig...');
+            LanguageConfig.init();
+            
+            // 确保语言立即应用
+            setTimeout(function() {
+                LanguageConfig.applyLanguage();
+            }, 100);
+        }
+
+
+
+
     });
     // 侧边栏折叠功能
     document.querySelector('.toggle-btn').addEventListener('click', function() {
@@ -1239,6 +1296,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 初始化表格
     renderWageTable();
+    const statusTextMap = {
+    "draft": LanguageConfig.getText('status.draft') || "Draft",
+    "submitted": LanguageConfig.getText('status.submitted.wsg') || "Submitted", 
+    "endorsed": "Endorsed", // 这个可能需要添加到语言文件中
+    "cancelled": LanguageConfig.getText('status.cancelled') || "Cancelled",
+    "confirm": "Client's Site Representative to Confirm",
+    "double-check": "Contractor/Contractor's Agent Double Check"
+    };
     
     // 设置筛选器事件
     setupFilterEvents();
