@@ -252,6 +252,7 @@
             </div>
         </div>
     </div>
+
     
     <!-- 添加用户模态框 -->
     <div id="add-user-modal" class="modal" style="display: none;">
@@ -281,13 +282,13 @@
                 <label for="input-user-department" data-i18n="department">Department</label>
                 <input type="text" id="input-user-department">
             </div>
-            <div class="form-group">
-                <label for="input-user-status" data-i18n="status">Status</label>
-                <select id="input-user-status" required>
-                    <option value="online" data-i18n="status.online">Online</option> <!-- 改为 online -->
-                    <option value="offline" data-i18n="status.offline">Offline</option> <!-- 改为 offline -->
-                </select>
-            </div>
+            <!--<div class="form-group">-->
+            <!--    <label for="input-user-status" data-i18n="status">Status</label>-->
+            <!--    <select id="input-user-status" required>-->
+            <!--        <option value="online" data-i18n="status.online">Online</option>--> <!-- 改为 online -->
+            <!--        <option value="offline" data-i18n="status.offline">Offline</option>--> <!-- 改为 offline -->
+            <!--    </select>-->
+            <!--</div>-->
             <div class="modal-actions">
                 <button type="button" class="btn btn-secondary" id="cancel-add-user" data-i18n="cancel">Cancel</button>
                 <button type="submit" class="btn" data-i18n="add.user">Add User</button>
@@ -296,6 +297,9 @@
     </div>
 </div>
 
+        </div> <!-- 关闭 user-management-page -->
+        </div> <!-- 关闭 main-content -->
+        </div> <!-- 关闭可能存在的其他容器 -->
 <footer>
     <div class="footer-content">
         <p data-i18n="copyright">&copy; 2025 AEL DWSS System. All rights reserved.</p>
