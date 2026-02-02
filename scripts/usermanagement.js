@@ -364,17 +364,31 @@ const UserManagement = {
 
         // 添加用户按钮
         const addUserBtn = document.getElementById('add-user-btn');
-        if (addUserBtn) {
-            addUserBtn.addEventListener('click', function() {
-                const modal = document.getElementById('add-user-modal');
-                if (modal) modal.style.display = 'flex';
-            });
-        }
+    if (addUserBtn) {
+        addUserBtn.addEventListener('click', function() {
+            // 重置表单标题和按钮文本
+            const modalTitle = document.querySelector('#add-user-modal h3 span');
+            const submitBtn = document.querySelector('#add-user-form button[type="submit"]');
+            modalTitle.textContent = 'Add New User';
+            submitBtn.textContent = 'Add User';
+            delete submitBtn.dataset.editingUserId;
+            
+            document.getElementById('add-user-modal').style.display = 'flex';
+            document.getElementById('add-user-form').reset();
+        });
+    }
         
-        // 取消添加用户
+        // 取消按钮
         document.getElementById('cancel-add-user').addEventListener('click', function() {
             document.getElementById('add-user-modal').style.display = 'none';
             document.getElementById('add-user-form').reset();
+            
+            // 重置表单标题和按钮文本
+            const modalTitle = document.querySelector('#add-user-modal h3 span');
+            const submitBtn = document.querySelector('#add-user-form button[type="submit"]');
+            modalTitle.textContent = 'Add New User';
+            submitBtn.textContent = 'Add User';
+            delete submitBtn.dataset.editingUserId;
         });
         
         
@@ -387,24 +401,47 @@ const UserManagement = {
         document.getElementById('add-user-form').addEventListener('submit', function(e) {
             e.preventDefault();
             
-            const newUser = {
-                id: UserManagement.users.length + 1,
-                name: document.getElementById('input-user-name').value,
-                email: document.getElementById('input-user-email').value,
-                role: document.getElementById('input-user-role').value,
-                department: document.getElementById('input-user-department').value,
-                status: document.getElementById('input-user-status').value,
-                addedDate: new Date().toISOString().split('T')[0]
-            };
+            // 获取编辑的用户ID（如果有）
+    const submitBtn = document.querySelector('#add-user-form button[type="submit"]');
+    const editingUserId = submitBtn.dataset.editingUserId;
+    
+            if (editingUserId) {
+                // 编辑现有用户
+                const userId = parseInt(editingUserId);
+                const user = UserManagement.users.find(u => u.id === userId);
+                
+                if (user) {
+                    user.name = document.getElementById('input-user-name').value;
+                    user.email = document.getElementById('input-user-email').value;
+                    user.role = document.getElementById('input-user-role').value;
+                    user.department = document.getElementById('input-user-department').value;
+                    user.status = document.getElementById('input-user-status').value;
+                    
+                    alert('User updated successfully!');
+                }
+            } else {
+                // 添加新用户
+                const newUser = {
+                    id: UserManagement.users.length + 1,
+                    name: document.getElementById('input-user-name').value,
+                    email: document.getElementById('input-user-email').value,
+                    role: document.getElementById('input-user-role').value,
+                    department: document.getElementById('input-user-department').value,
+                    status: document.getElementById('input-user-status').value, // 使用表单中的状态
+                    addedDate: new Date().toISOString().split('T')[0]
+                };
+                
+                UserManagement.users.push(newUser);
+                alert('User added successfully!');
+            }
             
-            UserManagement.users.push(newUser);
+            // 刷新表格和统计
             UserManagement.renderUserTable();
             UserManagement.updateUserStats();
             
+            // 关闭模态框
             document.getElementById('add-user-modal').style.display = 'none';
             this.reset();
-            
-            alert('User added successfully!');
         });
     },
     
@@ -423,18 +460,34 @@ const UserManagement = {
                     document.getElementById('input-user-department').value = user.department || '';
                     document.getElementById('input-user-status').value = user.status;
                     
+                    if (user) {
+                        // 填充编辑表单
+                        document.getElementById('input-user-name').value = user.name;
+                        document.getElementById('input-user-email').value = user.email;
+                        document.getElementById('input-user-role').value = user.role;
+                        document.getElementById('input-user-department').value = user.department || '';
+                        document.getElementById('input-user-status').value = user.status; // 填充状态
+                                
+                        // 修改表单标题和提交按钮文本
+                        const modalTitle = document.querySelector('#add-user-modal h3 span');
+                        const submitBtn = document.querySelector('#add-user-form button[type="submit"]');
+                                
+                        modalTitle.textContent = 'Edit User';
+                        submitBtn.textContent = 'Update User';
+                        submitBtn.dataset.editingUserId = userId; // 存储编辑的用户ID
                     // 显示模态框
                     document.getElementById('add-user-modal').style.display = 'flex';
                     
-                    // 修改表单标题和提交按钮文本
-                    const modalTitle = document.querySelector('#add-user-modal h3 span');
-                    const submitBtn = document.querySelector('#add-user-form button[type="submit"]');
-                    
-                    modalTitle.textContent = 'Edit User';
-                    submitBtn.textContent = 'Update User';
-                    
-                    // 临时存储正在编辑的用户ID
-                    submitBtn.dataset.editingUserId = userId;
+                    }
+                    //// 修改表单标题和提交按钮文本
+                    //const modalTitle = document.querySelector('#add-user-modal h3 span');
+                    //const submitBtn = document.querySelector('#add-user-form button[type="submit"]');
+                    //
+                    //modalTitle.textContent = 'Edit User';
+                    //submitBtn.textContent = 'Update User';
+                    //
+                    //// 临时存储正在编辑的用户ID
+                    //submitBtn.dataset.editingUserId = userId;
                     
                     // 修改表单提交事件
                     const form = document.getElementById('add-user-form');
@@ -483,6 +536,87 @@ const UserManagement = {
         });
     }
 };
+
+// 处理侧边栏子菜单的展开/收起
+document.addEventListener('DOMContentLoaded', function() {
+    // 获取所有带子菜单的菜单项
+    const submenuItems = document.querySelectorAll('.menu-item-with-submenu > .submenu-toggle');
+    
+    submenuItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // 获取父菜单项和子菜单
+            const parentItem = this.parentElement;
+            const submenu = parentItem.querySelector('.submenu');
+            
+            // 切换 active 类
+            parentItem.classList.toggle('active');
+            
+            // 如果点击的是当前活动的 User Management
+            if (parentItem.classList.contains('active')) {
+                // 展开子菜单
+                submenu.style.maxHeight = submenu.scrollHeight + 'px';
+                // 旋转箭头
+                const arrow = this.querySelector('.submenu-arrow');
+                if (arrow) arrow.style.transform = 'rotate(180deg)';
+            } else {
+                // 收起子菜单
+                submenu.style.maxHeight = '0';
+                // 恢复箭头方向
+                const arrow = this.querySelector('.submenu-arrow');
+                if (arrow) arrow.style.transform = 'rotate(0deg)';
+            }
+            
+            // 关闭其他打开的菜单
+            document.querySelectorAll('.menu-item-with-submenu').forEach(otherItem => {
+                if (otherItem !== parentItem && otherItem.classList.contains('active')) {
+                    otherItem.classList.remove('active');
+                    const otherSubmenu = otherItem.querySelector('.submenu');
+                    const otherArrow = otherItem.querySelector('.submenu-arrow');
+                    if (otherSubmenu) otherSubmenu.style.maxHeight = '0';
+                    if (otherArrow) otherArrow.style.transform = 'rotate(0deg)';
+                }
+            });
+        });
+    });
+    
+    // 点击子菜单链接时，保持父菜单展开
+    document.querySelectorAll('.submenu a').forEach(link => {
+        link.addEventListener('click', function() {
+            // 移除所有 active 类
+            document.querySelectorAll('.submenu a').forEach(a => {
+                a.classList.remove('active');
+            });
+            // 添加当前链接的 active 类
+            this.classList.add('active');
+            
+            // 确保父菜单保持展开
+            const parentItem = this.closest('.menu-item-with-submenu');
+            if (parentItem) {
+                parentItem.classList.add('active');
+                const submenu = parentItem.querySelector('.submenu');
+                const arrow = parentItem.querySelector('.submenu-arrow');
+                if (submenu) submenu.style.maxHeight = submenu.scrollHeight + 'px';
+                if (arrow) arrow.style.transform = 'rotate(180deg)';
+            }
+        });
+    });
+    
+    // 点击页面其他区域时关闭所有子菜单（可选）
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.menu-item-with-submenu')) {
+            document.querySelectorAll('.menu-item-with-submenu').forEach(item => {
+                item.classList.remove('active');
+                const submenu = item.querySelector('.submenu');
+                const arrow = item.querySelector('.submenu-arrow');
+                if (submenu) submenu.style.maxHeight = '0';
+                if (arrow) arrow.style.transform = 'rotate(0deg)';
+            });
+        }
+    });
+});
 
 // 初始化用户管理
 function initUserManagement() {
