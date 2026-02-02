@@ -209,5 +209,16 @@
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
     <script src="scripts/safetyinspect.js"></script>
+    <script>
+         // 侧边栏切换功能
+            const toggleBtn = document.querySelector('.toggle-btn');
+            const sidebar = document.querySelector('.sidebar');
+            
+            if (toggleBtn && sidebar) {
+                toggleBtn.addEventListener('click', function() {
+                    sidebar.classList.toggle('collapsed');
+                });
+            }
+    </script>
 </body>
 </html>

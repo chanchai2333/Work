@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n="site.diary">AEL DWSS - Site Diary</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <!-- Add New Diary Modal -->
@@ -43,7 +43,7 @@
         </div>
     </div>
     <!-- 侧边栏 -->
-    <div class="sidebar">
+        <div class="sidebar">
         <div class="logo">
             <div class="logo-icon">
                 <i class="fas fa-water"></i>
@@ -63,7 +63,7 @@
                 </a>
             </li>
             <li>
-                <a href="sitediary.html" class="active">
+                <a href="sitediary.html">
                     <i class="fas fa-book"></i>
                     <span class="menu-text" data-i18n="site.diary">Site Diary</span>
                 </a>
@@ -231,5 +231,16 @@
     <!-- 引入语言配置文件 -->
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
+    <script>
+         // 侧边栏切换功能
+            const toggleBtn = document.querySelector('.toggle-btn');
+            const sidebar = document.querySelector('.sidebar');
+            
+            if (toggleBtn && sidebar) {
+                toggleBtn.addEventListener('click', function() {
+                    sidebar.classList.toggle('collapsed');
+                });
+            }
+    </script>
 </body>
 </html>
