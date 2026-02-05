@@ -198,6 +198,395 @@
         }
     });
 </script>
+
+<script>
+    // Site Diary 页面特定的 JavaScript
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Site Diary page loaded');
+        
+        // 更新日期显示
+        updateCurrentDate();
+        
+        // 安全检查示例数据
+        let diaryData = [
+            {
+                id: "SD-2025-001",
+                status: "draft",
+                site: "Treatment Plant",
+                date: "2025-08-15",
+                submittedBy: "John Doe",
+                type: "Contractor Documents"
+            },
+            {
+                id: "SD-2025-002",
+                status: "submitted-wsg",
+                site: "Pipeline",
+                date: "2025-08-14",
+                submittedBy: "Jane Smith",
+                type: "Contractor Documents"
+            },
+            {
+                id: "SD-2025-003",
+                status: "submitted-ig",
+                site: "Reservoir",
+                date: "2025-08-13",
+                submittedBy: "Robert Johnson",
+                type: "Sub Contractor Documents"
+            },
+            {
+                id: "SD-2025-004",
+                status: "closed",
+                site: "Distribution",
+                date: "2025-08-12",
+                submittedBy: "Sarah Williams",
+                type: "Sub Contractor Documents"
+            },
+            {
+                id: "SD-2025-005",
+                status: "reopen",
+                site: "Pump Station",
+                date: "2025-08-11",
+                submittedBy: "Michael Brown",
+                type: "Contractor Documents"
+            },
+            {
+                id: "SD-2025-006",
+                status: "cancelled",
+                site: "Treatment Plant",
+                date: "2025-08-10",
+                submittedBy: "David Wilson",
+                type: "Contractor Documents"
+            },
+            {
+                id: "SD-2025-007",
+                status: "draft",
+                site: "Pipeline",
+                date: "2025-08-09",
+                submittedBy: "Emma Davis",
+                type: "Sub Contractor Documents"
+            },
+            {
+                id: "SD-2025-008",
+                status: "submitted-wsg",
+                site: "Reservoir",
+                date: "2025-08-08",
+                submittedBy: "James Miller",
+                type: "Contractor Documents"
+            },
+            {
+                id: "SD-2025-009",
+                status: "closed",
+                site: "Distribution",
+                date: "2025-08-07",
+                submittedBy: "Olivia Garcia",
+                type: "Sub Contractor Documents"
+            },
+            {
+                id: "SD-2025-010",
+                status: "reopen",
+                site: "Pump Station",
+                date: "2025-08-06",
+                submittedBy: "William Rodriguez",
+                type: "Contractor Documents"
+            }
+        ];
+        
+        // 当前筛选状态
+        let currentFilters = {
+            site: "all",
+            status: "all",
+            type: "all"
+        };
+        
+        // 更新统计信息
+        function updateStats() {
+            const totalCount = document.getElementById('total-documents-count');
+            const monthCount = document.getElementById('month-count');
+            
+            if (totalCount) {
+                totalCount.textContent = diaryData.length;
+            }
+            
+            if (monthCount) {
+                // 计算本月数据（示例：统计8月份的数据）
+                const currentMonth = new Date().getMonth() + 1; // 获取当前月份
+                const monthData = diaryData.filter(item => {
+                    const itemDate = new Date(item.date);
+                    return itemDate.getMonth() + 1 === currentMonth;
+                });
+                monthCount.textContent = monthData.length;
+            }
+        }
+        
+        // 格式化日期函数
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}-${month}-${year}`;
+        }
+        
+        // 获取状态文本
+        function getStatusText(status) {
+            const statusMap = {
+                'draft': 'Draft',
+                'submitted-wsg': 'Submitted to WSG',
+                'submitted-ig': 'Submitted to IG',
+                'closed': 'Closed',
+                'reopen': 'Reopen',
+                'cancelled': 'Cancelled'
+            };
+            return statusMap[status] || status;
+        }
+        
+        // 获取站点类型
+        function getSiteType(siteName) {
+            if (siteName.toLowerCase().includes('treatment')) return 'treatment';
+            if (siteName.toLowerCase().includes('pipeline')) return 'pipeline';
+            if (siteName.toLowerCase().includes('reservoir')) return 'reservoir';
+            if (siteName.toLowerCase().includes('distribution')) return 'distribution';
+            if (siteName.toLowerCase().includes('pump')) return 'pump';
+            return 'other';
+        }
+        
+        // 渲染表格
+        function renderDiaryTable() {
+            const tbody = document.getElementById('diary-table-body');
+            const noResults = document.getElementById('no-results-message');
+            
+            if (!tbody) {
+                console.error('Table body not found');
+                return;
+            }
+            
+            // 清空表格
+            tbody.innerHTML = '';
+            
+            // 筛选数据
+            const filteredData = diaryData.filter(item => {
+                // 站点筛选
+                if (currentFilters.site !== "all") {
+                    const siteType = getSiteType(item.site);
+                    if (siteType !== currentFilters.site) return false;
+                }
+                
+                // 状态筛选
+                if (currentFilters.status !== "all" && item.status !== currentFilters.status) {
+                    return false;
+                }
+                
+                // 文档类型筛选
+                if (currentFilters.type !== "all" && item.type !== currentFilters.type) {
+                    return false;
+                }
+                
+                return true;
+            });
+            
+            // 显示/隐藏无结果消息
+            if (noResults) {
+                noResults.style.display = filteredData.length === 0 ? 'block' : 'none';
+            }
+            
+            // 填充表格数据
+            filteredData.forEach(item => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${item.id}</td>
+                    <td><span class="status-badge status-${item.status}">${getStatusText(item.status)}</span></td>
+                    <td>${item.site}</td>
+                    <td>${formatDate(item.date)}</td>
+                    <td>${item.submittedBy}</td>
+                    <td>${item.type}</td>
+                    <td>
+                        <button class="action-btn view-btn" data-id="${item.id}">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="action-btn edit-btn" data-id="${item.id}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="action-btn delete-btn" data-id="${item.id}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+            
+            // 添加事件监听器到操作按钮
+            setupActionButtons();
+        }
+        
+        // 设置操作按钮事件
+        function setupActionButtons() {
+            // 查看按钮
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const docId = this.getAttribute('data-id');
+                    alert(`View diary: ${docId}`);
+                    // 这里可以跳转到查看页面
+                });
+            });
+            
+            // 编辑按钮
+            document.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const docId = this.getAttribute('data-id');
+                    alert(`Edit diary: ${docId}`);
+                    // 这里可以跳转到编辑页面
+                });
+            });
+            
+            // 删除按钮
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const docId = this.getAttribute('data-id');
+                    if (confirm(`Are you sure you want to delete diary ${docId}?`)) {
+                        const index = diaryData.findIndex(item => item.id === docId);
+                        if (index !== -1) {
+                            diaryData.splice(index, 1);
+                            renderDiaryTable();
+                            updateStats();
+                        }
+                    }
+                });
+            });
+        }
+        
+        // 设置过滤器事件
+        function setupFilterEvents() {
+            document.querySelectorAll('.filter-group').forEach(group => {
+                const toggle = group.querySelector('.filter-toggle');
+                const options = group.querySelector('.filter-options');
+                
+                if (!toggle || !options) return;
+                
+                // Toggle dropdown
+                toggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    document.querySelectorAll('.filter-options').forEach(opt => {
+                        if (opt !== options) opt.classList.remove('open');
+                    });
+                    options.classList.toggle('open');
+                });
+                
+                // Filter option click
+                group.querySelectorAll('.filter-option').forEach(option => {
+                    option.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        
+                        // Update active option
+                        group.querySelectorAll('.filter-option').forEach(opt => {
+                            opt.classList.remove('active');
+                        });
+                        option.classList.add('active');
+                        
+                        // Update toggle text
+                        toggle.querySelector('span').textContent = option.textContent;
+                        
+                        // Update filter
+                        const filterType = option.dataset.filter;
+                        const filterValue = option.dataset.value;
+                        currentFilters[filterType] = filterValue;
+                        
+                        // Re-render table
+                        renderDiaryTable();
+                        
+                        // Close dropdown
+                        options.classList.remove('open');
+                    });
+                });
+            });
+            
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', function() {
+                document.querySelectorAll('.filter-options').forEach(opt => {
+                    opt.classList.remove('open');
+                });
+            });
+        }
+        
+        // 设置添加日记按钮事件
+        function setupAddDiaryButton() {
+            const addBtn = document.getElementById('add-diary-btn');
+            const modal = document.getElementById('add-diary-modal');
+            const cancelBtn = document.getElementById('cancel-add-diary');
+            const form = document.getElementById('add-diary-form');
+            
+            if (addBtn && modal) {
+                addBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('Opening diary modal');
+                    modal.style.display = 'flex';
+                });
+            }
+            
+            if (cancelBtn && modal) {
+                cancelBtn.addEventListener('click', function() {
+                    modal.style.display = 'none';
+                });
+            }
+            
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    // 获取表单数据
+                    const newDiary = {
+                        id: document.getElementById('input-diary-id').value,
+                        status: document.getElementById('input-status').value,
+                        site: document.getElementById('input-site').value,
+                        date: document.getElementById('input-date').value,
+                        submittedBy: document.getElementById('input-submitted-by').value,
+                        type: document.getElementById('input-type').value
+                    };
+                    
+                    // 添加到数据数组
+                    diaryData.unshift(newDiary);
+                    
+                    // 重新渲染表格
+                    renderDiaryTable();
+                    updateStats();
+                    
+                    // 重置表单并关闭模态框
+                    form.reset();
+                    modal.style.display = 'none';
+                    
+                    alert('New diary added successfully!');
+                });
+            }
+        }
+        
+        // 初始化
+        function initializePage() {
+            console.log('Initializing Site Diary page');
+            
+            updateStats();
+            renderDiaryTable();
+            setupFilterEvents();
+            setupAddDiaryButton();
+            setupActionButtons();
+        }
+        
+        // 开始初始化
+        initializePage();
+        
+        // 更新日期函数
+        function updateCurrentDate() {
+            const dateElement = document.getElementById('current-date');
+            if (dateElement) {
+                const now = new Date();
+                const options = { year: 'numeric', month: 'long', day: 'numeric' };
+                dateElement.textContent = now.toLocaleDateString('en-US', options);
+            }
+        }
+    });
+</script>
+
     <!-- 引入语言配置文件 -->
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
