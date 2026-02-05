@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/safetyinspect.css">
-    <!-- 添加语言配置 -->
+    <!-- 添加主题配置 -->
     <script src="scripts/theme-config.js"></script>
 </head>
 <body>
@@ -40,68 +40,11 @@
             </form>
         </div>
     </div>
-    <!-- 侧边栏 -->
-    <div class="sidebar">
-        <div class="logo">
-            <div class="logo-icon">
-                <i class="fas fa-water"></i>
-            </div>
-            <h2 data-i18n="platform">AEL DWSS</h2>
-        </div>
-        
-        <button class="toggle-btn">
-            <i class="fas fa-chevron-left"></i>
-        </button>
-        
-        <ul class="menu">
-            <li>
-                <a href="index.html" class="active">
-                    <i class="fas fa-home"></i>
-                    <span class="menu-text" data-i18n="dashboard">Dashboard</span>
-                </a>
-            </li>
-            <li>
-                <a href="sitediary.html">
-                    <i class="fas fa-book"></i>
-                    <span class="menu-text" data-i18n="site.diary">Site Diary</span>
-                </a>
-            </li>
-            <li>
-                <a href="safetyinspect.html">
-                    <i class="fas fa-clipboard-check"></i>
-                    <span class="menu-text" data-i18n="safety.inspection">Safety Inspection</span>
-                </a>
-            </li>
-            <li>
-                <a href="sitelocations.html">
-                    <i class="fas fa-map-marked-alt"></i>
-                    <span class="menu-text" data-i18n="site.locations">Site Locations</span>
-                </a>
-            </li>
-            <li>
-                <a href="labourwage.html">
-                    <i class="fas fa-money-bill-wave"></i>
-                    <span class="menu-text" data-i18n="labour.wage">Labour Wage</span>
-                </a>
-            </li>
-            <li>
-                <a href="settings.html">
-                    <i class="fas fa-cogs"></i>
-                    <span class="menu-text" data-i18n="system.settings">System Settings</span>
-                </a>
-            </li>
-            <li>
-                <a href="usermanagement.html">
-                    <i class="fas fa-user-circle"></i>
-                    <span class="menu-text" data-i18n="user.management">User Management</span>
-                </a>
-            </li>
-        </ul>
-    </div>
+
     <!-- 主内容区域 -->
     <div class="main-content">
         <div class="header">
-            <h1 data-i18n="platform">DWSS Management System</h1>
+            <h1 data-i18n="safety.inspection">Safety Inspection</h1>
             <div class="header-controls">
                 <div class="user-date-row">
                     <div class="date-display">
@@ -209,16 +152,77 @@
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
     <script src="scripts/safetyinspect.js"></script>
+    <script src="scripts/sidebar.js"></script>
+    
     <script>
-         // 侧边栏切换功能
-            const toggleBtn = document.querySelector('.toggle-btn');
-            const sidebar = document.querySelector('.sidebar');
+        // 安全检查页面初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Safety inspection page loaded');
             
-            if (toggleBtn && sidebar) {
-                toggleBtn.addEventListener('click', function() {
-                    sidebar.classList.toggle('collapsed');
-                });
+            // 更新当前日期显示
+            updateCurrentDate();
+            
+            // 监听日期格式变化（如果其他页面有触发这个事件）
+            document.addEventListener('dateFormatChanged', function(e) {
+                console.log('Date format changed to:', e.detail.format);
+                updateCurrentDate();
+            });
+            
+            // 原有的其他初始化代码...
+        });
+        
+        // 更新当前日期显示
+        function updateCurrentDate() {
+            const dateElement = document.getElementById('current-date');
+            if (!dateElement) {
+                console.warn('current-date element not found');
+                return;
             }
+            
+            const today = new Date();
+            const formattedDate = formatDateForDisplay(today);
+            dateElement.textContent = formattedDate;
+            
+            console.log('Safety inspection date updated to:', formattedDate);
+        }
+        
+        // 格式化日期显示（与其他页面保持一致）
+        function formatDateForDisplay(date) {
+            // 获取用户保存的日期格式，如果没有则使用默认DD-MM-YYYY
+            const dateFormat = localStorage.getItem('dateFormat') || 'DD-MM-YYYY';
+            
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const year = date.getFullYear();
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
+                               'August', 'September', 'October', 'November', 'December'];
+            
+            switch(dateFormat) {
+                case 'DD-MM-YYYY':
+                    return `${day}-${month}-${year}`;
+                case 'MM-DD-YYYY':
+                    return `${month}-${day}-${year}`;
+                case 'YYYY-MM-DD':
+                    return `${year}-${month}-${day}`;
+                case 'DD/MM/YYYY':
+                    return `${day}/${month}/${year}`;
+                case 'MM/DD/YYYY':
+                    return `${month}/${day}/${year}`;
+                case 'DD Month YYYY':
+                    return `${day} ${monthNames[date.getMonth()]},${year}`;
+                case 'Month DD, YYYY':
+                    return `${monthNames[date.getMonth()]} ${day}, ${year}`;
+                default:
+                    // 默认格式：DD-MM-YYYY
+                    return `${day}-${month}-${year}`;
+            }
+        }
+        
+        // 如果在safetyinspect.js中有格式化表格日期的需要，可以添加这个函数
+        function formatDateForTable(dateString) {
+            if (!dateString) return '';
+            return formatDateForDisplay(new Date(dateString));
+        }
     </script>
 </body>
 </html>

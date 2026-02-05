@@ -5,588 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n="platform">AEL DWSS - Site Locations</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        /* 基础样式 */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
-            display: flex;
-            background-color: #f5f7fa;
-            color: #333;
-            min-height: 100vh;
-        }
-        
-        /* 侧边栏样式 - 与index.html保持一致 */
-        .sidebar {
-            width: 260px;
-            background: linear-gradient(135deg, #2c3e50, #1a2530);
-            color: white;
-            height: 100vh;
-            position: fixed;
-            transition: all 0.3s ease;
-            z-index: 1000;
-            padding: 20px 0;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 3px 0 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .logo {
-            display: flex;
-            align-items: center;
-            padding: 0 20px 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 20px;
-        }
-        
-        .logo-icon {
-            width: 40px;
-            height: 40px;
-            background: #3498db;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 10px;
-            font-size: 1.8rem;
-        }
-        
-        .logo h2 {
-            font-size: 1.6rem;
-            font-weight: 600;
-        }
-        
-        .toggle-btn {
-            position: absolute;
-            top: 25px;
-            right: -12px;
-            background: #3498db;
-            color: white;
-            border: none;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
-        }
-        
-        .menu {
-            list-style: none;
-            padding: 0 15px;
-        }
-        
-        .menu li {
-            margin-bottom: 5px;
-        }
-        
-        .menu a {
-            display: flex;
-            align-items: center;
-            padding: 14px 15px;
-            color: #ecf0f1;
-            text-decoration: none;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-        
-        .menu a:hover, .menu a.active {
-            background: rgba(52, 152, 219, 0.2);
-            color: #fff;
-        }
-        
-        .menu i {
-            font-size: 1.2rem;
-            margin-right: 15px;
-            width: 24px;
-            text-align: center;
-        }
-        
-        .menu-text {
-            transition: opacity 0.3s ease;
-        }
-        
-        /* 主内容区域 - 与index.html保持一致 */
-        .main-content {
-            flex: 1;
-            margin-left: 260px;
-            padding: 30px;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            transition: all 0.3s ease;
-        }
-        
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #e0e6ed;
-        }
-        
-        .header h1 {
-            color: #2c3e50;
-            font-size: 2rem;
-        }
-        
-        .user-date-row {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        
-        .date-display {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 1rem;
-            color: #2563eb;
-            font-weight: 500;
-        }
-
-        /* 移除 date-display 的 margin-left: auto */
-        .date-display {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 8px 15px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 500;
-            white-space: nowrap;
-            color: #127be4;
-            background-color: #eef2f6;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-            /* 移除 margin-left: auto */
-        }
-        
-        .user-btn {
-            background: #2563eb;
-            color: #fff;
-            border: none;
-            border-radius: 20px;
-            padding: 10px 20px;
-            font-weight: 600;
-            font-size: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        
-        .user-btn:hover {
-            background: #1746a2;
-        }
-        
-        /* 搜索区域 */
-        .search-buttons {
-            margin-bottom: 24px;
-        }
-        
-        #search-form {
-            display: flex;
-            flex: 1;
-            max-width: 500px;
-            min-width: 250px;
-        }
-        
-        #search-form input {
-            flex: 1;
-            padding: 12px 18px;
-            font-size: 1rem;
-            border: 1px solid #ddd;
-            border-radius: 8px 0 0 8px;
-            outline: none;
-        }
-        
-        #search-form input:focus {
-            border-color: #3498db;
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-        }
-        
-        #search-form button {
-            padding: 12px 20px;
-            font-size: 1rem;
-            cursor: pointer;
-            background: #3498db;
-            color: white;
-            border: none;
-            border-radius: 0 8px 8px 0;
-            transition: background 0.3s ease;
-        }
-        
-        #search-form button:hover {
-            background: #2980b9;
-        }
-        
-        /* 工地位置页面 */
-        .site-locations-page {
-            flex: 1;
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-            margin-bottom: 30px;
-        }
-        
-        .site-locations-page > h2 {
-            margin-bottom: 25px;
-            color: #2c3e50;
-            font-size: 1.8rem;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .site-locations-page > h2 i {
-            color: #3498db;
-        }
-        
-        .map-and-list {
-            display: flex;
-            gap: 30px;
-            height: 500px;
-        }
-        
-        .map-container {
-            flex: 2;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-        }
-        
-        #site-map {
-            width: 100%;
-            height: 100%;
-            background: #eaf2f8;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #7f8c8d;
-            font-weight: bold;
-        }
-        
-        .site-list-container {
-            flex: 1;
-            background: #f8f9fa;
-            border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .site-list-header {
-            padding: 20px;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .site-list-header h2 {
-            font-size: 1.5rem;
-            color: #2c3e50;
-            margin: 0;
-        }
-        
-        .search-box {
-            display: flex;
-            align-items: center;
-            background: white;
-            border-radius: 8px;
-            padding: 8px 15px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-        
-        .search-box input {
-            border: none;
-            outline: none;
-            padding: 5px;
-            font-size: 1rem;
-            width: 150px;
-        }
-        
-        .search-box button {
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: #3498db;
-        }
-        
-        .site-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        
-        .site-item {
-            display: flex;
-            align-items: center;
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-        
-        .site-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .site-item.active {
-            background: #e6f2ff;
-            border-left: 4px solid #3498db;
-        }
-        
-        .site-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            background: rgba(52, 152, 219, 0.1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 15px;
-            color: #3498db;
-            font-size: 1.2rem;
-        }
-        
-        .site-info {
-            flex: 1;
-        }
-        
-        .site-info h3 {
-            margin: 0 0 5px 0;
-            color: #2c3e50;
-            font-size: 1.1rem;
-        }
-        
-        .site-info p {
-            margin: 0;
-            color: #7f8c8d;
-            font-size: 0.9rem;
-        }
-        
-        footer {
-            text-align: center;
-            padding: 30px 0 20px;
-            color: #7f8c8d;
-            margin-top: 40px;
-            border-top: 1px solid #e0e6ed;
-        }
-        
-        footer p {
-            margin-bottom: 5px;
-        }
-        
-                        /* 深色主題樣式 */
-    body.dark-theme {
-        background-color: #121212 !important;
-        color: #e0e0e0 !important;
-    }
-
-    body.dark-theme .main-content {
-        background-color: #121212 !important;
-    }
-
-    body.dark-theme .site-locations-page {
-        background-color: #1e1e1e !important;
-        color: #e0e0e0 !important;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3) !important;
-    }
-
-    body.dark-theme .header h1,
-    body.dark-theme .site-locations-page h2,
-    body.dark-theme .site-list-header h2 {
-        color: #e0e0e0 !important;
-    }
-
-    body.dark-theme .date-display {
-        background-color: #2d2d2d !important;
-        color: #e0e0e0 !important;
-        border: 1px solid #444 !important;
-    }
-
-    body.dark-theme #search-form input,
-    body.dark-theme .search-box input {
-        background-color: #2d2d2d !important;
-        color: #e0e0e0 !important;
-        border-color: #444 !important;
-    }
-
-    body.dark-theme #search-form input::placeholder,
-    body.dark-theme .search-box input::placeholder {
-        color: #888 !important;
-    }
-
-    body.dark-theme .site-list-container {
-        background-color: #1e1e1e !important;
-    }
-
-    body.dark-theme .site-item {
-        background-color: #2d2d2d !important;
-        color: #e0e0e0 !important;
-        border-color: #444 !important;
-    }
-
-    body.dark-theme .site-item.active {
-        background-color: #3498db !important;
-        color: white !important;
-    }
-
-    body.dark-theme .site-info h3 {
-        color: #e0e0e0 !important;
-    }
-
-    body.dark-theme .site-info p {
-        color: #b0b0b0 !important;
-    }
-
-    body.dark-theme .search-box {
-        background-color: #2d2d2d !important;
-        border-color: #444 !important;
-    }
-
-    body.dark-theme footer {
-        border-top-color: #333 !important;
-        color: #aaa !important;
-    }
-
-    body.dark-theme #site-map {
-        background-color: #2d2d2d !important;
-        color: #e0e0e0 !important;
-        border: 1px solid #444 !important;
-    }
-
-    body.dark-theme .header {
-        border-bottom-color: #333 !important;
-    }
-
-    body.dark-theme .site-list-header {
-        border-bottom-color: #444 !important;
-    }
-        /* 响应式设计 */
-        @media (max-width: 992px) {
-            .map-and-list {
-                flex-direction: column;
-                height: auto;
-            }
-            
-            .map-container {
-                height: 300px;
-                margin-bottom: 20px;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 70px;
-            }
-            
-            .sidebar .logo h2, .sidebar .menu-text {
-                display: none;
-            }
-            
-            .main-content {
-                margin-left: 70px;
-                padding: 15px;
-            }
-            
-            .site-list-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 15px;
-            }
-            
-            .search-box {
-                width: 100%;
-            }
-            
-            .search-box input {
-                width: 100%;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="styles/main.css">
     <!-- 添加主题配置 -->
     <script src="scripts/theme-config.js"></script>
 </head>
 <body>
-    <!-- 侧边栏 - 与index.html保持一致 -->
-    <div class="sidebar">
-        <div class="logo">
-            <div class="logo-icon">
-                <i class="fas fa-water"></i>
-            </div>
-            <h2 data-i18n="platform">AEL DWSS</h2>
-        </div>
-        
-        <button class="toggle-btn">
-            <i class="fas fa-chevron-left"></i>
-        </button>
-        
-        <ul class="menu">
-            <li>
-                <a href="index.html">
-                    <i class="fas fa-home"></i>
-                    <span class="menu-text" data-i18n="dashboard">Dashboard</span>
-                </a>
-            </li>
-            <li>
-                <a href="sitediary.html">
-                    <i class="fas fa-book"></i>
-                    <span class="menu-text" data-i18n="site.diary">Site Diary</span>
-                </a>
-            </li>
-            <li>
-                <a href="safetyinspect.html">
-                    <i class="fas fa-clipboard-check"></i>
-                    <span class="menu-text" data-i18n="safety.inspection">Safety Inspection</span>
-                </a>
-            </li>
-            <li>
-                <a href="sitelocations.html" class="active">
-                    <i class="fas fa-map-marked-alt"></i>
-                    <span class="menu-text" data-i18n="site.locations">Site Locations</span>
-                </a>
-            </li>
-            <li>
-                <a href="labourwage.html">
-                    <i class="fas fa-money-bill-wave"></i>
-                    <span class="menu-text" data-i18n="labour.wage">Labour Wage</span>
-                </a>
-            </li>
-            <li>
-                <a href="settings.html">
-                    <i class="fas fa-cogs"></i>
-                    <span class="menu-text" data-i18n="system.settings">System Settings</span>
-                </a>
-            </li>
-            <li>
-                <a href="usermanagement.html">
-                    <i class="fas fa-user-circle"></i>
-                    <span class="menu-text" data-i18n="user.management">User Management</span>
-                </a>
-            </li>
-        </ul>
-    </div>
-    
+    <script src="scripts/language.js"></script>
+    <script src="scripts/app.js"></script>
+    <script src="scripts/sidebar.js"></script>
+
     <!-- 主内容区域 -->
     <div class="main-content">
         <div class="header">
-            <h1 data-i18n="platform">DWSS Management System</h1>
+            <h1 data-i18n="site.locations">Site Location</h1>
             <div class="header-controls">
                 <div class="user-date-row">
                     <div class="date-display">
@@ -638,7 +69,7 @@
                         
                         <div class="site-item" data-lat="22.3293" data-lng="114.1594">
                             <div class="site-icon">
-                                <i class="fas fa-road"></i> <!-- 使用 fa-road 代替 fa-pipe -->
+                                <i class="fas fa-road"></i>
                             </div>
                             <div class="site-info">
                                 <h3 data-i18n="site.pipeline">Pipeline</h3>
@@ -668,7 +99,7 @@
                         
                         <div class="site-item" data-lat="22.3493" data-lng="114.1494">
                             <div class="site-icon">
-                                <i class="fas fa-gas-pump"></i> <!-- 使用 fa-gas-pump 代替 fa-pump -->
+                                <i class="fas fa-gas-pump"></i>
                             </div>
                             <div class="site-info">
                                 <h3 data-i18n="site.pump">Pump Station</h3>
@@ -687,39 +118,26 @@
     </div>
 
     <!-- 添加语言脚本 -->
-    <script src="scripts/language.js"></script>
-    <script src="scripts/app.js"></script>
+
     <script>
-        // 初始化配置系統
-        document.addEventListener('DOMContentLoaded', function() {
-            // 初始化语言
-            LanguageConfig.init();
-            
-            // 初始化应用配置
-            if (typeof AppConfig !== 'undefined') {
-                AppConfig.init();
-                
-                // 更新當前日期（使用配置系統的格式）
-                AppConfig.updateDateDisplay();
-            }
-            
             // 搜索功能
             const siteSearch = document.getElementById('site-search');
             const siteItems = document.querySelectorAll('.site-item');
             
-            // 添加搜索事件監聽器
-            siteSearch.addEventListener('input', function() {
-                const searchTerm = this.value.toLowerCase();
-                
-                siteItems.forEach(item => {
-                    const siteName = item.querySelector('h3').textContent.toLowerCase();
-                    if (siteName.includes(searchTerm)) {
-                        item.style.display = 'flex';
-                    } else {
-                        item.style.display = 'none';
-                    }
+            if (siteSearch) {
+                siteSearch.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase();
+                    
+                    siteItems.forEach(item => {
+                        const siteName = item.querySelector('h3').textContent.toLowerCase();
+                        if (siteName.includes(searchTerm)) {
+                            item.style.display = 'flex';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
                 });
-            });
+            }
             
             // 添加工地點擊事件
             siteItems.forEach(item => {
@@ -731,21 +149,9 @@
                     
                     // 添加active類到當前項
                     this.classList.add('active');
-                    
-                    // 在實際實現中，這裡會調用地圖API
-                    const lat = this.getAttribute('data-lat');
-                    const lng = this.getAttribute('data-lng');
-                    
-                    console.log('Selected site: ' + this.querySelector('h3').textContent);
-                    console.log('Coordinates: ' + lat + ', ' + lng);
                 });
             });
-            
-            // 防止表單提交刷新頁面
-            document.getElementById('search-form').addEventListener('submit', function(e) {
-                e.preventDefault();
-            });
-        });
+    
     </script>
     
 </body>

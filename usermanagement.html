@@ -300,7 +300,7 @@
         </div> <!-- 关闭 user-management-page -->
         </div> <!-- 关闭 main-content -->
         </div> <!-- 关闭可能存在的其他容器 -->
-<footer>
+        
     <div class="footer-content">
         <p data-i18n="copyright">&copy; 2025 AEL DWSS System. All rights reserved.</p>
         <p data-i18n="platform">AEL DWSS Platform</p>
@@ -325,11 +325,8 @@
                 });
             }
             
-            // 更新当前日期
-            const now = new Date();
-            const options = { year: 'numeric', month: 'long', day: 'numeric' };
-            document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', options);
         });
     </script>
+    
 </body>
 </html>

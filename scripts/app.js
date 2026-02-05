@@ -55,28 +55,33 @@ const AppConfig = {
     },
     
     updateDateDisplay: function() {
-        const now = new Date();
-        let formattedDate;
-        
-        switch(this.current.dateFormat) {
-            case 'dd-mm-yyyy':
-                formattedDate = now.toLocaleDateString('en-GB');
-                break;
-            case 'mm-dd-yyyy':
-                formattedDate = now.toLocaleDateString('en-US');
-                break;
-            case 'yyyy-mm-dd':
-                formattedDate = now.toISOString().split('T')[0];
-                break;
-            default:
-                formattedDate = now.toLocaleDateString('en-US');
-        }
-        
-        const dateElement = document.getElementById('current-date');
-        if (dateElement) {
-            dateElement.textContent = formattedDate;
-        }
+    const now = new Date();
+    let formattedDate;
+    
+    // 获取本地时间的各个部分
+    const day = now.getDate().toString().padStart(2, '0');
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const year = now.getFullYear();
+    
+    switch(this.current.dateFormat) {
+        case 'dd-mm-yyyy':
+            formattedDate = `${day}-${month}-${year}`; // 05-02-2026
+            break;
+        case 'mm-dd-yyyy':
+            formattedDate = `${month}-${day}-${year}`; // 02-05-2026
+            break;
+        case 'yyyy-mm-dd':
+            formattedDate = `${year}-${month}-${day}`; // 2026-02-05
+            break;
+        default:
+            formattedDate = `${day}-${month}-${year}`; // 默认05-02-2026
     }
+    
+    const dateElement = document.getElementById('current-date');
+    if (dateElement) {
+        dateElement.textContent = formattedDate;
+    }
+}
 };
 
 // 页面加载时自动初始化配置
