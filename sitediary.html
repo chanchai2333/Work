@@ -74,103 +74,102 @@
         
         <!-- Site Diary 页面内容 -->
         <div class="site-diary-page">
-            <h2><i class="fas fa-book"></i> <span data-i18n="site.diary.management">Site Diary Management</span></h2>
-            
-            <div class="diary-controls">
-                <div class="diary-stats">
-                    <div class="stat-card">
-                        <div class="label" data-i18n="total.documents">Total Documents</div>
-                        <div class="value" id="total-documents-count">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="label" data-i18n="this.month">This Month</div>
-                        <div class="value" id="month-count">0</div>
-                    </div>
-                </div>
+    <h2><i class="fas fa-book"></i> <span data-i18n="site.diary.management">Site Diary Management</span></h2>
+    
+    <!-- 使用 diary-controls-row 让统计和筛选器在同一行 -->
+    <div class="diary-controls-row">
+        <div class="diary-stats">
+            <div class="stat-card">
+                <div class="label" data-i18n="total.documents">Total Documents</div>
+                <div class="value" id="total-documents-count">0</div>
             </div>
-            
-            <div class="diary-container">
-                <!-- 筛选器区域 -->
-                <section class="filters-section">
-                    <div class="filter-group" id="site-filter-group">
-                        <div class="filter-toggle">
-                            <span data-i18n="all.sites">All Sites</span>
-                            <i class="fas fa-chevron-down"></i>
-                        </div>
-                        <div class="filter-options">
-                            <div class="filter-option active" data-filter="site" data-value="all" data-i18n="all.sites">All Sites</div>
-                            <div class="filter-option" data-filter="site" data-value="treatment" data-i18n="site.treatment">Treatment Plant</div>
-                            <div class="filter-option" data-filter="site" data-value="pipeline" data-i18n="site.pipeline">Pipeline</div>
-                            <div class="filter-option" data-filter="site" data-value="reservoir" data-i18n="site.reservoir">Reservoir</div>
-                            <div class="filter-option" data-filter="site" data-value="distribution" data-i18n="site.distribution">Distribution</div>
-                            <div class="filter-option" data-filter="site" data-value="pump" data-i18n="site.pump">Pump Station</div>
-                        </div>
-                    </div>
-                    
-                    <div class="filter-group" id="status-filter-group">
-                        <div class="filter-toggle">
-                            <span data-i18n="all.statuses">All Statuses</span>
-                            <i class="fas fa-chevron-down"></i>
-                        </div>
-                        <div class="filter-options">
-                            <div class="filter-option active" data-filter="status" data-value="all" data-i18n="all.statuses">All Statuses</div>
-                            <div class="filter-option" data-filter="status" data-value="draft" data-i18n="status.draft">Draft</div>
-                            <div class="filter-option" data-filter="status" data-value="submitted-wsg" data-i18n="status.submitted.wsg">Submitted to WSG</div>
-                            <div class="filter-option" data-filter="status" data-value="submitted-ig" data-i18n="status.submitted.ig">Submitted to IG</div>
-                            <div class="filter-option" data-filter="status" data-value="closed" data-i18n="status.closed">Closed</div>
-                            <div class="filter-option" data-filter="status" data-value="reopen" data-i18n="status.reopen">Reopen</div>
-                            <div class="filter-option" data-filter="status" data-value="cancelled" data-i18n="status.cancelled">Cancelled</div>
-                        </div>
-                    </div>
-                    
-                    <div class="filter-group" id="type-filter-group">
-                        <div class="filter-toggle">
-                            <span data-i18n="all.document.types">All Document Types</span>
-                            <i class="fas fa-chevron-down"></i>
-                        </div>
-                        <div class="filter-options">
-                            <div class="filter-option active" data-filter="type" data-value="all" data-i18n="all.document.types">All Document Types</div>
-                            <div class="filter-option" data-filter="type" data-value="Sub Contractor Documents" data-i18n="document.type.subcontractor">Sub Contractor Documents</div>
-                            <div class="filter-option" data-filter="type" data-value="Contractor Documents" data-i18n="document.type.contractor">Contractor Documents</div>
-                        </div>
-                    </div>
-                </section>        
+            <div class="stat-card">
+                <div class="label" data-i18n="this.month">This Month</div>
+                <div class="value" id="month-count">0</div>
             </div>
-            
-            <section class="content-section">
-                <div class="table-header">
-                    <h2 class="table-title" data-i18n="diary.entries">Site Diary Entries</h2>
-                </div>
-                
-                <div class="table-container">
-                    <table class="diary-table">
-                        <thead>
-                            <tr>
-                                <th data-i18n="diary.id">Diary ID</th>
-                                <th data-i18n="status">Status</th>
-                                <th data-i18n="site">Site</th>
-                                <th data-i18n="date">Date</th>
-                                <th data-i18n="submitted.by">Submitted By</th>
-                                <th data-i18n="document.type">Document Type</th>
-                                <th data-i18n="actions">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="diary-table-body">
-                            <!-- 表格内容将通过JavaScript动态生成 -->
-                        </tbody>
-                    </table>
-                    <div id="no-results-message" class="no-results" style="display: none;" data-i18n="no.matching.documents">
-                        No matching documents found. Please try different filters.
-                    </div>
-                </div>
-            </section>      
-            
-            <footer>
-                <p data-i18n="copyright">&copy; 2025 AEL DWSS System. All rights reserved.</p>
-                <p data-i18n="platform">AEL DWSS Platform</p>
-            </footer>
         </div>
+        
+        <section class="filters-section">
+            <div class="filter-group" id="site-filter-group">
+                <div class="filter-toggle">
+                    <span data-i18n="all.sites">All Sites</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="filter-options">
+                    <div class="filter-option active" data-filter="site" data-value="all" data-i18n="all.sites">All Sites</div>
+                    <div class="filter-option" data-filter="site" data-value="treatment" data-i18n="site.treatment">Treatment Plant</div>
+                    <div class="filter-option" data-filter="site" data-value="pipeline" data-i18n="site.pipeline">Pipeline</div>
+                    <div class="filter-option" data-filter="site" data-value="reservoir" data-i18n="site.reservoir">Reservoir</div>
+                    <div class="filter-option" data-filter="site" data-value="distribution" data-i18n="site.distribution">Distribution</div>
+                    <div class="filter-option" data-filter="site" data-value="pump" data-i18n="site.pump">Pump Station</div>
+                </div>
+            </div>
+            
+            <div class="filter-group" id="status-filter-group">
+                <div class="filter-toggle">
+                    <span data-i18n="all.statuses">All Statuses</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="filter-options">
+                    <div class="filter-option active" data-filter="status" data-value="all" data-i18n="all.statuses">All Statuses</div>
+                    <div class="filter-option" data-filter="status" data-value="draft" data-i18n="status.draft">Draft</div>
+                    <div class="filter-option" data-filter="status" data-value="submitted-wsg" data-i18n="status.submitted.wsg">Submitted to WSG</div>
+                    <div class="filter-option" data-filter="status" data-value="submitted-ig" data-i18n="status.submitted.ig">Submitted to IG</div>
+                    <div class="filter-option" data-filter="status" data-value="closed" data-i18n="status.closed">Closed</div>
+                    <div class="filter-option" data-filter="status" data-value="reopen" data-i18n="status.reopen">Reopen</div>
+                    <div class="filter-option" data-filter="status" data-value="cancelled" data-i18n="status.cancelled">Cancelled</div>
+                </div>
+            </div>
+            
+            <div class="filter-group" id="type-filter-group">
+                <div class="filter-toggle">
+                    <span data-i18n="all.document.types">All Document Types</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="filter-options">
+                    <div class="filter-option active" data-filter="type" data-value="all" data-i18n="all.document.types">All Document Types</div>
+                    <div class="filter-option" data-filter="type" data-value="Sub Contractor Documents" data-i18n="document.type.subcontractor">Sub Contractor Documents</div>
+                    <div class="filter-option" data-filter="type" data-value="Contractor Documents" data-i18n="document.type.contractor">Contractor Documents</div>
+                </div>
+            </div>
+        </section>
     </div>
+    
+    <!-- 表格区域 -->
+    <section class="content-section">
+        <div class="table-header">
+            <h2 class="table-title" data-i18n="diary.entries">Site Diary Entries</h2>
+        </div>
+        
+        <div class="table-container">
+            <table class="diary-table">
+                <thead>
+                    <tr>
+                        <th data-i18n="diary.id">Diary ID</th>
+                        <th data-i18n="status">Status</th>
+                        <th data-i18n="site">Site</th>
+                        <th data-i18n="date">Date</th>
+                        <th data-i18n="submitted.by">Submitted By</th>
+                        <th data-i18n="document.type">Document Type</th>
+                        <th data-i18n="actions">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="diary-table-body">
+                    <!-- 表格内容将通过JavaScript动态生成 -->
+                </tbody>
+            </table>
+            <div id="no-results-message" class="no-results" style="display: none;" data-i18n="no.matching.documents">
+                No matching documents found. Please try different filters.
+            </div>
+        </div>
+    </section>
+    
+    <footer>
+        <p data-i18n="copyright">&copy; 2025 AEL DWSS System. All rights reserved.</p>
+        <p data-i18n="platform">AEL DWSS Platform</p>
+    </footer>
+</div>
+</div>
     <script>
     // Site Diary 页面特定的弹窗控制
     document.addEventListener('DOMContentLoaded', function() {

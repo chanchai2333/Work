@@ -170,11 +170,16 @@
             margin-bottom: 30px;
             padding-bottom: 20px;
             border-bottom: 1px solid #e0e6ed;
+            flex-wrap: wrap; /* 添加换行支持 */
+            gap: 15px; /* 添加间距 */
         }
 
         .header h1 {
             color: #2c3e50;
             font-size: 2rem;
+            margin: 0; /* 移除默认边距 */
+            flex: 1; /* 让标题占据可用空间 */
+            min-width: 200px; /* 最小宽度避免挤压 */
         }
 
         .search-buttons {
@@ -257,24 +262,23 @@
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    width: auto; /* 修改為 auto 避免佔用全寬 */
     gap: 15px;
-    flex-direction: row; /* 強制水平排列 */
-    margin-left: auto; /* 推向右側 */
+    flex-wrap: nowrap; /* 不换行 */
 }
 
-/* 移除 date-display 的 margin-left: auto */
+/* 日期显示样式 */
 .date-display {
-    background: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 1rem;
+    color: #2563eb;
+    font-weight: 500;
+    background: #eef2f6;
     padding: 8px 15px;
     border-radius: 8px;
-    font-size: 16px;
-    font-weight: 500;
-    white-space: nowrap;
-    color: #2c3e50;
-    background-color: #eef2f6;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    /* 移除 margin-left: auto */
+    white-space: nowrap; /* 防止换行 */
 }
 
 
@@ -301,20 +305,19 @@
 .user-profile .btn:hover {
     background: rgba(52, 152, 219, 0.3);
 }
-/* Add to main.css */
+/* 修改 user-date-row 为一行布局 */
 .user-date-row {
     display: flex;
     align-items: center;
     gap: 16px;
+    flex-wrap: nowrap; /* 确保不换行 */
 }
 
 /* 調整響應式佈局 */
 @media (max-width: 768px) {
     .header-controls {
-        flex-direction: column;
-        gap: 10px;
         width: 100%;
-        align-items: flex-end;
+        justify-content: space-between;
     }
 }
 
@@ -850,17 +853,17 @@
     color: #fff;
     border: none;
     border-radius: 20px;
-    padding: 10px 36px; /* Wider padding */
+    padding: 10px 20px;
     font-weight: 600;
-    font-size: 1.1rem;
+    font-size: 1rem;
     box-shadow: 0 2px 8px rgba(37,99,235,0.08);
     display: flex;
     align-items: center;
     gap: 10px;
     cursor: pointer;
     transition: background 0.2s;
-    min-width: 140px; /* Minimum width for a wide button */
-    justify-content: center;
+    white-space: nowrap; /* 防止换行 */
+    min-width: 140px; /* 最小宽度 */
 }
 .user-btn:hover {
     background: #1746a2;
@@ -1129,7 +1132,7 @@
             .header {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 20px;
+                gap: 15px;
             }
 
             .search-buttons {
@@ -2373,3 +2376,239 @@ body {
 .btn[type="submit"]:hover {
     background: linear-gradient(135deg, #27ae60, #219653);
 }
+
+/* 方案1：为这两个页面添加特定类选择器 */
+body.site-inspection .main-content,
+body.site-diary .main-content,
+.site-inspection-page .main-content,
+.site-diary-page .main-content {
+    transition: margin-left 0.3s ease, width 0.3s ease !important;
+}
+
+body.site-inspection .sidebar.collapsed ~ .main-content,
+body.site-inspection .sidebar.collapsed + .main-content,
+body.site-diary .sidebar.collapsed ~ .main-content,
+body.site-diary .sidebar.collapsed + .main-content,
+.site-inspection-page .sidebar.collapsed ~ .main-content,
+.site-inspection-page .sidebar.collapsed + .main-content,
+.site-diary-page .sidebar.collapsed ~ .main-content,
+.site-diary-page .sidebar.collapsed + .main-content {
+    margin-left: 70px !important;
+    width: calc(100% - 70px) !important;
+}
+
+body.site-inspection .sidebar:not(.collapsed) ~ .main-content,
+body.site-inspection .sidebar:not(.collapsed) + .main-content,
+body.site-diary .sidebar:not(.collapsed) ~ .main-content,
+body.site-diary .sidebar:not(.collapsed) + .main-content,
+.site-inspection-page .sidebar:not(.collapsed) ~ .main-content,
+.site-inspection-page .sidebar:not(.collapsed) + .main-content,
+.site-diary-page .sidebar:not(.collapsed) ~ .main-content,
+.site-diary-page .sidebar:not(.collapsed) + .main-content {
+    margin-left: 260px !important;
+    width: calc(100% - 260px) !important;
+}
+
+/* ===== 紧急修复：侧边栏和主内容布局问题 ===== */
+
+/* 确保body使用正确的flex布局 */
+body {
+    display: flex;
+    flex-direction: row; /* 改为水平布局 */
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+/* 侧边栏固定定位 */
+.sidebar {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    height: 100vh !important;
+    z-index: 1000;
+}
+
+/* 主内容区域 - 关键修复 */
+.main-content {
+    margin-left: 260px !important;
+    width: calc(100% - 260px) !important;
+    padding: 30px;
+    min-height: 100vh;
+    background-color: #f5f7fa;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+/* 侧边栏折叠时 */
+.sidebar.collapsed + .main-content,
+.sidebar.collapsed ~ .main-content {
+    margin-left: 70px !important;
+    width: calc(100% - 70px) !important;
+}
+
+/* 确保内容区域足够宽 */
+.site-diary-page,
+.safety-inspect-page,
+.labour-wage-page,
+.site-locations-page {
+    width: 100% !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box;
+}
+
+/* 表格容器宽度修复 */
+.table-container {
+    width: 100% !important;
+    overflow-x: auto;
+}
+
+/* 确保表格也占满宽度 */
+.diary-table,
+.safety-table,
+.wage-table,
+.location-table {
+    width: 100% !important;
+    min-width: 1000px; /* 确保表格有最小宽度 */
+}
+
+/* ===== 针对Site Diary和Site Location的特殊修复 ===== */
+
+/* 为这两个页面添加特定的修复 */
+.site-diary-page,
+.site-locations-page {
+    background: white;
+    border-radius: 12px;
+    width: 100% !important;
+    padding: 30px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    margin-bottom: 30px;
+    box-sizing: border-box;
+}
+
+/* 确保页面内的表格容器也占满宽度 */
+.site-diary-page .table-container,
+.site-locations-page .table-container {
+    width: 100% !important;
+    box-sizing: border-box;
+}
+
+/* ===== 响应式设计修复 ===== */
+
+@media (max-width: 900px) {
+    .sidebar:not(.collapsed) {
+        width: 260px !important;
+        position: fixed !important;
+        z-index: 1000 !important;
+    }
+    
+    .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding: 20px !important;
+    }
+    
+    .sidebar.collapsed ~ .main-content,
+    .sidebar.collapsed + .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        padding: 15px !important;
+    }
+    
+    .site-diary-page,
+    .site-locations-page {
+        padding: 20px !important;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* ===== 添加footer固定位置修复 ===== */
+
+footer {
+    margin-top: auto !important;
+    position: relative;
+    bottom: 0;
+    width: 100%;
+    background: transparent;
+}
+
+/* ===== 确保所有页面内容都可以扩展 ===== */
+
+/* 移除所有可能限制宽度的最大宽度设置 */
+.content-section {
+    max-width: none !important;
+    width: 100% !important;
+}
+
+/* 移除dashboard的最大宽度限制 */
+.dashboard {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+}
+
+/* 确保卡片布局适应新宽度 */
+.feature-cards {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) !important;
+}
+
+/* ===== 修复暗黑主题下的布局问题 ===== */
+
+body.dark-theme .main-content {
+    background-color: #121212 !important;
+}
+
+body.dark-theme .site-diary-page,
+body.dark-theme .site-locations-page,
+body.dark-theme .content-section {
+    background-color: #1e1e1e !important;
+}
+
+/* ===== JavaScript辅助类 ===== */
+
+/* 用于动态添加的类 */
+.main-content-expanded {
+    margin-left: 260px !important;
+    width: calc(100% - 260px) !important;
+}
+
+.main-content-collapsed {
+    margin-left: 70px !important;
+    width: calc(100% - 70px) !important;
+}
+
+/* === 侧边栏按钮旋转修复 === */
+
+/* 确保按钮旋转生效 */
+.toggle-btn {
+    transition: transform 0.3s ease !important;
+}
+
+/* 确保旋转效果不被覆盖 */
+.sidebar.collapsed .toggle-btn,
+.sidebar.collapsed .toggle-btn i {
+    transform: rotate(180deg) !important;
+}
+
+/* 或者直接旋转图标而不是按钮 */
+.sidebar:not(.collapsed) .toggle-btn i {
+    transform: rotate(0deg) !important;
+}
+
+.sidebar.collapsed .toggle-btn i {
+    transform: rotate(180deg) !important;
+}
+

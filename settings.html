@@ -9,63 +9,6 @@
 </head>
 <body>
     <!-- 侧边栏 -->
-    <div class="sidebar">
-        <div class="logo">
-            <div class="logo-icon">
-                <i class="fas fa-water"></i>
-            </div>
-            <h2>AEL DWSS</h2>
-        </div>
-        
-        <button class="toggle-btn">
-            <i class="fas fa-chevron-left"></i>
-        </button>
-        
-        <ul class="menu">
-            <li>
-                <a href="index.html">
-                    <i class="fas fa-home"></i>
-                    <span class="menu-text" data-i18n="dashboard">Dashboard</span>
-                </a>
-            </li>
-            <li>
-                <a href="sitediary.html">
-                    <i class="fas fa-book"></i>
-                    <span class="menu-text" data-i18n="site.diary">Site Diary</span>
-                </a>
-            </li>
-            <li>
-                <a href="safetyinspect.html">
-                    <i class="fas fa-clipboard-check"></i>
-                    <span class="menu-text" data-i18n="safety.inspection">Safety Inspection</span>
-                </a>
-            </li>
-            <li>
-                <a href="sitelocations.html">
-                    <i class="fas fa-map-marked-alt"></i>
-                    <span class="menu-text" data-i18n="site.locations">Site Locations</span>
-                </a>
-            </li>
-            <li>
-                <a href="labourwage.html">
-                    <i class="fas fa-money-bill-wave"></i>
-                    <span class="menu-text" data-i18n="labour.wage">Labour Wage</span>
-                </a>
-            </li>
-            <li>
-                <a href="settings.html">
-                    <i class="fas fa-cogs"></i>
-                    <span class="menu-text" data-i18n="system.settings">System Settings</span>
-                </a>
-            </li>
-            <li>
-                <a href="usermanagement.html">
-                    <i class="fas fa-user-circle"></i>
-                    <span class="menu-text" data-i18n="user.management">User Management</span>
-                </a>
-            </li>
-        </ul>
-    </div>
     
     <!-- 主内容区域 -->
     <div class="main-content">
@@ -386,9 +329,61 @@
 
     <script src="scripts/theme-config.js"></script>
     <script src="scripts/app.js"></script>
+    <script src="scripts/sidebar.js"></script>
     <script src="scripts/language.js"></script>
+
+    
     
     <script>
+
+        // 紧急修复：手动初始化侧边栏
+setTimeout(function() {
+    console.log('Attempting to initialize sidebar manually...');
+    
+    // 检查侧边栏是否存在
+    const sidebar = document.querySelector('.sidebar');
+    const toggleBtn = document.querySelector('.toggle-btn');
+    
+    if (!sidebar) {
+        console.log('No sidebar found, trying to load via sidebar.js...');
+        
+        // 如果 loadSidebar 函数存在，调用它
+        if (typeof loadSidebar === 'function') {
+            loadSidebar();
+        } else {
+            console.error('loadSidebar function not available!');
+            console.log('Script loading order might be wrong.');
+            
+            // 重新加载 sidebar.js
+            const script = document.createElement('script');
+            script.src = 'scripts/sidebar.js';
+            script.onload = function() {
+                console.log('sidebar.js reloaded, calling loadSidebar...');
+                if (typeof loadSidebar === 'function') {
+                    loadSidebar();
+                }
+            };
+            document.head.appendChild(script);
+        }
+    } else {
+        console.log('Sidebar found, checking toggle button...');
+        if (toggleBtn) {
+            console.log('Toggle button found, adding manual click handler...');
+            
+            // 手动添加点击事件
+            toggleBtn.addEventListener('click', function() {
+                console.log('Manual toggle clicked!');
+                const sidebar = document.querySelector('.sidebar');
+                if (sidebar) {
+                    sidebar.classList.toggle('collapsed');
+                    console.log('Sidebar collapsed:', sidebar.classList.contains('collapsed'));
+                }
+            });
+        }
+    }
+}, 500);
+
+
 
         // 设置页面特定功能 - 修复版本
         document.addEventListener('DOMContentLoaded', function() {
@@ -985,5 +980,7 @@
             color: #bbbbbb;
         }
     </style>
+
+    
 </body>
 </html>

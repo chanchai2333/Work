@@ -42,9 +42,9 @@
         <div class="labour-wage-page">
             <h2><i class="fas fa-money-bill-wave"></i> <span data-i18n="labour.wage.management">Labour Wage Management</span></h2>
             
-            <!-- 修改这里：使用与sitediary.html相同的布局结构 -->
+            <!-- 使用与safetyinspect.html完全相同的水平布局结构 -->
             <div class="diary-controls-row">
-                <div class="wage-stats">
+                <div class="diary-stats">
                     <div class="stat-card">
                         <div class="label" data-i18n="total.documents">Total Records</div>
                         <div class="value" id="total-records-count">0</div>
@@ -55,7 +55,7 @@
                     </div>
                 </div>
                 
-                <div class="filters-section">
+                <section class="filters-section">
                     <div class="filter-group" id="type-filter-group">
                         <div class="filter-toggle">
                             <span data-i18n="all.document.types">All Document Types</span>
@@ -99,7 +99,7 @@
                             <div class="filter-option" data-filter="site" data-value="pump">Pump Station</div>
                         </div>
                     </div>
-                </div>
+                </section>
             </div>
                     
             <section class="content-section">
@@ -201,9 +201,9 @@
     <script src="scripts/sidebar.js"></script>
     
     <style>
-        /* 只保留labourwage页面的特有样式 */
+        /* labourwage页面特有颜色样式 - 保持布局与site diary完全一致 */
         
-        /* 劳动工资页面特定样式 */
+        /* 页面容器 */
         .labour-wage-page {
             background: white;
             border-radius: 12px;
@@ -211,475 +211,306 @@
             padding: 30px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
             margin-bottom: 30px;
-            flex: 1;
         }
 
-        .labour-wage-page h2 {
+        /* 标题样式 - 与site diary完全一致 */
+        .labour-wage-page > h2 {
             color: #2c3e50;
-            margin-bottom: 25px;
-            font-size: 1.8rem;
+            margin-bottom: 25px; /* 重要：确保有足够间距 */
+            font-size: 1.8rem; /* 重要：确保字体大小一致 */
             display: flex;
             align-items: center;
             gap: 12px;
         }
 
-        .labour-wage-page h2 i {
-            color: #9b59b6;
+        .labour-wage-page > h2 i {
+            color: #9b59b6; /* 紫色图标 */
         }
 
-        /* 统计卡片样式 - 紫色主题 */
-        .wage-stats {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
+        /* 统计卡片紫色主题 - 只改变颜色，保持布局不变 */
+        .labour-wage-page .diary-stats .stat-card {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad) !important;
+            box-shadow: 0 4px 12px rgba(155, 89, 182, 0.25) !important;
         }
 
-        .wage-stats .stat-card {
-            background: linear-gradient(135deg, #9b59b6, #8e44ad);
-            color: white;
-            padding: 12px 10px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(155, 89, 182, 0.25);
-            min-width: 120px;
-            width: 140px;
-            height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        .labour-wage-page .diary-stats .stat-card:hover {
+            box-shadow: 0 6px 15px rgba(155, 89, 182, 0.35) !important;
         }
 
-        .wage-stats .stat-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 15px rgba(155, 89, 182, 0.35);
+        .labour-wage-page .diary-stats .stat-card .label,
+        .labour-wage-page .diary-stats .stat-card .value {
+            color: white !important;
         }
 
-        .wage-stats .stat-card .label {
-            font-size: 0.9rem;
-            opacity: 0.9;
-            margin-right: 10px;
-        }
-
-        .wage-stats .stat-card .value {
-            font-size: 1.8rem;
-            font-weight: 700;
-        }
-
-        /* 筛选器区域 */
-        .diary-controls-row {
-            display: flex;
-            align-items: center;
-            gap: 32px;
-            margin-bottom: 24px;
-        }
-        
-        .filters-section {
-            display: flex;
-            gap: 24px;
-        }
-        
-        .filter-group {
-            position: relative;
-            min-width: 140px;
-        }
-        
-        .filter-toggle {
-            display: flex;
-            align-items: center;
-            padding: 12px 20px;
-            background: white;
-            border: 1px solid #dce1e6;
-            border-radius: 8px;
-            cursor: pointer;
-            min-width: 140px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-        
-        .filter-toggle:hover {
-            border-color: #a0b4c0;
-        }
-        
-        .filter-toggle i {
-            margin-left: auto;
-            transition: transform 0.3s ease;
-        }
-        
-        .filter-options {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            width: 100%;
-            background: white;
-            border: 1px solid #dce1e6;
-            border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            margin-top: 5px;
-            z-index: 10;
-            display: none;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .filter-options.open {
-            display: block;
-        }
-        
-        .filter-option {
-            padding: 12px 20px;
-            cursor: pointer;
-            transition: background 0.2s ease;
-        }
-        
-        .filter-option:hover {
-            background: #f0f7ff;
-        }
-        
-        .filter-option.active {
-            background: #e6f2ff;
-            color: #0066cc;
-            font-weight: 500;
-        }
-
-        /* 表格区域 */
-        .content-section {
-            background: rgb(255, 255, 255);
-            border-radius: 12px;
-            padding: 40px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-            max-width: 1500px;
-            margin: 0 auto;
-        }
-        
-        .table-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eaeaea;
-        }
-        
-        .table-title {
-            font-size: 1.5rem;
-            color: #2c3e50;
-            font-weight: 600;
-        }
-        
-        .table-container {
-            overflow-x: auto;
-            border-radius: 8px;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
-        }
-
-        /* 表格样式 */
-        .wage-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            background: white;
-        }
-
-        .wage-table th {
-            background: #f8f9fa;
-            padding: 16px 20px;
-            text-align: left;
-            font-weight: 600;
-            color: #2c3e50;
-            border-bottom: 2px solid #eaeaea;
-        }
-
-        .wage-table td {
-            padding: 18px 20px;
-            border-bottom: 1px solid #eaeaea;
-            color: #555;
-            transition: background 0.2s ease;
-        }
-
-        .wage-table tr:hover td {
-            background: #f9fbfd;
-        }
-
-        .wage-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        /* 状态标签样式 */
-        .status-badge {
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            display: inline-block;
-            text-align: center;
-            min-width: 120px;
-        }
-
-        .status-draft {
-            background: rgba(149, 165, 166, 0.2);
-            color: #848f90;
-        }
-
-        .status-submitted {
-            background: rgba(52, 152, 219, 0.2);
-            color: #2980b9;
-        }
-
-        .status-endorsed {
-            background: rgba(46, 204, 113, 0.2);
-            color: #27ae60;
-        }
-
-        .status-cancelled {
-            background: rgba(231, 76, 60, 0.2);
-            color: #c0392b;
-        }
-
-        .status-confirm {
+        /* 表格状态标签紫色主题 */
+        .labour-wage-page .status-confirm {
             background: rgba(155, 89, 182, 0.2);
             color: #8e44ad;
         }
 
-        .status-double-check {
+        .labour-wage-page .status-double-check {
             background: rgba(243, 156, 18, 0.2);
             color: #d35400;
         }
+        
+        /* 操作按钮紫色主题 */
+        .labour-wage-page .view-btn {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad) !important;
+        }
 
+        .labour-wage-page .view-btn:hover {
+            background: linear-gradient(135deg, #8e44ad, #7d3c98) !important;
+            box-shadow: 0 5px 12px rgba(155, 89, 182, 0.3) !important;
+        }
+        
+        /* ===== 表格样式修复 - 与Site Diary完全一致 ===== */
+        
+        /* 表格标题移到左边 */
+        .labour-wage-page .table-header {
+            display: flex !important;
+            justify-content: flex-start !important; /* 改为左对齐 */
+            align-items: center !important;
+            margin-bottom: 25px !important;
+            padding-bottom: 15px !important;
+            border-bottom: 1px solid #eaeaea !important;
+        }
+        
+        .labour-wage-page .table-title {
+            font-size: 1.5rem !important;
+            color: #2c3e50 !important;
+            font-weight: 600 !important;
+            margin: 0 !important; /* 移除默认边距 */
+        }
+        
+        /* 表格容器 */
+        .labour-wage-page .table-container {
+            overflow-x: auto !important;
+            border-radius: 8px !important;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05) !important;
+            background: white !important;
+        }
+        
+        /* 表格样式 - 与Site Diary完全一致 */
+        .labour-wage-page .wage-table {
+            table-layout: auto !important; /* 使用自动布局，更灵活 */
+            width: 100% !important;
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            background: white !important;
+        }
+        
+        .labour-wage-page .wage-table th {
+            background: #f8f9fa !important;
+            padding: 16px 20px !important;
+            text-align: left !important;
+            font-weight: 600 !important;
+            color: #2c3e50 !important;
+            border-bottom: 2px solid #eaeaea !important;
+        }
+        
+        .labour-wage-page .wage-table td {
+            padding: 18px 20px !important;
+            border-bottom: 1px solid #eaeaea !important; /* 添加记录间分隔线 */
+            color: #555 !important;
+            transition: background 0.2s ease !important;
+        }
+        
+        .labour-wage-page .wage-table tr:hover td {
+            background: #f9fbfd !important; /* 行悬停效果 */
+        }
+        
+        .labour-wage-page .wage-table tr:last-child td {
+            border-bottom: none !important; /* 最后一行不加底边 */
+        }
+
+        /* 设置最小宽度，让Period列有足够空间 */
+    .labour-wage-page .wage-table th:nth-child(5),  /* Period */
+    .labour-wage-page .wage-table td:nth-child(5) {
+        min-width: 200px !important;
+        max-width: 250px !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        line-height: 1.4 !important;
+    }
+    
+    /* 其他列设置最小宽度 */
+    .labour-wage-page .wage-table th:nth-child(1),  /* ID */
+    .labour-wage-page .wage-table td:nth-child(1) {
+        min-width: 100px !important;
+    }
+    
+    .labour-wage-page .wage-table th:nth-child(2),  /* Document Type */
+    .labour-wage-page .wage-table td:nth-child(2) {
+        min-width: 160px !important;
+    }
+    
+    .labour-wage-page .wage-table th:nth-child(3),  /* Status */
+    .labour-wage-page .wage-table td:nth-child(3) {
+        min-width: 120px !important;
+    }
+    
+    .labour-wage-page .wage-table th:nth-child(4),  /* Site */
+    .labour-wage-page .wage-table td:nth-child(4) {
+        min-width: 100px !important;
+    }
+    
+    .labour-wage-page .wage-table th:nth-child(6),  /* Submitted By */
+    .labour-wage-page .wage-table td:nth-child(6) {
+        min-width: 120px !important;
+    }
+    
+    .labour-wage-page .wage-table th:nth-child(7),  /* Total Amount */
+    .labour-wage-page .wage-table td:nth-child(7) {
+        min-width: 110px !important;
+    }
+    
+    .labour-wage-page .wage-table th:nth-child(8),  /* Actions */
+    .labour-wage-page .wage-table td:nth-child(8) {
+        min-width: 130px !important;
+        width: 130px !important; /* 固定操作列宽度 */
+    }
+
+
+
+
+        
+        /* 状态标签样式 */
+        .labour-wage-page .status-badge {
+            padding: 8px 16px !important;
+            border-radius: 20px !important;
+            font-size: 0.85rem !important;
+            font-weight: 500 !important;
+            display: inline-block !important;
+            text-align: center !important;
+            min-width: 120px !important;
+        }
+        
+        .labour-wage-page .status-draft {
+            background: rgba(149, 165, 166, 0.2) !important;
+            color: #848f90 !important;
+        }
+        
+        .labour-wage-page .status-submitted {
+            background: rgba(52, 152, 219, 0.2) !important;
+            color: #2980b9 !important;
+        }
+        
+        .labour-wage-page .status-endorsed {
+            background: rgba(46, 204, 113, 0.2) !important;
+            color: #27ae60 !important;
+        }
+        
+        .labour-wage-page .status-cancelled {
+            background: rgba(231, 76, 60, 0.2) !important;
+            color: #c0392b !important;
+        }
+        
         /* 操作按钮样式 */
-        .action-buttons {
-            display: flex;
-            gap: 10px;
+        .labour-wage-page .action-buttons {
+            display: flex !important;
+            gap: 10px !important;
         }
-
-        .action-btn {
-            padding: 10px 16px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1rem;
-            min-width: 44px;
-            min-height: 44px;
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+        
+        .labour-wage-page .action-btn {
+            padding: 10px 16px !important;
+            border: none !important;
+            border-radius: 8px !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 1rem !important;
+            min-width: 44px !important;
+            min-height: 44px !important;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1) !important;
         }
-
-        .view-btn {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
+        
+        .labour-wage-page .view-btn {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad) !important;
+            color: white !important;
         }
-
-        .view-btn:hover {
-            background: linear-gradient(135deg, #2980b9, #2471a3);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 12px rgba(52, 152, 219, 0.3);
+        
+        .labour-wage-page .view-btn:hover {
+            background: linear-gradient(135deg, #8e44ad, #7d3c98) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 5px 12px rgba(155, 89, 182, 0.3) !important;
         }
-
-        .edit-btn {
-            background: linear-gradient(135deg, #2ecc71, #27ae60);
-            color: white;
+        
+        .labour-wage-page .edit-btn {
+            background: linear-gradient(135deg, #2ecc71, #27ae60) !important;
+            color: white !important;
         }
-
-        .edit-btn:hover {
-            background: linear-gradient(135deg, #27ae60, #219653);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 12px rgba(46, 204, 113, 0.3);
+        
+        .labour-wage-page .edit-btn:hover {
+            background: linear-gradient(135deg, #27ae60, #219653) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 5px 12px rgba(46, 204, 113, 0.3) !important;
         }
-
-        .delete-btn {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-            color: white;
+        
+        .labour-wage-page .delete-btn {
+            background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
+            color: white !important;
         }
-
-        .delete-btn:hover {
-            background: linear-gradient(135deg, #c0392b, #e74c3c);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 12px rgba(231, 76, 60, 0.3);
+        
+        .labour-wage-page .delete-btn:hover {
+            background: linear-gradient(135deg, #c0392b, #e74c3c) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 5px 12px rgba(231, 76, 60, 0.3) !important;
         }
-
-        .action-btn i {
-            margin-right: 6px;
-            font-size: 1.1rem;
+        
+        .labour-wage-page .action-btn i {
+            margin-right: 6px !important;
+            font-size: 1.1rem !important;
         }
-
+        
+        /* 金额列右对齐 */
+        .labour-wage-page .wage-table td:nth-child(7) {
+            text-align: right !important;
+            font-weight: 600 !important;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+        }
+        
         /* 无结果消息 */
-        .no-results {
-            text-align: center;
-            padding: 40px;
-            color: #7f8c8d;
-            font-style: italic;
-            background: #f9f9f9;
-            border-radius: 8px;
-            margin: 20px 0;
+        .labour-wage-page .no-results {
+            text-align: center !important;
+            padding: 40px !important;
+            color: #7f8c8d !important;
+            font-style: italic !important;
+            background: #f9f9f9 !important;
+            border-radius: 8px !important;
+            margin: 20px 0 !important;
         }
-
-        /* 模态框样式 */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-content {
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
-            width: 90%;
-            max-width: 500px;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .modal-content h3 {
-            margin-bottom: 20px;
-            color: #2c3e50;
-            font-size: 1.5rem;
-        }
-
-        .modal-content label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: #2c3e50;
-        }
-
-        .modal-content input,
-        .modal-content select {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 20px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 1rem;
-        }
-
-        .modal-content input:focus,
-        .modal-content select:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-        }
-
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-            margin-top: 20px;
-        }
-
-        .modal-actions .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .modal-actions .btn[type="submit"] {
-            background: #3498db;
-            color: white;
-        }
-
-        .modal-actions .btn[type="submit"]:hover {
-            background: #2980b9;
-        }
-
-        .modal-actions .btn[type="button"] {
-            background: #e0e6ed;
-            color: #2c3e50;
-        }
-
-        .modal-actions .btn[type="button"]:hover {
-            background: #d0d9e3;
-        }
-
+        
         /* 响应式设计 */
-        @media (max-width: 900px) {
-            .wage-stats {
-                flex-direction: column;
-            }
-
-            .wage-stats .stat-card {
-                width: 100%;
-            }
-            
-            .diary-controls-row {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 15px;
-            }
-            
-            .filters-section {
-                flex-direction: column;
-                width: 100%;
-            }
-            
-            .filter-group {
-                width: 100%;
-            }
-            
-            .filter-toggle {
-                width: 100%;
-            }
-        }
-
         @media (max-width: 768px) {
-            .search-buttons {
-                flex-direction: column;
-                align-items: stretch;
+            .labour-wage-page .action-buttons {
+                flex-direction: column !important;
             }
             
-            #search-form {
-                margin-right: 0;
-                margin-bottom: 15px;
+            .labour-wage-page .action-btn {
+                width: 100% !important;
+                margin-bottom: 5px !important;
             }
             
-            .nav-buttons {
-                width: 100%;
-                justify-content: center;
+            .labour-wage-page .wage-table {
+                font-size: 0.9rem !important;
             }
             
-            .nav-buttons button {
-                padding: 8px 12px;
-                font-size: 0.9rem;
-            }
-
-            .action-buttons {
-                flex-direction: column;
-            }
-
-            .action-btn {
-                width: 100%;
-                margin-bottom: 5px;
+            .labour-wage-page .wage-table th,
+            .labour-wage-page .wage-table td {
+                padding: 12px 15px !important;
             }
         }
-
-        @media (max-width: 600px) {
-            .labour-wage-page {
-                padding: 20px;
-            }
-
-            .wage-table {
-                font-size: 0.9rem;
-            }
-
-            .wage-table th,
-            .wage-table td {
-                padding: 12px 15px;
-            }
+        
+        /* 确保表格列对齐 */
+        .labour-wage-page .wage-table {
+            table-layout: auto !important;
+        }
+        
+        .labour-wage-page .wage-table th,
+        .labour-wage-page .wage-table td {
+            vertical-align: middle !important;
         }
     </style>
     

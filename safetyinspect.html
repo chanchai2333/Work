@@ -11,36 +11,6 @@
     <script src="scripts/theme-config.js"></script>
 </head>
 <body>
-    <!-- Add New Inspection Modal -->
-    <div class="modal" id="add-inspect-modal" style="display:none;">
-        <div class="modal-content">
-            <h3 data-i18n="add.new.inspection">Add New Inspection</h3>
-            <form id="add-inspect-form">
-                <label data-i18n="inspection.id">Inspection ID</label>
-                <input type="text" id="input-inspect-id" required>
-                <label data-i18n="status">Status</label>
-                <select id="input-inspect-status" required>
-                    <option value="draft" data-i18n="status.draft">Draft</option>
-                    <option value="submitted-wsg" data-i18n="status.submitted.wsg">Submitted to WSG</option>
-                    <option value="submitted-ig" data-i18n="status.submitted.ig">Submitted to IG</option>
-                    <option value="closed" data-i18n="status.closed">Closed</option>
-                    <option value="reopen" data-i18n="status.reopen">Reopen</option>
-                    <option value="cancelled" data-i18n="status.cancelled">Cancelled</option>
-                </select>
-                <label data-i18n="site">Site</label>
-                <input type="text" id="input-inspect-site" required>
-                <label data-i18n="date">Date</label>
-                <input type="date" id="input-inspect-date" required>
-                <label data-i18n="inspector">Inspector</label>
-                <input type="text" id="input-inspect-by" required>
-                <div class="modal-actions">
-                    <button type="submit" class="btn" data-i18n="save">Save</button>
-                    <button type="button" class="btn" id="cancel-add-inspect" data-i18n="cancel">Cancel</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- 主内容区域 -->
     <div class="main-content">
         <div class="header">
@@ -133,7 +103,12 @@
                             </tr>
                         </thead>
                         <tbody id="inspection-table-body">
-                            <!-- 內容由 JS 動態生成 -->
+                            <!-- 内容由 JS 动态生成 -->
+                            <tr id="loading-row">
+                                <td colspan="6" style="text-align: center; padding: 40px;">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading inspection records...
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                     <div id="no-results-message" class="no-results" style="display: none;" data-i18n="no.matching.documents">
@@ -147,17 +122,371 @@
             </footer>
         </div>
     </div>
-    
+
+    <!-- Add New Inspection Modal -->
+    <div class="modal" id="add-inspect-modal" style="display:none;">
+        <div class="modal-content">
+            <h3 data-i18n="add.new.inspection">Add New Inspection</h3>
+            <form id="add-inspect-form">
+                <label data-i18n="inspection.id">Inspection ID</label>
+                <input type="text" id="input-inspect-id" required>
+                <label data-i18n="status">Status</label>
+                <select id="input-inspect-status" required>
+                    <option value="draft" data-i18n="status.draft">Draft</option>
+                    <option value="submitted-wsg" data-i18n="status.submitted.wsg">Submitted to WSG</option>
+                    <option value="submitted-ig" data-i18n="status.submitted.ig">Submitted to IG</option>
+                    <option value="closed" data-i18n="status.closed">Closed</option>
+                    <option value="reopen" data-i18n="status.reopen">Reopen</option>
+                    <option value="cancelled" data-i18n="status.cancelled">Cancelled</option>
+                </select>
+                <label data-i18n="site">Site</label>
+                <input type="text" id="input-inspect-site" required>
+                <label data-i18n="date">Date</label>
+                <input type="date" id="input-inspect-date" required>
+                <label data-i18n="inspector">Inspector</label>
+                <input type="text" id="input-inspect-by" required>
+                <div class="modal-actions">
+                    <button type="submit" class="btn" data-i18n="save">Save</button>
+                    <button type="button" class="btn" id="cancel-add-inspect" data-i18n="cancel">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- 添加语言脚本 -->
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
     <script src="scripts/safetyinspect.js"></script>
     <script src="scripts/sidebar.js"></script>
     
+    <style>
+        /* safetyinspect页面特有样式 - 橙色主题 */
+        
+        /* 页面容器 */
+        .site-diary-page {
+            background: white;
+            border-radius: 12px;
+            width: 100%;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+        }
+
+        /* 标题样式 */
+        .site-diary-page > h2 {
+            color: #2c3e50;
+            margin-bottom: 25px;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .site-diary-page > h2 i {
+            color: #e62222; /* 橙色图标 */
+        }
+
+        /* 统计卡片橙色主题 */
+        .site-diary-page .diary-stats .stat-card {
+            background: linear-gradient(135deg, #e67e22, #d35400) !important;
+            box-shadow: 0 4px 12px rgba(230, 126, 34, 0.25) !important;
+        }
+
+        .site-diary-page .diary-stats .stat-card:hover {
+            box-shadow: 0 6px 15px rgba(230, 126, 34, 0.35) !important;
+        }
+
+        .site-diary-page .diary-stats .stat-card .label,
+        .site-diary-page .diary-stats .stat-card .value {
+            color: white !important;
+        }
+
+        /* 表格状态标签橙色主题 */
+        .site-diary-page .status-submitted-wsg {
+            background: rgba(52, 152, 219, 0.2);
+            color: #2980b9;
+        }
+
+        .site-diary-page .status-submitted-ig {
+            background: rgba(155, 89, 182, 0.2);
+            color: #8e44ad;
+        }
+        
+        /* 操作按钮橙色主题 */
+        .site-diary-page .view-btn {
+            background: linear-gradient(135deg, #e67e22, #d35400) !important;
+        }
+
+        .site-diary-page .view-btn:hover {
+            background: linear-gradient(135deg, #d35400, #c0392b) !important;
+            box-shadow: 0 5px 12px rgba(230, 126, 34, 0.3) !important;
+        }
+        
+        /* ===== 表格样式 ===== */
+        
+        /* 表格标题 */
+        .site-diary-page .table-header {
+            display: flex !important;
+            justify-content: flex-start !important;
+            align-items: center !important;
+            margin-bottom: 25px !important;
+            padding-bottom: 15px !important;
+            border-bottom: 1px solid #eaeaea !important;
+        }
+        
+        .site-diary-page .table-title {
+            font-size: 1.5rem !important;
+            color: #2c3e50 !important;
+            font-weight: 600 !important;
+            margin: 0 !important;
+        }
+        
+        /* 表格容器 */
+        .site-diary-page .table-container {
+            overflow-x: auto !important;
+            border-radius: 8px !important;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05) !important;
+            background: white !important;
+        }
+        
+        /* 表格样式 */
+        .site-diary-page .diary-table {
+            table-layout: auto !important;
+            width: 100% !important;
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            background: white !important;
+        }
+        
+        .site-diary-page .diary-table th {
+            background: #f8f9fa !important;
+            padding: 16px 20px !important;
+            text-align: left !important;
+            font-weight: 600 !important;
+            color: #2c3e50 !important;
+            border-bottom: 2px solid #eaeaea !important;
+        }
+        
+        .site-diary-page .diary-table td {
+            padding: 18px 20px !important;
+            border-bottom: 1px solid #eaeaea !important;
+            color: #555 !important;
+            transition: background 0.2s ease !important;
+        }
+        
+        .site-diary-page .diary-table tr:hover td {
+            background: #f9fbfd !important;
+        }
+        
+        .site-diary-page .diary-table tr:last-child td {
+            border-bottom: none !important;
+        }
+
+        /* 列宽度设置 */
+        .site-diary-page .diary-table th:nth-child(1),
+        .site-diary-page .diary-table td:nth-child(1) {
+            min-width: 120px !important; /* Inspection ID */
+        }
+        
+        .site-diary-page .diary-table th:nth-child(2),
+        .site-diary-page .diary-table td:nth-child(2) {
+            min-width: 140px !important; /* Status */
+        }
+        
+        .site-diary-page .diary-table th:nth-child(3),
+        .site-diary-page .diary-table td:nth-child(3) {
+            min-width: 100px !important; /* Site */
+        }
+        
+        .site-diary-page .diary-table th:nth-child(4),
+        .site-diary-page .diary-table td:nth-child(4) {
+            min-width: 100px !important; /* Date */
+        }
+        
+        .site-diary-page .diary-table th:nth-child(5),
+        .site-diary-page .diary-table td:nth-child(5) {
+            min-width: 120px !important; /* Inspector */
+        }
+        
+        .site-diary-page .diary-table th:nth-child(6),
+        .site-diary-page .diary-table td:nth-child(6) {
+            min-width: 130px !important; /* Actions */
+            width: 130px !important;
+        }
+        
+        /* 状态标签样式 */
+        .site-diary-page .status-badge {
+            padding: 8px 16px !important;
+            border-radius: 20px !important;
+            font-size: 0.85rem !important;
+            font-weight: 500 !important;
+            display: inline-block !important;
+            text-align: center !important;
+            min-width: 140px !important;
+        }
+        
+        .site-diary-page .status-draft {
+            background: rgba(149, 165, 166, 0.2) !important;
+            color: #848f90 !important;
+        }
+        
+        .site-diary-page .status-submitted-wsg {
+            background: rgba(52, 152, 219, 0.2) !important;
+            color: #2980b9 !important;
+        }
+        
+        .site-diary-page .status-submitted-ig {
+            background: rgba(155, 89, 182, 0.2) !important;
+            color: #8e44ad !important;
+        }
+        
+        .site-diary-page .status-closed {
+            background: rgba(46, 204, 113, 0.2) !important;
+            color: #27ae60 !important;
+        }
+        
+        .site-diary-page .status-reopen {
+            background: rgba(243, 156, 18, 0.2) !important;
+            color: #d35400 !important;
+        }
+        
+        .site-diary-page .status-cancelled {
+            background: rgba(231, 76, 60, 0.2) !important;
+            color: #c0392b !important;
+        }
+        
+        /* 操作按钮样式 */
+        .site-diary-page .action-buttons {
+            display: flex !important;
+            gap: 10px !important;
+        }
+        
+        .site-diary-page .action-btn {
+            padding: 10px 16px !important;
+            border: none !important;
+            border-radius: 8px !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 1rem !important;
+            min-width: 44px !important;
+            min-height: 44px !important;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        .site-diary-page .view-btn {
+            background: linear-gradient(135deg, #e67e22, #d35400) !important;
+            color: white !important;
+        }
+        
+        .site-diary-page .view-btn:hover {
+            background: linear-gradient(135deg, #d35400, #c0392b) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 5px 12px rgba(230, 126, 34, 0.3) !important;
+        }
+        
+        .site-diary-page .edit-btn {
+            background: linear-gradient(135deg, #2ecc71, #27ae60) !important;
+            color: white !important;
+        }
+        
+        .site-diary-page .edit-btn:hover {
+            background: linear-gradient(135deg, #27ae60, #219653) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 5px 12px rgba(46, 204, 113, 0.3) !important;
+        }
+        
+        .site-diary-page .delete-btn {
+            background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
+            color: white !important;
+        }
+        
+        .site-diary-page .delete-btn:hover {
+            background: linear-gradient(135deg, #c0392b, #e74c3c) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 5px 12px rgba(231, 76, 60, 0.3) !important;
+        }
+        
+        .site-diary-page .action-btn i {
+            margin-right: 6px !important;
+            font-size: 1.1rem !important;
+        }
+        
+        /* 日期列 */
+        .site-diary-page .diary-table td:nth-child(4) {
+            font-weight: 500 !important;
+        }
+        
+        /* 无结果消息 */
+        .site-diary-page .no-results {
+            text-align: center !important;
+            padding: 40px !important;
+            color: #7f8c8d !important;
+            font-style: italic !important;
+            background: #f9f9f9 !important;
+            border-radius: 8px !important;
+            margin: 20px 0 !important;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .site-diary-page .action-buttons {
+                flex-direction: column !important;
+            }
+            
+            .site-diary-page .action-btn {
+                width: 100% !important;
+                margin-bottom: 5px !important;
+            }
+            
+            .site-diary-page .diary-table {
+                font-size: 0.9rem !important;
+            }
+            
+            .site-diary-page .diary-table th,
+            .site-diary-page .diary-table td {
+                padding: 12px 15px !important;
+            }
+        }
+        
+        /* 确保表格列对齐 */
+        .site-diary-page .diary-table {
+            table-layout: auto !important;
+        }
+        
+        .site-diary-page .diary-table th,
+        .site-diary-page .diary-table td {
+            vertical-align: middle !important;
+        }
+    </style>
+    
     <script>
         // 安全检查页面初始化
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Safety inspection page loaded');
+            
+            // 确保所有DOM元素都加载完成
+            setTimeout(function() {
+                // 检查页面元素是否存在
+                console.log('Checking DOM elements...');
+                console.log('Inspection table body:', document.getElementById('inspection-table-body'));
+                console.log('Add inspection button:', document.getElementById('add-inspection-btn'));
+                
+                // 显示加载状态
+                const loadingRow = document.getElementById('loading-row');
+                if (loadingRow) {
+                    loadingRow.innerHTML = '<td colspan="6" style="text-align: center; padding: 40px;"><i class="fas fa-spinner fa-spin"></i> Loading inspection records...</td>';
+                }
+                
+                // 初始化数据
+                initSafetyInspectionPage();
+            }, 100);
+        });
+        
+        function initSafetyInspectionPage() {
+            console.log('Initializing safety inspection page...');
             
             // 更新当前日期显示
             updateCurrentDate();
@@ -168,8 +497,15 @@
                 updateCurrentDate();
             });
             
-            // 原有的其他初始化代码...
-        });
+            // 初始化检查数据
+            initInspectionData();
+            
+            // 设置事件监听器
+            setupEventListeners();
+            
+            // 更新统计
+            updateStats();
+        }
         
         // 更新当前日期显示
         function updateCurrentDate() {
@@ -222,6 +558,388 @@
         function formatDateForTable(dateString) {
             if (!dateString) return '';
             return formatDateForDisplay(new Date(dateString));
+        }
+        
+        function initInspectionData() {
+            console.log('Initializing inspection data...');
+            
+            // 检查本地存储中是否有数据
+            let inspectionData = [];
+            const storedData = sessionStorage.getItem('inspectionData') || localStorage.getItem('inspectionData');
+            
+            if (storedData && storedData !== 'null' && storedData !== '[]') {
+                try {
+                    inspectionData = JSON.parse(storedData);
+                    console.log('Loaded inspection data from storage:', inspectionData.length, 'records');
+                } catch (e) {
+                    console.error('Error parsing inspection data:', e);
+                    inspectionData = getDefaultInspectionData();
+                }
+            } else {
+                inspectionData = getDefaultInspectionData();
+                console.log('Using default inspection data');
+            }
+            
+            // 存储到sessionStorage
+            sessionStorage.setItem('inspectionData', JSON.stringify(inspectionData));
+            
+            // 渲染表格
+            renderInspectionTable(inspectionData);
+            
+            return inspectionData;
+        }
+        
+        function getDefaultInspectionData() {
+            return [
+                { 
+                    id: "SI-2025-001", 
+                    status: "draft", 
+                    statusText: "Draft",
+                    site: "Treatment Plant", 
+                    date: "2025-09-15", 
+                    formattedDate: "15-Sep-2025",
+                    inspector: "John Doe"
+                },
+                { 
+                    id: "SI-2025-002", 
+                    status: "submitted-wsg", 
+                    statusText: "Submitted to WSG",
+                    site: "Pipeline", 
+                    date: "2025-09-12", 
+                    formattedDate: "12-Sep-2025",
+                    inspector: "Jane Smith"
+                },
+                { 
+                    id: "SI-2025-003", 
+                    status: "submitted-ig", 
+                    statusText: "Submitted to IG",
+                    site: "Reservoir", 
+                    date: "2025-09-10", 
+                    formattedDate: "10-Sep-2025",
+                    inspector: "Robert Johnson"
+                },
+                { 
+                    id: "SI-2025-004", 
+                    status: "closed", 
+                    statusText: "Closed",
+                    site: "Distribution", 
+                    date: "2025-09-08", 
+                    formattedDate: "08-Sep-2025",
+                    inspector: "Sarah Williams"
+                },
+                { 
+                    id: "SI-2025-005", 
+                    status: "reopen", 
+                    statusText: "Reopen",
+                    site: "Pump Station", 
+                    date: "2025-09-05", 
+                    formattedDate: "05-Sep-2025",
+                    inspector: "Michael Brown"
+                }
+            ];
+        }
+        
+        function renderInspectionTable(inspectionData) {
+            console.log('Rendering inspection table with', inspectionData.length, 'records');
+            
+            const tbody = document.getElementById('inspection-table-body');
+            const noResults = document.getElementById('no-results-message');
+            
+            if (!tbody) {
+                console.error('Inspection table body not found!');
+                return;
+            }
+            
+            // 移除加载行
+            const loadingRow = document.getElementById('loading-row');
+            if (loadingRow) {
+                loadingRow.remove();
+            }
+            
+            // 清空表格
+            tbody.innerHTML = '';
+            
+            // 如果没有数据
+            if (!inspectionData || inspectionData.length === 0) {
+                if (noResults) {
+                    noResults.style.display = 'block';
+                }
+                return;
+            }
+            
+            // 填充数据
+            inspectionData.forEach(item => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${item.id}</td>
+                    <td><span class="status-badge status-${item.status}">${item.statusText}</span></td>
+                    <td>${item.site}</td>
+                    <td>${item.formattedDate}</td>
+                    <td>${item.inspector}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="action-btn view-btn" data-id="${item.id}" title="View">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="action-btn edit-btn" data-id="${item.id}" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="action-btn delete-btn" data-id="${item.id}" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+            
+            // 更新统计
+            updateStats(inspectionData);
+            
+            // 绑定操作按钮事件
+            bindActionButtons();
+        }
+        
+        function setupEventListeners() {
+            console.log('Setting up event listeners...');
+            
+            // 添加检查记录按钮
+            const addInspectBtn = document.getElementById('add-inspection-btn');
+            if (addInspectBtn) {
+                addInspectBtn.addEventListener('click', function() {
+                    console.log('Add inspection button clicked');
+                    document.getElementById('add-inspect-modal').style.display = 'flex';
+                });
+            }
+            
+            // 取消添加按钮
+            const cancelBtn = document.getElementById('cancel-add-inspect');
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', function() {
+                    document.getElementById('add-inspect-modal').style.display = 'none';
+                    // 重置表单
+                    document.getElementById('add-inspect-form').reset();
+                });
+            }
+            
+            // 添加检查表单提交
+            const addInspectForm = document.getElementById('add-inspect-form');
+            if (addInspectForm) {
+                addInspectForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    console.log('Add inspection form submitted');
+                    
+                    // 获取表单数据
+                    const id = document.getElementById('input-inspect-id').value;
+                    const status = document.getElementById('input-inspect-status').value;
+                    const site = document.getElementById('input-inspect-site').value;
+                    const date = document.getElementById('input-inspect-date').value;
+                    const inspector = document.getElementById('input-inspect-by').value;
+                    
+                    // 状态文本映射
+                    const statusTextMap = {
+                        "draft": "Draft",
+                        "submitted-wsg": "Submitted to WSG",
+                        "submitted-ig": "Submitted to IG",
+                        "closed": "Closed",
+                        "reopen": "Reopen",
+                        "cancelled": "Cancelled"
+                    };
+                    
+                    // 格式化日期
+                    const formattedDate = formatDateForTable(date);
+                    
+                    // 创建新记录
+                    const newInspection = {
+                        id: id,
+                        status: status,
+                        statusText: statusTextMap[status],
+                        site: site,
+                        date: date,
+                        formattedDate: formattedDate,
+                        inspector: inspector
+                    };
+                    
+                    // 添加到数据数组
+                    const storedData = sessionStorage.getItem('inspectionData');
+                    let inspectionData = [];
+                    if (storedData) {
+                        inspectionData = JSON.parse(storedData);
+                    }
+                    inspectionData.push(newInspection);
+                    
+                    // 保存到存储
+                    sessionStorage.setItem('inspectionData', JSON.stringify(inspectionData));
+                    
+                    // 重新渲染表格
+                    renderInspectionTable(inspectionData);
+                    
+                    // 关闭模态框
+                    document.getElementById('add-inspect-modal').style.display = 'none';
+                    
+                    // 重置表单
+                    document.getElementById('add-inspect-form').reset();
+                    
+                    alert('Inspection record added successfully!');
+                });
+            }
+            
+            // 筛选器事件
+            setupFilterEvents();
+        }
+        
+        function setupFilterEvents() {
+            console.log('Setting up filter events...');
+            
+            document.querySelectorAll('.filter-group').forEach(group => {
+                const toggle = group.querySelector('.filter-toggle');
+                const options = group.querySelector('.filter-options');
+                
+                if (!toggle || !options) return;
+                
+                toggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    document.querySelectorAll('.filter-options').forEach(opt => {
+                        if (opt !== options) opt.classList.remove('open');
+                    });
+                    options.classList.toggle('open');
+                });
+                
+                group.querySelectorAll('.filter-option').forEach(option => {
+                    option.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        group.querySelectorAll('.filter-option').forEach(opt => opt.classList.remove('active'));
+                        option.classList.add('active');
+                        toggle.querySelector('span').textContent = option.textContent;
+                        
+                        const filterType = option.dataset.filter;
+                        const filterValue = option.dataset.value;
+                        
+                        // 应用筛选
+                        applyFilters(filterType, filterValue);
+                        options.classList.remove('open');
+                    });
+                });
+            });
+            
+            // 点击外部关闭所有下拉菜单
+            document.addEventListener('click', function(e) {
+                document.querySelectorAll('.filter-options').forEach(opt => opt.classList.remove('open'));
+            });
+        }
+        
+        function applyFilters(filterType, filterValue) {
+            console.log('Applying filter:', filterType, '=', filterValue);
+            
+            const storedData = sessionStorage.getItem('inspectionData');
+            if (!storedData) return;
+            
+            let inspectionData = JSON.parse(storedData);
+            let filteredData = [...inspectionData];
+            
+            // 重置所有筛选
+            filteredData = inspectionData.filter(item => {
+                // 站点筛选
+                if (filterType === 'site' && filterValue !== 'all') {
+                    return item.site.toLowerCase().includes(filterValue);
+                }
+                
+                // 状态筛选
+                if (filterType === 'status' && filterValue !== 'all') {
+                    return item.status === filterValue;
+                }
+                
+                return true;
+            });
+            
+            // 重新渲染表格
+            renderInspectionTable(filteredData);
+        }
+        
+        function bindActionButtons() {
+            console.log('Binding action buttons...');
+            
+            // 查看按钮
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const inspectId = this.getAttribute('data-id');
+                    console.log('View inspection record:', inspectId);
+                    alert(`Viewing inspection record: ${inspectId}`);
+                });
+            });
+            
+            // 编辑按钮
+            document.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const inspectId = this.getAttribute('data-id');
+                    console.log('Edit inspection record:', inspectId);
+                    alert(`Editing inspection record: ${inspectId}`);
+                });
+            });
+            
+            // 删除按钮
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const inspectId = this.getAttribute('data-id');
+                    console.log('Delete inspection record:', inspectId);
+                    
+                    if (confirm('Are you sure you want to delete this inspection record?')) {
+                        // 从存储中删除
+                        const storedData = sessionStorage.getItem('inspectionData');
+                        if (storedData) {
+                            let inspectionData = JSON.parse(storedData);
+                            inspectionData = inspectionData.filter(item => item.id !== inspectId);
+                            sessionStorage.setItem('inspectionData', JSON.stringify(inspectionData));
+                            
+                            // 重新渲染表格
+                            renderInspectionTable(inspectionData);
+                            
+                            alert('Inspection record deleted successfully!');
+                        }
+                    }
+                });
+            });
+        }
+        
+        function updateStats(inspectionData = null) {
+            console.log('Updating statistics...');
+            
+            // 如果没有传入数据，从存储中获取
+            if (!inspectionData) {
+                const storedData = sessionStorage.getItem('inspectionData');
+                inspectionData = storedData ? JSON.parse(storedData) : [];
+            }
+            
+            // 总检查数
+            const totalInspectionsEl = document.getElementById('total-inspections-count');
+            if (totalInspectionsEl) {
+                totalInspectionsEl.textContent = inspectionData.length;
+            }
+            
+            // 本月检查数
+            const monthCountEl = document.getElementById('month-count');
+            if (monthCountEl) {
+                const currentDate = new Date();
+                const currentMonth = currentDate.getMonth();
+                const currentYear = currentDate.getFullYear();
+                
+                const monthCount = inspectionData.filter(item => {
+                    if (item.date) {
+                        try {
+                            const itemDate = new Date(item.date);
+                            return itemDate.getMonth() === currentMonth && 
+                                   itemDate.getFullYear() === currentYear;
+                        } catch (e) {
+                            return false;
+                        }
+                    }
+                    return false;
+                }).length;
+                
+                monthCountEl.textContent = monthCount;
+            }
         }
     </script>
 </body>

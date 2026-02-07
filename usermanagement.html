@@ -8,91 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- 侧边栏 -->
-    <div class="sidebar">
-        <div class="logo">
-            <div class="logo-icon">
-                <i class="fas fa-water"></i>
-            </div>
-            <h2>AEL DWSS</h2>
-        </div>
-        
-        <button class="toggle-btn">
-            <i class="fas fa-chevron-left"></i>
-        </button>
-        
-        <ul class="menu">
-            <li>
-                <a href="index.html">
-                    <i class="fas fa-home"></i>
-                    <span class="menu-text" data-i18n="dashboard">Dashboard</span>
-                </a>
-            </li>
-            <li>
-                <a href="sitediary.html">
-                    <i class="fas fa-book"></i>
-                    <span class="menu-text" data-i18n="site.diary">Site Diary</span>
-                </a>
-            </li>
-            <li>
-                <a href="safetyinspect.html">
-                    <i class="fas fa-clipboard-check"></i>
-                    <span class="menu-text" data-i18n="safety.inspection">Safety Inspection</span>
-                </a>
-            </li>
-            <li>
-                <a href="sitelocations.html">
-                    <i class="fas fa-map-marked-alt"></i>
-                    <span class="menu-text" data-i18n="site.locations">Site Locations</span>
-                </a>
-            </li>
-            <li>
-                <a href="labourwage.html">
-                    <i class="fas fa-money-bill-wave"></i>
-                    <span class="menu-text" data-i18n="labour.wage">Labour Wage</span>
-                </a>
-            </li>
-            <li>
-                <a href="settings.html">
-                    <i class="fas fa-cogs"></i>
-                    <span class="menu-text" data-i18n="system.settings">System Settings</span>
-                </a>
-            </li>
-            <li class="menu-item-with-submenu active">
-                <a href="#" class="submenu-toggle">
-                    <i class="fas fa-users"></i>
-                    <span class="menu-text" data-i18n="user.management">User Management</span>
-                    <i class="fas fa-chevron-down submenu-arrow"></i>
-                </a>
-                <ul class="submenu">
-                    <li>
-                        <a href="usermanagement.html" class="active">
-                            <i class="fas fa-user"></i>
-                            <span class="menu-text">Users</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="teams.html">
-                            <i class="fas fa-user-friends"></i>
-                            <span class="menu-text">Teams</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="presets.html">
-                            <i class="fas fa-sliders-h"></i>
-                            <span class="menu-text">Presets</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="subscriptions.html">
-                            <i class="fas fa-credit-card"></i>
-                            <span class="menu-text">Subscriptions</span>
-                        </a>
-                    </li>
-                </ul>
-            </li>
-        </ul>
-    </div>
     
     <!-- 主内容区域 -->
     <div class="main-content">
@@ -126,41 +41,40 @@
         <!-- 用户管理主要内容区域 -->
         <div class="user-management-page">
             <div class="user-stats">
-            <div class="stat-card">
-                <div class="label" data-i18n="total.users">Total Users</div>
-                <div class="value" id="total-users-count">53</div>
+                <div class="stat-card">
+                    <div class="label" data-i18n="total.users">Total Users</div>
+                    <div class="value" id="total-users-count">53</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #2ecc71, #27ae60);">
+                    <div class="label" data-i18n="online.users">Online Users</div>
+                    <div class="value" id="online-users-count">47</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #f39c12, #d35400);">
+                    <div class="label" data-i18n="offline.users">Offline Users</div>
+                    <div class="value" id="offline-users-count">6</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">
+                    <div class="label" data-i18n="admin.users">Admin Users</div>
+                    <div class="value" id="admin-users-count">12</div>
+                </div>
             </div>
-            <div class="stat-card" style="background: linear-gradient(135deg, #2ecc71, #27ae60);">
-                <div class="label" data-i18n="online.users">Online Users</div>
-                <div class="value" id="online-users-count">47</div> <!-- 改为 online -->
-            </div>
-            <div class="stat-card" style="background: linear-gradient(135deg, #f39c12, #d35400);">
-                <div class="label" data-i18n="offline.users">Offline Users</div>
-                <div class="value" id="offline-users-count">6</div> <!-- 改为 offline -->
-            </div>
-            <div class="stat-card" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">
-                <div class="label" data-i18n="admin.users">Admin Users</div>
-                <div class="value" id="admin-users-count">12</div>
-            </div>
-        </div>
-        </div>
             
             <!-- 筛选器区域 -->
             <div class="filters-section">
-            <div class="filter-group">
-                <button class="filter-toggle">
-                    <span>All Roles</span>
-                    <i class="fas fa-chevron-down"></i>
-                </button>
-                <div class="filter-options">
-                    <div class="filter-option active" data-filter="role" data-value="all">All Roles</div>
-                    <div class="filter-option" data-filter="role" data-value="admin">Admin</div>
-                    <div class="filter-option" data-filter="role" data-value="officer">Officer</div>
-                    <div class="filter-option" data-filter="role" data-value="aei">AEI</div> <!-- 添加 AEI 选项 -->
-                    <div class="filter-option" data-filter="role" data-value="inspector">Inspector</div>
-                    <div class="filter-option" data-filter="role" data-value="contractor">Contractor</div>
+                <div class="filter-group">
+                    <button class="filter-toggle">
+                        <span>All Roles</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="filter-options">
+                        <div class="filter-option active" data-filter="role" data-value="all">All Roles</div>
+                        <div class="filter-option" data-filter="role" data-value="admin">Admin</div>
+                        <div class="filter-option" data-filter="role" data-value="officer">Officer</div>
+                        <div class="filter-option" data-filter="role" data-value="aei">AEI</div>
+                        <div class="filter-option" data-filter="role" data-value="inspector">Inspector</div>
+                        <div class="filter-option" data-filter="role" data-value="contractor">Contractor</div>
+                    </div>
                 </div>
-            </div>
                 
                 <div class="filter-group">
                     <button class="filter-toggle">
@@ -189,30 +103,30 @@
             </div>
             
             <!-- 用户列表表格 -->
-                    <div class="content-section">
-            <div class="table-header">
-                <div class="table-title">
-                    <i class="fas fa-users"></i> <span data-i18n="user.list">User List</span>
+            <div class="content-section">
+                <div class="table-header">
+                    <div class="table-title">
+                        <i class="fas fa-users"></i> <span data-i18n="user.list">User List</span>
+                    </div>
+                    <div class="table-controls">
+                        <button class="action-btn refresh-btn">
+                            <i class="fas fa-sync-alt"></i> <span data-i18n="refresh">Refresh</span>
+                        </button>
+                    </div>
                 </div>
-                <div class="table-controls">
-                    <button class="action-btn refresh-btn">
-                        <i class="fas fa-sync-alt"></i> <span data-i18n="refresh">Refresh</span>
-                    </button>
-                </div>
-            </div>
 
-            <div class="table-container">
-                <table class="diary-table" id="users-table">
-                    <thead>
-                        <tr>
-                            <th width="40%" data-i18n="user.role.name">User Role / Name</th>
-                            <th width="25%" data-i18n="email.address">Email Address</th>
-                            <th width="15%" data-i18n="user.role">Role</th>
-                            <th width="10%" data-i18n="status">Status</th>
-                            <th width="10%" data-i18n="actions">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="users-table-body">
+                <div class="table-container">
+                    <table class="diary-table" id="users-table">
+                        <thead>
+                            <tr>
+                                <th width="40%" data-i18n="user.role.name">User Role / Name</th>
+                                <th width="25%" data-i18n="email.address">Email Address</th>
+                                <th width="15%" data-i18n="user.role">Role</th>
+                                <th width="10%" data-i18n="status">Status</th>
+                                <th width="10%" data-i18n="actions">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
                             <!-- 用户数据将通过JavaScript动态加载 -->
                         </tbody>
                     </table>
@@ -250,65 +164,55 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    
-    <!-- 添加用户模态框 -->
-    <div id="add-user-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <h3><i class="fas fa-user-plus"></i> <span data-i18n="add.new.user">Add New User</span></h3>
-        <form id="add-user-form">
-            <div class="form-group">
-                <label for="input-user-name" data-i18n="full.name">Full Name</label>
-                <input type="text" id="input-user-name" required>
+            
+            <!-- 添加用户模态框 -->
+            <div id="add-user-modal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <h3><i class="fas fa-user-plus"></i> <span data-i18n="add.new.user">Add New User</span></h3>
+                    <form id="add-user-form">
+                        <div class="form-group">
+                            <label for="input-user-name" data-i18n="full.name">Full Name</label>
+                            <input type="text" id="input-user-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="input-user-email" data-i18n="email.address">Email Address</label>
+                            <input type="email" id="input-user-email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="input-user-role" data-i18n="user.role">Role</label>
+                            <select id="input-user-role" required>
+                                <option value="" data-i18n="select.role">Select Role</option>
+                                <option value="admin" data-i18n="role.admin">Administrator</option>
+                                <option value="officer" data-i18n="role.officer">Administration Officer</option>
+                                <option value="aei" data-i18n="role.aei">AEI</option>
+                                <option value="inspector" data-i18n="role.inspector">Inspector</option>
+                                <option value="contractor" data-i18n="role.contractor">Contractor</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="input-user-department" data-i18n="department">Department</label>
+                            <input type="text" id="input-user-department">
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary" id="cancel-add-user" data-i18n="cancel">Cancel</button>
+                            <button type="submit" class="btn" data-i18n="add.user">Add User</button>
+                        </div>
+                    </form>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="input-user-email" data-i18n="email.address">Email Address</label>
-                <input type="email" id="input-user-email" required>
-            </div>
-            <div class="form-group">
-                <label for="input-user-role" data-i18n="user.role">Role</label>
-                <select id="input-user-role" required>
-                    <option value="" data-i18n="select.role">Select Role</option>
-                    <option value="admin" data-i18n="role.admin">Administrator</option>
-                    <option value="officer" data-i18n="role.officer">Administration Officer</option>
-                    <option value="aei" data-i18n="role.aei">AEI</option>
-                    <option value="inspector" data-i18n="role.inspector">Inspector</option>
-                    <option value="contractor" data-i18n="role.contractor">Contractor</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="input-user-department" data-i18n="department">Department</label>
-                <input type="text" id="input-user-department">
-            </div>
-            <!--<div class="form-group">-->
-            <!--    <label for="input-user-status" data-i18n="status">Status</label>-->
-            <!--    <select id="input-user-status" required>-->
-            <!--        <option value="online" data-i18n="status.online">Online</option>--> <!-- 改为 online -->
-            <!--        <option value="offline" data-i18n="status.offline">Offline</option>--> <!-- 改为 offline -->
-            <!--    </select>-->
-            <!--</div>-->
-            <div class="modal-actions">
-                <button type="button" class="btn btn-secondary" id="cancel-add-user" data-i18n="cancel">Cancel</button>
-                <button type="submit" class="btn" data-i18n="add.user">Add User</button>
-            </div>
-        </form>
-    </div>
-</div>
-
+            
+            <!-- Footer 放在 user-management-page 内部 -->
+            <footer>
+                <p data-i18n="copyright">© 2025 AEL DWSS System. All rights reserved.</p>
+                <p data-i18n="platform">AEL DWSS Platform</p>
+            </footer>
         </div> <!-- 关闭 user-management-page -->
-        </div> <!-- 关闭 main-content -->
-        </div> <!-- 关闭可能存在的其他容器 -->
-        
-    <div class="footer-content">
-        <p data-i18n="copyright">&copy; 2025 AEL DWSS System. All rights reserved.</p>
-        <p data-i18n="platform">AEL DWSS Platform</p>
-    </div>
-</footer>
-    <!-- 引入语言配置文件 -->
+    </div> <!-- 关闭 main-content -->
+
+    <!-- 引入脚本 -->
     <script src="scripts/language.js"></script>
     <script src="scripts/usermanagement.js"></script>
+    <script src="scripts/sidebar.js"></script>
     <script src="scripts/app.js"></script>
     
     <script>
@@ -324,9 +228,7 @@
                     document.querySelector('.sidebar').classList.toggle('collapsed');
                 });
             }
-            
         });
     </script>
-    
 </body>
 </html>
