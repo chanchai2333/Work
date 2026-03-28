@@ -99,19 +99,17 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 // ===== 全局配置系统结束 =====
 
-// 以下是原有的 app.js 代码...
-
 // 侧边栏折叠功能
-        document.querySelector('.toggle-btn').addEventListener('click', function() {
-            document.querySelector('.sidebar').classList.toggle('collapsed');
-        });
+    //    document.querySelector('.toggle-btn').addEventListener('click', function() {
+    //        document.querySelector('.sidebar').classList.toggle('collapsed');
+    //    });
+//
+    //    // 更新当前日期
+    //    const now = new Date();
+    //    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    //    document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', options);
 
-        // 更新当前日期
-        const now = new Date();
-        const options = { year: 'numeric', month: 'long', day: 'numeric' };
-        document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', options);
 
-        // 在現有代碼後添加以下內容
 
 // 引入 Chart.js 庫
 const chartScript = document.createElement('script');
@@ -128,7 +126,7 @@ chartScript.onload = function() {
         dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
     }
 
-    // Site Diary 數據 (示例數據)
+    // ========== Site Diary 數據 ==========
     const siteDiaryData = {
         labels: dates,
         datasets: [{
@@ -148,7 +146,7 @@ chartScript.onload = function() {
         }]
     };
 
-    // Safety Inspection 數據 (示例數據)
+    // ========== Safety Inspection 數據 ==========
     const safetyInspectionData = {
         labels: dates,
         datasets: [{
@@ -167,32 +165,34 @@ chartScript.onload = function() {
             fill: true
         }]
     };
-    // Labour Wage 數據配置
+
+    // ========== Labour Wage 數據 (雙 Y 軸) ==========
     const labourWageData = {
         labels: dates,
-         datasets: [
-        {
-            label: 'total wages',
-            data: Array.from({length: 30}, () => Math.floor(Math.random() * 50000) + 20000), // 範例數據
-            borderColor: '#9b59b6',
-            backgroundColor: 'rgba(155, 89, 182, 0.1)',
-            borderWidth: 2,
-            tension: 0.3,
-            fill: true,
-            yAxisID: 'y'
-        },
-        {
-            label: 'working time (hours)',
-            data: Array.from({length: 30}, () => Math.floor(Math.random() * 80) + 20), // 範例數據
-            borderColor: '#1abc9c',
-            backgroundColor: 'rgba(26, 188, 156, 0.1)',
-            borderWidth: 2,
-            tension: 0.3,
-            fill: true,
-            yAxisID: 'y1'
-        }
-    ]
-};
+        datasets: [
+            {
+                label: 'total wages',
+                data: Array.from({length: 30}, () => Math.floor(Math.random() * 50000) + 20000),
+                borderColor: '#9b59b6',
+                backgroundColor: 'rgba(155, 89, 182, 0.1)',
+                borderWidth: 2,
+                tension: 0.3,
+                fill: true,
+                yAxisID: 'y'
+            },
+            {
+                label: 'working time (hours)',
+                data: Array.from({length: 30}, () => Math.floor(Math.random() * 80) + 20),
+                borderColor: '#1abc9c',
+                backgroundColor: 'rgba(26, 188, 156, 0.1)',
+                borderWidth: 2,
+                tension: 0.3,
+                fill: true,
+                yAxisID: 'y1'
+            }
+        ]
+    };
+
     // 創建 Site Diary 趨勢圖
     const siteDiaryCtx = document.getElementById('siteDiaryChart').getContext('2d');
     new Chart(siteDiaryCtx, {
@@ -201,21 +201,13 @@ chartScript.onload = function() {
         options: {
             responsive: true,
             plugins: {
-                legend: {
-                    position: 'top',
-                },
-                tooltip: {
-                    mode: 'index',
-                    intersect: false,
-                }
+                legend: { position: 'top' },
+                tooltip: { mode: 'index', intersect: false }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Number of Diaries'
-                    }
+                    title: { display: true, text: 'Number of Diaries' }
                 }
             }
         }
@@ -229,114 +221,70 @@ chartScript.onload = function() {
         options: {
             responsive: true,
             plugins: {
-                legend: {
-                    position: 'top',
-                },
-                tooltip: {
-                    mode: 'index',
-                    intersect: false,
-                }
+                legend: { position: 'top' },
+                tooltip: { mode: 'index', intersect: false }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Number of Inspections'
-                    }
+                    title: { display: true, text: 'Number of Inspections' }
                 }
             }
         }
     });
-    // 創建趨勢圖
-const ctx = document.getElementById('labourWageChart').getContext('2d');
-new Chart(ctx, {
-    type: 'line',
-    data: labourWageData,
-    options: {
-        responsive: true,
-        maintainAspectRatio: false, // 禁用默認寬高比
-        plugins: {
-            legend: {
-                position: 'top',
-                labels: {
-                    boxWidth: 12,
-                    padding: 20,
-                    font: {
-                        size: 12
-                    }
-                }
-            },
-            tooltip: {
-                mode: 'index',
-                intersect: false,
-                callbacks: {
-                    label: function(context) {
-                        let label = context.dataset.label || '';
-                        if (context.datasetIndex === 0) {
-                            return `${label}: $${context.parsed.y.toLocaleString()}`;
-                        } else {
-                            return `${label}: ${context.parsed.y1} hours`;
+
+    // 創建 Labour Wage 趨勢圖 (雙 Y 軸)
+    const labourWageCtx = document.getElementById('labourWageChart').getContext('2d');
+    new Chart(labourWageCtx, {
+        type: 'line',
+        data: labourWageData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: { boxWidth: 12, padding: 20, font: { size: 12 } }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (context.datasetIndex === 0) {
+                                return `${label}: $${context.parsed.y.toLocaleString()}`;
+                            } else {
+                                return `${label}: ${context.parsed.y1} hours`;
+                            }
                         }
                     }
                 }
-            }
-        },
-        scales: {
-            y: {
-                type: 'linear',
-                position: 'left',
-                title: {
-                    display: true,
-                    text: 'Total wages',
-                    font: {
-                        weight: 'bold',
-                        size: 12
-                    }
-                },
-                min: 0,
-                grid: {
-                    color: 'rgba(155, 89, 182, 0.1)'
-                },
-                ticks: {
-                    callback: function(value) {
-                        return '$' + value.toLocaleString();
-                    }
-                }
             },
-            y1: {
-                type: 'linear',
-                position: 'right',
-                title: {
-                    display: true,
-                    text: 'working time (hours)',
-                    font: {
-                        weight: 'bold',
-                        size: 12
+            scales: {
+                y: {
+                    type: 'linear',
+                    position: 'left',
+                    title: { display: true, text: 'Total wages', font: { weight: 'bold', size: 12 } },
+                    min: 0,
+                    grid: { color: 'rgba(155, 89, 182, 0.1)' },
+                    ticks: { callback: function(value) { return '$' + value.toLocaleString(); } }
+                },
+                y1: {
+                    type: 'linear',
+                    position: 'right',
+                    title: { display: true, text: 'working time (hours)', font: { weight: 'bold', size: 12 } },
+                    min: 0,
+                    grid: { drawOnChartArea: false },
+                    afterDataLimits: (scale) => {
+                        scale.max = Math.max(...labourWageData.datasets[1].data) * 1.5;
                     }
                 },
-                min: 0,
-                grid: {
-                    drawOnChartArea: false // 不在圖表區繪製網格線
-                },
-                // 動態調整比例避免數據重疊
-                afterDataLimits: (scale) => {
-                    scale.max = Math.max(...labourWageData.datasets[1].data) * 1.5;
-                }
+                x: { grid: { display: false } }
             },
-            x: {
-                grid: {
-                    display: false
-                }
-            }
-        },
-        interaction: {
-            mode: 'nearest',
-            axis: 'x'
+            interaction: { mode: 'nearest', axis: 'x' }
         }
-    }
-});
-
+    });
 };
 
 // 窗口大小改變時重新計算圖表比例
