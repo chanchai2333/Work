@@ -1,3 +1,14 @@
+/* === BUGFIX #2: Sync global date display === */
+document.addEventListener('DOMContentLoaded', () => {
+    const storedDate = sessionStorage.getItem('globalDate');
+    const dateSpan = document.querySelector('.date-display span');
+
+    if (storedDate && dateSpan) {
+        dateSpan.textContent = storedDate;
+    }
+});
+``
+
 document.addEventListener('DOMContentLoaded', function() {
     // 从sessionStorage获取文档数据
     const documentData = JSON.parse(sessionStorage.getItem('currentDocument'));
@@ -46,9 +57,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // 设置当前日期
-    const today = new Date();
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    document.getElementById('current-date').textContent = today.toLocaleDateString('en-US', options);
+    // 设置当前日期（只在沒有 globalDate 時才設定）
+    if (!sessionStorage.getItem('globalDate')) {
+        const today = new Date();
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('current-date').textContent =
+            today.toLocaleDateString('en-US', options);
+    }
+    ``
 
     document.getElementById('back-to-diary-btn').addEventListener('click', function() {
                 window.location.href = 'sitediary.html';

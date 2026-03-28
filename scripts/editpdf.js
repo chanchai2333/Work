@@ -1,3 +1,14 @@
+/* === BUGFIX #2: Sync global date display === */
+document.addEventListener('DOMContentLoaded', () => {
+    const storedDate = sessionStorage.getItem('globalDate');
+    const dateSpan = document.querySelector('.date-display span');
+
+    if (storedDate && dateSpan) {
+        dateSpan.textContent = storedDate;
+    }
+});
+``
+
 // editpdf.js
 document.addEventListener("DOMContentLoaded", function() {
     // 先嘗試從 localStorage 讀取

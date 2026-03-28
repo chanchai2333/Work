@@ -2612,3 +2612,95 @@ body.dark-theme .content-section {
     transform: rotate(180deg) !important;
 }
 
+.filter-options {
+  display: none;
+  position: absolute;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  margin-top: 6px;
+  min-width: 200px;
+  z-index: 999;
+}
+
+.filter-options.open {
+  display: block;
+}
+
+.filter-group {
+  position: relative;
+}
+
+/* === FORCE NO CONTENT SHIFT WHEN SIDEBAR TOGGLES === */
+.main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+}
+
+.sidebar.collapsed + .main-content,
+.sidebar + .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+}
+
+/* ===== FIX: Sidebar overlay content issue ===== */
+
+/* Sidebar sizes */
+.sidebar {
+    width: 260px;
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 1000;
+}
+
+.sidebar.collapsed {
+    width: 70px;
+}
+
+/* Main content always full width, but padded */
+.main-content {
+    margin-left: 0 !important;
+    padding-left: 260px;   /* 預留 sidebar 空間 */
+    width: 100% !important;
+    transition: padding-left 0.3s ease;
+    box-sizing: border-box;
+}
+
+/* Sidebar collapsed → reduce padding */
+.sidebar.collapsed ~ .main-content {
+    padding-left: 70px;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .main-content {
+        padding-left: 0;
+    }
+
+    .sidebar {
+        transform: translateX(-100%);
+    }
+
+    .sidebar.collapsed {
+        transform: translateX(0);
+    }
+}
+
+/* === BUGFIX #1: Prevent sitediary page shift === */
+
+/* main-content 永遠不被 sidebar 推移 */
+.main-content {
+    margin-left: 0 !important;
+    transform: none !important;
+}
+
+/* 明確禁止 sidebar 影響 main-content 位移 */
+.sidebar + .main-content,
+.sidebar ~ .main-content,
+.sidebar.collapsed + .main-content,
+.sidebar.collapsed ~ .main-content {
+    margin-left: 0 !important;
+    transform: none !important;
+}
