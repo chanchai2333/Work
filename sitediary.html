@@ -74,522 +74,451 @@
         
         <!-- Site Diary 页面内容 -->
         <div class="site-diary-page">
-    <h2><i class="fas fa-book"></i> <span data-i18n="site.diary.management">Site Diary Management</span></h2>
-    
-    <!-- 使用 diary-controls-row 让统计和筛选器在同一行 -->
-    <div class="diary-controls-row">
-        <div class="diary-stats">
-            <div class="stat-card">
-                <div class="label" data-i18n="total.documents">Total Documents</div>
-                <div class="value" id="total-documents-count">0</div>
+            <h2><i class="fas fa-book"></i> <span data-i18n="site.diary.management">Site Diary Management</span></h2>
+            
+            <div class="diary-controls-row">
+                <div class="diary-stats">
+                    <div class="stat-card">
+                        <div class="label" data-i18n="total.documents">Total Documents</div>
+                        <div class="value" id="total-documents-count">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label" data-i18n="this.month">This Month</div>
+                        <div class="value" id="month-count">0</div>
+                    </div>
+                </div>
+                
+                <section class="filters-section">
+                    <div class="filter-group" id="site-filter-group">
+                        <div class="filter-toggle">
+                            <span data-i18n="all.sites">All Sites</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="filter-options">
+                            <div class="filter-option active" data-filter="site" data-value="all" data-i18n="all.sites">All Sites</div>
+                            <div class="filter-option" data-filter="site" data-value="treatment" data-i18n="site.treatment">Treatment Plant</div>
+                            <div class="filter-option" data-filter="site" data-value="pipeline" data-i18n="site.pipeline">Pipeline</div>
+                            <div class="filter-option" data-filter="site" data-value="reservoir" data-i18n="site.reservoir">Reservoir</div>
+                            <div class="filter-option" data-filter="site" data-value="distribution" data-i18n="site.distribution">Distribution</div>
+                            <div class="filter-option" data-filter="site" data-value="pump" data-i18n="site.pump">Pump Station</div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group" id="status-filter-group">
+                        <div class="filter-toggle">
+                            <span data-i18n="all.statuses">All Statuses</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="filter-options">
+                            <div class="filter-option active" data-filter="status" data-value="all" data-i18n="all.statuses">All Statuses</div>
+                            <div class="filter-option" data-filter="status" data-value="draft" data-i18n="status.draft">Draft</div>
+                            <div class="filter-option" data-filter="status" data-value="submitted-wsg" data-i18n="status.submitted.wsg">Submitted to WSG</div>
+                            <div class="filter-option" data-filter="status" data-value="submitted-ig" data-i18n="status.submitted.ig">Submitted to IG</div>
+                            <div class="filter-option" data-filter="status" data-value="closed" data-i18n="status.closed">Closed</div>
+                            <div class="filter-option" data-filter="status" data-value="reopen" data-i18n="status.reopen">Reopen</div>
+                            <div class="filter-option" data-filter="status" data-value="cancelled" data-i18n="status.cancelled">Cancelled</div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group" id="type-filter-group">
+                        <div class="filter-toggle">
+                            <span data-i18n="all.document.types">All Document Types</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="filter-options">
+                            <div class="filter-option active" data-filter="type" data-value="all" data-i18n="all.document.types">All Document Types</div>
+                            <div class="filter-option" data-filter="type" data-value="Sub Contractor Documents" data-i18n="document.type.subcontractor">Sub Contractor Documents</div>
+                            <div class="filter-option" data-filter="type" data-value="Contractor Documents" data-i18n="document.type.contractor">Contractor Documents</div>
+                        </div>
+                    </div>
+                </section>
             </div>
-            <div class="stat-card">
-                <div class="label" data-i18n="this.month">This Month</div>
-                <div class="value" id="month-count">0</div>
-            </div>
+            
+            <section class="content-section">
+                <div class="table-header">
+                    <h2 class="table-title" data-i18n="diary.entries">Site Diary Entries</h2>
+                </div>
+                
+                <div class="table-container">
+                    <table class="diary-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="diary.id">Diary ID</th>
+                                <th data-i18n="status">Status</th>
+                                <th data-i18n="site">Site</th>
+                                <th data-i18n="date">Date</th>
+                                <th data-i18n="submitted.by">Submitted By</th>
+                                <th data-i18n="document.type">Document Type</th>
+                                <th data-i18n="actions">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="diary-table-body">
+                            <!-- 表格内容将通过JavaScript动态生成 -->
+                        </tbody>
+                    </table>
+                    <div id="no-results-message" class="no-results" style="display: none;" data-i18n="no.matching.documents">
+                        No matching documents found. Please try different filters.
+                    </div>
+                </div>
+            </section>
+            
+            <footer>
+                <p data-i18n="copyright">&copy; 2025 AEL DWSS System. All rights reserved.</p>
+                <p data-i18n="platform">AEL DWSS Platform</p>
+            </footer>
         </div>
-        
-        <section class="filters-section">
-            <div class="filter-group" id="site-filter-group">
-                <div class="filter-toggle">
-                    <span data-i18n="all.sites">All Sites</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="filter-options">
-                    <div class="filter-option active" data-filter="site" data-value="all" data-i18n="all.sites">All Sites</div>
-                    <div class="filter-option" data-filter="site" data-value="treatment" data-i18n="site.treatment">Treatment Plant</div>
-                    <div class="filter-option" data-filter="site" data-value="pipeline" data-i18n="site.pipeline">Pipeline</div>
-                    <div class="filter-option" data-filter="site" data-value="reservoir" data-i18n="site.reservoir">Reservoir</div>
-                    <div class="filter-option" data-filter="site" data-value="distribution" data-i18n="site.distribution">Distribution</div>
-                    <div class="filter-option" data-filter="site" data-value="pump" data-i18n="site.pump">Pump Station</div>
-                </div>
-            </div>
-            
-            <div class="filter-group" id="status-filter-group">
-                <div class="filter-toggle">
-                    <span data-i18n="all.statuses">All Statuses</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="filter-options">
-                    <div class="filter-option active" data-filter="status" data-value="all" data-i18n="all.statuses">All Statuses</div>
-                    <div class="filter-option" data-filter="status" data-value="draft" data-i18n="status.draft">Draft</div>
-                    <div class="filter-option" data-filter="status" data-value="submitted-wsg" data-i18n="status.submitted.wsg">Submitted to WSG</div>
-                    <div class="filter-option" data-filter="status" data-value="submitted-ig" data-i18n="status.submitted.ig">Submitted to IG</div>
-                    <div class="filter-option" data-filter="status" data-value="closed" data-i18n="status.closed">Closed</div>
-                    <div class="filter-option" data-filter="status" data-value="reopen" data-i18n="status.reopen">Reopen</div>
-                    <div class="filter-option" data-filter="status" data-value="cancelled" data-i18n="status.cancelled">Cancelled</div>
-                </div>
-            </div>
-            
-            <div class="filter-group" id="type-filter-group">
-                <div class="filter-toggle">
-                    <span data-i18n="all.document.types">All Document Types</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="filter-options">
-                    <div class="filter-option active" data-filter="type" data-value="all" data-i18n="all.document.types">All Document Types</div>
-                    <div class="filter-option" data-filter="type" data-value="Sub Contractor Documents" data-i18n="document.type.subcontractor">Sub Contractor Documents</div>
-                    <div class="filter-option" data-filter="type" data-value="Contractor Documents" data-i18n="document.type.contractor">Contractor Documents</div>
-                </div>
-            </div>
-        </section>
     </div>
-    
-    <!-- 表格区域 -->
-    <section class="content-section">
-        <div class="table-header">
-            <h2 class="table-title" data-i18n="diary.entries">Site Diary Entries</h2>
-        </div>
-        
-        <div class="table-container">
-            <table class="diary-table">
-                <thead>
-                    <tr>
-                        <th data-i18n="diary.id">Diary ID</th>
-                        <th data-i18n="status">Status</th>
-                        <th data-i18n="site">Site</th>
-                        <th data-i18n="date">Date</th>
-                        <th data-i18n="submitted.by">Submitted By</th>
-                        <th data-i18n="document.type">Document Type</th>
-                        <th data-i18n="actions">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="diary-table-body">
-                    <!-- 表格内容将通过JavaScript动态生成 -->
-                </tbody>
-            </table>
-            <div id="no-results-message" class="no-results" style="display: none;" data-i18n="no.matching.documents">
-                No matching documents found. Please try different filters.
-            </div>
-        </div>
-    </section>
-    
-    <footer>
-        <p data-i18n="copyright">&copy; 2025 AEL DWSS System. All rights reserved.</p>
-        <p data-i18n="platform">AEL DWSS Platform</p>
-    </footer>
-</div>
-</div>
-    <script>
-    // Site Diary 页面特定的弹窗控制
-    document.addEventListener('DOMContentLoaded', function() {
-        const addBtn = document.getElementById('add-diary-btn');
-        const modal = document.getElementById('add-diary-modal');
-        const cancelBtn = document.getElementById('cancel-add-diary');
-        
-        if (addBtn && modal) {
-            addBtn.addEventListener('click', function() {
-                console.log('Opening diary modal');
-                modal.style.display = 'flex';
-            });
-            
-            if (cancelBtn) {
-                cancelBtn.addEventListener('click', function() {
-                    modal.style.display = 'none';
-                });
-            }
-            
-            modal.addEventListener('click', function(e) {
-                if (e.target === modal) {
-                    modal.style.display = 'none';
-                }
-            });
-        }
-    });
-</script>
 
-<script>
-    // Site Diary 页面特定的 JavaScript
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('Site Diary page loaded');
-        
-        // 更新日期显示
-        updateCurrentDate();
-        
-        // 安全检查示例数据
-        let diaryData = [
-            {
-                id: "SD-2025-001",
-                status: "draft",
-                site: "Treatment Plant",
-                date: "2025-08-15",
-                submittedBy: "John Doe",
-                type: "Contractor Documents"
-            },
-            {
-                id: "SD-2025-002",
-                status: "submitted-wsg",
-                site: "Pipeline",
-                date: "2025-08-14",
-                submittedBy: "Jane Smith",
-                type: "Contractor Documents"
-            },
-            {
-                id: "SD-2025-003",
-                status: "submitted-ig",
-                site: "Reservoir",
-                date: "2025-08-13",
-                submittedBy: "Robert Johnson",
-                type: "Sub Contractor Documents"
-            },
-            {
-                id: "SD-2025-004",
-                status: "closed",
-                site: "Distribution",
-                date: "2025-08-12",
-                submittedBy: "Sarah Williams",
-                type: "Sub Contractor Documents"
-            },
-            {
-                id: "SD-2025-005",
-                status: "reopen",
-                site: "Pump Station",
-                date: "2025-08-11",
-                submittedBy: "Michael Brown",
-                type: "Contractor Documents"
-            },
-            {
-                id: "SD-2025-006",
-                status: "cancelled",
-                site: "Treatment Plant",
-                date: "2025-08-10",
-                submittedBy: "David Wilson",
-                type: "Contractor Documents"
-            },
-            {
-                id: "SD-2025-007",
-                status: "draft",
-                site: "Pipeline",
-                date: "2025-08-09",
-                submittedBy: "Emma Davis",
-                type: "Sub Contractor Documents"
-            },
-            {
-                id: "SD-2025-008",
-                status: "submitted-wsg",
-                site: "Reservoir",
-                date: "2025-08-08",
-                submittedBy: "James Miller",
-                type: "Contractor Documents"
-            },
-            {
-                id: "SD-2025-009",
-                status: "closed",
-                site: "Distribution",
-                date: "2025-08-07",
-                submittedBy: "Olivia Garcia",
-                type: "Sub Contractor Documents"
-            },
-            {
-                id: "SD-2025-010",
-                status: "reopen",
-                site: "Pump Station",
-                date: "2025-08-06",
-                submittedBy: "William Rodriguez",
-                type: "Contractor Documents"
-            }
-        ];
-        
-        // 当前筛选状态
-        let currentFilters = {
-            site: "all",
-            status: "all",
-            type: "all"
-        };
-        
-        // 更新统计信息
-        function updateStats() {
-            const totalCount = document.getElementById('total-documents-count');
-            const monthCount = document.getElementById('month-count');
-            
-            if (totalCount) {
-                totalCount.textContent = diaryData.length;
-            }
-            
-            if (monthCount) {
-                // 计算本月数据（示例：统计8月份的数据）
-                const currentMonth = new Date().getMonth() + 1; // 获取当前月份
-                const monthData = diaryData.filter(item => {
-                    const itemDate = new Date(item.date);
-                    return itemDate.getMonth() + 1 === currentMonth;
-                });
-                monthCount.textContent = monthData.length;
-            }
-        }
-        
-        // 格式化日期函数
-        function formatDate(dateString) {
-            if (!dateString) return '';
-            const date = new Date(dateString);
-            const day = date.getDate().toString().padStart(2, '0');
-            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-            const year = date.getFullYear();
-            return `${day}-${month}-${year}`;
-        }
-        
-        // 获取状态文本
-        function getStatusText(status) {
-            const statusMap = {
-                'draft': 'Draft',
-                'submitted-wsg': 'Submitted to WSG',
-                'submitted-ig': 'Submitted to IG',
-                'closed': 'Closed',
-                'reopen': 'Reopen',
-                'cancelled': 'Cancelled'
-            };
-            return statusMap[status] || status;
-        }
-        
-        // 获取站点类型
-        function getSiteType(siteName) {
-            if (siteName.toLowerCase().includes('treatment')) return 'treatment';
-            if (siteName.toLowerCase().includes('pipeline')) return 'pipeline';
-            if (siteName.toLowerCase().includes('reservoir')) return 'reservoir';
-            if (siteName.toLowerCase().includes('distribution')) return 'distribution';
-            if (siteName.toLowerCase().includes('pump')) return 'pump';
-            return 'other';
-        }
-        
-        // 渲染表格
-        function renderDiaryTable() {
-            const tbody = document.getElementById('diary-table-body');
-            const noResults = document.getElementById('no-results-message');
-            
-            if (!tbody) {
-                console.error('Table body not found');
-                return;
-            }
-            
-            // 清空表格
-            tbody.innerHTML = '';
-            
-            // 筛选数据
-            const filteredData = diaryData.filter(item => {
-                // 站点筛选
-                if (currentFilters.site !== "all") {
-                    const siteType = getSiteType(item.site);
-                    if (siteType !== currentFilters.site) return false;
-                }
-                
-                // 状态筛选
-                if (currentFilters.status !== "all" && item.status !== currentFilters.status) {
-                    return false;
-                }
-                
-                // 文档类型筛选
-                if (currentFilters.type !== "all" && item.type !== currentFilters.type) {
-                    return false;
-                }
-                
-                return true;
-            });
-            
-            // 显示/隐藏无结果消息
-            if (noResults) {
-                noResults.style.display = filteredData.length === 0 ? 'block' : 'none';
-            }
-            
-            // 填充表格数据
-            filteredData.forEach(item => {
-                const row = document.createElement('tr');
-                
-                row.innerHTML = `
-                    <td>${item.id}</td>
-                    <td><span class="status-badge status-${item.status}">${getStatusText(item.status)}</span></td>
-                    <td>${item.site}</td>
-                    <td>${formatDate(item.date)}</td>
-                    <td>${item.submittedBy}</td>
-                    <td>${item.type}</td>
-                    <td>
-                        <button class="action-btn view-btn" data-id="${item.id}">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button class="action-btn edit-btn" data-id="${item.id}">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="action-btn delete-btn" data-id="${item.id}">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                
-                tbody.appendChild(row);
-            });
-            
-            // 添加事件监听器到操作按钮
-            setupActionButtons();
-        }
-        
-        // 设置操作按钮事件
-        function setupActionButtons() {
-            // 查看按钮
-            document.querySelectorAll('.view-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const docId = this.getAttribute('data-id');
-                    alert(`View diary: ${docId}`);
-                    // 这里可以跳转到查看页面
-                });
-            });
-            
-            // 编辑按钮
-            document.querySelectorAll('.edit-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const docId = this.getAttribute('data-id');
-                    alert(`Edit diary: ${docId}`);
-                    // 这里可以跳转到编辑页面
-                });
-            });
-            
-            // 删除按钮
-            document.querySelectorAll('.delete-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const docId = this.getAttribute('data-id');
-                    if (confirm(`Are you sure you want to delete diary ${docId}?`)) {
-                        const index = diaryData.findIndex(item => item.id === docId);
-                        if (index !== -1) {
-                            diaryData.splice(index, 1);
-                            renderDiaryTable();
-                            updateStats();
-                        }
-                    }
-                });
-            });
-        }
-        
-        // 设置过滤器事件
-        function setupFilterEvents() {
-            document.querySelectorAll('.filter-group').forEach(group => {
-                const toggle = group.querySelector('.filter-toggle');
-                const options = group.querySelector('.filter-options');
-                
-                if (!toggle || !options) return;
-                
-                // Toggle dropdown
-                toggle.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    document.querySelectorAll('.filter-options').forEach(opt => {
-                        if (opt !== options) opt.classList.remove('open');
-                    });
-                    options.classList.toggle('open');
-                });
-                
-                // Filter option click
-                group.querySelectorAll('.filter-option').forEach(option => {
-                    option.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                        
-                        // Update active option
-                        group.querySelectorAll('.filter-option').forEach(opt => {
-                            opt.classList.remove('active');
-                        });
-                        option.classList.add('active');
-                        
-                        // Update toggle text
-                        toggle.querySelector('span').textContent = option.textContent;
-                        
-                        // Update filter
-                        const filterType = option.dataset.filter;
-                        const filterValue = option.dataset.value;
-                        currentFilters[filterType] = filterValue;
-                        
-                        // Re-render table
-                        renderDiaryTable();
-                        
-                        // Close dropdown
-                        options.classList.remove('open');
-                    });
-                });
-            });
-            
-            // Close dropdowns when clicking outside
-            document.addEventListener('click', function() {
-                document.querySelectorAll('.filter-options').forEach(opt => {
-                    opt.classList.remove('open');
-                });
-            });
-        }
-        
-        // 设置添加日记按钮事件
-        function setupAddDiaryButton() {
-            const addBtn = document.getElementById('add-diary-btn');
-            const modal = document.getElementById('add-diary-modal');
-            const cancelBtn = document.getElementById('cancel-add-diary');
-            const form = document.getElementById('add-diary-form');
-            
-            if (addBtn && modal) {
-                addBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    console.log('Opening diary modal');
-                    modal.style.display = 'flex';
-                });
-            }
-            
-            if (cancelBtn && modal) {
-                cancelBtn.addEventListener('click', function() {
-                    modal.style.display = 'none';
-                });
-            }
-            
-            if (form) {
-                form.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    
-                    // 获取表单数据
-                    const newDiary = {
-                        id: document.getElementById('input-diary-id').value,
-                        status: document.getElementById('input-status').value,
-                        site: document.getElementById('input-site').value,
-                        date: document.getElementById('input-date').value,
-                        submittedBy: document.getElementById('input-submitted-by').value,
-                        type: document.getElementById('input-type').value
-                    };
-                    
-                    // 添加到数据数组
-                    diaryData.unshift(newDiary);
-                    
-                    // 重新渲染表格
-                    renderDiaryTable();
-                    updateStats();
-                    
-                    // 重置表单并关闭模态框
-                    form.reset();
-                    modal.style.display = 'none';
-                    
-                    alert('New diary added successfully!');
-                });
-            }
-        }
-        
-        // 初始化
-        function initializePage() {
-            console.log('Initializing Site Diary page');
-            
-            updateStats();
-            renderDiaryTable();
-            setupFilterEvents();
-            setupAddDiaryButton();
-            setupActionButtons();
-        }
-        
-        // 开始初始化
-        initializePage();
-        
-        // 更新日期函数
-        function updateCurrentDate() {
-            const dateElement = document.getElementById('current-date');
-            if (dateElement) {
-                const now = new Date();
-                const options = { year: 'numeric', month: 'long', day: 'numeric' };
-                dateElement.textContent = now.toLocaleDateString('en-US', options);
-            }
-        }
-    });
-</script>
-
-    <!-- 引入语言配置文件 -->
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
     <script src="scripts/sidebar.js"></script>
-    <script src="scripts/sitediary.js"></script>
+    
+    <script>
+        // ==================== Site Diary Page Logic ====================
+        (function() {
+            // ---------- 1. 数据模型：从 localStorage 加载，无则使用默认 ----------
+            let diaryData = [];
+            const STORAGE_KEY = 'siteDiaryData';
+            
+            const defaultDiaries = [
+                { id: "SD-2025-001", status: "draft", site: "Treatment Plant", date: "2025-08-15", submittedBy: "John Doe", type: "Contractor Documents" },
+                { id: "SD-2025-002", status: "submitted-wsg", site: "Pipeline", date: "2025-08-14", submittedBy: "Jane Smith", type: "Contractor Documents" },
+                { id: "SD-2025-003", status: "submitted-ig", site: "Reservoir", date: "2025-08-13", submittedBy: "Robert Johnson", type: "Sub Contractor Documents" },
+                { id: "SD-2025-004", status: "closed", site: "Distribution", date: "2025-08-12", submittedBy: "Sarah Williams", type: "Sub Contractor Documents" },
+                { id: "SD-2025-005", status: "reopen", site: "Pump Station", date: "2025-08-11", submittedBy: "Michael Brown", type: "Contractor Documents" },
+                { id: "SD-2025-006", status: "cancelled", site: "Treatment Plant", date: "2025-08-10", submittedBy: "David Wilson", type: "Contractor Documents" },
+                { id: "SD-2025-007", status: "draft", site: "Pipeline", date: "2025-08-09", submittedBy: "Emma Davis", type: "Sub Contractor Documents" },
+                { id: "SD-2025-008", status: "submitted-wsg", site: "Reservoir", date: "2025-08-08", submittedBy: "James Miller", type: "Contractor Documents" },
+                { id: "SD-2025-009", status: "closed", site: "Distribution", date: "2025-08-07", submittedBy: "Olivia Garcia", type: "Sub Contractor Documents" },
+                { id: "SD-2025-010", status: "reopen", site: "Pump Station", date: "2025-08-06", submittedBy: "William Rodriguez", type: "Contractor Documents" }
+            ];
+            
+            function loadData() {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (stored) {
+                    diaryData = JSON.parse(stored);
+                } else {
+                    diaryData = [...defaultDiaries];
+                    saveData();
+                }
+            }
+            
+            function saveData() {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(diaryData));
+            }
+            
+            // ---------- 2. 辅助函数 ----------
+            function formatDate(dateString) {
+                if (!dateString) return '';
+                const date = new Date(dateString);
+                const day = date.getDate().toString().padStart(2, '0');
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const year = date.getFullYear();
+                return `${day}-${month}-${year}`;
+            }
+            
+            function getStatusText(status) {
+                const map = {
+                    'draft': 'Draft',
+                    'submitted-wsg': 'Submitted to WSG',
+                    'submitted-ig': 'Submitted to IG',
+                    'closed': 'Closed',
+                    'reopen': 'Reopen',
+                    'cancelled': 'Cancelled'
+                };
+                return map[status] || status;
+            }
+            
+            function getSiteType(siteName) {
+                const lower = siteName.toLowerCase();
+                if (lower.includes('treatment')) return 'treatment';
+                if (lower.includes('pipeline')) return 'pipeline';
+                if (lower.includes('reservoir')) return 'reservoir';
+                if (lower.includes('distribution')) return 'distribution';
+                if (lower.includes('pump')) return 'pump';
+                return 'other';
+            }
+            
+            // 当前筛选条件
+            let currentFilters = {
+                site: "all",
+                status: "all",
+                type: "all"
+            };
+            
+            // ---------- 3. 渲染表格 & 统计 ----------
+            function updateStats() {
+                const totalEl = document.getElementById('total-documents-count');
+                const monthEl = document.getElementById('month-count');
+                if (totalEl) totalEl.textContent = diaryData.length;
+                if (monthEl) {
+                    const currentMonth = new Date().getMonth() + 1;
+                    const monthCount = diaryData.filter(item => {
+                        const itemDate = new Date(item.date);
+                        return itemDate.getMonth() + 1 === currentMonth;
+                    }).length;
+                    monthEl.textContent = monthCount;
+                }
+            }
+            
+            function renderDiaryTable() {
+                const tbody = document.getElementById('diary-table-body');
+                const noResults = document.getElementById('no-results-message');
+                if (!tbody) return;
+                
+                tbody.innerHTML = '';
+                
+                const filtered = diaryData.filter(item => {
+                    if (currentFilters.site !== "all") {
+                        const siteType = getSiteType(item.site);
+                        if (siteType !== currentFilters.site) return false;
+                    }
+                    if (currentFilters.status !== "all" && item.status !== currentFilters.status) return false;
+                    if (currentFilters.type !== "all" && item.type !== currentFilters.type) return false;
+                    return true;
+                });
+                
+                if (noResults) {
+                    noResults.style.display = filtered.length === 0 ? 'block' : 'none';
+                }
+                
+                filtered.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.id}</td>
+                        <td><span class="status-badge status-${item.status}">${getStatusText(item.status)}</span></td>
+                        <td>${item.site}</td>
+                        <td>${formatDate(item.date)}</span></td>
+                        <td>${item.submittedBy}</td>
+                        <td>${item.type}</td>
+                        <td>
+                            <button class="action-btn view-btn" data-id="${item.id}"><i class="fas fa-eye"></i></button>
+                            <button class="action-btn edit-btn" data-id="${item.id}"><i class="fas fa-edit"></i></button>
+                            <button class="action-btn delete-btn" data-id="${item.id}"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                
+                attachActionEvents();
+            }
+            
+            function attachActionEvents() {
+                document.querySelectorAll('.view-btn').forEach(btn => {
+                    btn.removeEventListener('click', handleView);
+                    btn.addEventListener('click', handleView);
+                });
+                document.querySelectorAll('.edit-btn').forEach(btn => {
+                    btn.removeEventListener('click', handleEdit);
+                    btn.addEventListener('click', handleEdit);
+                });
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.removeEventListener('click', handleDelete);
+                    btn.addEventListener('click', handleDelete);
+                });
+            }
+            
+            function handleView(e) {
+                const id = e.currentTarget.getAttribute('data-id');
+                const doc = diaryData.find(d => d.id === id);
+                if (doc) {
+                    sessionStorage.setItem('currentDocument', JSON.stringify({
+                        id: doc.id,
+                        status: doc.status,
+                        statusText: getStatusText(doc.status),
+                        site: doc.site,
+                        date: formatDate(doc.date),
+                        submittedBy: doc.submittedBy,
+                        type: doc.type,
+                        pdfUrl: doc.pdfUrl || ''
+                    }));
+                    window.location.href = 'sitediarydocument.html';
+                } else {
+                    alert('Document not found');
+                }
+            }
+            
+            function handleEdit(e) {
+                const id = e.currentTarget.getAttribute('data-id');
+                const doc = diaryData.find(d => d.id === id);
+                if (doc) {
+                    sessionStorage.setItem('editDocument', JSON.stringify({
+                        id: doc.id,
+                        status: doc.status,
+                        statusText: getStatusText(doc.status),
+                        site: doc.site,
+                        date: formatDate(doc.date),
+                        submittedBy: doc.submittedBy,
+                        type: doc.type,
+                        pdfUrl: doc.pdfUrl || ''
+                    }));
+                    window.location.href = 'editpdf.html';
+                } else {
+                    alert('Document not found');
+                }
+            }
+            
+            function handleDelete(e) {
+                const id = e.currentTarget.getAttribute('data-id');
+                if (confirm(`Are you sure you want to delete diary ${id}?`)) {
+                    const index = diaryData.findIndex(d => d.id === id);
+                    if (index !== -1) {
+                        diaryData.splice(index, 1);
+                        saveData();
+                        renderDiaryTable();
+                        updateStats();
+                    }
+                }
+            }
+            
+            // ---------- 4. 筛选器事件 ----------
+            function setupFilterEvents() {
+                document.querySelectorAll('.filter-group').forEach(group => {
+                    const toggle = group.querySelector('.filter-toggle');
+                    const options = group.querySelector('.filter-options');
+                    if (!toggle || !options) return;
+                    
+                    toggle.removeEventListener('click', toggleHandler);
+                    toggle.addEventListener('click', toggleHandler);
+                    
+                    function toggleHandler(e) {
+                        e.stopPropagation();
+                        document.querySelectorAll('.filter-options').forEach(opt => {
+                            if (opt !== options) opt.classList.remove('open');
+                        });
+                        options.classList.toggle('open');
+                    }
+                    
+                    group.querySelectorAll('.filter-option').forEach(opt => {
+                        opt.removeEventListener('click', optionHandler);
+                        opt.addEventListener('click', optionHandler);
+                    });
+                    
+                    function optionHandler(e) {
+                        e.stopPropagation();
+                        const option = e.currentTarget;
+                        group.querySelectorAll('.filter-option').forEach(o => o.classList.remove('active'));
+                        option.classList.add('active');
+                        toggle.querySelector('span').textContent = option.textContent;
+                        
+                        const filterType = option.dataset.filter;
+                        const filterValue = option.dataset.value;
+                        currentFilters[filterType] = filterValue;
+                        renderDiaryTable();
+                        options.classList.remove('open');
+                    }
+                });
+                
+                document.removeEventListener('click', outsideClickListener);
+                document.addEventListener('click', outsideClickListener);
+                function outsideClickListener() {
+                    document.querySelectorAll('.filter-options').forEach(opt => opt.classList.remove('open'));
+                }
+            }
+            
+            // ---------- 5. 新增日记模态框 ----------
+            function setupAddDiaryModal() {
+                const addBtn = document.getElementById('add-diary-btn');
+                const modal = document.getElementById('add-diary-modal');
+                const cancelBtn = document.getElementById('cancel-add-diary');
+                const form = document.getElementById('add-diary-form');
+                
+                if (addBtn && modal) {
+                    addBtn.addEventListener('click', () => {
+                        modal.style.display = 'flex';
+                    });
+                }
+                if (cancelBtn && modal) {
+                    cancelBtn.addEventListener('click', () => {
+                        modal.style.display = 'none';
+                        form?.reset();
+                    });
+                }
+                if (modal) {
+                    modal.addEventListener('click', (e) => {
+                        if (e.target === modal) modal.style.display = 'none';
+                    });
+                }
+                if (form) {
+                    form.addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        const newDiary = {
+                            id: document.getElementById('input-diary-id').value,
+                            status: document.getElementById('input-status').value,
+                            site: document.getElementById('input-site').value,
+                            date: document.getElementById('input-date').value,
+                            submittedBy: document.getElementById('input-submitted-by').value,
+                            type: document.getElementById('input-type').value
+                        };
+                        diaryData.unshift(newDiary);
+                        saveData();
+                        renderDiaryTable();
+                        updateStats();
+                        modal.style.display = 'none';
+                        form.reset();
+                        alert('New diary added successfully!');
+                    });
+                }
+            }
+            
+            // ---------- 6. 同步全局日期显示 ----------
+            function syncGlobalDate() {
+                const storedDate = sessionStorage.getItem('globalDate');
+                const dateSpan = document.querySelector('.date-display span');
+                if (storedDate && dateSpan) {
+                    dateSpan.textContent = storedDate;
+                }
+            }
+            
+            // ---------- 7. 页面初始化 ----------
+            function init() {
+                loadData();
+                updateStats();
+                renderDiaryTable();
+                setupFilterEvents();
+                setupAddDiaryModal();
+                syncGlobalDate();
+            }
+            
+            init();
+        })();
+    </script>
+
+    <!-- ========== 侧边栏状态持久化（与 sitediarydocument.html 和 editpdf.html 保持一致） ========== -->
+    <script>
+        (function() {
+            function saveSidebarState() {
+                const sidebar = document.querySelector('.sidebar');
+                if (sidebar) {
+                    const isCollapsed = sidebar.classList.contains('collapsed');
+                    localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
+                }
+            }
+            function restoreSidebarState() {
+                const sidebar = document.querySelector('.sidebar');
+                if (sidebar) {
+                    const savedState = localStorage.getItem('sidebarCollapsed');
+                    if (savedState === 'true') {
+                        sidebar.classList.add('collapsed');
+                    } else if (savedState === 'false') {
+                        sidebar.classList.remove('collapsed');
+                    }
+                }
+            }
+            function bindToggleEvent() {
+                const toggleBtn = document.querySelector('.toggle-btn');
+                if (toggleBtn) {
+                    toggleBtn.removeEventListener('click', saveSidebarState);
+                    toggleBtn.addEventListener('click', function() {
+                        setTimeout(saveSidebarState, 50);
+                    });
+                }
+            }
+            document.addEventListener('DOMContentLoaded', function() {
+                restoreSidebarState();
+                bindToggleEvent();
+            });
+        })();
+    </script>
 </body>
 </html>
