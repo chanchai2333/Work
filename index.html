@@ -246,12 +246,50 @@
         </footer>
     </div> <!-- 关闭main-content div -->
     
-    
-
     <!-- 引入语言配置文件 -->
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
     <script src="scripts/sidebar.js"></script>
     <script src="scripts/dashboard.js"></script>
+
+    <!-- ========== 侧边栏状态持久化（与 sitediary.html 等保持一致） ========== -->
+    <script>
+        (function() {
+            function saveSidebarState() {
+                const sidebar = document.querySelector('.sidebar');
+                if (sidebar) {
+                    const isCollapsed = sidebar.classList.contains('collapsed');
+                    localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
+                }
+            }
+            function restoreSidebarState() {
+                const sidebar = document.querySelector('.sidebar');
+                if (sidebar) {
+                    const savedState = localStorage.getItem('sidebarCollapsed');
+                    if (savedState === 'true') {
+                        sidebar.classList.add('collapsed');
+                    } else if (savedState === 'false') {
+                        sidebar.classList.remove('collapsed');
+                    }
+                }
+            }
+            function bindToggleEvent() {
+                const toggleBtn = document.querySelector('.toggle-btn');
+                if (toggleBtn) {
+                    toggleBtn.removeEventListener('click', saveSidebarState);
+                    toggleBtn.addEventListener('click', function() {
+                        setTimeout(saveSidebarState, 50);
+                    });
+                }
+            }
+            document.addEventListener('DOMContentLoaded', function() {
+                // 等待 sidebar.js 动态插入侧边栏完成
+                setTimeout(function() {
+                    restoreSidebarState();
+                    bindToggleEvent();
+                }, 100);
+            });
+        })();
+    </script>
 </body>
 </html>
