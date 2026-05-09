@@ -1,404 +1,353 @@
-/* === BUGFIX #2: Sync global date display === */
-document.addEventListener('DOMContentLoaded', () => {
-    const storedDate = sessionStorage.getItem('globalDate');
-    const dateSpan = document.querySelector('.date-display span');
-
-    if (storedDate && dateSpan) {
-        dateSpan.textContent = storedDate;
-    }
-});
-``
-
-// editpdf.js
-document.addEventListener("DOMContentLoaded", function() {
-    // 先嘗試從 localStorage 讀取
-    let diaryDataedit = JSON.parse(localStorage.getItem('diaryDataedit'));
-    if (!diaryDataedit || !Array.isArray(diaryDataedit)) {
-        // 如果沒有就用預設資料
-    diaryDataedit = [
-        { 
-        id: "SD-2025-1", 
-        status: "draft", 
-        statusText: "Draft",
-        site: "Treatment Plant", 
-        date: "15-Aug-2025", 
-        submittedBy: "John Doe",
-        type: "Contractor Documents",
-        pdfUrl: "pdfs/site-diary-1.pdf"
-    },
-    { 
-        id: "SD-2025-2", 
-        status: "submitted-ig", 
-        statusText: "Submitted to IG",
-        site: "Pipeline", 
-        date: "14-Aug-2025", 
-        submittedBy: "Jane Smith",
-        type: "Contractor Documents",
-        pdfUrl: "pdfs/site-diary-2.pdf"
-    },
-    { 
-        id: "SD-2025-3", 
-        status: "cancelled", 
-        statusText: "Cancelled",
-        site: "Reservoir", 
-        date: "13-Aug-2025", 
-        submittedBy: "Robert Johnson",
-        type: "Sub Contractor Documents",
-        pdfUrl: "pdfs/site-diary-3.pdf"
-    },
-    { 
-        id: "SD-2025-4", 
-        status: "reopen", 
-        statusText: "Reopen",
-        site: "Distribution", 
-        date: "12-Aug-2025", 
-        submittedBy: "Sarah Williams",
-        type: "Sub Contractor Documents",
-        pdfUrl: "pdfs/site-diary-4.pdf"
-    },
-    { 
-        id: "SD-2025-5", 
-        status: "submitted-wsg", 
-        statusText: "Submitted to WSG",
-        site: "Pump Station", 
-        date: "11-Aug-2025", 
-        submittedBy: "Michael Brown",
-        type: "Contractor Documents",
-        pdfUrl: "pdfs/site-diary-5.pdf"
-    },
-    { 
-        id: "SD-2025-6", 
-        status: "closed", 
-        statusText: "Closed",
-        site: "Reservoir", 
-        date: "10-Aug-2025", 
-        submittedBy: "David Wilson",
-        type: "Sub Contractor Documents",
-        pdfUrl: "pdfs/site-diary-6.pdf"
-    },
-    { 
-        id: "SD-2025-7", 
-        status: "draft", 
-        statusText: "Draft",
-        site: "Treatment Plant", 
-        date: "09-Aug-2025", 
-        submittedBy: "Emma Davis",
-        type: "Sub Contractor Documents",
-        pdfUrl: "pdfs/site-diary-7.pdf"
-    },
-    { 
-        id: "SD-2025-8", 
-        status: "submitted-ig", 
-        statusText: "Submitted to IG",
-        site: "Distribution", 
-        date: "08-Aug-2025", 
-        submittedBy: "James Miller",
-        type: "Contractor Documents",
-        pdfUrl: "pdfs/site-diary-8.pdf"
-    },
-    { 
-        id: "SD-2025-9", 
-        status: "closed", 
-        statusText: "Closed",
-        site: "Pump Station", 
-        date: "07-Aug-2025", 
-        submittedBy: "Olivia Garcia",
-        type: "Sub Contractor Documents",
-        pdfUrl: "pdfs/site-diary-9.pdf"
-    },
-    { 
-        id: "SD-2025-10", 
-        status: "reopen", 
-        statusText: "Reopen",
-        site: "Pipeline", 
-        date: "06-Aug-2025", 
-        submittedBy: "William Rodriguez",
-        type: "Sub Contractor Documents",
-        pdfUrl: "pdfs/site-diary-10.pdf"
-    }
-    ];
-}
+/**
+ * editpdf.js - PDF 编辑页面逻辑 + 绘图工具
+ */
+(function() {
+    // ---------- 全局变量 ----------
+    let pdfDoc = null;
+    let currentPage = 1;
+    let scale = 1.5;
+    let currentTool = 'select';
+    let isDrawing = false;
+    let lastX = 0, lastY = 0;
+    let startX = 0, startY = 0; // 用于矩形/形状
+    let annotations = [];        // 存储所有绘制内容（简单存储）
     
-    // 2. 從 URL 參數或 sessionStorage 獲取當前文檔 ID（可選）
-    const urlParams = new URLSearchParams(window.location.search);
-    const docId = urlParams.get('id') || JSON.parse(sessionStorage.getItem('editDocument'))?.id;
-
-    // 3. 找到對應的文檔並顯示在頁面上
-    const currentDoc = diaryDataedit.find(doc => doc.id === docId);
-    
-    if (currentDoc) {
-        document.getElementById('docId').textContent = currentDoc.id;
-        document.getElementById('docSite').textContent = currentDoc.site;
-        document.getElementById('docDate').textContent = currentDoc.date;
-        document.getElementById('docSubmittedBy').textContent = currentDoc.submittedBy;
-        
-        // 如果有 PDF 預覽功能
-        if (currentDoc.pdfUrl) {
-            const pdfViewer = document.getElementById('pdfViewer');
-            pdfViewer.setAttribute('data', currentDoc.pdfUrl);
-        }
-    } else {
-        console.error("找不到對應的文檔！");
-    }
-});
-    
-    // 设置当前日期
-    const today = new Date();
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    document.getElementById('current-date').textContent = today.toLocaleDateString('en-US', options);
-    
-    // 从localStorage获取用户名
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (user) {
-        document.getElementById('username').textContent = user.name;
-    }
-    
-    // 添加工具按钮事件
-    setupToolButtons();
-    
-    // 添加页面导航事件
-    setupNavigation();
-
-// 添加按钮事件监听
-    document.getElementById('save-btn').addEventListener('click', saveChanges);
-    document.getElementById('cancel-btn').addEventListener('click', cancelEditing);
-    document.getElementById('back-btn').addEventListener('click', goBackToDiary);
-
-// 加载PDF文档
-function loadPDF(url) {
-    // 使用PDF.js加载PDF
-    const loadingTask = pdfjsLib.getDocument(url);
-    
-    loadingTask.promise.then(function(pdf) {
-        window.pdfDoc = pdf;
-        document.getElementById('total-pages').textContent = pdf.numPages;
-        
-        // 显示第一页
-        renderPage(1);
-        
-        // 生成页面缩略图
-        generateThumbnails(pdf);
-    }).catch(function(error) {
-        console.error('Error loading PDF:', error);
-        alert('Failed to load PDF document');
-    });
-}
-
-// 渲染PDF页面
-function renderPage(pageNum) {
-    if (!window.pdfDoc) return;
-    
-    window.pdfDoc.getPage(pageNum).then(function(page) {
-        const viewport = page.getViewport({ scale: 1.5 });
-        const canvas = document.getElementById('pdf-canvas');
-        const context = canvas.getContext('2d');
-        
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-        
-        // 更新当前页面信息
-        document.getElementById('current-page').textContent = pageNum;
-        window.currentPage = pageNum;
-        
-        const renderContext = {
-            canvasContext: context,
-            viewport: viewport
-        };
-        
-        page.render(renderContext);
-    });
-}
-
-// 生成页面缩略图
-function generateThumbnails(pdf) {
-    const thumbnailsContainer = document.getElementById('page-thumbnails');
-    thumbnailsContainer.innerHTML = '';
-    
-    for (let i = 1; i <= pdf.numPages; i++) {
-        pdf.getPage(i).then(function(page) {
-            const viewport = page.getViewport({ scale: 0.2 });
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-            canvas.className = 'page-thumb';
-            
-            if (i === 1) {
-                canvas.classList.add('active');
-            }
-            
-            canvas.addEventListener('click', function() {
-                document.querySelectorAll('.page-thumb').forEach(thumb => {
-                    thumb.classList.remove('active');
-                });
-                this.classList.add('active');
-                renderPage(i);
-            });
-            
-            const renderContext = {
-                canvasContext: context,
-                viewport: viewport
-            };
-            
-            page.render(renderContext);
-            thumbnailsContainer.appendChild(canvas);
-        });
-    }
-}
-
-// 设置工具按钮
-function setupToolButtons() {
-    const toolButtons = document.querySelectorAll('.tool-btn');
-    
-    toolButtons.forEach(btn => {
-        btn.addEventListener('click', function() {
-            toolButtons.forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            
-            const tool = this.dataset.tool;
-            activateTool(tool);
-        });
-    });
-    
-    // 设置属性控件
+    // DOM 元素
+    const canvas = document.getElementById('pdf-canvas');
+    const drawCanvas = document.getElementById('draw-canvas');
+    const ctx = canvas ? canvas.getContext('2d') : null;
+    const drawCtx = drawCanvas ? drawCanvas.getContext('2d') : null;
+    const colorPicker = document.getElementById('color-picker');
     const sizeSlider = document.getElementById('size-slider');
     const sizeValue = document.getElementById('size-value');
     const opacitySlider = document.getElementById('opacity-slider');
     const opacityValue = document.getElementById('opacity-value');
+    const currentPageSpan = document.getElementById('current-page');
+    const totalPagesSpan = document.getElementById('total-pages');
     
-    sizeSlider.addEventListener('input', function() {
-        sizeValue.textContent = this.value + 'px';
-    });
+    // 当前工具参数
+    let currentColor = '#3498db';
+    let currentSize = 3;
+    let currentOpacity = 100; // 百分比
     
-    opacitySlider.addEventListener('input', function() {
-        opacityValue.textContent = this.value + '%';
-    });
-}
-
-// 激活工具
-function activateTool(tool) {
-    const annotationLayer = document.getElementById('annotation-layer');
-    
-    // 清除之前的工具状态
-    annotationLayer.classList.remove('active');
-    
-    // 根据选择的工具设置注释层
-    switch(tool) {
-        case 'select':
-            // 选择工具逻辑
-            break;
-        case 'text':
-            annotationLayer.classList.add('active');
-            setupTextTool();
-            break;
-        case 'highlight':
-            annotationLayer.classList.add('active');
-            setupHighlightTool();
-            break;
-        case 'draw':
-            annotationLayer.classList.add('active');
-            setupDrawTool();
-            break;
-        case 'shape':
-            annotationLayer.classList.add('active');
-            setupShapeTool();
-            break;
-        case 'stamp':
-            annotationLayer.classList.add('active');
-            setupStampTool();
-            break;
-    }
-}
-
-// 设置文本工具
-function setupTextTool() {
-    // 实现文本注释功能
-    console.log('Text tool activated');
-}
-
-// 设置高亮工具
-function setupHighlightTool() {
-    // 实现高亮注释功能
-    console.log('Highlight tool activated');
-}
-
-// 设置绘图工具
-function setupDrawTool() {
-    // 实现绘图功能
-    console.log('Draw tool activated');
-}
-
-// 设置形状工具
-function setupShapeTool() {
-    // 实现形状注释功能
-    console.log('Shape tool activated');
-}
-
-// 设置印章工具
-function setupStampTool() {
-    // 实现印章功能
-    console.log('Stamp tool activated');
-}
-
-// 设置页面导航
-function setupNavigation() {
-    document.getElementById('prev-page').addEventListener('click', function() {
-        if (window.currentPage > 1) {
-            renderPage(window.currentPage - 1);
+    // ---------- 同步全局日期 ----------
+    function syncGlobalDate() {
+        const storedDate = sessionStorage.getItem('globalDate');
+        const dateSpan = document.querySelector('.date-display span');
+        if (storedDate && dateSpan) {
+            dateSpan.textContent = storedDate;
+        } else {
+            const today = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            if (dateSpan) dateSpan.textContent = today.toLocaleDateString('en-US', options);
         }
-    });
-    
-    document.getElementById('next-page').addEventListener('click', function() {
-        if (window.currentPage < window.pdfDoc.numPages) {
-            renderPage(window.currentPage + 1);
-        }
-    });
-    
-    // 缩放控制
-    document.getElementById('zoom-in').addEventListener('click', function() {
-        // 实现放大功能
-        console.log('Zoom in');
-    });
-    
-    document.getElementById('zoom-out').addEventListener('click', function() {
-        // 实现缩小功能
-        console.log('Zoom out');
-    });
-    
-    document.getElementById('fit-width').addEventListener('click', function() {
-        // 实现适应宽度功能
-        console.log('Fit width');
-    });
-    
-    document.getElementById('fit-page').addEventListener('click', function() {
-        // 实现适应页面功能
-        console.log('Fit page');
-    });
-}
-
-// 保存更改
-function saveChanges() {
-    // 实现保存功能
-    alert('Changes saved successfully!');
-    goBackToDiary();
-}
-
-// 取消编辑
-function cancelEditing() {
-    if (confirm('Are you sure you want to cancel? All changes will be lost.')) {
-        goBackToDiary();
     }
-}
-
-// 返回日记页面
-function goBackToDiary() {
-    window.location.href = 'sitediary.html';
-}
-
- // 添加按钮事件监听（备用方法）
-            document.getElementById('back-btn').addEventListener('click', function(e) {
-                e.preventDefault();
-                console.log('Back button event listener triggered');
-                window.goBackToDiary();
+    
+    // ---------- 加载文档元数据 ----------
+    function loadDocumentData() {
+        const editDocStr = sessionStorage.getItem('editDocument');
+        if (!editDocStr) {
+            console.warn('No editDocument data');
+            return null;
+        }
+        try {
+            const doc = JSON.parse(editDocStr);
+            document.getElementById('docId').textContent = doc.id || 'N/A';
+            document.getElementById('docSite').textContent = doc.site || 'N/A';
+            document.getElementById('docDate').textContent = doc.date || 'N/A';
+            document.getElementById('docSubmittedBy').textContent = doc.submittedBy || 'N/A';
+            document.getElementById('docTitle').textContent = doc.site ? `${doc.site} - ${doc.type || 'Diary'}` : 'Edit Document';
+            return doc;
+        } catch (e) {
+            console.error(e);
+            return null;
+        }
+    }
+    
+    // ---------- PDF 加载和渲染 (使用PDF.js) ----------
+    function loadPDF(url) {
+        const loadingTask = pdfjsLib.getDocument(url);
+        loadingTask.promise.then(pdf => {
+            pdfDoc = pdf;
+            totalPagesSpan.textContent = pdf.numPages;
+            renderPage(currentPage);
+        }).catch(err => {
+            console.error('PDF加载失败:', err);
+            // 如果没有PDF文件，显示提示
+            canvas.style.display = 'none';
+            drawCanvas.style.display = 'none';
+            document.querySelector('.pdf-canvas-container').innerHTML += '<p style="text-align:center;padding:40px">No PDF available for editing. You can still use annotation tools on a blank canvas.</p>';
+        });
+    }
+    
+    function renderPage(pageNum) {
+        if (!pdfDoc) return;
+        pdfDoc.getPage(pageNum).then(page => {
+            const viewport = page.getViewport({ scale: scale });
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            drawCanvas.width = viewport.width;
+            drawCanvas.height = viewport.height;
+            
+            // 渲染 PDF 内容
+            const renderContext = {
+                canvasContext: ctx,
+                viewport: viewport
+            };
+            page.render(renderContext);
+            
+            // 清除绘制层并重新绘制已保存的注释（本页面简单实现，未跨页保存）
+            drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+            // 可以在此处加载之前保存的 annotations（可选）
+            
+            currentPageSpan.textContent = pageNum;
+            currentPage = pageNum;
+            
+            // 调整容器滚动位置
+            const container = document.querySelector('.pdf-canvas-container');
+            if (container) container.scrollTop = 0;
+        });
+    }
+    
+    // ---------- 绘图工具核心 ----------
+    function getCanvasCoords(e) {
+        const rect = drawCanvas.getBoundingClientRect();
+        const scaleX = drawCanvas.width / rect.width;
+        const scaleY = drawCanvas.height / rect.height;
+        let clientX, clientY;
+        if (e.touches) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+        let x = (clientX - rect.left) * scaleX;
+        let y = (clientY - rect.top) * scaleY;
+        x = Math.min(Math.max(0, x), drawCanvas.width);
+        y = Math.min(Math.max(0, y), drawCanvas.height);
+        return { x, y };
+    }
+    
+    function startDrawing(e) {
+        if (currentTool === 'select') return;
+        e.preventDefault();
+        isDrawing = true;
+        const { x, y } = getCanvasCoords(e);
+        lastX = x;
+        lastY = y;
+        startX = x;
+        startY = y;
+        
+        // 画笔/高亮初始点
+        if (currentTool === 'draw' || currentTool === 'highlight') {
+            drawCtx.beginPath();
+            drawCtx.moveTo(x, y);
+            drawCtx.lineCap = 'round';
+            drawCtx.lineJoin = 'round';
+            drawCtx.strokeStyle = currentColor;
+            drawCtx.lineWidth = currentSize;
+            if (currentTool === 'highlight') {
+                drawCtx.globalAlpha = currentOpacity / 100 * 0.5;
+                drawCtx.strokeStyle = '#ffeb3b'; // 高亮黄色
+            } else {
+                drawCtx.globalAlpha = currentOpacity / 100;
+            }
+            drawCtx.lineTo(x, y);
+            drawCtx.stroke();
+            drawCtx.beginPath();
+            drawCtx.moveTo(x, y);
+        }
+    }
+    
+    function draw(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        const { x, y } = getCanvasCoords(e);
+        
+        if (currentTool === 'draw') {
+            drawCtx.globalAlpha = currentOpacity / 100;
+            drawCtx.strokeStyle = currentColor;
+            drawCtx.lineWidth = currentSize;
+            drawCtx.lineTo(x, y);
+            drawCtx.stroke();
+            drawCtx.beginPath();
+            drawCtx.moveTo(x, y);
+        } 
+        else if (currentTool === 'highlight') {
+            drawCtx.globalAlpha = currentOpacity / 100 * 0.4;
+            drawCtx.strokeStyle = '#ffeb3b';
+            drawCtx.lineWidth = currentSize * 3;
+            drawCtx.lineTo(x, y);
+            drawCtx.stroke();
+            drawCtx.beginPath();
+            drawCtx.moveTo(x, y);
+        }
+        lastX = x;
+        lastY = y;
+    }
+    
+    function stopDrawing(e) {
+        if (!isDrawing) return;
+        isDrawing = false;
+        
+        // 处理形状（矩形/圆）
+        if (currentTool === 'shape') {
+            const { x, y } = getCanvasCoords(e);
+            const width = x - startX;
+            const height = y - startY;
+            drawCtx.globalAlpha = currentOpacity / 100;
+            drawCtx.strokeStyle = currentColor;
+            drawCtx.fillStyle = 'transparent';
+            drawCtx.lineWidth = currentSize;
+            drawCtx.strokeRect(startX, startY, width, height);
+        }
+        else if (currentTool === 'text') {
+            // 文本工具：弹出输入框
+            const { x, y } = getCanvasCoords(e);
+            const text = prompt('Enter text annotation:', 'Note');
+            if (text) {
+                drawCtx.font = `${currentSize * 4}px Arial`;
+                drawCtx.fillStyle = currentColor;
+                drawCtx.globalAlpha = currentOpacity / 100;
+                drawCtx.fillText(text, x, y);
+            }
+        }
+        else if (currentTool === 'stamp') {
+            const { x, y } = getCanvasCoords(e);
+            drawCtx.font = `${currentSize * 8}px "Font Awesome 6 Free"`;
+            drawCtx.fillStyle = currentColor;
+            drawCtx.globalAlpha = currentOpacity / 100;
+            drawCtx.fillText('✓', x, y); // 简单印章符号
+        }
+        
+        drawCtx.beginPath(); // 重置路径
+    }
+    
+    // 绑定绘图事件
+    function bindDrawingEvents() {
+        if (!drawCanvas) return;
+        drawCanvas.addEventListener('mousedown', startDrawing);
+        drawCanvas.addEventListener('mousemove', draw);
+        drawCanvas.addEventListener('mouseup', stopDrawing);
+        drawCanvas.addEventListener('mouseleave', stopDrawing);
+        // 触摸屏支持
+        drawCanvas.addEventListener('touchstart', startDrawing);
+        drawCanvas.addEventListener('touchmove', draw);
+        drawCanvas.addEventListener('touchend', stopDrawing);
+    }
+    
+    // ---------- 工具按钮逻辑 ----------
+    function setupTools() {
+        const toolBtns = document.querySelectorAll('.tool-btn');
+        toolBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                toolBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentTool = btn.dataset.tool;
+                
+                // 鼠标样式
+                if (drawCanvas) {
+                    if (currentTool === 'select') {
+                        drawCanvas.style.cursor = 'default';
+                    } else {
+                        drawCanvas.style.cursor = 'crosshair';
+                    }
+                }
+                console.log(`Tool activated: ${currentTool}`);
             });
+        });
+        
+        // 属性绑定
+        if (colorPicker) {
+            colorPicker.addEventListener('input', e => currentColor = e.target.value);
+        }
+        if (sizeSlider) {
+            sizeSlider.addEventListener('input', e => {
+                currentSize = parseInt(e.target.value);
+                sizeValue.textContent = currentSize + 'px';
+            });
+        }
+        if (opacitySlider) {
+            opacitySlider.addEventListener('input', e => {
+                currentOpacity = parseInt(e.target.value);
+                opacityValue.textContent = currentOpacity + '%';
+            });
+        }
+    }
+    
+    // ---------- 导航和缩放 ----------
+    function setupNavigation() {
+        document.getElementById('prev-page')?.addEventListener('click', () => {
+            if (pdfDoc && currentPage > 1) renderPage(currentPage - 1);
+        });
+        document.getElementById('next-page')?.addEventListener('click', () => {
+            if (pdfDoc && currentPage < pdfDoc.numPages) renderPage(currentPage + 1);
+        });
+        document.getElementById('zoom-in')?.addEventListener('click', () => {
+            scale += 0.2;
+            if (pdfDoc) renderPage(currentPage);
+        });
+        document.getElementById('zoom-out')?.addEventListener('click', () => {
+            scale = Math.max(0.6, scale - 0.2);
+            if (pdfDoc) renderPage(currentPage);
+        });
+        // fit-width 和 fit-page 可简易实现
+        document.getElementById('fit-width')?.addEventListener('click', () => {
+            const container = document.querySelector('.pdf-canvas-container');
+            if (container && canvas) {
+                scale = container.clientWidth / canvas.width;
+                if (pdfDoc) renderPage(currentPage);
+            }
+        });
+        document.getElementById('fit-page')?.addEventListener('click', () => {
+            scale = 1.2;
+            if (pdfDoc) renderPage(currentPage);
+        });
+    }
+    
+    // ---------- 按钮：保存/取消/返回 ----------
+    function bindActionButtons() {
+        document.getElementById('save-btn')?.addEventListener('click', () => {
+            // 简单保存：这里可以转换为图片并保存，或只提示成功
+            alert('Changes saved (demo). In production, you would export the annotated PDF.');
+            window.location.href = 'sitediary.html';
+        });
+        document.getElementById('cancel-btn')?.addEventListener('click', () => {
+            if (confirm('Cancel editing? All changes will be lost.'))
+                window.location.href = 'sitediary.html';
+        });
+        document.getElementById('back-btn')?.addEventListener('click', () => {
+            window.location.href = 'sitediary.html';
+        });
+    }
+    
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+        syncGlobalDate();
+        const doc = loadDocumentData();
+        
+        // 如果有 PDF URL 则加载，否则显示占位
+        if (doc && doc.pdfUrl) {
+            loadPDF(doc.pdfUrl);
+        } else {
+            // 无 PDF，但仍可绘制空白画布
+            canvas.style.display = 'block';
+            drawCanvas.style.display = 'block';
+            canvas.width = 800;
+            canvas.height = 1000;
+            drawCanvas.width = 800;
+            drawCanvas.height = 1000;
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, 0, 800, 1000);
+            ctx.fillStyle = '#666';
+            ctx.font = '20px Arial';
+            ctx.fillText('No PDF document attached. You can still use annotation tools.', 30, 100);
+        }
+        
+        setupTools();
+        bindDrawingEvents();
+        setupNavigation();
+        bindActionButtons();
+    });
+})();
