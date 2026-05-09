@@ -1,237 +1,174 @@
+// safetyinspect.js - 安全检查页面逻辑
 document.addEventListener("DOMContentLoaded", function() {
-    // 初始化資料，優先讀取 sessionStorage/localStorage
+    // 初始化资料，优先读取 sessionStorage/localStorage
     let inspectionData = [];
     const storedInspections = sessionStorage.getItem('inspectionData') || localStorage.getItem('inspectionData');
     if (storedInspections) {
-        inspectionData = JSON.parse(storedInspections);
-    } else {
+        try {
+            inspectionData = JSON.parse(storedInspections);
+        } catch(e) { inspectionData = []; }
+    }
+    if (!inspectionData.length) {
         inspectionData = [
             { id: "INSP-2025-1", status: "draft", statusText: "Draft", site: "Treatment Plant", date: "15-Aug-2025", inspector: "John Doe"},
             { id: "INSP-2025-2", status: "reopen", statusText: "Reopen", site: "Pipeline", date: "14-Aug-2025", inspector: "Jane Smith" },
             { id: "INSP-2025-3", status: "closed", statusText: "Closed", site: "Reservoir", date: "13-Aug-2025", inspector: "Robert Johnson"}
         ];
+        localStorage.setItem('inspectionData', JSON.stringify(inspectionData));
+        sessionStorage.setItem('inspectionData', JSON.stringify(inspectionData));
     }
 
-    // 当前筛选状态
-    let currentFilters = {
-        site: "all",
-        status: "all"
-    };
+    let currentFilters = { site: "all", status: "all" };
 
     // 更新日期
-    const now = new Date();
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
     const dateSpan = document.getElementById('current-date');
-    if (dateSpan) dateSpan.textContent = now.toLocaleDateString('en-US', options);
+    if (dateSpan) {
+        const now = new Date();
+        dateSpan.textContent = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    }
 
-    // 彈窗顯示
-    document.querySelector('.nav-buttons button').addEventListener('click', function() {
-        document.getElementById('add-inspect-modal').style.display = 'flex';
-    });
+    // 新增模态框
+    const addBtn = document.querySelector('.nav-buttons button');
+    if (addBtn) addBtn.addEventListener('click', () => document.getElementById('add-inspect-modal').style.display = 'flex');
+    const cancelBtn = document.getElementById('cancel-add-inspect');
+    if (cancelBtn) cancelBtn.addEventListener('click', () => document.getElementById('add-inspect-modal').style.display = 'none');
+    const addForm = document.getElementById('add-inspect-form');
+    if (addForm) {
+        addForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const newInspection = {
+                id: document.getElementById('input-inspect-id').value,
+                status: document.getElementById('input-inspect-status').value,
+                statusText: document.getElementById('input-inspect-status').selectedOptions[0].text,
+                site: document.getElementById('input-inspect-site').value,
+                date: new Date(document.getElementById('input-inspect-date').value).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}),
+                inspector: document.getElementById('input-inspect-by').value,
+            };
+            inspectionData.push(newInspection);
+            sessionStorage.setItem('inspectionData', JSON.stringify(inspectionData));
+            localStorage.setItem('inspectionData', JSON.stringify(inspectionData));
+            document.getElementById('add-inspect-modal').style.display = 'none';
+            renderInspectionTable();
+        });
+    }
 
-    // 彈窗取消
-    document.getElementById('cancel-add-inspect').addEventListener('click', function() {
-        document.getElementById('add-inspect-modal').style.display = 'none';
-    });
-
-    // 新增 inspection
-    document.getElementById('add-inspect-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const newInspection = {
-            id: document.getElementById('input-inspect-id').value,
-            status: document.getElementById('input-inspect-status').value,
-            statusText: document.getElementById('input-inspect-status').selectedOptions[0].text,
-            site: document.getElementById('input-inspect-site').value,
-            date: new Date(document.getElementById('input-inspect-date').value).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}),
-            inspector: document.getElementById('input-inspect-by').value,
-        };
-        inspectionData.push(newInspection);
-        // 儲存到 sessionStorage 和 localStorage
-        sessionStorage.setItem('inspectionData', JSON.stringify(inspectionData));
-        localStorage.setItem('inspectionData', JSON.stringify(inspectionData));
-        document.getElementById('add-inspect-modal').style.display = 'none';
-        renderInspectionTable();
-    });
-
-    // 設置篩選器事件
     function setupFilterEvents() {
         document.querySelectorAll('.filter-group').forEach(group => {
             const toggle = group.querySelector('.filter-toggle');
             const options = group.querySelector('.filter-options');
-            
-            // 确保筛选选项初始状态是隐藏的
+            if (!toggle || !options) return;
             options.style.display = 'none';
-            
-            // Toggle dropdown on click
-            toggle.addEventListener('click', function(e) {
+            toggle.addEventListener('click', (e) => {
                 e.stopPropagation();
-                // Close other dropdowns
-                document.querySelectorAll('.filter-options').forEach(opt => {
-                    if (opt !== options) {
-                        opt.style.display = 'none';
-                        opt.classList.remove('open');
-                    }
-                });
-                
-                // Toggle current dropdown
-                if (options.style.display === 'none') {
-                    options.style.display = 'block';
-                    options.classList.add('open');
-                } else {
-                    options.style.display = 'none';
-                    options.classList.remove('open');
-                }
+                document.querySelectorAll('.filter-options').forEach(opt => opt !== options && (opt.style.display = 'none'));
+                options.style.display = options.style.display === 'none' ? 'block' : 'none';
             });
-            
-            // Option click
-            group.querySelectorAll('.filter-option').forEach(option => {
-                option.addEventListener('click', function(e) {
+            group.querySelectorAll('.filter-option').forEach(opt => {
+                opt.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    // Remove active from all
-                    group.querySelectorAll('.filter-option').forEach(opt => opt.classList.remove('active'));
-                    option.classList.add('active');
-                    toggle.querySelector('span').textContent = option.textContent;
-                    const filterType = option.dataset.filter;
-                    const filterValue = option.dataset.value;
-                    currentFilters[filterType] = filterValue;
+                    group.querySelectorAll('.filter-option').forEach(o => o.classList.remove('active'));
+                    opt.classList.add('active');
+                    toggle.querySelector('span').textContent = opt.textContent;
+                    currentFilters[opt.dataset.filter] = opt.dataset.value;
                     renderInspectionTable();
-                    options.style.display = 'none'; // Close dropdown
-                    options.classList.remove('open');
+                    options.style.display = 'none';
                 });
             });
         });
-        
-        // Click outside closes all dropdowns
-        document.addEventListener('click', function(e) {
-            document.querySelectorAll('.filter-options').forEach(opt => {
-                opt.style.display = 'none';
-                opt.classList.remove('open');
-            });
-        });
+        document.addEventListener('click', () => document.querySelectorAll('.filter-options').forEach(opt => opt.style.display = 'none'));
     }
 
-    // 渲染表格
     function renderInspectionTable() {
         const tbody = document.getElementById('inspection-table-body');
         const totalCount = document.getElementById('total-inspections-count');
         const noResults = document.getElementById('no-results-message');
-        
         if (!tbody) return;
-        tbody.innerHTML = '';
-        
-        // 筛选数据
-        const filteredData = inspectionData.filter(item => {
-            // 站点筛选
+        const filtered = inspectionData.filter(item => {
             if (currentFilters.site !== "all") {
-                const siteValue = item.site.toLowerCase().includes('treatment') ? 'treatment' : 
-                                 item.site.toLowerCase().includes('pipeline') ? 'pipeline' :
-                                 item.site.toLowerCase().includes('reservoir') ? 'reservoir' :
-                                 item.site.toLowerCase().includes('distribution') ? 'distribution' : 'pump';
-                
-                if (siteValue !== currentFilters.site) return false;
+                const siteVal = item.site.toLowerCase().includes('treatment') ? 'treatment' :
+                                item.site.toLowerCase().includes('pipeline') ? 'pipeline' :
+                                item.site.toLowerCase().includes('reservoir') ? 'reservoir' :
+                                item.site.toLowerCase().includes('distribution') ? 'distribution' : 'pump';
+                if (siteVal !== currentFilters.site) return false;
             }
-            
-            // 状态筛选
-            if (currentFilters.status !== "all" && item.status !== currentFilters.status) {
-                return false;
-            }
-            
+            if (currentFilters.status !== "all" && item.status !== currentFilters.status) return false;
             return true;
         });
-        
-        // 显示无结果消息
-        if (filteredData.length === 0) {
+        tbody.innerHTML = '';
+        if (filtered.length === 0) {
             noResults.style.display = 'block';
         } else {
             noResults.style.display = 'none';
+            filtered.forEach(item => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${item.id}</td>
+                    <td><span class="status-badge status-${item.status}">${item.statusText}</span></td>
+                    <td>${item.site}</td>
+                    <td>${item.date}</td>
+                    <td>${item.inspector}</td>
+                    <td class="action-buttons">
+                        <button class="action-btn view-btn" data-id="${item.id}"><i class="fas fa-eye"></i></button>
+                        <button class="action-btn edit-btn" data-id="${item.id}"><i class="fas fa-edit"></i></button>
+                        <button class="action-btn delete-btn" data-id="${item.id}"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+            });
         }
-        
-        // 填充表格
-        filteredData.forEach(item => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${item.id}</td>
-                <td><span class="status-badge status-${item.status}">${item.statusText}</span></td>
-                <td>${item.site}</td>
-                <td>${item.date}</td>
-                <td>${item.inspector}</td>
-                <td class="action-buttons">
-                    <button class="action-btn view-btn" data-id="${item.id}"><i class="fas fa-eye"></i></button>
-                    <button class="action-btn edit-btn" data-id="${item.id}"><i class="fas fa-edit"></i></button>
-                    <button class="action-btn delete-btn" data-id="${item.id}"><i class="fas fa-trash"></i></button>
-                </td>
-            `;
-            tbody.appendChild(row);
-        });
-        
-        if (totalCount) totalCount.textContent = filteredData.length;
+        if (totalCount) totalCount.textContent = filtered.length;
 
-        // 查看功能
+        // 绑定按钮事件
         document.querySelectorAll('.view-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const docId = this.getAttribute('data-id');
-                const inspectionItem = inspectionData.find(item => item.id === docId);
-                
-                if (inspectionItem) {
-                    // 存储当前文档数据到sessionStorage
-                    sessionStorage.setItem('currentInspection', JSON.stringify({
-                        id: inspectionItem.id,
-                        status: inspectionItem.status,
-                        statusText: inspectionItem.statusText,
-                        site: inspectionItem.site,
-                        date: inspectionItem.date,
-                        inspector: inspectionItem.inspector
-                    }));
-                    
-                    // 跳转到文档查看页面
-                    window.location.href = 'safetyinspectdocument.html';
-                }
-            });
+            btn.removeEventListener('click', handleView);
+            btn.addEventListener('click', handleView);
         });
-        
-        // 編輯功能
-    // 添加查看按钮事件监听器
-    document.querySelectorAll('.edit-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const docId = this.getAttribute('data-id');
-                const inspectionItem = inspectionData.find(item => item.id === docId);
-                
-                if (inspectionItem) {
-                    // 存储当前文档数据到sessionStorage
-                    sessionStorage.setItem('currentInspection', JSON.stringify({
-                        id: inspectionItem.id,
-                        status: inspectionItem.status,
-                        statusText: inspectionItem.statusText,
-                        site: inspectionItem.site,
-                        date: inspectionItem.date,
-                        inspector: inspectionItem.inspector
-                    }));
-                    
-                    // 跳转到文档查看页面
-                    window.location.href = 'editsafetypdf.html';
-                }
-            });
-    });
-
-        // 刪除功能
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.removeEventListener('click', handleEdit);
+            btn.addEventListener('click', handleEdit);
+        });
         document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const docId = this.getAttribute('data-id');
-                const idx = inspectionData.findIndex(item => item.id === docId);
-                if (idx !== -1) {
-                    if (confirm('Are you sure you want to delete this inspection?')) {
-                        inspectionData.splice(idx, 1);
-                        // 更新 sessionStorage 和 localStorage
-                        sessionStorage.setItem('inspectionData', JSON.stringify(inspectionData));
-                        localStorage.setItem('inspectionData', JSON.stringify(inspectionData));
-                        renderInspectionTable();
-                    }
-                }
-            });
+            btn.removeEventListener('click', handleDelete);
+            btn.addEventListener('click', handleDelete);
         });
     }
 
-    // 初始化篩選器和表格
+    function handleView(e) {
+        const id = e.currentTarget.getAttribute('data-id');
+        const doc = inspectionData.find(d => d.id === id);
+        if (doc) {
+            sessionStorage.setItem('currentInspection', JSON.stringify({
+                id: doc.id, status: doc.status, statusText: doc.statusText,
+                site: doc.site, date: doc.date, inspector: doc.inspector
+            }));
+            window.location.href = 'safetyinspectdocument.html';
+        } else alert('Document not found');
+    }
+
+    function handleEdit(e) {
+        const id = e.currentTarget.getAttribute('data-id');
+        const doc = inspectionData.find(d => d.id === id);
+        if (doc) {
+            sessionStorage.setItem('editDocument', JSON.stringify({
+                id: doc.id, status: doc.status, statusText: doc.statusText,
+                site: doc.site, date: doc.date, inspector: doc.inspector, pdfUrl: doc.pdfUrl || ''
+            }));
+            window.location.href = 'editsafetypdf.html';
+        } else alert('Document not found');
+    }
+
+    function handleDelete(e) {
+        const id = e.currentTarget.getAttribute('data-id');
+        if (confirm('Delete this inspection?')) {
+            const idx = inspectionData.findIndex(d => d.id === id);
+            if (idx !== -1) {
+                inspectionData.splice(idx, 1);
+                sessionStorage.setItem('inspectionData', JSON.stringify(inspectionData));
+                localStorage.setItem('inspectionData', JSON.stringify(inspectionData));
+                renderInspectionTable();
+            }
+        }
+    }
+
     setupFilterEvents();
     renderInspectionTable();
 });
