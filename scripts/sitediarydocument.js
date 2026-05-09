@@ -1,82 +1,86 @@
-/* === BUGFIX #2: Sync global date display === */
-document.addEventListener('DOMContentLoaded', () => {
-    const storedDate = sessionStorage.getItem('globalDate');
-    const dateSpan = document.querySelector('.date-display span');
-
-    if (storedDate && dateSpan) {
-        dateSpan.textContent = storedDate;
-    }
-});
-``
-
-document.addEventListener('DOMContentLoaded', function() {
-    // 从sessionStorage获取文档数据
-    const documentData = JSON.parse(sessionStorage.getItem('currentDocument'));
-    
-    // 显示文件资料
-    if (documentData) {
-        // 设置PDF查看器
-        if (documentData.pdfUrl) {
-            document.getElementById('pdf-viewer').src = documentData.pdfUrl;
+// ===== Site Diary Document Viewer =====
+(function() {
+    function syncGlobalDate() {
+        const storedDate = sessionStorage.getItem('globalDate');
+        const dateSpan = document.querySelector('.date-display span');
+        if (storedDate && dateSpan) {
+            dateSpan.textContent = storedDate;
         }
-        
-        // 设置文档信息
+    }
+
+    function loadDocument() {
+        const documentData = JSON.parse(sessionStorage.getItem('currentDocument'));
+        if (!documentData) {
+            console.warn('No document data found');
+            document.getElementById('docId').textContent = 'N/A';
+            return;
+        }
+
+        // PDF 查看器
+        const pdfFrame = document.getElementById('pdf-viewer');
+        const noPdfMsg = document.getElementById('no-pdf-message');
+        if (documentData.pdfUrl && pdfFrame) {
+            pdfFrame.src = documentData.pdfUrl;
+            pdfFrame.style.display = 'block';
+            if (noPdfMsg) noPdfMsg.style.display = 'none';
+        } else {
+            if (pdfFrame) pdfFrame.style.display = 'none';
+            if (noPdfMsg) noPdfMsg.style.display = 'flex';
+        }
+
+        // 文档元数据
         document.getElementById('docId').textContent = documentData.id || 'N/A';
-        document.getElementById('docTitle').textContent = `${documentData.site} - ${documentData.type}`;
+        const titleSpan = document.getElementById('docTitle');
+        if (titleSpan) titleSpan.textContent = `${documentData.site || ''} - ${documentData.type || ''}`;
         document.getElementById('docSite').textContent = documentData.site || 'N/A';
         document.getElementById('docDate').textContent = documentData.date || 'N/A';
         document.getElementById('docAuthor').textContent = documentData.submittedBy || 'N/A';
-        
-        // 设置状态文本和样式
-        const statusElement = document.getElementById('docStatus');
-        statusElement.textContent = documentData.statusText || 'Draft';
-        
-        // 清除现有样式类
-        statusElement.className = 'doc-status';
-        
-        // 添加对应状态的样式类
-        if (documentData.status === 'draft') {
-            statusElement.classList.add('status-draft');
-        } else if (documentData.status === 'submitted-ig') {
-            statusElement.classList.add('status-submitted-ig');
-        } else if (documentData.status === 'submitted-wsg') {
-            statusElement.classList.add('status-submitted-wsg');
-        } else if (documentData.status === 'closed') {
-            statusElement.classList.add('status-closed');
-        } else if (documentData.status === 'reopen') {
-            statusElement.classList.add('status-reopen');
-        } else if (documentData.status === 'cancelled') {
-            statusElement.classList.add('status-cancelled');
+
+        // 状态
+        const statusEl = document.getElementById('docStatus');
+        if (statusEl) {
+            statusEl.textContent = documentData.statusText || 'Draft';
+            statusEl.className = 'doc-status';
+            const statusMap = {
+                'draft': 'status-draft',
+                'submitted-ig': 'status-submitted-ig',
+                'submitted-wsg': 'status-submitted-wsg',
+                'closed': 'status-closed',
+                'reopen': 'status-reopen',
+                'cancelled': 'status-cancelled'
+            };
+            if (statusMap[documentData.status]) {
+                statusEl.classList.add(statusMap[documentData.status]);
+            }
         }
     }
-    
-    // 从localStorage获取用户名
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (user) {
-        document.getElementById('username').textContent = user.name;
-    }
-    
-    // 设置当前日期
-    // 设置当前日期（只在沒有 globalDate 時才設定）
-    if (!sessionStorage.getItem('globalDate')) {
-        const today = new Date();
-        const options = { year: 'numeric', month: 'long', day: 'numeric' };
-        document.getElementById('current-date').textContent =
-            today.toLocaleDateString('en-US', options);
-    }
-    ``
 
-    document.getElementById('back-to-diary-btn').addEventListener('click', function() {
+    function bindEvents() {
+        const backBtn = document.getElementById('back-to-diary-btn');
+        if (backBtn) {
+            backBtn.addEventListener('click', function() {
                 window.location.href = 'sitediary.html';
             });
-            
-            // 打印功能
-            document.getElementById('print-btn').addEventListener('click', function() {
+        }
+
+        const printBtn = document.getElementById('print-btn');
+        if (printBtn) {
+            printBtn.addEventListener('click', function() {
                 window.print();
             });
-            
-            // 导出PDF功能
-            document.getElementById('export-pdf-btn').addEventListener('click', function() {
-                
+        }
+
+        const exportBtn = document.getElementById('export-pdf-btn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', function() {
+                alert('PDF export feature is under development.');
             });
-});
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        syncGlobalDate();
+        loadDocument();
+        bindEvents();
+    });
+})();
