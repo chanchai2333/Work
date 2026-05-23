@@ -503,7 +503,7 @@
         </div>
     </div>
 
-    <!-- 侧边栏状态持久化（与 labourwage.html 一致） -->
+    <!-- 侧边栏状态持久化（与 labourwage.html 完全一致） -->
     <script>
         (function() {
             function saveSidebarState() {
@@ -513,6 +513,7 @@
                     localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
                 }
             }
+
             function restoreSidebarState() {
                 const sidebar = document.querySelector('.sidebar');
                 if (sidebar) {
@@ -524,23 +525,36 @@
                     }
                 }
             }
+
             function bindToggleEvent() {
                 const toggleBtn = document.querySelector('.toggle-btn');
                 if (toggleBtn) {
+                    // 移除可能存在的旧监听器，避免重复绑定
                     toggleBtn.removeEventListener('click', saveSidebarState);
                     toggleBtn.addEventListener('click', function() {
-                        setTimeout(saveSidebarState, 50);
+                        // 先切换侧边栏状态
+                        const sidebar = document.querySelector('.sidebar');
+                        if (sidebar) {
+                            sidebar.classList.toggle('collapsed');
+                            // 保存状态
+                            const isCollapsed = sidebar.classList.contains('collapsed');
+                            localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
+                        }
                     });
                 }
             }
+
             document.addEventListener('DOMContentLoaded', function() {
                 restoreSidebarState();
                 bindToggleEvent();
                 // 同步日期显示
                 const storedDate = sessionStorage.getItem('globalDate');
                 const dateSpan = document.querySelector('.date-display span');
-                if (storedDate && dateSpan) dateSpan.textContent = storedDate;
-                else if (dateSpan) dateSpan.textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                if (storedDate && dateSpan) {
+                    dateSpan.textContent = storedDate;
+                } else if (dateSpan) {
+                    dateSpan.textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                }
             });
         })();
     </script>
