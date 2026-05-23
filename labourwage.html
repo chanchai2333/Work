@@ -268,6 +268,32 @@
     </style>
 
     <script>
+        // 辅助函数：格式化金额用于显示（带货币符号和千位分隔符）
+        function formatAmountDisplay(amount) {
+            if (!amount || amount === '-' || amount === '') return '-';
+            const num = parseFloat(amount);
+            if (isNaN(num)) return amount;
+            return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // 辅助函数：格式化金额用于存储（无逗号，两位小数）
+        function formatAmountForStorage(amount) {
+            if (amount === undefined || amount === null || amount === '') return '-';
+            if (typeof amount === 'number') return amount.toFixed(2);
+            const parsed = parseFloat(amount);
+            if (isNaN(parsed)) return '-';
+            return parsed.toFixed(2);
+        }
+
+        // 排序函数：按 periodStart 降序（最新在前）
+        function sortByDateDesc(data) {
+            return [...data].sort((a, b) => {
+                if (!a.periodStart) return 1;
+                if (!b.periodStart) return -1;
+                return b.periodStart.localeCompare(a.periodStart);
+            });
+        }
+
         // 页面加载完成后执行
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
@@ -292,6 +318,13 @@
             } else {
                 wageData = getDefaultWageData();
             }
+            // 确保金额存储格式为无逗号两位小数
+            wageData = wageData.map(item => {
+                if (item.amount && item.amount !== '-') {
+                    item.amount = formatAmountForStorage(item.amount);
+                }
+                return item;
+            });
             sessionStorage.setItem('wageData', JSON.stringify(wageData));
             renderWageTable(wageData);
             return wageData;
@@ -314,35 +347,34 @@
             const loadingRow = document.getElementById('loading-row');
             if (loadingRow) loadingRow.remove();
             tbody.innerHTML = '';
-            if (!wageData || wageData.length === 0) {
+            
+            // 先排序：按 periodStart 降序（最新在前）
+            const sortedData = sortByDateDesc(wageData);
+            
+            if (!sortedData || sortedData.length === 0) {
                 if (noResults) noResults.style.display = 'block';
                 return;
             }
-            wageData.forEach(item => {
-                let amountDisplay = item.amount;
-                if (amountDisplay && amountDisplay !== '-') {
-                    const num = parseFloat(amountDisplay);
-                    if (!isNaN(num)) amountDisplay = num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    amountDisplay = `$${amountDisplay}`;
-                } else { amountDisplay = '-'; }
+            sortedData.forEach(item => {
+                const amountDisplay = formatAmountDisplay(item.amount);
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${item.id}</span></td>
-                    <td>${item.typeText}</span></td>
+                    <td>${item.id}</td>
+                    <td>${item.typeText}</td>
                     <td><span class="status-badge status-${item.status}">${item.statusText}</span></td>
-                    <td>${item.site}</span></td>
-                    <td>${item.period}</span></td>
-                    <td>${item.submittedBy}</span></td>
-                    <td>${amountDisplay}</span></td>
+                    <td>${item.site}</td>
+                    <td>${item.period}</td>
+                    <td>${item.submittedBy}</td>
+                    <td>${amountDisplay}</td>
                     <td class="action-buttons">
                         <button class="action-btn view-btn" data-id="${item.id}"><i class="fas fa-eye"></i></button>
                         <button class="action-btn edit-btn" data-id="${item.id}"><i class="fas fa-edit"></i></button>
                         <button class="action-btn delete-btn" data-id="${item.id}"><i class="fas fa-trash"></i></button>
-                    </span>
+                    </td>
                 `;
                 tbody.appendChild(row);
             });
-            updateStats(wageData);
+            updateStats(sortedData);
             bindActionButtons();
         }
         
@@ -362,7 +394,11 @@
                     const periodStart = document.getElementById('input-period-start').value;
                     const periodEnd = document.getElementById('input-period-end').value;
                     const submittedBy = document.getElementById('input-submitted-by').value;
-                    const amount = document.getElementById('input-amount').value;
+                    let amountValue = document.getElementById('input-amount').value;
+                    if (amountValue === '') amountValue = '0';
+                    const amountNum = parseFloat(amountValue);
+                    const amountStored = isNaN(amountNum) ? '-' : amountNum.toFixed(2);
+                    
                     let wageData = JSON.parse(sessionStorage.getItem('wageData') || '[]');
                     let newId = "", typeText = "";
                     if (type === "GF527A") {
@@ -383,7 +419,7 @@
                     const newWage = {
                         id: newId, type, typeText, status, statusText: statusTextMap[status],
                         site, period: `${fmt(periodStart)} to ${fmt(periodEnd)}`, submittedBy,
-                        amount: amount ? parseFloat(amount).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : "-",
+                        amount: amountStored,
                         periodStart, periodEnd
                     };
                     wageData.push(newWage);
