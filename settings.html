@@ -71,14 +71,8 @@
                             </select>
                         </div>
                         
-                        <div class="form-group">
-                            <label for="date-format" data-i18n="date.format">Date Format</label>
-                            <select id="date-format" class="form-control">
-                                <option value="dd-mm-yyyy">DD-MM-YYYY</option>
-                                <option value="mm-dd-yyyy">MM-DD-YYYY</option>
-                                <option value="yyyy-mm-dd">YYYY-MM-DD</option>
-                            </select>
-                        </div>            
+                        <!-- 日期格式已移除 -->
+                        
                         <div class="form-group">
                             <label for="results-per-page" data-i18n="results.per.page">Results Per Page</label>
                             <select id="results-per-page" class="form-control">
@@ -110,7 +104,6 @@
                             <span data-i18n="initial.pdf.upload">Initial PDF Upload</span>
                         </div>
                         <div class="card-badge">
-                            <!--i class="fas fa-exclamation-circle"></i> Required-->
                             <span class="card-badge" data-i18n="required">Required</span>
                         </div>
                     </div>
@@ -332,80 +325,74 @@
     <script src="scripts/sidebar.js"></script>
     <script src="scripts/language.js"></script>
 
-    
-    
     <script>
-
         // 紧急修复：手动初始化侧边栏
-setTimeout(function() {
-    console.log('Attempting to initialize sidebar manually...');
-    
-    // 检查侧边栏是否存在
-    const sidebar = document.querySelector('.sidebar');
-    const toggleBtn = document.querySelector('.toggle-btn');
-    
-    if (!sidebar) {
-        console.log('No sidebar found, trying to load via sidebar.js...');
-        
-        // 如果 loadSidebar 函数存在，调用它
-        if (typeof loadSidebar === 'function') {
-            loadSidebar();
-        } else {
-            console.error('loadSidebar function not available!');
-            console.log('Script loading order might be wrong.');
+        setTimeout(function() {
+            console.log('Attempting to initialize sidebar manually...');
             
-            // 重新加载 sidebar.js
-            const script = document.createElement('script');
-            script.src = 'scripts/sidebar.js';
-            script.onload = function() {
-                console.log('sidebar.js reloaded, calling loadSidebar...');
+            const sidebar = document.querySelector('.sidebar');
+            const toggleBtn = document.querySelector('.toggle-btn');
+            
+            if (!sidebar) {
+                console.log('No sidebar found, trying to load via sidebar.js...');
+                
                 if (typeof loadSidebar === 'function') {
                     loadSidebar();
+                } else {
+                    console.error('loadSidebar function not available!');
+                    const script = document.createElement('script');
+                    script.src = 'scripts/sidebar.js';
+                    script.onload = function() {
+                        console.log('sidebar.js reloaded, calling loadSidebar...');
+                        if (typeof loadSidebar === 'function') {
+                            loadSidebar();
+                        }
+                    };
+                    document.head.appendChild(script);
                 }
-            };
-            document.head.appendChild(script);
-        }
-    } else {
-        console.log('Sidebar found, checking toggle button...');
-        if (toggleBtn) {
-            console.log('Toggle button found, adding manual click handler...');
-            
-            // 手动添加点击事件
-            toggleBtn.addEventListener('click', function() {
-                console.log('Manual toggle clicked!');
-                const sidebar = document.querySelector('.sidebar');
-                if (sidebar) {
-                    sidebar.classList.toggle('collapsed');
-                    console.log('Sidebar collapsed:', sidebar.classList.contains('collapsed'));
+            } else {
+                console.log('Sidebar found, checking toggle button...');
+                if (toggleBtn) {
+                    console.log('Toggle button found, adding manual click handler...');
+                    toggleBtn.addEventListener('click', function() {
+                        console.log('Manual toggle clicked!');
+                        const sidebar = document.querySelector('.sidebar');
+                        if (sidebar) {
+                            sidebar.classList.toggle('collapsed');
+                            console.log('Sidebar collapsed:', sidebar.classList.contains('collapsed'));
+                        }
+                    });
                 }
-            });
-        }
-    }
-}, 500);
+            }
+        }, 500);
 
-
-
-        // 设置页面特定功能 - 修复版本
+        // 设置页面特定功能
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Settings page initialized');
 
-             if (typeof LanguageConfig !== 'undefined') {
+            if (typeof LanguageConfig !== 'undefined') {
                 LanguageConfig.init();
             }
             
-            // 初始化主题配置
+            // 初始化主题配置（用于读取当前主题和语言，但不包含日期格式）
             if (typeof ThemeConfig !== 'undefined') {
                 const config = ThemeConfig.init();
                 console.log('ThemeConfig loaded:', config);
                 
-                // 设置表单的初始值
+                // 设置表单的初始值（主题、语言）
                 document.getElementById('theme').value = config.theme;
                 document.getElementById('language').value = config.language;
-                document.getElementById('date-format').value = config.dateFormat;
-                
-                // 更新日期显示
-                updateDateDisplay();
             }
+            
+            // 加载每页结果数设置
+            const resultsPerPageSelect = document.getElementById('results-per-page');
+            const savedResultsPerPage = localStorage.getItem('ael_dwss_results_per_page');
+            if (savedResultsPerPage && resultsPerPageSelect) {
+                resultsPerPageSelect.value = savedResultsPerPage;
+            }
+            
+            // 更新日期显示（固定格式 DD-MM-YYYY）
+            updateDateDisplayFixed();
             
             // 侧边栏切换功能
             const toggleBtn = document.querySelector('.toggle-btn');
@@ -427,36 +414,13 @@ setTimeout(function() {
             initSettingsSave();
         });
         
-        // 更新日期显示
-        function updateDateDisplay() {
-            if (typeof ThemeConfig === 'undefined') return;
-            
+        // 固定格式的日期显示（DD-MM-YYYY），不依赖任何配置
+        function updateDateDisplayFixed() {
             const now = new Date();
-            let formattedDate;
-            
-            switch(ThemeConfig.current.dateFormat) {
-                case 'dd-mm-yyyy':
-                    formattedDate = now.getDate().toString().padStart(2, '0') + '-' + 
-                                  (now.getMonth() + 1).toString().padStart(2, '0') + '-' + 
-                                  now.getFullYear();
-                    break;
-                case 'mm-dd-yyyy':
-                    formattedDate = (now.getMonth() + 1).toString().padStart(2, '0') + '-' + 
-                                  now.getDate().toString().padStart(2, '0') + '-' + 
-                                  now.getFullYear();
-                    break;
-                case 'yyyy-mm-dd':
-                    formattedDate = now.getFullYear() + '-' + 
-                                  (now.getMonth() + 1).toString().padStart(2, '0') + '-' + 
-                                  now.getDate().toString().padStart(2, '0');
-                    break;
-                default:
-                    formattedDate = now.toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                    });
-            }
+            const day = now.getDate().toString().padStart(2, '0');
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const year = now.getFullYear();
+            const formattedDate = `${day}-${month}-${year}`;
             
             const dateElement = document.getElementById('current-date');
             if (dateElement) {
@@ -464,61 +428,38 @@ setTimeout(function() {
             }
         }
         
-        // 密码显示/隐藏功能 - 修复版本
+        // 密码显示/隐藏功能
         function initPasswordToggle() {
             console.log('Initializing password toggle...');
             
-            // 查找所有密码切换按钮
             const passwordToggleBtns = document.querySelectorAll('.password-toggle-btn, .toggle-password');
             console.log('Found password toggle buttons:', passwordToggleBtns.length);
             
             passwordToggleBtns.forEach(btn => {
-                console.log('Setting up password toggle for button:', btn);
-                
-                // 确保按钮类型正确
                 btn.type = 'button';
                 
-                // 移除现有的事件监听器（通过克隆替换）
                 const newBtn = btn.cloneNode(true);
                 btn.parentNode.replaceChild(newBtn, btn);
                 
-                // 为新按钮添加事件监听器
                 newBtn.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
                     
-                    console.log('Password toggle button clicked');
-                    
-                    // 找到对应的密码输入框
                     const passwordInput = this.parentElement.querySelector('input');
-                    
                     if (!passwordInput) {
                         console.error('Password input not found');
                         return;
                     }
                     
-                    console.log('Password input found:', passwordInput);
-                    console.log('Current input type:', passwordInput.type);
-                    
-                    // 切换密码显示/隐藏
                     if (passwordInput.type === 'password') {
                         passwordInput.type = 'text';
                         this.innerHTML = '<i class="fas fa-eye-slash"></i>';
-                        console.log('Password shown');
                     } else {
                         passwordInput.type = 'password';
                         this.innerHTML = '<i class="fas fa-eye"></i>';
-                        console.log('Password hidden');
                     }
                 });
             });
-            
-            // 调试信息
-            if (passwordToggleBtns.length === 0) {
-                console.warn('No password toggle buttons found. Checking HTML structure...');
-                console.log('Password input element:', document.getElementById('email-password'));
-                console.log('Password input container:', document.querySelector('.password-input'));
-            }
         }
         
         // 文件上传功能
@@ -551,48 +492,9 @@ setTimeout(function() {
             });
         }
         
-        // 设置保存功能
+        // 设置保存功能（主题、语言、每页结果数）
         function initSettingsSave() {
-            // 主题切换
-            const themeSelect = document.getElementById('theme');
-            if (themeSelect) {
-                themeSelect.addEventListener('change', function() {
-                    if (typeof ThemeConfig !== 'undefined') {
-                        ThemeConfig.save({ theme: this.value });
-                        updateDateDisplay();
-                    }
-                });
-            }
-            
-            // 语言切换
-            const languageSelect = document.getElementById('language');
-            if (languageSelect) {
-                languageSelect.addEventListener('change', function() {
-                    if (typeof ThemeConfig !== 'undefined') {
-                        ThemeConfig.save({ language: this.value });
-            
-                        // Apply the new language immediately
-                        if (typeof LanguageConfig !== 'undefined') {
-                            LanguageConfig.setLanguage(this.value);
-                        }
-            
-                        updateDateDisplay();
-                    }
-                });
-            }
-            
-            // 日期格式切换
-            const dateFormatSelect = document.getElementById('date-format');
-            if (dateFormatSelect) {
-                dateFormatSelect.addEventListener('change', function() {
-                    if (typeof ThemeConfig !== 'undefined') {
-                        ThemeConfig.save({ dateFormat: this.value });
-                        updateDateDisplay();
-                    }
-                });
-            }
-            
-            // 保存设置按钮
+            // 保存显示设置按钮
             const saveBtn = document.getElementById('save-display-settings');
             if (saveBtn) {
                 saveBtn.addEventListener('click', function() {
@@ -601,24 +503,30 @@ setTimeout(function() {
                         return;
                     }
                     
-                    const settings = {
-                        theme: document.getElementById('theme').value,
-                        language: document.getElementById('language').value,
-                        dateFormat: document.getElementById('date-format').value
-                    };
+                    const theme = document.getElementById('theme').value;
+                    const language = document.getElementById('language').value;
+                    const resultsPerPage = document.getElementById('results-per-page').value;
                     
-                    ThemeConfig.save(settings);
+                    // 保存主题和语言（使用 ThemeConfig）
+                    ThemeConfig.save({ theme: theme, language: language });
                     
-                    // 显示对应语言的提示
-                    const message = settings.language === 'zh' ? '设置已保存！' : 'Settings saved!';
+                    // 保存每页结果数
+                    localStorage.setItem('ael_dwss_results_per_page', resultsPerPage);
+                    
+                    // 立即应用语言
+                    if (typeof LanguageConfig !== 'undefined') {
+                        LanguageConfig.setLanguage(language);
+                    }
+                    
+                    // 日期格式已移除，无需处理
+                    
+                    // 显示成功消息
+                    const message = language === 'zh' ? '设置已保存！' : 'Settings saved!';
                     alert(message);
-                    
-                    // 更新日期显示
-                    updateDateDisplay();
                 });
             }
             
-            // 重置设置按钮
+            // 重置显示设置按钮
             const resetBtn = document.getElementById('reset-display-settings');
             if (resetBtn) {
                 resetBtn.addEventListener('click', function() {
@@ -634,19 +542,26 @@ setTimeout(function() {
                         '设置已重置！' : 'Settings reset!';
                     
                     if (confirm(message)) {
+                        // 重置主题和语言（清除存储）
                         localStorage.removeItem('ael_dwss_theme');
                         localStorage.removeItem('ael_dwss_language');
-                        localStorage.removeItem('ael_dwss_dateFormat');
+                        // 注意：日期格式不再处理，不删除也不重置
                         
+                        // 重置每页结果数
+                        localStorage.removeItem('ael_dwss_results_per_page');
+                        document.getElementById('results-per-page').value = '10';
+                        
+                        // 重新初始化配置
                         ThemeConfig.init();
                         
                         // 更新表单值
                         document.getElementById('theme').value = ThemeConfig.current.theme;
                         document.getElementById('language').value = ThemeConfig.current.language;
-                        document.getElementById('date-format').value = ThemeConfig.current.dateFormat;
                         
-                        // 更新日期显示
-                        updateDateDisplay();
+                        // 应用语言
+                        if (typeof LanguageConfig !== 'undefined') {
+                            LanguageConfig.setLanguage(ThemeConfig.current.language);
+                        }
                         
                         alert(successMessage);
                     }
@@ -702,7 +617,7 @@ setTimeout(function() {
         
         .password-input .form-control {
             flex: 1;
-            padding-right: 45px; /* 为眼睛图标留出空间 */
+            padding-right: 45px;
         }
         
         .password-toggle-btn {
@@ -980,7 +895,5 @@ setTimeout(function() {
             color: #bbbbbb;
         }
     </style>
-
-    
 </body>
 </html>

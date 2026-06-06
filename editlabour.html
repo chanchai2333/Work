@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AEL DWSS - Edit Labour Wage</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="scripts/theme-config.js"></script>
     <style>
         /* 基础样式重置 */
@@ -22,10 +22,9 @@
             background-color: #f5f7fa;
             color: #333;
             overflow-x: hidden;
-            flex-direction: row;
         }
 
-        /* 侧边栏样式 - 与labourwage.html统一 */
+        /* 侧边栏样式 */
         .sidebar {
             width: 260px;
             background: linear-gradient(135deg, #2c3e50, #1a2530);
@@ -154,13 +153,8 @@
             min-height: 100vh;
             padding: 30px;
             transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .main-content {
             max-width: 1500px;
             margin: 0 auto;
-            padding: 30px;
         }
 
         .header {
@@ -181,10 +175,7 @@
             display: flex;
             justify-content: flex-end;
             align-items: center;
-            width: auto;
             gap: 15px;
-            flex-direction: row;
-            margin-left: auto;
         }
 
         .date-display {
@@ -228,6 +219,7 @@
             background: #1746a2;
         }
 
+        /* 编辑页面样式 */
         .edit-labour-page {
             background: white;
             border-radius: 12px;
@@ -237,82 +229,42 @@
             flex: 1;
         }
 
-        .edit-labour-page h2 {
-            color: #2c3e50;
-            margin-bottom: 25px;
-            font-size: 1.8rem;
-            display: flex;
-            align-items: center;
-            gap: 12px;
+        /* 标签页样式 */
+        .tabs {
+            margin-top: 20px;
         }
 
-        .edit-labour-page h2 i {
-            color: #9b59b6;
-        }
-
-        .document-header {
+        .tab-headers {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            border-bottom: 1px solid #ddd;
             margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eaeaea;
         }
 
-        .document-header h2 {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 1.8rem;
-            color: #2c3e50;
-            margin: 0;
-        }
-
-        .doc-status {
-            display: inline-block;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            min-width: 120px;
-            text-align: center;
-            margin-left: 15px;
-        }
-
-        .status-draft { background: rgba(149,165,166,0.2); color: #848f90; }
-        .status-submitted { background: rgba(52,152,219,0.2); color: #2980b9; }
-        .status-endorsed { background: rgba(46,204,113,0.2); color: #27ae60; }
-        .status-cancelled { background: rgba(231,76,60,0.2); color: #c0392b; }
-        .status-confirm { background: rgba(155,89,182,0.2); color: #8e44ad; }
-        .status-double-check { background: rgba(243,156,18,0.2); color: #d35400; }
-
-        .document-actions {
-            display: flex;
-            gap: 12px;
-        }
-
-        .document-actions .btn {
-            background: #3498db;
-            color: #fff;
+        .tab-header {
+            padding: 12px 24px;
+            background: none;
             border: none;
-            border-radius: 8px;
-            padding: 10px 20px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            box-shadow: 0 2px 5px rgba(52,152,219,0.3);
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
+            border-bottom: 3px solid transparent;
             cursor: pointer;
-            transition: all 0.3s ease;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s;
         }
 
-        .document-actions .btn:hover {
-            background: #2980b9;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(52,152,219,0.4);
+        .tab-header.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
         }
 
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* 文档元数据 */
         .document-meta {
             background: #f8f9fa;
             border-radius: 12px;
@@ -346,6 +298,37 @@
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
+        /* 文档操作按钮 */
+        .document-actions {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            justify-content: flex-end;
+        }
+
+        .document-actions .btn {
+            background: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            box-shadow: 0 2px 5px rgba(52,152,219,0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .document-actions .btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(52,152,219,0.4);
+        }
+
+        /* 编辑表单 */
         .edit-form {
             background: white;
             border-radius: 12px;
@@ -386,6 +369,160 @@
             gap: 20px;
         }
 
+        /* PDF 编辑器相关样式 */
+        .pdf-toolbar {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .toolbar-section {
+            margin-bottom: 20px;
+        }
+
+        .toolbar-section h3 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+            font-size: 1.1rem;
+        }
+
+        .tool-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tool-btn {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tool-btn.active, .tool-btn:hover {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        .property-controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .property-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .property-group label {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .pdf-editor-container {
+            margin-top: 20px;
+        }
+
+        .pdf-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .nav-btn, .zoom-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .nav-btn:hover, .zoom-btn:hover {
+            background: #2980b9;
+        }
+
+        .page-info {
+            font-weight: 500;
+        }
+
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .zoom-level {
+            font-weight: 500;
+        }
+
+        .pdf-canvas-container {
+            position: relative;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: auto;
+            max-height: 600px;
+            background: #f9f9f9;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+        }
+
+        #pdf-canvas {
+            display: block;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .draw-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .page-thumbnails {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .page-thumb {
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .page-thumb:hover {
+            border-color: #3498db;
+        }
+
+        .page-thumb.active {
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52,152,219,0.3);
+        }
+
         footer {
             text-align: center;
             padding: 30px 0 20px;
@@ -404,14 +541,8 @@
         }
         @media (max-width: 768px) {
             .header { flex-direction: column; align-items: flex-start; gap: 20px; }
-            .document-header { flex-direction: column; gap: 15px; }
-            .document-actions { width: 100%; justify-content: center; }
-            .document-meta { grid-template-columns: 1fr; gap: 15px; padding: 15px 20px; }
-        }
-        @media (max-width: 600px) {
-            .main-content { padding: 15px; }
-            .edit-labour-page { padding: 20px; }
-            .edit-form { padding: 20px; }
+            .pdf-controls { flex-direction: column; gap: 10px; }
+            .tool-buttons { flex-direction: column; }
         }
     </style>
 </head>
@@ -436,20 +567,19 @@
 
     <div class="main-content">
         <div class="header">
-            <h1>DWSS Management System</h1>
+            <h1>Edit Labour Wage</h1>
             <div class="header-controls">
                 <div class="user-date-row">
-                    <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date">September 17, 2025</span></div>
+                    <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
                     <button class="user-btn"><i class="fas fa-user"></i> John Doe</button>
                 </div>
             </div>
         </div>
 
         <div class="edit-labour-page">
+            <!-- 文档标题和操作按钮 -->
             <div class="document-header">
-                <div class="doc-title-section">
-                    <h2><i class="fas fa-file-alt"></i> <span id="docTitle">Edit Labour Wage Record</span> <span class="doc-status" id="docStatus">Editing</span></h2>
-                </div>
+                <h2><i class="fas fa-file-alt"></i> <span id="docTitle">Edit Labour Wage Record</span> <span class="doc-status" id="docStatus">Editing</span></h2>
                 <div class="document-actions">
                     <button class="btn" id="save-btn"><i class="fas fa-save"></i> Save Changes</button>
                     <button class="btn" id="cancel-btn"><i class="fas fa-times"></i> Cancel</button>
@@ -457,6 +587,7 @@
                 </div>
             </div>
 
+            <!-- 文档元数据 -->
             <div class="document-meta">
                 <div class="meta-item"><span class="meta-label">Document ID:</span><span class="meta-value" id="docId">N/A</span></div>
                 <div class="meta-item"><span class="meta-label">Document Type:</span><span class="meta-value" id="docType">N/A</span></div>
@@ -466,11 +597,14 @@
                 <div class="meta-item"><span class="meta-label">Total Amount:</span><span class="meta-value" id="docAmount">N/A</span></div>
             </div>
 
+            <!-- 标签页 -->
             <div class="tabs">
                 <div class="tab-headers">
                     <button class="tab-header active" data-tab="record-details">Record Details</button>
+                    <button class="tab-header" data-tab="pdf-editor">PDF Editor</button>
                 </div>
                 <div class="tab-contents">
+                    <!-- 记录详情标签页 -->
                     <div class="tab-content active" id="record-details">
                         <div class="edit-form">
                             <h3><i class="fas fa-edit"></i> Edit Record Details</h3>
@@ -530,6 +664,53 @@
                             </form>
                         </div>
                     </div>
+
+                    <!-- PDF编辑器标签页 -->
+                    <div class="tab-content" id="pdf-editor">
+                        <div class="pdf-toolbar">
+                            <div class="toolbar-section">
+                                <h3>Annotation Tools</h3>
+                                <div class="tool-buttons">
+                                    <button class="tool-btn active" data-tool="select"><i class="fas fa-mouse-pointer"></i> Select</button>
+                                    <button class="tool-btn" data-tool="text"><i class="fas fa-font"></i> Text</button>
+                                    <button class="tool-btn" data-tool="highlight"><i class="fas fa-highlighter"></i> Highlight</button>
+                                    <button class="tool-btn" data-tool="draw"><i class="fas fa-pen"></i> Draw</button>
+                                    <button class="tool-btn" data-tool="shape"><i class="fas fa-square"></i> Shapes</button>
+                                    <button class="tool-btn" data-tool="stamp"><i class="fas fa-stamp"></i> Stamp</button>
+                                </div>
+                            </div>
+                            <div class="toolbar-section">
+                                <h3>Properties</h3>
+                                <div class="property-controls">
+                                    <div class="property-group"><label>Color:</label><input type="color" id="color-picker" value="#3498db"></div>
+                                    <div class="property-group"><label>Size:</label><input type="range" id="size-slider" min="1" max="10" value="3"><span id="size-value">3px</span></div>
+                                    <div class="property-group"><label>Opacity:</label><input type="range" id="opacity-slider" min="10" max="100" value="100"><span id="opacity-value">100%</span></div>
+                                </div>
+                            </div>
+                            <div class="toolbar-section">
+                                <h3>Pages</h3>
+                                <div class="page-thumbnails" id="page-thumbnails"></div>
+                            </div>
+                        </div>
+                        <div class="pdf-editor-container">
+                            <div class="pdf-controls">
+                                <button class="nav-btn" id="prev-page"><i class="fas fa-chevron-left"></i></button>
+                                <span class="page-info">Page <span id="current-page">1</span> of <span id="total-pages">1</span></span>
+                                <button class="nav-btn" id="next-page"><i class="fas fa-chevron-right"></i></button>
+                                <div class="zoom-controls">
+                                    <button class="zoom-btn" id="zoom-out"><i class="fas fa-search-minus"></i> Zoom Out</button>
+                                    <span class="zoom-level">100%</span>
+                                    <button class="zoom-btn" id="zoom-in"><i class="fas fa-search-plus"></i> Zoom In</button>
+                                    <button class="zoom-btn" id="fit-width">Fit Width</button>
+                                    <button class="zoom-btn" id="fit-page">Fit Page</button>
+                                </div>
+                            </div>
+                            <div class="pdf-canvas-container">
+                                <canvas id="pdf-canvas"></canvas>
+                                <canvas id="draw-canvas" class="draw-layer"></canvas>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -549,57 +730,52 @@
                     localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
                 }
             }
-
             function restoreSidebarState() {
                 const sidebar = document.querySelector('.sidebar');
                 if (sidebar) {
                     const savedState = localStorage.getItem('sidebarCollapsed');
-                    if (savedState === 'true') {
-                        sidebar.classList.add('collapsed');
-                    } else if (savedState === 'false') {
-                        sidebar.classList.remove('collapsed');
-                    }
+                    if (savedState === 'true') sidebar.classList.add('collapsed');
+                    else if (savedState === 'false') sidebar.classList.remove('collapsed');
                 }
             }
-
             function bindToggleEvent() {
                 const toggleBtn = document.querySelector('.toggle-btn');
                 if (toggleBtn) {
-                    // 移除可能存在的旧监听器，避免重复绑定
                     toggleBtn.removeEventListener('click', saveSidebarState);
                     toggleBtn.addEventListener('click', function() {
-                        // 先切换侧边栏状态
                         const sidebar = document.querySelector('.sidebar');
                         if (sidebar) {
                             sidebar.classList.toggle('collapsed');
-                            // 保存状态
                             const isCollapsed = sidebar.classList.contains('collapsed');
                             localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
                         }
                     });
                 }
             }
-
             document.addEventListener('DOMContentLoaded', function() {
                 restoreSidebarState();
                 bindToggleEvent();
                 // 同步日期显示
                 const storedDate = sessionStorage.getItem('globalDate');
                 const dateSpan = document.querySelector('.date-display span');
-                if (storedDate && dateSpan) {
-                    dateSpan.textContent = storedDate;
-                } else if (dateSpan) {
-                    dateSpan.textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-                }
+                if (storedDate && dateSpan) dateSpan.textContent = storedDate;
+                else if (dateSpan) dateSpan.textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
             });
         })();
     </script>
 
-    <!-- 原有编辑逻辑 -->
+    <!-- 主要逻辑：加载记录、处理表单保存、PDF 编辑器占位功能 -->
     <script>
+        // PDF 相关全局变量
+        let pdfDoc = null;
+        let currentPage = 1;
+        let scale = 1.5;
+
         document.addEventListener('DOMContentLoaded', function() {
+            // 从 sessionStorage 获取要编辑的工资记录
             const wageRecord = JSON.parse(sessionStorage.getItem('currentWageRecord'));
             if (wageRecord) {
+                // 填充元数据
                 document.getElementById('docId').textContent = wageRecord.id || 'N/A';
                 document.getElementById('docTitle').textContent = `Edit Labour Wage Record - ${wageRecord.id}`;
                 document.getElementById('docType').textContent = wageRecord.typeText || 'N/A';
@@ -608,6 +784,7 @@
                 document.getElementById('docAuthor').textContent = wageRecord.submittedBy || 'N/A';
                 document.getElementById('docAmount').textContent = wageRecord.amount ? `$${wageRecord.amount}` : 'N/A';
                 
+                // 填充表单
                 document.getElementById('edit-type').value = wageRecord.type || 'GF527A';
                 document.getElementById('edit-status').value = wageRecord.status || 'draft';
                 document.getElementById('edit-site').value = wageRecord.site || 'Treatment Plant';
@@ -621,37 +798,213 @@
                 statusEl.className = 'doc-status status-draft';
             }
 
-            document.getElementById('save-btn').addEventListener('click', function() {
-                const wageId = document.getElementById('docId').textContent;
-                const type = document.getElementById('edit-type').value;
-                const status = document.getElementById('edit-status').value;
-                const site = document.getElementById('edit-site').value;
-                const submittedBy = document.getElementById('edit-submitted-by').value;
-                const amount = document.getElementById('edit-amount').value;
-                const periodStart = document.getElementById('edit-period-start').value;
-                const periodEnd = document.getElementById('edit-period-end').value;
-                
-                const statusTextMap = { draft:"Draft", submitted:"Submitted", endorsed:"Endorsed", cancelled:"Cancelled", confirm:"Client's Site Representative to Confirm", "double-check":"Contractor/Contractor's Agent Double Check" };
-                const typeTextMap = { GF527A:"GF527A - Return on Construction Site Employment", "GF527-2003":"GF527 (2003) - Labour Wage", "GF527-2017":"GF527 (2017) - Labour Wage" };
-                function fmt(d) { let date = new Date(d); return `${date.getDate().toString().padStart(2,'0')}-${date.toLocaleString('en-US',{month:'short'})}-${date.getFullYear()}`; }
-                
-                const updatedRecord = {
-                    id: wageId, type, typeText: typeTextMap[type], status, statusText: statusTextMap[status],
-                    site, period: `${fmt(periodStart)} to ${fmt(periodEnd)}`, submittedBy, amount, periodStart, periodEnd
-                };
-                let wageData = JSON.parse(sessionStorage.getItem('wageData') || '[]');
-                const index = wageData.findIndex(item => item.id === wageId);
-                if (index !== -1) {
-                    wageData[index] = updatedRecord;
-                    sessionStorage.setItem('wageData', JSON.stringify(wageData));
-                    sessionStorage.setItem('currentWageRecord', JSON.stringify(updatedRecord));
-                    alert('Labour wage record updated successfully!');
-                    window.location.href = 'labourwage.html';
-                } else { alert('Error: Record not found!'); }
+            // 标签页切换
+            document.querySelectorAll('.tab-header').forEach(header => {
+                header.addEventListener('click', function() {
+                    document.querySelectorAll('.tab-header').forEach(h => h.classList.remove('active'));
+                    this.classList.add('active');
+                    const tabId = this.getAttribute('data-tab');
+                    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                    document.getElementById(tabId).classList.add('active');
+                    // 如果切换到 PDF 编辑器且尚未初始化，则尝试加载 PDF
+                    if (tabId === 'pdf-editor' && !pdfDoc) {
+                        initializePDFEditor();
+                    }
+                });
             });
-            document.getElementById('cancel-btn').addEventListener('click', () => { if (confirm('Cancel editing? Changes will be lost.')) window.location.href = 'labourwage.html'; });
+
+            // 按钮事件
+            document.getElementById('save-btn').addEventListener('click', saveChanges);
+            document.getElementById('cancel-btn').addEventListener('click', () => {
+                if (confirm('Cancel editing? All changes will be lost.')) window.location.href = 'labourwage.html';
+            });
             document.getElementById('back-btn').addEventListener('click', () => window.location.href = 'labourwage.html');
         });
+
+        // 保存更改
+        function saveChanges() {
+            const wageId = document.getElementById('docId').textContent;
+            const type = document.getElementById('edit-type').value;
+            const status = document.getElementById('edit-status').value;
+            const site = document.getElementById('edit-site').value;
+            const submittedBy = document.getElementById('edit-submitted-by').value;
+            const amount = document.getElementById('edit-amount').value;
+            const periodStart = document.getElementById('edit-period-start').value;
+            const periodEnd = document.getElementById('edit-period-end').value;
+            
+            const statusTextMap = {
+                draft: "Draft", submitted: "Submitted", endorsed: "Endorsed",
+                cancelled: "Cancelled", confirm: "Client's Site Representative to Confirm",
+                "double-check": "Contractor/Contractor's Agent Double Check"
+            };
+            const typeTextMap = {
+                GF527A: "GF527A - Return on Construction Site Employment",
+                "GF527-2003": "GF527 (2003) - Labour Wage",
+                "GF527-2017": "GF527 (2017) - Labour Wage"
+            };
+            function fmt(d) {
+                let date = new Date(d);
+                return `${date.getDate().toString().padStart(2,'0')}-${date.toLocaleString('en-US',{month:'short'})}-${date.getFullYear()}`;
+            }
+            
+            const updatedRecord = {
+                id: wageId,
+                type: type,
+                typeText: typeTextMap[type],
+                status: status,
+                statusText: statusTextMap[status],
+                site: site,
+                period: `${fmt(periodStart)} to ${fmt(periodEnd)}`,
+                submittedBy: submittedBy,
+                amount: amount,
+                periodStart: periodStart,
+                periodEnd: periodEnd
+            };
+            let wageData = JSON.parse(sessionStorage.getItem('wageData') || '[]');
+            const index = wageData.findIndex(item => item.id === wageId);
+            if (index !== -1) {
+                wageData[index] = updatedRecord;
+                sessionStorage.setItem('wageData', JSON.stringify(wageData));
+                sessionStorage.setItem('currentWageRecord', JSON.stringify(updatedRecord));
+                alert('Labour wage record updated successfully!');
+                window.location.href = 'labourwage.html';
+            } else {
+                alert('Error: Record not found!');
+            }
+        }
+
+        // PDF 编辑器初始化（带占位示例）
+        function initializePDFEditor() {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+            // 尝试从当前记录中获取 PDF URL，如果没有则使用示例或显示占位
+            const wageRecord = JSON.parse(sessionStorage.getItem('currentWageRecord'));
+            const pdfUrl = wageRecord && wageRecord.pdfUrl ? wageRecord.pdfUrl : null;
+            
+            if (!pdfUrl) {
+                // 无 PDF，显示提示信息
+                const container = document.querySelector('.pdf-canvas-container');
+                container.innerHTML = '<div style="text-align:center; padding:50px; color:#666;">No PDF document available for this wage record.</div>';
+                return;
+            }
+            
+            const loadingTask = pdfjsLib.getDocument(pdfUrl);
+            loadingTask.promise.then(function(pdf) {
+                pdfDoc = pdf;
+                document.getElementById('total-pages').textContent = pdf.numPages;
+                renderPage(1);
+                generateThumbnails(pdf);
+                setupPDFNavigation();
+                setupToolButtons();
+            }).catch(function(error) {
+                console.error('Error loading PDF:', error);
+                const container = document.querySelector('.pdf-canvas-container');
+                container.innerHTML = '<div style="text-align:center; padding:50px; color:#666;">Failed to load PDF document.</div>';
+            });
+        }
+
+        function renderPage(pageNum) {
+            if (!pdfDoc) return;
+            pdfDoc.getPage(pageNum).then(function(page) {
+                const viewport = page.getViewport({ scale: scale });
+                const canvas = document.getElementById('pdf-canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                document.getElementById('current-page').textContent = pageNum;
+                currentPage = pageNum;
+                const renderContext = { canvasContext: ctx, viewport: viewport };
+                page.render(renderContext);
+            });
+        }
+
+        function generateThumbnails(pdf) {
+            const container = document.getElementById('page-thumbnails');
+            container.innerHTML = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+                pdf.getPage(i).then(function(page) {
+                    const viewport = page.getViewport({ scale: 0.2 });
+                    const canvas = document.createElement('canvas');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    canvas.className = 'page-thumb';
+                    if (i === 1) canvas.classList.add('active');
+                    canvas.addEventListener('click', function() {
+                        document.querySelectorAll('.page-thumb').forEach(thumb => thumb.classList.remove('active'));
+                        canvas.classList.add('active');
+                        renderPage(i);
+                    });
+                    page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport });
+                    container.appendChild(canvas);
+                });
+            }
+        }
+
+        function setupPDFNavigation() {
+            document.getElementById('prev-page').addEventListener('click', function() {
+                if (currentPage > 1) renderPage(currentPage - 1);
+            });
+            document.getElementById('next-page').addEventListener('click', function() {
+                if (pdfDoc && currentPage < pdfDoc.numPages) renderPage(currentPage + 1);
+            });
+            document.getElementById('zoom-in').addEventListener('click', function() {
+                scale += 0.25;
+                renderPage(currentPage);
+                document.querySelector('.zoom-level').textContent = Math.round(scale * 100) + '%';
+            });
+            document.getElementById('zoom-out').addEventListener('click', function() {
+                if (scale > 0.5) {
+                    scale -= 0.25;
+                    renderPage(currentPage);
+                    document.querySelector('.zoom-level').textContent = Math.round(scale * 100) + '%';
+                }
+            });
+            document.getElementById('fit-width').addEventListener('click', function() {
+                const container = document.querySelector('.pdf-canvas-container');
+                const containerWidth = container.clientWidth - 40;
+                if (pdfDoc && currentPage) {
+                    pdfDoc.getPage(currentPage).then(page => {
+                        const viewport = page.getViewport({ scale: 1 });
+                        scale = (containerWidth - 40) / viewport.width;
+                        renderPage(currentPage);
+                        document.querySelector('.zoom-level').textContent = Math.round(scale * 100) + '%';
+                    });
+                }
+            });
+            document.getElementById('fit-page').addEventListener('click', function() {
+                const container = document.querySelector('.pdf-canvas-container');
+                const containerWidth = container.clientWidth - 40;
+                const containerHeight = container.clientHeight - 40;
+                if (pdfDoc && currentPage) {
+                    pdfDoc.getPage(currentPage).then(page => {
+                        const viewport = page.getViewport({ scale: 1 });
+                        const scaleX = (containerWidth - 40) / viewport.width;
+                        const scaleY = (containerHeight - 40) / viewport.height;
+                        scale = Math.min(scaleX, scaleY);
+                        renderPage(currentPage);
+                        document.querySelector('.zoom-level').textContent = Math.round(scale * 100) + '%';
+                    });
+                }
+            });
+        }
+
+        function setupToolButtons() {
+            const toolBtns = document.querySelectorAll('.tool-btn');
+            toolBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    toolBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    const tool = this.dataset.tool;
+                    console.log(`Tool activated: ${tool}`);
+                    // 可扩展实际绘图功能，这里只做演示
+                });
+            });
+            document.getElementById('size-slider').addEventListener('input', function() {
+                document.getElementById('size-value').textContent = this.value + 'px';
+            });
+            document.getElementById('opacity-slider').addEventListener('input', function() {
+                document.getElementById('opacity-value').textContent = this.value + '%';
+            });
+        }
     </script>
 </body>
 </html>
