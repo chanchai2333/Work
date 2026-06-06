@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- 静态侧边栏（只保留 Users 和 Teams） -->
+    <!-- 静态侧边栏（包含 Logout 按钮） -->
     <div class="sidebar">
         <div class="logo">
             <div class="logo-icon"><i class="fas fa-water"></i></div>
@@ -32,6 +32,13 @@
                 </ul>
             </li>
         </ul>
+        <!-- 底部 Logout 按钮 -->
+        <div class="sidebar-footer">
+            <button id="sidebar-logout-btn" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span class="menu-text">Logout</span>
+            </button>
+        </div>
     </div>
 
     <!-- 主内容区域 -->
@@ -40,8 +47,17 @@
             <h1 data-i18n="user.management">User Management</h1>
             <div class="header-controls">
                 <div class="user-date-row">
-                    <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date">September 17, 2025</span></div>
-                    <button class="user-btn"><i class="fas fa-user"></i><span data-i18n="user.name">John Doe</span></button>
+                    <div class="date-display">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span id="current-date">September 17, 2025</span>
+                    </div>
+                    <button class="user-btn">
+                        <i class="fas fa-user"></i> <span data-i18n="user.name">John Doe</span>
+                    </button>
+                    <!-- 右上角 Logout 按钮 -->
+                    <button id="top-logout-btn" class="logout-btn-top" style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; border: none; border-radius: 20px; padding: 10px 20px; font-weight: 600; margin-left: 10px;">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
                 </div>
             </div>
         </div>
@@ -141,11 +157,13 @@
 
     <!-- 引入脚本 -->
     <script src="scripts/language.js"></script>
+    <!-- 注意：usermanagement.html 使用内嵌脚本，不需要单独引入 usermanagement.js -->
     <script src="scripts/sidebar.js"></script>
     <script src="scripts/app.js"></script>
 
+    <!-- 内嵌用户管理逻辑 + Logout 处理 -->
     <script>
-        // ==================== 用户管理功能（内嵌脚本，已添加 localStorage 持久化） ====================
+        // ==================== 用户管理功能 ====================
         const UserManagement = {
             users: [],
             currentFilters: { role: "all", status: "all", sort: "name-asc" },
@@ -369,9 +387,17 @@
             }
         };
 
+        // 初始化用户管理
         function initUserManagement() { UserManagement.init(); }
 
-        // 初始化页面
+        // 通用退出登录函数
+        function performLogout() {
+            sessionStorage.removeItem('isLoggedIn');
+            sessionStorage.removeItem('loggedUser');
+            window.location.href = 'login.html';
+        }
+
+        // 页面加载初始化
         document.addEventListener('DOMContentLoaded', function() {
             initUserManagement();
             // 同步日期
@@ -379,6 +405,13 @@
             const dateSpan = document.querySelector('.date-display span');
             if (storedDate && dateSpan) dateSpan.textContent = storedDate;
             else if (dateSpan) dateSpan.textContent = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+            
+            // 绑定右上角 Logout 按钮
+            const topLogoutBtn = document.getElementById('top-logout-btn');
+            if (topLogoutBtn) topLogoutBtn.addEventListener('click', performLogout);
+            // 绑定侧边栏底部 Logout 按钮
+            const sidebarLogoutBtn = document.getElementById('sidebar-logout-btn');
+            if (sidebarLogoutBtn) sidebarLogoutBtn.addEventListener('click', performLogout);
         });
     </script>
 </body>

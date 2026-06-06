@@ -2704,3 +2704,51 @@ body.dark-theme .content-section {
     margin-left: 0 !important;
     transform: none !important;
 }
+
+/* 侧边栏底部退出按钮样式 */
+.sidebar-footer {
+    margin-top: auto;
+    padding: 20px 15px 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.logout-btn {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    background: rgba(231, 76, 60, 0.2);
+    color: #ecf0f1;
+    border: none;
+    border-radius: 8px;
+    padding: 14px 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+    gap: 12px;
+}
+
+.logout-btn i {
+    width: 24px;
+    text-align: center;
+    font-size: 1.2rem;
+}
+
+.logout-btn:hover {
+    background: rgba(231, 76, 60, 0.4);
+    color: #fff;
+}
+
+.sidebar.collapsed .logout-btn .menu-text {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+}
+
+.sidebar.collapsed .logout-btn {
+    justify-content: center;
+    padding: 14px 0;
+}
+
+.sidebar.collapsed .logout-btn i {
+    margin-right: 0;
+}

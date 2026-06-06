@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Login - AEL DWSS System</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 登录页面专用样式，保持与系统风格一致 */
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+            margin: 0 auto;
+        }
+        .login-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px 32px;
+            transition: transform 0.3s ease;
+        }
+        .login-card:hover {
+            transform: translateY(-5px);
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .login-logo {
+            font-size: 3rem;
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            color: white;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+        .login-header h2 {
+            color: #2c3e50;
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+        .login-header p {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        .form-group {
+            margin-bottom: 24px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 0.9rem;
+        }
+        .input-group {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .form-control {
+            width: 100%;
+            padding: 12px 42px 12px 16px;  /* 右侧留出空间给眼睛图标 */
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+            box-sizing: border-box;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52,152,219,0.1);
+        }
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #bdc3c7;
+            font-size: 1rem;
+            padding: 0;
+            z-index: 2;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .password-toggle:hover {
+            color: #3498db;
+        }
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-login:hover {
+            background: linear-gradient(135deg, #2980b9, #2471a3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52,152,219,0.3);
+        }
+        .error-message {
+            background: #fee2e2;
+            color: #e74c3c;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-top: 16px;
+            text-align: center;
+            display: none;
+        }
+        .error-message.show {
+            display: block;
+        }
+        .login-footer {
+            text-align: center;
+            margin-top: 24px;
+            color: #95a5a6;
+            font-size: 0.8rem;
+        }
+        @media (max-width: 480px) {
+            .login-card { padding: 30px 20px; }
+            .login-logo { width: 60px; height: 60px; font-size: 2rem; }
+            .form-control { padding: 10px 38px 10px 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-logo">
+                    <i class="fas fa-water"></i>
+                </div>
+                <h2>AEL DWSS</h2>
+                <p>Sign in to access the system</p>
+            </div>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <div class="input-group">
+                        <input type="text" id="username" class="form-control" placeholder="Enter your username" required autocomplete="off">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-group">
+                        <input type="password" id="password" class="form-control" placeholder="Enter your password" required>
+                        <button type="button" class="password-toggle" id="toggle-password">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="btn-login">
+                    <i class="fas fa-sign-in-alt"></i> Sign In
+                </button>
+                <div id="login-error" class="error-message">
+                    <i class="fas fa-exclamation-circle"></i> Invalid username or password
+                </div>
+            </form>
+            <div class="login-footer">
+                <p>Demo credentials: admin / 12345678</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="scripts/login.js"></script>
+</body>
+</html>

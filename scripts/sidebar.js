@@ -1,4 +1,4 @@
-// sidebar.js - 修复子菜单展开/收起问题
+/// sidebar.js - 修复子菜单展开/收起问题，并添加退出登录功能
 function loadSidebar() {
     // 先检查是否已经有侧边栏
     const existingSidebar = document.querySelector('.sidebar');
@@ -28,7 +28,7 @@ function loadSidebar() {
         });
     }
     
-    // 侧边栏HTML - 只保留 Users 和 Teams
+    // 侧边栏HTML - 只保留 Users 和 Teams，并添加底部 Logout 按钮
     const sidebarHTML = `
         <div class="sidebar">
             <div class="logo">
@@ -101,6 +101,14 @@ function loadSidebar() {
                     </ul>
                 </li>
             </ul>
+            
+            <!-- 底部 Logout 按钮 -->
+            <div class="sidebar-footer">
+                <button id="logout-btn" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span class="menu-text">Logout</span>
+                </button>
+            </div>
         </div>    
     `;
     
@@ -170,14 +178,26 @@ function initializeSidebar() {
             const parentLi = this.parentElement;
             if (parentLi) {
                 parentLi.classList.toggle('active');
-                // 可选：保存子菜单展开状态到 localStorage（如果需要持久化）
-                // 这里不保存，保持简单
             }
         });
     }
     
     // 高亮当前页面菜单项（会同时处理父菜单展开）
     highlightCurrentPage();
+    
+    // 处理 Logout 按钮事件
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            // 清除登录状态
+            sessionStorage.removeItem('isLoggedIn');
+            sessionStorage.removeItem('loggedUser');
+            // 跳转到登录页
+            window.location.href = 'login.html';
+        });
+    }
     
     // 确保当点击子菜单链接时，父菜单保持展开（高亮当前页面时会处理，但以防万一）
     document.querySelectorAll('.submenu a').forEach(link => {

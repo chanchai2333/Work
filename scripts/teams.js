@@ -7,40 +7,48 @@
     let users = [];
     let editingTeamId = null;
     
+    // 从 localStorage 加载用户（与用户管理共享）
     function loadUsers() {
         const stored = localStorage.getItem(USERS_KEY);
         if (stored) {
             try {
                 users = JSON.parse(stored);
-            } catch(e) { users = []; }
+            } catch(e) {
+                users = [];
+            }
         }
+        // 如果没有用户数据，尝试从默认列表加载（也可避免空列表）
         if (!users.length) {
-            // 默认示例用户（与 usermanagement 保持一致）
+            // 默认用户（与 usermanagement 保持一致）
             users = [
-                { id:1, name:"Admin", role:"admin" },
-                { id:2, name:"Kenneth Daluz", role:"officer" },
-                { id:3, name:"TANG Chi Long, Gary", role:"aei" },
-                { id:4, name:"FUNG Wai Ching", role:"aei" },
-                { id:5, name:"WONG Lap Pan", role:"aei" },
-                { id:6, name:"CHA Chi Ming", role:"aei" },
-                { id:7, name:"John Smith", role:"inspector" },
-                { id:8, name:"Sarah Johnson", role:"contractor" },
-                { id:9, name:"Robert Chen", role:"officer" },
-                { id:10, name:"Emma Wilson", role:"inspector" }
+                { id:1, name:"Admin", email:"admin@rdrive.io", role:"admin" },
+                { id:2, name:"Kenneth Daluz", email:"kenneth.daluz@aster-dsd.com", role:"officer" },
+                { id:3, name:"TANG Chi Long, Gary", email:"gcifang@dsd.gov.hk", role:"aei" },
+                { id:4, name:"FUNG Wai Ching", email:"wcfung04@dsd.gov.hk", role:"aei" },
+                { id:5, name:"WONG Lap Pan", email:"ipwong02@dsd.gov.hk", role:"aei" },
+                { id:6, name:"CHA Chi Ming", email:"cmcha02@dsd.gov.hk", role:"aei" },
+                { id:7, name:"John Smith", email:"john.smith@ael-dwss.com", role:"inspector" },
+                { id:8, name:"Sarah Johnson", email:"sarah.j@ael-dwss.com", role:"contractor" },
+                { id:9, name:"Robert Chen", email:"robert.chen@dsd.gov.hk", role:"officer" },
+                { id:10, name:"Emma Wilson", email:"emma.w@ael-dwss.com", role:"inspector" }
             ];
             localStorage.setItem(USERS_KEY, JSON.stringify(users));
         }
     }
     
+    // 加载团队数据
     function loadTeams() {
         const stored = localStorage.getItem(TEAMS_KEY);
         if (stored) {
             try {
                 teams = JSON.parse(stored);
                 teams.forEach(t => { if (!t.memberIds) t.memberIds = []; });
-            } catch(e) { teams = []; }
+            } catch(e) {
+                teams = [];
+            }
         }
         if (!teams.length) {
+            // 默认示例团队
             teams = [
                 { id:1, name:"Treatment Plant Upgrade", memberIds:[1,2,3] },
                 { id:2, name:"Pipeline Safety Project", memberIds:[4,5,7] },
@@ -61,6 +69,7 @@
         if (active) active.textContent = teams.length;
     }
     
+    // 根据成员 ID 数组返回名字列表
     function getMemberNames(memberIds) {
         if (!memberIds.length) return 'None';
         return memberIds.map(id => {
@@ -69,6 +78,12 @@
         }).join(', ');
     }
     
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m] || m));
+    }
+    
+    // 渲染团队表格
     function renderTeamsTable() {
         const tbody = document.getElementById('teams-table-body');
         const noResults = document.getElementById('no-results-message');
@@ -91,6 +106,7 @@
                 </span>
             `;
         });
+        // 绑定编辑和删除事件
         document.querySelectorAll('.edit-team-btn').forEach(btn => {
             btn.addEventListener('click', () => openEditTeamModal(parseInt(btn.dataset.id)));
         });
@@ -99,11 +115,7 @@
         });
     }
     
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m] || m));
-    }
-    
+    // 初始化团队成员选择下拉框（从 users 填充）
     function initMemberSelect() {
         const select = document.getElementById('team-members');
         if (!select) return;
@@ -116,6 +128,7 @@
         });
     }
     
+    // 打开添加团队模态框
     function openAddTeamModal() {
         editingTeamId = null;
         document.getElementById('modal-title').innerHTML = '<i class="fas fa-users"></i> Add New Team';
@@ -125,6 +138,7 @@
         document.getElementById('team-modal').style.display = 'flex';
     }
     
+    // 打开编辑团队模态框
     function openEditTeamModal(teamId) {
         const team = teams.find(t => t.id === teamId);
         if (!team) return;
@@ -140,6 +154,7 @@
         document.getElementById('team-modal').style.display = 'flex';
     }
     
+    // 保存团队（新增或编辑）
     function saveTeam(e) {
         e.preventDefault();
         const name = document.getElementById('team-name').value.trim();
@@ -149,10 +164,13 @@
         }
         const select = document.getElementById('team-members');
         const selectedIds = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
+        
         if (editingTeamId === null) {
+            // 新增
             const newId = teams.length ? Math.max(...teams.map(t => t.id)) + 1 : 1;
             teams.push({ id: newId, name, memberIds: selectedIds });
         } else {
+            // 编辑
             const team = teams.find(t => t.id === editingTeamId);
             if (team) {
                 team.name = name;
@@ -165,6 +183,7 @@
         document.getElementById('team-modal').style.display = 'none';
     }
     
+    // 删除团队
     function deleteTeam(teamId) {
         if (confirm('Are you sure you want to delete this team?')) {
             teams = teams.filter(t => t.id !== teamId);
@@ -174,11 +193,13 @@
         }
     }
     
+    // 刷新表格
     function refreshTable() {
         renderTeamsTable();
         updateStats();
     }
     
+    // 搜索功能（按项目名）
     function setupSearch() {
         const form = document.getElementById('search-form');
         if (!form) return;
@@ -211,6 +232,7 @@
                     </span>
                 `;
             });
+            // 重新绑定事件
             document.querySelectorAll('.edit-team-btn').forEach(btn => {
                 btn.addEventListener('click', () => openEditTeamModal(parseInt(btn.dataset.id)));
             });
@@ -220,13 +242,15 @@
         });
     }
     
+    // 初始化
     function init() {
-        loadUsers();
-        loadTeams();
-        initMemberSelect();
+        loadUsers();         // 先加载用户列表
+        loadTeams();         // 加载团队
+        initMemberSelect();  // 填充成员下拉框
         renderTeamsTable();
         updateStats();
         setupSearch();
+        
         document.getElementById('add-team-btn')?.addEventListener('click', openAddTeamModal);
         document.querySelector('.refresh-btn')?.addEventListener('click', refreshTable);
         document.getElementById('cancel-team-btn')?.addEventListener('click', () => {
