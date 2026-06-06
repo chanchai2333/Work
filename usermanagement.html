@@ -8,122 +8,67 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- 静态侧边栏（确保从任何页面进入都能显示） -->
+    <!-- 静态侧边栏（只保留 Users 和 Teams） -->
     <div class="sidebar">
         <div class="logo">
-            <div class="logo-icon">
-                <i class="fas fa-water"></i>
-            </div>
+            <div class="logo-icon"><i class="fas fa-water"></i></div>
             <h2>AEL DWSS</h2>
         </div>
-        
-        <button class="toggle-btn">
-            <i class="fas fa-chevron-left"></i>
-        </button>
-        
+        <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
         <ul class="menu">
-            <li>
-                <a href="index.html" id="menu-dashboard">
-                    <i class="fas fa-home"></i>
-                    <span class="menu-text" data-i18n="dashboard">Dashboard</span>
+            <li><a href="index.html" id="menu-dashboard"><i class="fas fa-home"></i><span class="menu-text" data-i18n="dashboard">Dashboard</span></a></li>
+            <li><a href="sitediary.html" id="menu-sitediary"><i class="fas fa-book"></i><span class="menu-text" data-i18n="site.diary">Site Diary</span></a></li>
+            <li><a href="safetyinspect.html" id="menu-safetyinspect"><i class="fas fa-clipboard-check"></i><span class="menu-text" data-i18n="safety.inspection">Safety Inspection</span></a></li>
+            <li><a href="sitelocations.html" id="menu-sitelocations"><i class="fas fa-map-marked-alt"></i><span class="menu-text" data-i18n="site.locations">Site Locations</span></a></li>
+            <li><a href="labourwage.html" id="menu-labourwage"><i class="fas fa-money-bill-wave"></i><span class="menu-text" data-i18n="labour.wage">Labour Wage</span></a></li>
+            <li><a href="settings.html" id="menu-settings"><i class="fas fa-cogs"></i><span class="menu-text" data-i18n="system.settings">System Settings</span></a></li>
+            <li class="menu-item-with-submenu">
+                <a href="#" class="submenu-toggle" id="menu-usermanagement">
+                    <i class="fas fa-users"></i><span class="menu-text" data-i18n="user.management">User Management</span><i class="fas fa-chevron-down submenu-arrow"></i>
                 </a>
-            </li>
-            <li>
-                <a href="sitediary.html" id="menu-sitediary">
-                    <i class="fas fa-book"></i>
-                    <span class="menu-text" data-i18n="site.diary">Site Diary</span>
-                </a>
-            </li>
-            <li>
-                <a href="safetyinspect.html" id="menu-safetyinspect">
-                    <i class="fas fa-clipboard-check"></i>
-                    <span class="menu-text" data-i18n="safety.inspection">Safety Inspection</span>
-                </a>
-            </li>
-            <li>
-                <a href="sitelocations.html" id="menu-sitelocations">
-                    <i class="fas fa-map-marked-alt"></i>
-                    <span class="menu-text" data-i18n="site.locations">Site Locations</span>
-                </a>
-            </li>
-            <li>
-                <a href="labourwage.html" id="menu-labourwage">
-                    <i class="fas fa-money-bill-wave"></i>
-                    <span class="menu-text" data-i18n="labour.wage">Labour Wage</span>
-                </a>
-            </li>
-            <li>
-                <a href="settings.html" id="menu-settings">
-                    <i class="fas fa-cogs"></i>
-                    <span class="menu-text" data-i18n="system.settings">System Settings</span>
-                </a>
-            </li>
-            <li>
-                <a href="usermanagement.html" id="menu-usermanagement">
-                    <i class="fas fa-user-circle"></i>
-                    <span class="menu-text" data-i18n="user.management">User Management</span>
-                </a>
+                <ul class="submenu">
+                    <li><a href="usermanagement.html" id="submenu-users"><i class="fas fa-user"></i><span class="menu-text">Users</span></a></li>
+                    <li><a href="teams.html" id="submenu-teams"><i class="fas fa-user-friends"></i><span class="menu-text">Teams</span></a></li>
+                </ul>
             </li>
         </ul>
     </div>
-    
+
     <!-- 主内容区域 -->
     <div class="main-content">
         <div class="header">
             <h1 data-i18n="user.management">User Management</h1>
             <div class="header-controls">
                 <div class="user-date-row">
-                    <div class="date-display">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span id="current-date">September 17, 2025</span>
-                    </div>
-                    <button class="user-btn">
-                        <i class="fas fa-user"></i> <span data-i18n="user.name">John Doe</span>
-                    </button>
+                    <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date">September 17, 2025</span></div>
+                    <button class="user-btn"><i class="fas fa-user"></i><span data-i18n="user.name">John Doe</span></button>
                 </div>
             </div>
         </div>
-        
+
         <div class="search-buttons">
             <form id="search-form" action="#" method="get">
                 <input type="text" name="search" data-i18n-placeholder="search.placeholder" placeholder="Search users by name, email, or role..." />
                 <button type="submit" data-i18n="search">Search</button>
             </form>
             <div class="nav-buttons">
-                <button id="add-user-btn">
-                    <i class="fas fa-plus"></i> <span data-i18n="add.user">Add New User</span>
-                </button>
+                <button id="add-user-btn"><i class="fas fa-plus"></i><span data-i18n="add.user">Add New User</span></button>
             </div>
         </div>
-        
+
         <!-- 用户管理主要内容区域 -->
         <div class="user-management-page">
             <div class="user-stats">
-                <div class="stat-card">
-                    <div class="label" data-i18n="total.users">Total Users</div>
-                    <div class="value" id="total-users-count">53</div>
-                </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #2ecc71, #27ae60);">
-                    <div class="label" data-i18n="online.users">Online Users</div>
-                    <div class="value" id="online-users-count">47</div>
-                </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #f39c12, #d35400);">
-                    <div class="label" data-i18n="offline.users">Offline Users</div>
-                    <div class="value" id="offline-users-count">6</div>
-                </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">
-                    <div class="label" data-i18n="admin.users">Admin Users</div>
-                    <div class="value" id="admin-users-count">12</div>
-                </div>
+                <div class="stat-card"><div class="label" data-i18n="total.users">Total Users</div><div class="value" id="total-users-count">53</div></div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #2ecc71, #27ae60);"><div class="label" data-i18n="online.users">Online Users</div><div class="value" id="online-users-count">47</div></div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #f39c12, #d35400);"><div class="label" data-i18n="offline.users">Offline Users</div><div class="value" id="offline-users-count">6</div></div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);"><div class="label" data-i18n="admin.users">Admin Users</div><div class="value" id="admin-users-count">12</div></div>
             </div>
-            
+
             <!-- 筛选器区域 -->
             <div class="filters-section">
                 <div class="filter-group">
-                    <button class="filter-toggle">
-                        <span>All Roles</span>
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
+                    <button class="filter-toggle"><span>All Roles</span><i class="fas fa-chevron-down"></i></button>
                     <div class="filter-options">
                         <div class="filter-option active" data-filter="role" data-value="all">All Roles</div>
                         <div class="filter-option" data-filter="role" data-value="admin">Admin</div>
@@ -133,24 +78,16 @@
                         <div class="filter-option" data-filter="role" data-value="contractor">Contractor</div>
                     </div>
                 </div>
-                
                 <div class="filter-group">
-                    <button class="filter-toggle">
-                        <span>All Status</span>
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
+                    <button class="filter-toggle"><span>All Status</span><i class="fas fa-chevron-down"></i></button>
                     <div class="filter-options">
                         <div class="filter-option active" data-filter="status" data-value="all">All Status</div>
                         <div class="filter-option" data-filter="status" data-value="online">Online</div>
                         <div class="filter-option" data-filter="status" data-value="offline">Offline</div>
                     </div>
                 </div>
-
                 <div class="filter-group">
-                    <button class="filter-toggle">
-                        <span>Sort by Name</span>
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
+                    <button class="filter-toggle"><span>Sort by Name</span><i class="fas fa-chevron-down"></i></button>
                     <div class="filter-options">
                         <div class="filter-option active" data-filter="sort" data-value="name-asc">Name A-Z</div>
                         <div class="filter-option" data-filter="sort" data-value="name-desc">Name Z-A</div>
@@ -159,192 +96,289 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- 用户列表表格 -->
             <div class="content-section">
                 <div class="table-header">
-                    <div class="table-title">
-                        <i class="fas fa-users"></i> <span data-i18n="user.list">User List</span>
-                    </div>
-                    <div class="table-controls">
-                        <button class="action-btn refresh-btn">
-                            <i class="fas fa-sync-alt"></i> <span data-i18n="refresh">Refresh</span>
-                        </button>
-                    </div>
+                    <div class="table-title"><i class="fas fa-users"></i><span data-i18n="user.list">User List</span></div>
+                    <div class="table-controls"><button class="action-btn refresh-btn"><i class="fas fa-sync-alt"></i><span data-i18n="refresh">Refresh</span></button></div>
                 </div>
-
                 <div class="table-container">
                     <table class="diary-table" id="users-table">
-                        <thead>
-                            <tr>
-                                <th width="40%" data-i18n="user.role.name">User Role / Name</th>
-                                <th width="25%" data-i18n="email.address">Email Address</th>
-                                <th width="15%" data-i18n="user.role">Role</th>
-                                <th width="10%" data-i18n="status">Status</th>
-                                <th width="10%" data-i18n="actions">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="users-table-body">
-                            <!-- 用户数据将通过JavaScript动态加载 -->
-                        </tbody>
+                        <thead><tr><th width="40%" data-i18n="user.role.name">User Role / Name</th><th width="25%" data-i18n="email.address">Email Address</th><th width="15%" data-i18n="user.role">Role</th><th width="10%" data-i18n="status">Status</th><th width="10%" data-i18n="actions">Actions</th></tr></thead>
+                        <tbody id="users-table-body"></tbody>
                     </table>
                 </div>
-                
-                <div id="no-results-message" class="no-results" style="display: none;">
-                    <i class="fas fa-users-slash"></i>
-                    <h3 data-i18n="no.users.found">No users found</h3>
-                    <p data-i18n="adjust.filters">Try adjusting your filters or search terms</p>
-                </div>
-                
-                <!-- 分页控件 -->
+                <div id="no-results-message" class="no-results" style="display: none;"><i class="fas fa-users-slash"></i><h3 data-i18n="no.users.found">No users found</h3><p data-i18n="adjust.filters">Try adjusting your filters or search terms</p></div>
                 <div class="pagination">
-                    <div class="pagination-info">
-                        <span data-i18n="showing">Showing</span> 
-                        <span id="page-start">1</span>-<span id="page-end">10</span> 
-                        <span data-i18n="of">of</span> 
-                        <span id="total-items">53</span> 
-                        <span data-i18n="users">users</span>
-                    </div>
+                    <div class="pagination-info"><span data-i18n="showing">Showing</span> <span id="page-start">1</span>-<span id="page-end">10</span> <span data-i18n="of">of</span> <span id="total-items">53</span> <span data-i18n="users">users</span></div>
                     <div class="pagination-controls">
-                        <button class="pagination-btn" id="prev-page" disabled>
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
-                        <div class="page-numbers">
-                            <span class="page-number active">1</span>
-                            <span class="page-number">2</span>
-                            <span class="page-number">3</span>
-                            <span class="page-number">4</span>
-                            <span class="page-number">5</span>
-                        </div>
-                        <button class="pagination-btn" id="next-page">
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
+                        <button class="pagination-btn" id="prev-page" disabled><i class="fas fa-chevron-left"></i></button>
+                        <div class="page-numbers"><span class="page-number active">1</span><span class="page-number">2</span><span class="page-number">3</span><span class="page-number">4</span><span class="page-number">5</span></div>
+                        <button class="pagination-btn" id="next-page"><i class="fas fa-chevron-right"></i></button>
                     </div>
                 </div>
             </div>
-            
+
             <!-- 添加用户模态框 -->
             <div id="add-user-modal" class="modal" style="display: none;">
                 <div class="modal-content">
-                    <h3><i class="fas fa-user-plus"></i> <span data-i18n="add.new.user">Add New User</span></h3>
+                    <h3><i class="fas fa-user-plus"></i><span data-i18n="add.new.user">Add New User</span></h3>
                     <form id="add-user-form">
-                        <div class="form-group">
-                            <label for="input-user-name" data-i18n="full.name">Full Name</label>
-                            <input type="text" id="input-user-name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="input-user-email" data-i18n="email.address">Email Address</label>
-                            <input type="email" id="input-user-email" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="input-user-role" data-i18n="user.role">Role</label>
-                            <select id="input-user-role" required>
-                                <option value="" data-i18n="select.role">Select Role</option>
-                                <option value="admin" data-i18n="role.admin">Administrator</option>
-                                <option value="officer" data-i18n="role.officer">Administration Officer</option>
-                                <option value="aei" data-i18n="role.aei">AEI</option>
-                                <option value="inspector" data-i18n="role.inspector">Inspector</option>
-                                <option value="contractor" data-i18n="role.contractor">Contractor</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="input-user-department" data-i18n="department">Department</label>
-                            <input type="text" id="input-user-department">
-                        </div>
-                        <!-- 状态字段 -->
-                        <div class="form-group">
-                            <label for="input-user-status" data-i18n="status">Status</label>
-                            <select id="input-user-status" required>
-                                <option value="online" data-i18n="status.online">Online</option>
-                                <option value="offline" data-i18n="status.offline">Offline</option>
-                            </select>
-                        </div>
-                        <div class="modal-actions">
-                            <button type="button" class="btn btn-secondary" id="cancel-add-user" data-i18n="cancel">Cancel</button>
-                            <button type="submit" class="btn" data-i18n="add.user">Add User</button>
-                        </div>
+                        <div class="form-group"><label for="input-user-name" data-i18n="full.name">Full Name</label><input type="text" id="input-user-name" required></div>
+                        <div class="form-group"><label for="input-user-email" data-i18n="email.address">Email Address</label><input type="email" id="input-user-email" required></div>
+                        <div class="form-group"><label for="input-user-role" data-i18n="user.role">Role</label><select id="input-user-role" required><option value="" data-i18n="select.role">Select Role</option><option value="admin" data-i18n="role.admin">Administrator</option><option value="officer" data-i18n="role.officer">Administration Officer</option><option value="aei" data-i18n="role.aei">AEI</option><option value="inspector" data-i18n="role.inspector">Inspector</option><option value="contractor" data-i18n="role.contractor">Contractor</option></select></div>
+                        <div class="form-group"><label for="input-user-department" data-i18n="department">Department</label><input type="text" id="input-user-department"></div>
+                        <div class="form-group"><label for="input-user-status" data-i18n="status">Status</label><select id="input-user-status" required><option value="online" data-i18n="status.online">Online</option><option value="offline" data-i18n="status.offline">Offline</option></select></div>
+                        <div class="modal-actions"><button type="button" class="btn btn-secondary" id="cancel-add-user" data-i18n="cancel">Cancel</button><button type="submit" class="btn" data-i18n="add.user">Add User</button></div>
                     </form>
                 </div>
             </div>
-            
-            <!-- Footer -->
-            <footer>
-                <p data-i18n="copyright">© 2025 AEL DWSS System. All rights reserved.</p>
-                <p data-i18n="platform">AEL DWSS Platform</p>
-            </footer>
-        </div> <!-- 关闭 user-management-page -->
-    </div> <!-- 关闭 main-content -->
+
+            <footer><p data-i18n="copyright">© 2025 AEL DWSS System. All rights reserved.</p><p data-i18n="platform">AEL DWSS Platform</p></footer>
+        </div>
+    </div>
 
     <!-- 引入脚本 -->
     <script src="scripts/language.js"></script>
-    <script src="scripts/usermanagement.js"></script>
     <script src="scripts/sidebar.js"></script>
     <script src="scripts/app.js"></script>
-    
-    <!-- 侧边栏状态持久化 -->
+
     <script>
-        (function() {
-            function saveSidebarState() {
-                const sidebar = document.querySelector('.sidebar');
-                if (sidebar) {
-                    const isCollapsed = sidebar.classList.contains('collapsed');
-                    localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
+        // ==================== 用户管理功能（内嵌脚本，已添加 localStorage 持久化） ====================
+        const UserManagement = {
+            users: [],
+            currentFilters: { role: "all", status: "all", sort: "name-asc" },
+            currentPage: 1,
+            itemsPerPage: 10,
+
+            loadUsersFromLocalStorage() {
+                const stored = localStorage.getItem('ael_dwss_users');
+                if (stored) {
+                    try {
+                        this.users = JSON.parse(stored);
+                        if (!Array.isArray(this.users) || this.users.length === 0) throw new Error();
+                    } catch(e) { this.setDefaultUsers(); }
+                } else {
+                    this.setDefaultUsers();
                 }
-            }
-            function restoreSidebarState() {
-                const sidebar = document.querySelector('.sidebar');
-                if (sidebar) {
-                    const savedState = localStorage.getItem('sidebarCollapsed');
-                    if (savedState === 'true') {
-                        sidebar.classList.add('collapsed');
-                    } else if (savedState === 'false') {
-                        sidebar.classList.remove('collapsed');
-                    }
+                if (this.users.length && !this.users[0].id) {
+                    this.users = this.users.map((u, idx) => ({ ...u, id: idx + 1 }));
+                    this.saveUsersToLocalStorage();
                 }
-            }
-            function bindToggleEvent() {
-                const toggleBtn = document.querySelector('.toggle-btn');
-                if (toggleBtn) {
-                    toggleBtn.removeEventListener('click', saveSidebarState);
-                    toggleBtn.addEventListener('click', function() {
-                        const sidebar = document.querySelector('.sidebar');
-                        if (sidebar) {
-                            sidebar.classList.toggle('collapsed');
-                            const isCollapsed = sidebar.classList.contains('collapsed');
-                            localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
-                        }
+            },
+            saveUsersToLocalStorage() {
+                localStorage.setItem('ael_dwss_users', JSON.stringify(this.users));
+            },
+            setDefaultUsers() {
+                this.users = [
+                    { id:1, name:"Admin", email:"admin@rdrive.io", role:"admin", department:"System Administration", status:"online", addedDate:"2024-01-15" },
+                    { id:2, name:"Kenneth Daluz", email:"kenneth.daluz@aster-dsd.com", role:"officer", department:"Administration", status:"online", addedDate:"2024-02-10" },
+                    { id:3, name:"TANG Chi Long, Gary", email:"gcifang@dsd.gov.hk", role:"aei", department:"AEI/NWNT", status:"online", addedDate:"2024-02-15" },
+                    { id:4, name:"FUNG Wai Ching", email:"wcfung04@dsd.gov.hk", role:"aei", department:"AEI/SWH", status:"online", addedDate:"2024-03-01" },
+                    { id:5, name:"WONG Lap Pan", email:"ipwong02@dsd.gov.hk", role:"aei", department:"AEI/SWH/1", status:"online", addedDate:"2024-03-05" },
+                    { id:6, name:"CHA Chi Ming", email:"cmcha02@dsd.gov.hk", role:"aei", department:"AMI/TM", status:"online", addedDate:"2024-03-10" },
+                    { id:7, name:"John Smith", email:"john.smith@ael-dwss.com", role:"inspector", department:"Safety Inspection", status:"online", addedDate:"2024-03-15" },
+                    { id:8, name:"Sarah Johnson", email:"sarah.j@ael-dwss.com", role:"contractor", department:"Contractor Team A", status:"offline", addedDate:"2024-04-01" },
+                    { id:9, name:"Robert Chen", email:"robert.chen@dsd.gov.hk", role:"officer", department:"Documentation", status:"online", addedDate:"2024-04-05" },
+                    { id:10, name:"Emma Wilson", email:"emma.w@ael-dwss.com", role:"inspector", department:"Quality Control", status:"offline", addedDate:"2024-04-10" }
+                ];
+                this.saveUsersToLocalStorage();
+            },
+
+            renderUserTable() {
+                const tbody = document.getElementById('users-table-body');
+                const noResults = document.getElementById('no-results-message');
+                if (!tbody) return;
+                tbody.innerHTML = '';
+                let filtered = this.users.filter(u => (this.currentFilters.role === "all" || u.role === this.currentFilters.role) && (this.currentFilters.status === "all" || u.status === this.currentFilters.status));
+                filtered = this.sortUsers(filtered, this.currentFilters.sort);
+                const total = filtered.length;
+                const start = (this.currentPage-1)*this.itemsPerPage;
+                const end = Math.min(start+this.itemsPerPage, total);
+                const paged = filtered.slice(start, end);
+                this.updatePaginationInfo(start+1, end, total);
+                if (noResults) noResults.style.display = paged.length===0 ? 'block' : 'none';
+                paged.forEach(u => {
+                    const roleText = { admin:"Administrator", officer:"Officer", aei:"AEI", inspector:"Inspector", contractor:"Contractor" }[u.role] || u.role;
+                    const statusText = u.status==='online'?'Online':'Offline';
+                    const statusClass = u.status==='online'?'status-online':'status-offline';
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td><div class="user-info"><div class="user-name">${this.escapeHtml(u.name)}</div>${u.department?`<div class="user-department">${this.escapeHtml(u.department)}</div>`:''}</div></span>
+                        <td>${this.escapeHtml(u.email)}</span>
+                        <td><span class="role-badge role-${u.role}">${roleText}</span></span>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></span>
+                        <td><button class="action-btn edit-user-btn" data-id="${u.id}"><i class="fas fa-edit"></i> Edit</button>
+                               <button class="action-btn delete-user-btn" data-id="${u.id}" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;"><i class="fas fa-trash"></i> Delete</button></span>
+                    `;
+                });
+                this.attachEventListeners();
+            },
+            escapeHtml(str) { return str?str.replace(/[&<>]/g, m=>({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])):''; },
+            sortUsers(users, sortBy) {
+                return [...users].sort((a,b)=>{
+                    if(sortBy==='name-asc') return a.name.localeCompare(b.name);
+                    if(sortBy==='name-desc') return b.name.localeCompare(a.name);
+                    if(sortBy==='date-asc') return new Date(a.addedDate)-new Date(b.addedDate);
+                    if(sortBy==='date-desc') return new Date(b.addedDate)-new Date(a.addedDate);
+                    return 0;
+                });
+            },
+            updatePaginationInfo(start,end,total) {
+                const ps=document.getElementById('page-start'), pe=document.getElementById('page-end'), ti=document.getElementById('total-items'), prev=document.getElementById('prev-page'), next=document.getElementById('next-page');
+                if(ps) ps.textContent=start;
+                if(pe) pe.textContent=end;
+                if(ti) ti.textContent=total;
+                if(prev) prev.disabled = this.currentPage===1;
+                if(next) next.disabled = this.currentPage*this.itemsPerPage >= total;
+            },
+            updateUserStats() {
+                const total=this.users.length, online=this.users.filter(u=>u.status==='online').length, offline=this.users.filter(u=>u.status==='offline').length, admin=this.users.filter(u=>u.role==='admin').length;
+                const totalEl=document.getElementById('total-users-count'), onlineEl=document.getElementById('online-users-count'), offlineEl=document.getElementById('offline-users-count'), adminEl=document.getElementById('admin-users-count');
+                if(totalEl) totalEl.textContent=total;
+                if(onlineEl) onlineEl.textContent=online;
+                if(offlineEl) offlineEl.textContent=offline;
+                if(adminEl) adminEl.textContent=admin;
+            },
+
+            setupFilterEvents() {
+                document.querySelectorAll('.filter-group').forEach(group=>{
+                    const toggle=group.querySelector('.filter-toggle');
+                    const options=group.querySelector('.filter-options');
+                    if(!toggle||!options) return;
+                    toggle.addEventListener('click',e=>{
+                        e.stopPropagation(); e.preventDefault();
+                        document.querySelectorAll('.filter-options').forEach(opt=>{if(opt!==options) opt.classList.remove('open','show');});
+                        options.classList.toggle('open'); options.classList.toggle('show');
+                    });
+                    options.querySelectorAll('.filter-option').forEach(opt=>{
+                        opt.addEventListener('click',e=>{
+                            e.stopPropagation(); e.preventDefault();
+                            options.querySelectorAll('.filter-option').forEach(o=>o.classList.remove('active'));
+                            opt.classList.add('active');
+                            toggle.querySelector('span').textContent=opt.textContent;
+                            const filterType=opt.dataset.filter, filterValue=opt.dataset.value;
+                            this.currentFilters[filterType]=filterValue;
+                            if(filterType==='sort') this.currentPage=1;
+                            this.renderUserTable();
+                            options.classList.remove('open','show');
+                        });
+                    });
+                });
+                document.addEventListener('click',()=>document.querySelectorAll('.filter-options').forEach(opt=>opt.classList.remove('open','show')));
+                document.getElementById('search-form')?.addEventListener('submit',e=>{e.preventDefault(); alert(`Searching for: ${e.target.querySelector('input').value}`);});
+                document.getElementById('prev-page')?.addEventListener('click',()=>{if(this.currentPage>1){this.currentPage--;this.renderUserTable();}});
+                document.getElementById('next-page')?.addEventListener('click',()=>{if(this.currentPage*this.itemsPerPage < this.users.length){this.currentPage++;this.renderUserTable();}});
+            },
+
+            setupActionButtons() {
+                const addUserBtn=document.getElementById('add-user-btn');
+                if(addUserBtn){
+                    addUserBtn.addEventListener('click',()=>{
+                        const modalTitle=document.querySelector('#add-user-modal h3 span');
+                        const submitBtn=document.querySelector('#add-user-form button[type="submit"]');
+                        if(modalTitle) modalTitle.textContent='Add New User';
+                        if(submitBtn) submitBtn.textContent='Add User';
+                        if(submitBtn) delete submitBtn.dataset.editingUserId;
+                        document.getElementById('add-user-modal').style.display='flex';
+                        document.getElementById('add-user-form').reset();
                     });
                 }
+                document.getElementById('cancel-add-user')?.addEventListener('click',()=>{
+                    document.getElementById('add-user-modal').style.display='none';
+                    document.getElementById('add-user-form').reset();
+                });
+                document.querySelector('.refresh-btn')?.addEventListener('click',()=>this.renderUserTable());
+                const form=document.getElementById('add-user-form');
+                if(form){
+                    form.addEventListener('submit',e=>{
+                        e.preventDefault();
+                        const name=document.getElementById('input-user-name').value.trim();
+                        const email=document.getElementById('input-user-email').value.trim();
+                        const role=document.getElementById('input-user-role').value;
+                        const dept=document.getElementById('input-user-department').value.trim();
+                        const status=document.getElementById('input-user-status').value;
+                        const submitBtn=document.querySelector('#add-user-form button[type="submit"]');
+                        const editingUserId=submitBtn?.dataset.editingUserId;
+                        if(editingUserId){
+                            const user=this.users.find(u=>u.id==parseInt(editingUserId));
+                            if(user){
+                                user.name=name; user.email=email; user.role=role; user.department=dept; user.status=status;
+                                alert('User updated successfully!');
+                            }
+                        } else {
+                            const newId=this.users.length?Math.max(...this.users.map(u=>u.id))+1:1;
+                            this.users.push({id:newId,name,email,role,department:dept,status,addedDate:new Date().toISOString().split('T')[0]});
+                            alert('User added successfully!');
+                        }
+                        this.saveUsersToLocalStorage();
+                        this.renderUserTable();
+                        this.updateUserStats();
+                        document.getElementById('add-user-modal').style.display='none';
+                        form.reset();
+                    });
+                }
+            },
+
+            attachEventListeners() {
+                document.querySelectorAll('.edit-user-btn').forEach(btn=>{
+                    const newBtn=btn.cloneNode(true);
+                    btn.parentNode.replaceChild(newBtn,btn);
+                    newBtn.addEventListener('click',()=>{
+                        const userId=parseInt(newBtn.dataset.id);
+                        const user=this.users.find(u=>u.id===userId);
+                        if(user){
+                            document.getElementById('input-user-name').value=user.name;
+                            document.getElementById('input-user-email').value=user.email;
+                            document.getElementById('input-user-role').value=user.role;
+                            document.getElementById('input-user-department').value=user.department||'';
+                            document.getElementById('input-user-status').value=user.status;
+                            const modalTitle=document.querySelector('#add-user-modal h3 span');
+                            const submitBtn=document.querySelector('#add-user-form button[type="submit"]');
+                            if(modalTitle) modalTitle.textContent='Edit User';
+                            if(submitBtn) submitBtn.textContent='Update User';
+                            if(submitBtn) submitBtn.dataset.editingUserId=userId;
+                            document.getElementById('add-user-modal').style.display='flex';
+                        }
+                    });
+                });
+                document.querySelectorAll('.delete-user-btn').forEach(btn=>{
+                    const newBtn=btn.cloneNode(true);
+                    btn.parentNode.replaceChild(newBtn,btn);
+                    newBtn.addEventListener('click',()=>{
+                        const userId=parseInt(newBtn.dataset.id);
+                        const userName=this.users.find(u=>u.id===userId)?.name;
+                        if(confirm(`Are you sure you want to delete user "${userName}"?`)){
+                            this.users=this.users.filter(u=>u.id!==userId);
+                            this.saveUsersToLocalStorage();
+                            this.renderUserTable();
+                            this.updateUserStats();
+                            alert('User deleted successfully!');
+                        }
+                    });
+                });
+            },
+
+            init() {
+                this.loadUsersFromLocalStorage();
+                this.renderUserTable();
+                this.setupFilterEvents();
+                this.setupActionButtons();
+                this.updateUserStats();
             }
-            document.addEventListener('DOMContentLoaded', function() {
-                restoreSidebarState();
-                bindToggleEvent();
-            });
-        })();
-    </script>
-    
-    <!-- 日期同步 -->
-    <script>
-        (function() {
+        };
+
+        function initUserManagement() { UserManagement.init(); }
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            initUserManagement();
+            // 同步日期
             const storedDate = sessionStorage.getItem('globalDate');
             const dateSpan = document.querySelector('.date-display span');
-            if (storedDate && dateSpan) {
-                dateSpan.textContent = storedDate;
-            } else if (dateSpan) {
-                const now = new Date();
-                dateSpan.textContent = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-            }
-        })();
-    </script>
-    
-    <script>
-        // 初始化用户管理页面
-        document.addEventListener('DOMContentLoaded', function() {
-            if (typeof initUserManagement === 'function') {
-                initUserManagement();
-            } else {
-                console.warn('initUserManagement not found, ensure usermanagement.js is loaded');
-            }
+            if (storedDate && dateSpan) dateSpan.textContent = storedDate;
+            else if (dateSpan) dateSpan.textContent = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
         });
     </script>
 </body>

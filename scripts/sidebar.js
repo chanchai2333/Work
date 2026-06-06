@@ -1,4 +1,4 @@
-// sidebar.js - 修复和简化版本
+// sidebar.js - 修复子菜单展开/收起问题
 function loadSidebar() {
     // 先检查是否已经有侧边栏
     const existingSidebar = document.querySelector('.sidebar');
@@ -28,7 +28,7 @@ function loadSidebar() {
         });
     }
     
-    // 侧边栏HTML
+    // 侧边栏HTML - 只保留 Users 和 Teams
     const sidebarHTML = `
         <div class="sidebar">
             <div class="logo">
@@ -87,27 +87,15 @@ function loadSidebar() {
                     </a>
                     <ul class="submenu">
                         <li>
-                            <a href="usermanagement.html">
+                            <a href="usermanagement.html" id="submenu-users">
                                 <i class="fas fa-user"></i>
                                 <span class="menu-text">Users</span>
                             </a>    
                         </li>
                         <li>
-                            <a href="teams.html">
+                            <a href="teams.html" id="submenu-teams">
                                 <i class="fas fa-user-friends"></i>
                                 <span class="menu-text">Teams</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="presets.html">
-                                <i class="fas fa-sliders-h"></i>
-                                <span class="menu-text">Presets</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="subscriptions.html">
-                                <i class="fas fa-credit-card"></i>
-                                <span class="menu-text">Subscriptions</span>
                             </a>
                         </li>
                     </ul>
@@ -130,7 +118,7 @@ function initializeSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const mainContent = document.querySelector('.main-content');
     
-    // 检查保存的侧边栏状态
+    // 检查保存的侧边栏状态（主侧边栏折叠/展开）
     const savedState = localStorage.getItem('sidebarState');
     const isCollapsed = savedState === 'collapsed';
     
@@ -140,7 +128,7 @@ function initializeSidebar() {
         updateMainContentLayout();
     }
     
-    // 设置切换按钮事件
+    // 设置主侧边栏切换按钮事件
     if (toggleBtn && sidebar) {
         // 移除现有的事件监听器
         const newToggleBtn = toggleBtn.cloneNode(true);
@@ -169,17 +157,39 @@ function initializeSidebar() {
         updateToggleButtonIcon();
     }
     
-    // 子菜单切换功能
-    document.querySelectorAll('.submenu-toggle').forEach(toggle => {
-        toggle.addEventListener('click', function(e) {
+    // 子菜单切换功能 - 只切换 active 类，不手动设置样式，完全依赖 CSS
+    const submenuToggle = document.querySelector('.submenu-toggle');
+    if (submenuToggle) {
+        // 移除可能存在的旧事件，使用新的事件
+        const newToggle = submenuToggle.cloneNode(true);
+        submenuToggle.parentNode.replaceChild(newToggle, submenuToggle);
+        
+        newToggle.addEventListener('click', function(e) {
             e.preventDefault();
+            e.stopPropagation();
             const parentLi = this.parentElement;
-            parentLi.classList.toggle('active');
+            if (parentLi) {
+                parentLi.classList.toggle('active');
+                // 可选：保存子菜单展开状态到 localStorage（如果需要持久化）
+                // 这里不保存，保持简单
+            }
+        });
+    }
+    
+    // 高亮当前页面菜单项（会同时处理父菜单展开）
+    highlightCurrentPage();
+    
+    // 确保当点击子菜单链接时，父菜单保持展开（高亮当前页面时会处理，但以防万一）
+    document.querySelectorAll('.submenu a').forEach(link => {
+        link.addEventListener('click', function(e) {
+            // 允许正常跳转
+            const parentItem = this.closest('.menu-item-with-submenu');
+            if (parentItem && !parentItem.classList.contains('active')) {
+                // 如果父菜单未展开，则展开（但跳转后页面会重新加载，高亮函数会处理）
+                // 这里不主动展开，因为跳转后新页面会调用 highlightCurrentPage
+            }
         });
     });
-    
-    // 高亮当前页面菜单项
-    highlightCurrentPage();
 }
 
 function updateMainContentLayout() {
@@ -221,63 +231,71 @@ function updateToggleButtonIcon() {
 
 function highlightCurrentPage() {
     // 获取当前页面文件名
-    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+    let currentPage = window.location.pathname.split('/').pop();
+    if (!currentPage || currentPage === '') currentPage = 'index.html';
     
     // 移除所有菜单项的 active 类
     document.querySelectorAll('.menu a').forEach(link => {
         link.classList.remove('active');
-        link.parentElement.classList.remove('active');
     });
-    
-    // 移除子菜单项中的 active 类
     document.querySelectorAll('.submenu a').forEach(link => {
         link.classList.remove('active');
     });
+    // 移除所有父菜单的 active 类（因为需要根据当前页面重新设置）
+    document.querySelectorAll('.menu-item-with-submenu').forEach(item => {
+        item.classList.remove('active');
+    });
     
     // 根据当前页面高亮对应菜单项
-    let menuItemId = '';
+    let mainMenuItemId = '';
     let isSubmenu = false;
+    let submenuParentId = '';
     
     switch(currentPage) {
         case 'index.html':
-            menuItemId = 'menu-dashboard';
+            mainMenuItemId = 'menu-dashboard';
             break;
         case 'sitediary.html':
-            menuItemId = 'menu-sitediary';
+            mainMenuItemId = 'menu-sitediary';
             break;
         case 'safetyinspect.html':
-            menuItemId = 'menu-safetyinspect';
+            mainMenuItemId = 'menu-safetyinspect';
             break;
         case 'sitelocations.html':
-            menuItemId = 'menu-sitelocations';
+            mainMenuItemId = 'menu-sitelocations';
             break;
         case 'labourwage.html':
-            menuItemId = 'menu-labourwage';
+            mainMenuItemId = 'menu-labourwage';
             break;
         case 'settings.html':
-            menuItemId = 'menu-settings';
+            mainMenuItemId = 'menu-settings';
             break;
         case 'usermanagement.html':
-        case 'teams.html':
-        case 'presets.html':
-        case 'subscriptions.html':
-            menuItemId = 'menu-usermanagement';
+            mainMenuItemId = 'submenu-users';
             isSubmenu = true;
+            submenuParentId = 'menu-usermanagement';
             break;
+        case 'teams.html':
+            mainMenuItemId = 'submenu-teams';
+            isSubmenu = true;
+            submenuParentId = 'menu-usermanagement';
+            break;
+        // 其他页面可继续添加
     }
     
-    if (menuItemId) {
-        const activeLink = document.getElementById(menuItemId);
+    if (mainMenuItemId) {
+        const activeLink = document.getElementById(mainMenuItemId);
         if (activeLink) {
-            if (isSubmenu) {
-                activeLink.parentElement.classList.add('active');
-                // 高亮子菜单中的当前页面
-                const currentSubmenuLink = activeLink.parentElement.querySelector(`a[href="${currentPage}"]`);
-                if (currentSubmenuLink) {
-                    currentSubmenuLink.classList.add('active');
+            activeLink.classList.add('active');
+            if (isSubmenu && submenuParentId) {
+                const parentMenu = document.getElementById(submenuParentId);
+                if (parentMenu) {
+                    const parentLi = parentMenu.closest('.menu-item-with-submenu');
+                    if (parentLi) {
+                        // 添加 active 类以展开子菜单（CSS 会负责显示）
+                        parentLi.classList.add('active');
+                    }
                 }
-            } else {
-                activeLink.classList.add('active');
             }
         }
     }

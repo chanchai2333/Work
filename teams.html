@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teams - AEL DWSS System</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- 侧边栏将由 sidebar.js 动态插入 -->
+    
+    <div class="main-content">
+        <div class="header">
+            <h1>Team Management</h1>
+            <div class="header-controls">
+                <div class="user-date-row">
+                    <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
+                    <button class="user-btn"><i class="fas fa-user"></i> John Doe</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="search-buttons">
+            <form id="search-form">
+                <input type="text" name="search" placeholder="Search teams by project name...">
+                <button type="submit">Search</button>
+            </form>
+            <div class="nav-buttons">
+                <button id="add-team-btn"><i class="fas fa-plus"></i> Add New Team</button>
+            </div>
+        </div>
+        
+        <div class="user-management-page">
+            <h2><i class="fas fa-users"></i> Teams / Projects</h2>
+            <div class="user-stats">
+                <div class="stat-card"><div class="label">Total Teams</div><div class="value" id="total-teams-count">0</div></div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #2ecc71, #27ae60);"><div class="label">Active Teams</div><div class="value" id="active-teams-count">0</div></div>
+            </div>
+            <div class="content-section">
+                <div class="table-header">
+                    <div class="table-title"><i class="fas fa-list"></i> Team List</div>
+                    <div class="table-controls"><button class="action-btn refresh-btn"><i class="fas fa-sync-alt"></i> Refresh</button></div>
+                </div>
+                <div class="table-container">
+                    <table class="diary-table" id="teams-table">
+                        <thead><tr><th>Team ID</th><th>Project Name</th><th>Members</th><th>Actions</th></tr></thead>
+                        <tbody id="teams-table-body"></tbody>
+                    </table>
+                    <div id="no-results-message" class="no-results" style="display: none;"><i class="fas fa-users-slash"></i><h3>No teams found</h3><p>Click "Add New Team" to create your first team.</p></div>
+                </div>
+            </div>
+            <footer><p>© 2025 AEL DWSS System. All rights reserved.</p><p>AEL DWSS Platform</p></footer>
+        </div>
+    </div>
+    
+    <!-- 添加/编辑团队模态框 -->
+    <div id="team-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3 id="modal-title"><i class="fas fa-users"></i> Add New Team</h3>
+            <form id="team-form">
+                <div class="form-group">
+                    <label for="team-name">Project Name <span style="color:red;">*</span></label>
+                    <input type="text" id="team-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="team-members">Members (Select multiple)</label>
+                    <select id="team-members" multiple size="5" style="height: auto; min-height: 120px;"></select>
+                    <small>Hold Ctrl (Windows) or Command (Mac) to select multiple members.</small>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancel-team-btn">Cancel</button>
+                    <button type="submit" class="btn" id="save-team-btn">Save Team</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="scripts/language.js"></script>
+    <script src="scripts/app.js"></script>
+    <script src="scripts/sidebar.js"></script>
+    <script src="scripts/teams.js"></script>
+    
+    <!-- 侧边栏状态持久化 -->
+    <script>
+        (function() {
+            function saveSidebarState() {
+                const sidebar = document.querySelector('.sidebar');
+                if (sidebar) localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed') ? 'true' : 'false');
+            }
+            function restoreSidebarState() {
+                const sidebar = document.querySelector('.sidebar');
+                if (sidebar && localStorage.getItem('sidebarCollapsed') === 'true') sidebar.classList.add('collapsed');
+            }
+            function bindToggleEvent() {
+                const toggleBtn = document.querySelector('.toggle-btn');
+                if (toggleBtn) toggleBtn.addEventListener('click', () => setTimeout(saveSidebarState, 50));
+            }
+            document.addEventListener('DOMContentLoaded', () => { restoreSidebarState(); bindToggleEvent(); });
+        })();
+    </script>
+    <script>
+        (function() {
+            const storedDate = sessionStorage.getItem('globalDate');
+            const dateSpan = document.querySelector('.date-display span');
+            if (storedDate && dateSpan) dateSpan.textContent = storedDate;
+            else if (dateSpan) dateSpan.textContent = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+        })();
+    </script>
+</body>
+</html>

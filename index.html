@@ -8,64 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- 静态侧边栏（确保链接可用且状态持久化） -->
-    <div class="sidebar">
-        <div class="logo">
-            <div class="logo-icon">
-                <i class="fas fa-water"></i>
-            </div>
-            <h2>AEL DWSS</h2>
-        </div>
-        
-        <button class="toggle-btn">
-            <i class="fas fa-chevron-left"></i>
-        </button>
-        
-        <ul class="menu">
-            <li>
-                <a href="index.html" id="menu-dashboard">
-                    <i class="fas fa-home"></i>
-                    <span class="menu-text" data-i18n="dashboard">Dashboard</span>
-                </a>
-            </li>
-            <li>
-                <a href="sitediary.html" id="menu-sitediary">
-                    <i class="fas fa-book"></i>
-                    <span class="menu-text" data-i18n="site.diary">Site Diary</span>
-                </a>
-            </li>
-            <li>
-                <a href="safetyinspect.html" id="menu-safetyinspect">
-                    <i class="fas fa-clipboard-check"></i>
-                    <span class="menu-text" data-i18n="safety.inspection">Safety Inspection</span>
-                </a>
-            </li>
-            <li>
-                <a href="sitelocations.html" id="menu-sitelocations">
-                    <i class="fas fa-map-marked-alt"></i>
-                    <span class="menu-text" data-i18n="site.locations">Site Locations</span>
-                </a>
-            </li>
-            <li>
-                <a href="labourwage.html" id="menu-labourwage">
-                    <i class="fas fa-money-bill-wave"></i>
-                    <span class="menu-text" data-i18n="labour.wage">Labour Wage</span>
-                </a>
-            </li>
-            <li>
-                <a href="settings.html" id="menu-settings">
-                    <i class="fas fa-cogs"></i>
-                    <span class="menu-text" data-i18n="system.settings">System Settings</span>
-                </a>
-            </li>
-            <li>
-                <a href="usermanagement.html" id="menu-usermanagement">
-                    <i class="fas fa-user-circle"></i>
-                    <span class="menu-text" data-i18n="user.management">User Management</span>
-                </a>
-            </li>
-        </ul>
-    </div>
+    <!-- 侧边栏将由 sidebar.js 动态插入 -->
     
     <!-- 主内容区域 -->
     <div class="main-content">
@@ -308,63 +251,7 @@
     <!-- 引入语言配置文件 -->
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
-    <!-- 移除 sidebar.js，因为已使用静态侧边栏，避免重复插入 -->
+    <script src="scripts/sidebar.js"></script>
     <script src="scripts/dashboard.js"></script>
-
-    <!-- ========== 侧边栏状态持久化（与 usermanagement.html 等保持一致） ========== -->
-    <script>
-        (function() {
-            function saveSidebarState() {
-                const sidebar = document.querySelector('.sidebar');
-                if (sidebar) {
-                    const isCollapsed = sidebar.classList.contains('collapsed');
-                    localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
-                }
-            }
-            function restoreSidebarState() {
-                const sidebar = document.querySelector('.sidebar');
-                if (sidebar) {
-                    const savedState = localStorage.getItem('sidebarCollapsed');
-                    if (savedState === 'true') {
-                        sidebar.classList.add('collapsed');
-                    } else if (savedState === 'false') {
-                        sidebar.classList.remove('collapsed');
-                    }
-                }
-            }
-            function bindToggleEvent() {
-                const toggleBtn = document.querySelector('.toggle-btn');
-                if (toggleBtn) {
-                    toggleBtn.removeEventListener('click', saveSidebarState);
-                    toggleBtn.addEventListener('click', function() {
-                        const sidebar = document.querySelector('.sidebar');
-                        if (sidebar) {
-                            sidebar.classList.toggle('collapsed');
-                            const isCollapsed = sidebar.classList.contains('collapsed');
-                            localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
-                        }
-                    });
-                }
-            }
-            document.addEventListener('DOMContentLoaded', function() {
-                restoreSidebarState();
-                bindToggleEvent();
-            });
-        })();
-    </script>
-    
-    <!-- 日期同步（从 sessionStorage 读取全局日期） -->
-    <script>
-        (function() {
-            const storedDate = sessionStorage.getItem('globalDate');
-            const dateSpan = document.querySelector('.date-display span');
-            if (storedDate && dateSpan) {
-                dateSpan.textContent = storedDate;
-            } else if (dateSpan) {
-                const now = new Date();
-                dateSpan.textContent = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-            }
-        })();
-    </script>
 </body>
 </html>
