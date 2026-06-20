@@ -6,6 +6,8 @@
     <title data-i18n="dashboard">Dashboard - AEL DWSS</title>
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js 已在 dashboard.js 中加载，但为了尽早引入，也在此加载 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <!-- 侧边栏将由 sidebar.js 动态插入 -->
@@ -50,7 +52,8 @@
                             <span data-i18n="site.diary">Site Diaries</span>
                         </div>
                         <div class="card-badge">
-                            <i class="fas fa-sync-alt"></i> <span data-i18n="updated.min.ago">Updated 2 min ago</span>
+                            <i class="fas fa-sync-alt"></i>
+                            <span id="diary-updated-time">Updated just now</span>
                         </div>
                     </div>
                     
@@ -61,37 +64,38 @@
                         </div>
                         <div class="kpi-row">
                             <div class="kpi-label" data-i18n="total.amount">Total</div>
-                            <div class="kpi-value">95</div>
+                            <div class="kpi-value" id="diary-total">0</div>
                         </div>
                         <div class="kpi-row">
                             <div class="kpi-label" data-i18n="closed">Closed</div>
-                            <div class="kpi-value">0</div>
+                            <div class="kpi-value" id="diary-closed">0</div>
                         </div>
                         <div class="kpi-row">
                             <div class="kpi-label" data-i18n="last.submitted">Last Submitted</div>
-                            <div class="kpi-value">15-Aug-25</div>
+                            <div class="kpi-value" id="diary-last-submitted">N/A</div>
                         </div>
                         <div class="kpi-row">
                             <div class="kpi-label" data-i18n="last.passed">Last Passed</div>
-                            <div class="kpi-value">34</div>
+                            <div class="kpi-value" id="diary-last-passed">N/A</div>
                         </div>
                         <div class="kpi-row">
                             <div class="kpi-label" data-i18n="pending.close">Pending Close</div>
-                            <div class="kpi-value">61</div>
+                            <div class="kpi-value" id="diary-pending-close">0</div>
                         </div>
                         <div class="kpi-row">
-                            <div class="kpi-label" data-i18n="percent.pending.close">% Pending Close</div>
-                            <div class="kpi-value">64%</div>
+                            <div class="kpi-label">% Closed</div>
+                            <div class="kpi-value" id="diary-closed-percent">0%</div>
                         </div>
                     </div>
                     
                     <div class="progress-section">
                         <div class="progress-container">
-                            <div class="progress-bar" style="width: 60%;"></div>
+                            <div class="progress-bar" id="diary-progress-bar" style="width: 0%;"></div>
                         </div>
                         <div class="progress-labels">
                             <span>0%</span>
                             <span>25%</span>
+                            <span>50%</span>
                             <span>75%</span>
                             <span>100%</span>
                         </div>
@@ -119,33 +123,33 @@
                         </div>
                         <div class="kpi-row">
                             <div class="kpi-label" data-i18n="total.amount">Total</div>
-                            <div class="kpi-value">233</div>
+                            <div class="kpi-value" id="inspection-total">0</div>
                         </div>
                         <div class="kpi-row">
                             <div class="kpi-label" data-i18n="closed">Closed</div>
-                            <div class="kpi-value">183</div>
+                            <div class="kpi-value" id="inspection-closed">0</div>
                         </div>
                         <div class="kpi-row">
                             <div class="kpi-label" data-i18n="last.submitted">Last Submitted</div>
-                            <div class="kpi-value">15-Aug-25</div>
+                            <div class="kpi-value" id="inspection-last-submitted">N/A</div>
                         </div>
                         <div class="kpi-row">
                             <div class="kpi-label" data-i18n="last.passed">Last Passed</div>
-                            <div class="kpi-value">11</div>
+                            <div class="kpi-value" id="inspection-last-passed">N/A</div>
                         </div>
                         <div class="kpi-row">
                             <div class="kpi-label" data-i18n="pending.close">Pending Close</div>
-                            <div class="kpi-value">39</div>
+                            <div class="kpi-value" id="inspection-pending-close">0</div>
                         </div>
                         <div class="kpi-row">
                             <div class="kpi-label" data-i18n="percent.pending.close">% Pending Close</div>
-                            <div class="kpi-value">21%</div>
+                            <div class="kpi-value" id="inspection-pending-percent">0%</div>
                         </div>
                     </div>
                     
                     <div class="progress-section">
                         <div class="progress-container">
-                            <div class="progress-bar" style="width: 28%;"></div>
+                            <div class="progress-bar" id="inspection-progress-bar" style="width: 0%;"></div>
                         </div>
                         <div class="progress-labels">
                             <span>0%</span>
@@ -177,33 +181,33 @@
                         </div>
                         <div class="kpi-row">
                             <div class="kpi-label" data-i18n="total.amount">Total</div>
-                            <div class="kpi-value">33</div>
+                            <div class="kpi-value" id="wage-total">0</div>
                         </div>
                         <div class="kpi-row">
                             <div class="kpi-label" data-i18n="closed">Closed</div>
-                            <div class="kpi-value">13</div>
+                            <div class="kpi-value" id="wage-closed">0</div>
                         </div>
                         <div class="kpi-row">
                             <div class="kpi-label" data-i18n="last.submitted">Last Submitted</div>
-                            <div class="kpi-value">15-Aug-25</div>
+                            <div class="kpi-value" id="wage-last-submitted">N/A</div>
                         </div>
                         <div class="kpi-row">
                             <div class="kpi-label" data-i18n="last.passed">Last Passed</div>
-                            <div class="kpi-value">11</div>
+                            <div class="kpi-value" id="wage-last-passed">N/A</div>
                         </div>
                         <div class="kpi-row">
                             <div class="kpi-label" data-i18n="pending.close">Pending Close</div>
-                            <div class="kpi-value">9</div>
+                            <div class="kpi-value" id="wage-pending-close">0</div>
                         </div>
                         <div class="kpi-row">
                             <div class="kpi-label" data-i18n="percent.pending.close">% Pending Close</div>
-                            <div class="kpi-value">27%</div>
+                            <div class="kpi-value" id="wage-pending-percent">0%</div>
                         </div>
                     </div>
                     
                     <div class="progress-section">
                         <div class="progress-container">
-                            <div class="progress-bar labour-wage" style="width: 35%;"></div>
+                            <div class="progress-bar labour-wage" id="wage-progress-bar" style="width: 0%;"></div>
                         </div>
                         <div class="progress-labels">
                             <span>0%</span>
@@ -219,7 +223,11 @@
                 <!-- Site Diary 趨勢圖 -->
                 <div class="trend-card">
                     <div class="chart-header">
-                        <h3><i class="fas fa-book"></i> <span data-i18n="site.diary">Site Diary</span> - 30 Day Trend</h3>
+                        <h3><i class="fas fa-book"></i> <span data-i18n="site.diary">Site Diary</span> - Monthly Submitted</h3>
+                        <div style="margin-top: 10px;">
+                            <label for="diary-year-select" style="font-weight: normal; margin-right: 8px;">Year:</label>
+                            <select id="diary-year-select" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc;"></select>
+                        </div>
                     </div>
                     <canvas id="siteDiaryChart"></canvas>
                 </div>
@@ -227,7 +235,11 @@
                 <!-- Safety Inspection 趨勢圖 -->
                 <div class="trend-card">
                     <div class="chart-header">
-                        <h3><i class="fas fa-clipboard-check"></i> <span data-i18n="safety.inspection">Safety Inspection</span> - 30 Day Trend</h3>
+                        <h3><i class="fas fa-clipboard-check"></i> <span data-i18n="safety.inspection">Safety Inspection</span> - Monthly Submitted</h3>
+                        <div style="margin-top: 10px;">
+                            <label for="inspection-year-select" style="font-weight: normal; margin-right: 8px;">Year:</label>
+                            <select id="inspection-year-select" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc;"></select>
+                        </div>
                     </div>
                     <canvas id="safetyInspectionChart"></canvas>
                 </div>
@@ -235,7 +247,11 @@
                 <!-- Labour Wage 趨勢圖 -->
                 <div class="trend-card">
                     <div class="chart-header">
-                        <h3><i class="fas fa-money-bill-wave"></i> <span data-i18n="labour.wage">Labour Wage</span> - 30 Day Trend</h3>
+                        <h3><i class="fas fa-money-bill-wave"></i> <span data-i18n="labour.wage">Labour Wage</span> - Monthly Submitted</h3>
+                        <div style="margin-top: 10px;">
+                            <label for="wage-year-select" style="font-weight: normal; margin-right: 8px;">Year:</label>
+                            <select id="wage-year-select" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc;"></select>
+                        </div>
                     </div>
                     <canvas id="labourWageChart"></canvas>
                 </div>
@@ -253,5 +269,482 @@
     <script src="scripts/app.js"></script>
     <script src="scripts/sidebar.js"></script>
     <script src="scripts/dashboard.js"></script>
+
+    <!-- 自定义脚本：更新所有卡片 KPI 及趋势图（真实数据） -->
+    <script>
+        (function() {
+            // ===== 通用工具：从 localStorage 读取数据 =====
+            function getData(key, defaultData) {
+                const stored = localStorage.getItem(key);
+                if (stored) {
+                    try { return JSON.parse(stored); } catch(e) { return defaultData; }
+                }
+                return defaultData;
+            }
+
+            // ===== 1. Site Diary 相关 =====
+            (function handleSiteDiary() {
+                // 实时更新时间
+                const pageLoadTime = Date.now();
+                const updateSpan = document.getElementById('diary-updated-time');
+                function updateTimeDisplay() {
+                    if (!updateSpan) return;
+                    const elapsed = Math.floor((Date.now() - pageLoadTime) / 60000);
+                    let text = '';
+                    if (elapsed < 1) text = 'Updated just now';
+                    else if (elapsed === 1) text = 'Updated 1 min ago';
+                    else text = `Updated ${elapsed} mins ago`;
+                    updateSpan.textContent = text;
+                }
+                updateTimeDisplay();
+                setInterval(updateTimeDisplay, 60000);
+
+                // 数据
+                const diaryDefault = [
+                    { id: "SD-2025-001", status: "draft", site: "Treatment Plant", date: "2025-08-15", submittedBy: "John Doe", type: "Contractor Documents" },
+                    { id: "SD-2025-002", status: "submitted-wsg", site: "Pipeline", date: "2025-08-14", submittedBy: "Jane Smith", type: "Contractor Documents" },
+                    { id: "SD-2025-003", status: "submitted-ig", site: "Reservoir", date: "2025-08-13", submittedBy: "Robert Johnson", type: "Sub Contractor Documents" },
+                    { id: "SD-2025-004", status: "closed", site: "Distribution", date: "2025-08-12", submittedBy: "Sarah Williams", type: "Sub Contractor Documents" },
+                    { id: "SD-2025-005", status: "reopen", site: "Pump Station", date: "2025-08-11", submittedBy: "Michael Brown", type: "Contractor Documents" },
+                    { id: "SD-2025-006", status: "cancelled", site: "Treatment Plant", date: "2025-08-10", submittedBy: "David Wilson", type: "Contractor Documents" },
+                    { id: "SD-2025-007", status: "draft", site: "Pipeline", date: "2025-08-09", submittedBy: "Emma Davis", type: "Sub Contractor Documents" },
+                    { id: "SD-2025-008", status: "submitted-wsg", site: "Reservoir", date: "2025-08-08", submittedBy: "James Miller", type: "Contractor Documents" },
+                    { id: "SD-2025-009", status: "closed", site: "Distribution", date: "2025-08-07", submittedBy: "Olivia Garcia", type: "Sub Contractor Documents" },
+                    { id: "SD-2025-010", status: "reopen", site: "Pump Station", date: "2025-08-06", submittedBy: "William Rodriguez", type: "Contractor Documents" }
+                ];
+                let diaryData = getData('siteDiaryData', diaryDefault);
+
+                // KPI 更新
+                function updateDiaryKPI() {
+                    const total = diaryData.length;
+                    const closed = diaryData.filter(d => d.status === 'closed').length;
+                    const pendingClose = total - closed;
+                    const closedPercent = total > 0 ? Math.round((closed / total) * 100) : 0;
+                    let lastSubmitted = '', lastPassed = '';
+                    if (diaryData.length > 0) {
+                        const sorted = [...diaryData].sort((a,b) => new Date(b.date) - new Date(a.date));
+                        const latest = sorted[0];
+                        if (latest && latest.date) {
+                            const d = new Date(latest.date);
+                            const day = d.getDate().toString().padStart(2,'0');
+                            const month = d.toLocaleString('en-US',{month:'short'});
+                            const year = d.getFullYear().toString().slice(-2);
+                            lastSubmitted = `${day}-${month}-${year}`;
+                        }
+                        const closedSorted = sorted.filter(d => d.status === 'closed');
+                        if (closedSorted.length > 0) {
+                            const latestClosed = closedSorted[0];
+                            if (latestClosed && latestClosed.date) {
+                                const d = new Date(latestClosed.date);
+                                const day = d.getDate().toString().padStart(2,'0');
+                                const month = d.toLocaleString('en-US',{month:'short'});
+                                const year = d.getFullYear().toString().slice(-2);
+                                lastPassed = `${day}-${month}-${year}`;
+                            }
+                        } else { lastPassed = 'N/A'; }
+                    }
+                    document.getElementById('diary-total').textContent = total;
+                    document.getElementById('diary-closed').textContent = closed;
+                    document.getElementById('diary-pending-close').textContent = pendingClose;
+                    document.getElementById('diary-closed-percent').textContent = closedPercent + '%';
+                    document.getElementById('diary-last-submitted').textContent = lastSubmitted || 'N/A';
+                    document.getElementById('diary-last-passed').textContent = lastPassed || 'N/A';
+                    const bar = document.getElementById('diary-progress-bar');
+                    if (bar) { bar.style.setProperty('width', closedPercent + '%', 'important'); void bar.offsetWidth; }
+                }
+                updateDiaryKPI();
+
+                // 图表
+                let diaryChart = null;
+                function getDiaryYears() {
+                    const years = new Set();
+                    diaryData.forEach(r => { if (r.date) { const y = r.date.split('-')[0]; if (y) years.add(y); } });
+                    if (years.size === 0) years.add(new Date().getFullYear().toString());
+                    return Array.from(years).sort();
+                }
+                function populateDiaryYearSelector() {
+                    const sel = document.getElementById('diary-year-select');
+                    if (!sel) return;
+                    const years = getDiaryYears();
+                    const currentYear = new Date().getFullYear().toString();
+                    sel.innerHTML = '';
+                    years.forEach(y => {
+                        const opt = document.createElement('option');
+                        opt.value = y; opt.textContent = y;
+                        if (y === currentYear) opt.selected = true;
+                        sel.appendChild(opt);
+                    });
+                    if (!sel.value && years.length > 0) sel.value = years[0];
+                }
+                function renderDiaryChart(year) {
+                    const canvas = document.getElementById('siteDiaryChart');
+                    if (!canvas) return;
+                    const monthMap = {};
+                    for (let m=1; m<=12; m++) monthMap[String(m).padStart(2,'0')] = 0;
+                    diaryData.forEach(r => {
+                        if (r.date) {
+                            const parts = r.date.split('-');
+                            if (parts.length===3 && parts[0]===year) {
+                                const mon = parts[1];
+                                if (monthMap[mon] !== undefined) monthMap[mon]++;
+                            }
+                        }
+                    });
+                    const labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                    const data = labels.map((_, idx) => {
+                        const key = String(idx+1).padStart(2,'0');
+                        return monthMap[key] || 0;
+                    });
+                    if (diaryChart) { diaryChart.destroy(); diaryChart = null; }
+                    const ctx = canvas.getContext('2d');
+                    diaryChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Submitted',
+                                data: data,
+                                borderColor: '#3498db',
+                                backgroundColor: 'rgba(52,152,219,0.1)',
+                                tension: 0.3,
+                                fill: true,
+                                pointBackgroundColor: '#3498db'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { position: 'top' },
+                                tooltip: { mode: 'index', intersect: false, callbacks: { label: ctx => `Submitted: ${ctx.parsed.y}` } }
+                            },
+                            scales: {
+                                y: { beginAtZero: true, max: 20, title: { display: true, text: 'Number of Diaries' } }
+                            }
+                        }
+                    });
+                }
+                function initDiaryChart() {
+                    populateDiaryYearSelector();
+                    const sel = document.getElementById('diary-year-select');
+                    if (sel) {
+                        renderDiaryChart(sel.value);
+                        sel.addEventListener('change', function() { renderDiaryChart(this.value); });
+                    }
+                }
+                function waitForDiaryChart() {
+                    if (typeof Chart === 'undefined') { setTimeout(waitForDiaryChart, 200); return; }
+                    const existing = Chart.getChart('siteDiaryChart');
+                    if (existing) existing.destroy();
+                    initDiaryChart();
+                }
+                waitForDiaryChart();
+                [1000, 3000, 5000].forEach(delay => {
+                    setTimeout(() => {
+                        const existing = Chart.getChart('siteDiaryChart');
+                        if (existing) existing.destroy();
+                        const sel = document.getElementById('diary-year-select');
+                        if (sel) renderDiaryChart(sel.value);
+                    }, delay);
+                });
+            })();
+
+            // ===== 2. Safety Inspection 相关（KPI + 图表） =====
+            (function handleSafetyInspection() {
+                const inspectionDefault = [
+                    { id: "INSP-2025-1", status: "draft", statusText: "Draft", site: "Treatment Plant", date: "2025-09-15", inspector: "John Doe" },
+                    { id: "INSP-2025-2", status: "reopen", statusText: "Reopen", site: "Pipeline", date: "2025-09-14", inspector: "Jane Smith" },
+                    { id: "INSP-2025-3", status: "closed", statusText: "Closed", site: "Reservoir", date: "2025-09-13", inspector: "Robert Johnson" }
+                ];
+                let inspectionData = getData('inspectionData', inspectionDefault);
+
+                // KPI 更新
+                function updateInspectionKPI() {
+                    const total = inspectionData.length;
+                    const closed = inspectionData.filter(d => d.status === 'closed').length;
+                    const pendingClose = total - closed;
+                    const pendingPercent = total > 0 ? Math.round((pendingClose / total) * 100) : 0;
+                    let lastSubmitted = '', lastPassed = '';
+                    if (inspectionData.length > 0) {
+                        const sorted = [...inspectionData].sort((a,b) => new Date(b.date) - new Date(a.date));
+                        const latest = sorted[0];
+                        if (latest && latest.date) {
+                            const d = new Date(latest.date);
+                            const day = d.getDate().toString().padStart(2,'0');
+                            const month = d.toLocaleString('en-US',{month:'short'});
+                            const year = d.getFullYear().toString().slice(-2);
+                            lastSubmitted = `${day}-${month}-${year}`;
+                        }
+                        const closedSorted = sorted.filter(d => d.status === 'closed');
+                        if (closedSorted.length > 0) {
+                            const latestClosed = closedSorted[0];
+                            if (latestClosed && latestClosed.date) {
+                                const d = new Date(latestClosed.date);
+                                const day = d.getDate().toString().padStart(2,'0');
+                                const month = d.toLocaleString('en-US',{month:'short'});
+                                const year = d.getFullYear().toString().slice(-2);
+                                lastPassed = `${day}-${month}-${year}`;
+                            }
+                        } else { lastPassed = 'N/A'; }
+                    }
+                    document.getElementById('inspection-total').textContent = total;
+                    document.getElementById('inspection-closed').textContent = closed;
+                    document.getElementById('inspection-pending-close').textContent = pendingClose;
+                    document.getElementById('inspection-pending-percent').textContent = pendingPercent + '%';
+                    document.getElementById('inspection-last-submitted').textContent = lastSubmitted || 'N/A';
+                    document.getElementById('inspection-last-passed').textContent = lastPassed || 'N/A';
+                    const bar = document.getElementById('inspection-progress-bar');
+                    if (bar) {
+                        const closedPercent = total > 0 ? Math.round((closed / total) * 100) : 0;
+                        bar.style.setProperty('width', closedPercent + '%', 'important');
+                        void bar.offsetWidth;
+                    }
+                }
+                updateInspectionKPI();
+
+                // 图表
+                let inspectionChart = null;
+                function getInspectionYears() {
+                    const years = new Set();
+                    inspectionData.forEach(r => { if (r.date) { const y = r.date.split('-')[0]; if (y) years.add(y); } });
+                    if (years.size === 0) years.add(new Date().getFullYear().toString());
+                    return Array.from(years).sort();
+                }
+                function populateInspectionYearSelector() {
+                    const sel = document.getElementById('inspection-year-select');
+                    if (!sel) return;
+                    const years = getInspectionYears();
+                    const currentYear = new Date().getFullYear().toString();
+                    sel.innerHTML = '';
+                    years.forEach(y => {
+                        const opt = document.createElement('option');
+                        opt.value = y; opt.textContent = y;
+                        if (y === currentYear) opt.selected = true;
+                        sel.appendChild(opt);
+                    });
+                    if (!sel.value && years.length > 0) sel.value = years[0];
+                }
+                function renderInspectionChart(year) {
+                    const canvas = document.getElementById('safetyInspectionChart');
+                    if (!canvas) return;
+                    const monthMap = {};
+                    for (let m=1; m<=12; m++) monthMap[String(m).padStart(2,'0')] = 0;
+                    inspectionData.forEach(r => {
+                        if (r.date) {
+                            const parts = r.date.split('-');
+                            if (parts.length===3 && parts[0]===year) {
+                                const mon = parts[1];
+                                if (monthMap[mon] !== undefined) monthMap[mon]++;
+                            }
+                        }
+                    });
+                    const labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                    const data = labels.map((_, idx) => {
+                        const key = String(idx+1).padStart(2,'0');
+                        return monthMap[key] || 0;
+                    });
+                    if (inspectionChart) { inspectionChart.destroy(); inspectionChart = null; }
+                    const ctx = canvas.getContext('2d');
+                    inspectionChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Submitted',
+                                data: data,
+                                borderColor: '#e74c3c',
+                                backgroundColor: 'rgba(231,76,60,0.1)',
+                                tension: 0.3,
+                                fill: true,
+                                pointBackgroundColor: '#e74c3c'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { position: 'top' },
+                                tooltip: { mode: 'index', intersect: false, callbacks: { label: ctx => `Submitted: ${ctx.parsed.y}` } }
+                            },
+                            scales: {
+                                y: { beginAtZero: true, max: 20, title: { display: true, text: 'Number of Inspections' } }
+                            }
+                        }
+                    });
+                }
+                function initInspectionChart() {
+                    populateInspectionYearSelector();
+                    const sel = document.getElementById('inspection-year-select');
+                    if (sel) {
+                        renderInspectionChart(sel.value);
+                        sel.addEventListener('change', function() { renderInspectionChart(this.value); });
+                    }
+                }
+                function waitForInspectionChart() {
+                    if (typeof Chart === 'undefined') { setTimeout(waitForInspectionChart, 200); return; }
+                    const existing = Chart.getChart('safetyInspectionChart');
+                    if (existing) existing.destroy();
+                    initInspectionChart();
+                }
+                waitForInspectionChart();
+                [1000, 3000, 5000].forEach(delay => {
+                    setTimeout(() => {
+                        const existing = Chart.getChart('safetyInspectionChart');
+                        if (existing) existing.destroy();
+                        const sel = document.getElementById('inspection-year-select');
+                        if (sel) renderInspectionChart(sel.value);
+                    }, delay);
+                });
+            })();
+
+            // ===== 3. Labour Wage 相关（KPI + 图表） =====
+            (function handleLabourWage() {
+                const wageDefault = [
+                    { id: "GF-527A-1", type: "GF527A", typeText: "GF527A - Return on Construction Site Employment", status: "draft", statusText: "Draft", site: "Treatment Plant", periodStart: "2025-09-01", periodEnd: "2025-09-07" },
+                    { id: "GF527-2003-LW-1", type: "GF527-2003", typeText: "GF527 (2003) - Labour Wage", status: "submitted", statusText: "Submitted", site: "Pipeline", periodStart: "2025-09-01", periodEnd: "2025-09-15" },
+                    { id: "GF527-2017-LW-1", type: "GF527-2017", typeText: "GF527 (2017) - Labour Wage", status: "endorsed", statusText: "Endorsed", site: "Reservoir", periodStart: "2025-08-01", periodEnd: "2025-08-31" },
+                    { id: "GF-527A-2", type: "GF527A", typeText: "GF527A - Return on Construction Site Employment", status: "confirm", statusText: "Client's Site Representative to Confirm", site: "Distribution", periodStart: "2025-09-10", periodEnd: "2025-09-16" },
+                    { id: "GF527-2003-LW-2", type: "GF527-2003", typeText: "GF527 (2003) - Labour Wage", status: "double-check", statusText: "Contractor/Contractor's Agent Double Check", site: "Pump Station", periodStart: "2025-09-05", periodEnd: "2025-09-11" }
+                ];
+                let wageData = getData('wageData', wageDefault);
+
+                // KPI 更新：定义 closed 状态为 "endorsed"
+                function updateWageKPI() {
+                    const total = wageData.length;
+                    const closed = wageData.filter(d => d.status === 'endorsed').length;
+                    const pendingClose = total - closed;
+                    const pendingPercent = total > 0 ? Math.round((pendingClose / total) * 100) : 0;
+                    let lastSubmitted = '', lastPassed = '';
+                    if (wageData.length > 0) {
+                        const sorted = [...wageData].sort((a,b) => new Date(b.periodStart) - new Date(a.periodStart));
+                        const latest = sorted[0];
+                        if (latest && latest.periodStart) {
+                            const d = new Date(latest.periodStart);
+                            const day = d.getDate().toString().padStart(2,'0');
+                            const month = d.toLocaleString('en-US',{month:'short'});
+                            const year = d.getFullYear().toString().slice(-2);
+                            lastSubmitted = `${day}-${month}-${year}`;
+                        }
+                        const closedSorted = sorted.filter(d => d.status === 'endorsed');
+                        if (closedSorted.length > 0) {
+                            const latestClosed = closedSorted[0];
+                            if (latestClosed && latestClosed.periodStart) {
+                                const d = new Date(latestClosed.periodStart);
+                                const day = d.getDate().toString().padStart(2,'0');
+                                const month = d.toLocaleString('en-US',{month:'short'});
+                                const year = d.getFullYear().toString().slice(-2);
+                                lastPassed = `${day}-${month}-${year}`;
+                            }
+                        } else { lastPassed = 'N/A'; }
+                    }
+                    document.getElementById('wage-total').textContent = total;
+                    document.getElementById('wage-closed').textContent = closed;
+                    document.getElementById('wage-pending-close').textContent = pendingClose;
+                    document.getElementById('wage-pending-percent').textContent = pendingPercent + '%';
+                    document.getElementById('wage-last-submitted').textContent = lastSubmitted || 'N/A';
+                    document.getElementById('wage-last-passed').textContent = lastPassed || 'N/A';
+                    const bar = document.getElementById('wage-progress-bar');
+                    if (bar) {
+                        const closedPercent = total > 0 ? Math.round((closed / total) * 100) : 0;
+                        bar.style.setProperty('width', closedPercent + '%', 'important');
+                        void bar.offsetWidth;
+                    }
+                }
+                updateWageKPI();
+
+                // 图表
+                let wageChart = null;
+                function getWageYears() {
+                    const years = new Set();
+                    wageData.forEach(r => { if (r.periodStart) { const y = r.periodStart.split('-')[0]; if (y) years.add(y); } });
+                    if (years.size === 0) years.add(new Date().getFullYear().toString());
+                    return Array.from(years).sort();
+                }
+                function populateWageYearSelector() {
+                    const sel = document.getElementById('wage-year-select');
+                    if (!sel) return;
+                    const years = getWageYears();
+                    const currentYear = new Date().getFullYear().toString();
+                    sel.innerHTML = '';
+                    years.forEach(y => {
+                        const opt = document.createElement('option');
+                        opt.value = y; opt.textContent = y;
+                        if (y === currentYear) opt.selected = true;
+                        sel.appendChild(opt);
+                    });
+                    if (!sel.value && years.length > 0) sel.value = years[0];
+                }
+                function renderWageChart(year) {
+                    const canvas = document.getElementById('labourWageChart');
+                    if (!canvas) return;
+                    const monthMap = {};
+                    for (let m=1; m<=12; m++) monthMap[String(m).padStart(2,'0')] = 0;
+                    wageData.forEach(r => {
+                        if (r.periodStart) {
+                            const parts = r.periodStart.split('-');
+                            if (parts.length===3 && parts[0]===year) {
+                                const mon = parts[1];
+                                if (monthMap[mon] !== undefined) monthMap[mon]++;
+                            }
+                        }
+                    });
+                    const labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                    const data = labels.map((_, idx) => {
+                        const key = String(idx+1).padStart(2,'0');
+                        return monthMap[key] || 0;
+                    });
+                    if (wageChart) { wageChart.destroy(); wageChart = null; }
+                    const ctx = canvas.getContext('2d');
+                    wageChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Submitted',
+                                data: data,
+                                borderColor: '#9b59b6',
+                                backgroundColor: 'rgba(155,89,182,0.1)',
+                                tension: 0.3,
+                                fill: true,
+                                pointBackgroundColor: '#9b59b6'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { position: 'top' },
+                                tooltip: { mode: 'index', intersect: false, callbacks: { label: ctx => `Submitted: ${ctx.parsed.y}` } }
+                            },
+                            scales: {
+                                y: { beginAtZero: true, max: 20, title: { display: true, text: 'Number of Records' } }
+                            }
+                        }
+                    });
+                }
+                function initWageChart() {
+                    populateWageYearSelector();
+                    const sel = document.getElementById('wage-year-select');
+                    if (sel) {
+                        renderWageChart(sel.value);
+                        sel.addEventListener('change', function() { renderWageChart(this.value); });
+                    }
+                }
+                function waitForWageChart() {
+                    if (typeof Chart === 'undefined') { setTimeout(waitForWageChart, 200); return; }
+                    const existing = Chart.getChart('labourWageChart');
+                    if (existing) existing.destroy();
+                    initWageChart();
+                }
+                waitForWageChart();
+                [1000, 3000, 5000].forEach(delay => {
+                    setTimeout(() => {
+                        const existing = Chart.getChart('labourWageChart');
+                        if (existing) existing.destroy();
+                        const sel = document.getElementById('wage-year-select');
+                        if (sel) renderWageChart(sel.value);
+                    }, delay);
+                });
+            })();
+
+        })();
+    </script>
 </body>
 </html>
