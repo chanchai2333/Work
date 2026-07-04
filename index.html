@@ -6,7 +6,6 @@
     <title data-i18n="dashboard">Dashboard - AEL DWSS</title>
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Chart.js 已在 dashboard.js 中加载，但为了尽早引入，也在此加载 -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -27,13 +26,6 @@
                     </button>
                 </div>
             </div>
-        </div>
-        
-        <div class="search-buttons">
-            <form id="search-form" action="#" method="get">
-                <input type="text" name="search" data-i18n-placeholder="search.placeholder" placeholder="Search sites, reports, or data..." />
-                <button type="submit" data-i18n="search">Search</button>
-            </form>
         </div>
         
         <div class="dashboard">
@@ -112,7 +104,8 @@
                             <span data-i18n="safety.inspection">Safety Inspection</span>
                         </div>
                         <div class="card-badge">
-                            <i class="fas fa-sync-alt"></i> <span data-i18n="updated.min.ago">Updated 5 min ago</span>
+                            <i class="fas fa-sync-alt"></i>
+                            <span id="inspection-updated-time">Updated just now</span>
                         </div>
                     </div>
                     
@@ -142,8 +135,8 @@
                             <div class="kpi-value" id="inspection-pending-close">0</div>
                         </div>
                         <div class="kpi-row">
-                            <div class="kpi-label" data-i18n="percent.pending.close">% Pending Close</div>
-                            <div class="kpi-value" id="inspection-pending-percent">0%</div>
+                            <div class="kpi-label">% Closed</div>
+                            <div class="kpi-value" id="inspection-closed-percent">0%</div>
                         </div>
                     </div>
                     
@@ -154,6 +147,7 @@
                         <div class="progress-labels">
                             <span>0%</span>
                             <span>25%</span>
+                            <span>50%</span>
                             <span>75%</span>
                             <span>100%</span>
                         </div>
@@ -170,7 +164,8 @@
                             <span data-i18n="labour.wage">Labour Wage</span>
                         </div>
                         <div class="card-badge">
-                            <i class="fas fa-sync-alt"></i> <span data-i18n="updated.min.ago">Updated 5 min ago</span>
+                            <i class="fas fa-sync-alt"></i>
+                            <span id="wage-updated-time">Updated just now</span>
                         </div>
                     </div>
                     
@@ -200,8 +195,8 @@
                             <div class="kpi-value" id="wage-pending-close">0</div>
                         </div>
                         <div class="kpi-row">
-                            <div class="kpi-label" data-i18n="percent.pending.close">% Pending Close</div>
-                            <div class="kpi-value" id="wage-pending-percent">0%</div>
+                            <div class="kpi-label">% Closed</div>
+                            <div class="kpi-value" id="wage-closed-percent">0%</div>
                         </div>
                     </div>
                     
@@ -212,6 +207,7 @@
                         <div class="progress-labels">
                             <span>0%</span>
                             <span>25%</span>
+                            <span>50%</span>
                             <span>75%</span>
                             <span>100%</span>
                         </div>
@@ -264,7 +260,6 @@
         </footer>
     </div> <!-- 关闭main-content div -->
     
-    <!-- 引入语言配置文件 -->
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
     <script src="scripts/sidebar.js"></script>
@@ -273,7 +268,7 @@
     <!-- 自定义脚本：更新所有卡片 KPI 及趋势图（真实数据） -->
     <script>
         (function() {
-            // ===== 通用工具：从 localStorage 读取数据 =====
+            // ===== 通用工具 =====
             function getData(key, defaultData) {
                 const stored = localStorage.getItem(key);
                 if (stored) {
@@ -282,7 +277,7 @@
                 return defaultData;
             }
 
-            // ===== 1. Site Diary 相关 =====
+            // ===== 1. Site Diary =====
             (function handleSiteDiary() {
                 // 实时更新时间
                 const pageLoadTime = Date.now();
@@ -358,7 +353,7 @@
                 let diaryChart = null;
                 function getDiaryYears() {
                     const years = new Set();
-                    diaryData.forEach(r => { if (r.date) { const y = r.date.split('-')[0]; if (y) years.add(y); } });
+                    diaryData.forEach(r => { if (r.date) { const y = new Date(r.date).getFullYear(); if (!isNaN(y)) years.add(String(y)); } });
                     if (years.size === 0) years.add(new Date().getFullYear().toString());
                     return Array.from(years).sort();
                 }
@@ -383,9 +378,10 @@
                     for (let m=1; m<=12; m++) monthMap[String(m).padStart(2,'0')] = 0;
                     diaryData.forEach(r => {
                         if (r.date) {
-                            const parts = r.date.split('-');
-                            if (parts.length===3 && parts[0]===year) {
-                                const mon = parts[1];
+                            const d = new Date(r.date);
+                            const y = d.getFullYear();
+                            if (String(y) === year) {
+                                const mon = String(d.getMonth() + 1).padStart(2,'0');
                                 if (monthMap[mon] !== undefined) monthMap[mon]++;
                             }
                         }
@@ -448,21 +444,35 @@
                 });
             })();
 
-            // ===== 2. Safety Inspection 相关（KPI + 图表） =====
+            // ===== 2. Safety Inspection =====
             (function handleSafetyInspection() {
+                // 实时更新时间
+                const pageLoadTime = Date.now();
+                const updateSpan = document.getElementById('inspection-updated-time');
+                function updateTimeDisplay() {
+                    if (!updateSpan) return;
+                    const elapsed = Math.floor((Date.now() - pageLoadTime) / 60000);
+                    let text = '';
+                    if (elapsed < 1) text = 'Updated just now';
+                    else if (elapsed === 1) text = 'Updated 1 min ago';
+                    else text = `Updated ${elapsed} mins ago`;
+                    updateSpan.textContent = text;
+                }
+                updateTimeDisplay();
+                setInterval(updateTimeDisplay, 60000);
+
                 const inspectionDefault = [
-                    { id: "INSP-2025-1", status: "draft", statusText: "Draft", site: "Treatment Plant", date: "2025-09-15", inspector: "John Doe" },
-                    { id: "INSP-2025-2", status: "reopen", statusText: "Reopen", site: "Pipeline", date: "2025-09-14", inspector: "Jane Smith" },
-                    { id: "INSP-2025-3", status: "closed", statusText: "Closed", site: "Reservoir", date: "2025-09-13", inspector: "Robert Johnson" }
+                    { id: "INSP-2025-1", status: "draft", statusText: "Draft", site: "Treatment Plant", date: "15-Sep-2025", inspector: "John Doe" },
+                    { id: "INSP-2025-2", status: "reopen", statusText: "Reopen", site: "Pipeline", date: "14-Sep-2025", inspector: "Jane Smith" },
+                    { id: "INSP-2025-3", status: "closed", statusText: "Closed", site: "Reservoir", date: "13-Sep-2025", inspector: "Robert Johnson" }
                 ];
                 let inspectionData = getData('inspectionData', inspectionDefault);
 
-                // KPI 更新
                 function updateInspectionKPI() {
                     const total = inspectionData.length;
                     const closed = inspectionData.filter(d => d.status === 'closed').length;
                     const pendingClose = total - closed;
-                    const pendingPercent = total > 0 ? Math.round((pendingClose / total) * 100) : 0;
+                    const closedPercent = total > 0 ? Math.round((closed / total) * 100) : 0;
                     let lastSubmitted = '', lastPassed = '';
                     if (inspectionData.length > 0) {
                         const sorted = [...inspectionData].sort((a,b) => new Date(b.date) - new Date(a.date));
@@ -489,12 +499,11 @@
                     document.getElementById('inspection-total').textContent = total;
                     document.getElementById('inspection-closed').textContent = closed;
                     document.getElementById('inspection-pending-close').textContent = pendingClose;
-                    document.getElementById('inspection-pending-percent').textContent = pendingPercent + '%';
+                    document.getElementById('inspection-closed-percent').textContent = closedPercent + '%';
                     document.getElementById('inspection-last-submitted').textContent = lastSubmitted || 'N/A';
                     document.getElementById('inspection-last-passed').textContent = lastPassed || 'N/A';
                     const bar = document.getElementById('inspection-progress-bar');
                     if (bar) {
-                        const closedPercent = total > 0 ? Math.round((closed / total) * 100) : 0;
                         bar.style.setProperty('width', closedPercent + '%', 'important');
                         void bar.offsetWidth;
                     }
@@ -505,7 +514,15 @@
                 let inspectionChart = null;
                 function getInspectionYears() {
                     const years = new Set();
-                    inspectionData.forEach(r => { if (r.date) { const y = r.date.split('-')[0]; if (y) years.add(y); } });
+                    inspectionData.forEach(r => {
+                        if (r.date) {
+                            const d = new Date(r.date);
+                            if (!isNaN(d)) {
+                                const y = d.getFullYear();
+                                if (y) years.add(String(y));
+                            }
+                        }
+                    });
                     if (years.size === 0) years.add(new Date().getFullYear().toString());
                     return Array.from(years).sort();
                 }
@@ -530,10 +547,13 @@
                     for (let m=1; m<=12; m++) monthMap[String(m).padStart(2,'0')] = 0;
                     inspectionData.forEach(r => {
                         if (r.date) {
-                            const parts = r.date.split('-');
-                            if (parts.length===3 && parts[0]===year) {
-                                const mon = parts[1];
-                                if (monthMap[mon] !== undefined) monthMap[mon]++;
+                            const d = new Date(r.date);
+                            if (!isNaN(d)) {
+                                const y = d.getFullYear();
+                                if (String(y) === year) {
+                                    const mon = String(d.getMonth() + 1).padStart(2,'0');
+                                    if (monthMap[mon] !== undefined) monthMap[mon]++;
+                                }
                             }
                         }
                     });
@@ -595,8 +615,23 @@
                 });
             })();
 
-            // ===== 3. Labour Wage 相关（KPI + 图表） =====
+            // ===== 3. Labour Wage =====
             (function handleLabourWage() {
+                // 实时更新时间
+                const pageLoadTime = Date.now();
+                const updateSpan = document.getElementById('wage-updated-time');
+                function updateTimeDisplay() {
+                    if (!updateSpan) return;
+                    const elapsed = Math.floor((Date.now() - pageLoadTime) / 60000);
+                    let text = '';
+                    if (elapsed < 1) text = 'Updated just now';
+                    else if (elapsed === 1) text = 'Updated 1 min ago';
+                    else text = `Updated ${elapsed} mins ago`;
+                    updateSpan.textContent = text;
+                }
+                updateTimeDisplay();
+                setInterval(updateTimeDisplay, 60000);
+
                 const wageDefault = [
                     { id: "GF-527A-1", type: "GF527A", typeText: "GF527A - Return on Construction Site Employment", status: "draft", statusText: "Draft", site: "Treatment Plant", periodStart: "2025-09-01", periodEnd: "2025-09-07" },
                     { id: "GF527-2003-LW-1", type: "GF527-2003", typeText: "GF527 (2003) - Labour Wage", status: "submitted", statusText: "Submitted", site: "Pipeline", periodStart: "2025-09-01", periodEnd: "2025-09-15" },
@@ -606,12 +641,11 @@
                 ];
                 let wageData = getData('wageData', wageDefault);
 
-                // KPI 更新：定义 closed 状态为 "endorsed"
                 function updateWageKPI() {
                     const total = wageData.length;
                     const closed = wageData.filter(d => d.status === 'endorsed').length;
                     const pendingClose = total - closed;
-                    const pendingPercent = total > 0 ? Math.round((pendingClose / total) * 100) : 0;
+                    const closedPercent = total > 0 ? Math.round((closed / total) * 100) : 0;
                     let lastSubmitted = '', lastPassed = '';
                     if (wageData.length > 0) {
                         const sorted = [...wageData].sort((a,b) => new Date(b.periodStart) - new Date(a.periodStart));
@@ -638,12 +672,11 @@
                     document.getElementById('wage-total').textContent = total;
                     document.getElementById('wage-closed').textContent = closed;
                     document.getElementById('wage-pending-close').textContent = pendingClose;
-                    document.getElementById('wage-pending-percent').textContent = pendingPercent + '%';
+                    document.getElementById('wage-closed-percent').textContent = closedPercent + '%';
                     document.getElementById('wage-last-submitted').textContent = lastSubmitted || 'N/A';
                     document.getElementById('wage-last-passed').textContent = lastPassed || 'N/A';
                     const bar = document.getElementById('wage-progress-bar');
                     if (bar) {
-                        const closedPercent = total > 0 ? Math.round((closed / total) * 100) : 0;
                         bar.style.setProperty('width', closedPercent + '%', 'important');
                         void bar.offsetWidth;
                     }

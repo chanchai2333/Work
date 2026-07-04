@@ -7,21 +7,85 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles/main.css">
     <script src="scripts/theme-config.js"></script>
+    <!-- 引入 PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        // 设置 worker 源
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <style>
+        .pdf-viewer-container {
+            background: #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 500px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #pdf-canvas {
+            max-width: 100%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            background: white;
+        }
+        .pdf-controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .pdf-controls button {
+            padding: 6px 16px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+        .pdf-controls button:hover {
+            background: #2980b9;
+        }
+        .pdf-controls span {
+            font-weight: 500;
+        }
+        .pdf-loading {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        .pdf-error {
+            color: #e74c3c;
+            font-size: 1.1rem;
+        }
+        .no-pdf-message {
+            text-align: center;
+            color: #888;
+        }
+        .no-pdf-message i {
+            font-size: 48px;
+            color: #ccc;
+            margin-bottom: 16px;
+        }
+        .document-actions .btn-print {
+            background: #27ae60;
+            color: white;
+        }
+        .document-actions .btn-print:hover {
+            background: #219653;
+        }
+    </style>
 </head>
 <body>
     <!-- 側邊欄 -->
     <div class="sidebar">
         <div class="logo">
-            <div class="logo-icon">
-                <i class="fas fa-water"></i>
-            </div>
+            <div class="logo-icon"><i class="fas fa-water"></i></div>
             <h2 data-i18n="platform">AEL DWSS</h2>
         </div>
-
-        <button class="toggle-btn">
-            <i class="fas fa-chevron-left"></i>
-        </button>
-
+        <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
         <ul class="menu">
             <li><a href="index.html"><i class="fas fa-home"></i><span class="menu-text" data-i18n="dashboard">Dashboard</span></a></li>
             <li><a href="sitediary.html"><i class="fas fa-book"></i><span class="menu-text" data-i18n="site.diary">Site Diary</span></a></li>
@@ -39,14 +103,8 @@
             <h1 data-i18n="site.diary">Site Diary</h1>
             <div class="header-controls">
                 <div class="user-date-row">
-                    <div class="date-display">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span id="current-date">September 17, 2025</span>
-                    </div>
-                    <button class="user-btn">
-                        <i class="fas fa-user"></i>
-                        <span data-i18n="user.name">John Doe</span>
-                    </button>
+                    <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
+                    <button class="user-btn"><i class="fas fa-user"></i><span data-i18n="user.name">John Doe</span></button>
                 </div>
             </div>
         </div>
@@ -59,9 +117,15 @@
                     <span class="doc-status" id="docStatus">Draft</span>
                 </h2>
                 <div class="document-actions">
-                    <button class="btn" id="export-pdf-btn"><i class="fas fa-file-pdf"></i><span data-i18n="export.pdf">Export PDF</span></button>
-                    <button class="btn" id="print-btn"><i class="fas fa-print"></i><span data-i18n="print">Print</span></button>
-                    <button class="btn" id="back-to-diary-btn"><i class="fas fa-arrow-left"></i><span data-i18n="back.to.diary">Back to Diary</span></button>
+                    <!-- 新增 Print PDF 按钮 -->
+                    <button class="btn btn-print" id="print-pdf-btn" style="display:none;">
+                        <i class="fas fa-print"></i>
+                        <span>Print PDF</span>
+                    </button>
+                    <button class="btn" id="back-to-diary-btn">
+                        <i class="fas fa-arrow-left"></i>
+                        <span data-i18n="back.to.diary">Back to Diary</span>
+                    </button>
                 </div>
             </div>
             
@@ -72,12 +136,20 @@
                 <div class="meta-item"><span class="meta-label" data-i18n="submitted.by">Submitted By:</span><span class="meta-value" id="docAuthor">N/A</span></div>
             </div>
             
+            <!-- PDF 渲染区 -->
             <div class="pdf-viewer-container">
-                <iframe id="pdf-viewer" src="" width="100%" height="600px" style="border: 1px solid #ddd;"></iframe>
-                <div class="no-pdf-message" id="no-pdf-message" style="display: none;">
-                    <i class="fas fa-file-pdf" style="font-size: 48px; color: #ccc; margin-bottom: 16px;"></i>
-                    <p data-i18n="no.pdf.available">No PDF document available for this diary record</p>
-                    <p data-i18n="pdf.preview.will.appear">The PDF preview will appear here when available</p>
+                <canvas id="pdf-canvas"></canvas>
+                <div id="pdf-loading" class="pdf-loading"><i class="fas fa-spinner fa-spin"></i> Loading PDF...</div>
+                <div id="pdf-error" class="pdf-error" style="display:none;"><i class="fas fa-exclamation-circle"></i> Failed to load PDF document.</div>
+                <div id="no-pdf-message" class="no-pdf-message" style="display:none;">
+                    <i class="fas fa-file-pdf"></i>
+                    <p>No PDF document available for this record.</p>
+                </div>
+                <div class="pdf-controls" id="pdf-controls" style="display:none;">
+                    <button id="pdf-prev"><i class="fas fa-chevron-left"></i> Prev</button>
+                    <span id="pdf-page-info">Page <span id="pdf-current-page">1</span> of <span id="pdf-total-pages">1</span></span>
+                    <button id="pdf-next">Next <i class="fas fa-chevron-right"></i></button>
+                    <span style="margin-left:15px;">Zoom: <button id="pdf-zoom-out">-</button> <span id="pdf-zoom-level">100%</span> <button id="pdf-zoom-in">+</button></span>
                 </div>
             </div>
         </div>
@@ -101,11 +173,8 @@
                 const sidebar = document.querySelector('.sidebar');
                 if (sidebar) {
                     const savedState = localStorage.getItem('sidebarCollapsed');
-                    if (savedState === 'true') {
-                        sidebar.classList.add('collapsed');
-                    } else if (savedState === 'false') {
-                        sidebar.classList.remove('collapsed');
-                    }
+                    if (savedState === 'true') sidebar.classList.add('collapsed');
+                    else if (savedState === 'false') sidebar.classList.remove('collapsed');
                 }
             }
             function bindToggleEvent() {
