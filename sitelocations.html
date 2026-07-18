@@ -4,155 +4,1097 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n="platform">AEL DWSS - Site Locations</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles/main.css">
-    <!-- 添加主题配置 -->
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="scripts/theme-config.js"></script>
+    
+    <style>
+        /* ========== Leaflet 彈窗層級 ========== */
+        .leaflet-popup { z-index: 99999 !important; }
+        .leaflet-popup-content-wrapper { border-radius: 8px; font-family: inherit; }
+        
+        /* ========== 整體佈局 ========== */
+        .map-and-list { 
+            display: flex; 
+            gap: 16px; 
+            position: relative; 
+            align-items: stretch; /* 讓子元素等高 */;
+        }
+        .map-container { 
+            flex: 1; 
+            position: relative; 
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        #site-map { 
+            height: 550px; 
+            width: 100%; 
+            border-radius: 8px; 
+            z-index: 1; 
+        }
+        .map-hint {
+            font-size: 12px; color: #666; margin-top: 6px;
+            background: #fffbe6; border: 1px solid #ffe58f;
+            padding: 8px 12px; border-radius: 6px; flex-shrink: 0;
+        }
+        .map-hint i { color: #f59e0b; }
+        
+        /* ========== 地圖彈窗內容 ========== */
+        .site-popup h4 { margin: 0 0 8px 0; color: #1a73e8; font-size: 15px; }
+        .site-popup p { margin: 4px 0; font-size: 13px; color: #444; }
+        .popup-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .popup-btn {
+            padding: 6px 14px; border: none; border-radius: 4px;
+            cursor: pointer; font-size: 12px; color: #fff; font-weight: 500;
+            transition: opacity 0.2s; text-decoration: none; display: inline-block;
+        }
+        .popup-btn:hover { opacity: 0.85; }
+        .popup-btn.edit { background: #1a73e8; }
+        .popup-btn.delete { background: #e53935; }
+        
+        /* ========== 側邊面板 ========== */
+        .site-panel {
+            position: fixed; top: 0; right: -460px; width: 440px; height: 100vh;
+            background: #fff; box-shadow: -4px 0 24px rgba(0,0,0,0.18);
+            z-index: 9998; transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .site-panel.show { right: 0; }
+        .panel-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 22px; border-bottom: 1px solid #e8e8e8;
+            background: #fff; flex-shrink: 0;
+        }
+        .panel-header h3 { margin: 0; font-size: 17px; color: #222; }
+        .panel-close {
+            width: 32px; height: 32px; border-radius: 50%; border: none;
+            background: #f5f5f5; font-size: 18px; cursor: pointer; color: #666;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .panel-close:hover { background: #e0e0e0; color: #333; }
+        .panel-body { flex: 1; overflow-y: auto; padding: 18px 22px; }
+        
+        .pick-location-card {
+            background: #e8f0fe; border: 1.5px dashed #1a73e8; border-radius: 10px;
+            padding: 14px 16px; margin-bottom: 16px; display: flex;
+            align-items: center; gap: 12px; cursor: pointer; transition: all 0.2s; user-select: none;
+        }
+        .pick-location-card:hover { background: #d2e3fc; }
+        .pick-location-card .pick-icon {
+            width: 44px; height: 44px; border-radius: 50%; background: #1a73e8;
+            color: #fff; display: flex; align-items: center; justify-content: center;
+            font-size: 18px; flex-shrink: 0;
+        }
+        .pick-location-card .pick-text { flex: 1; }
+        .pick-location-card .pick-title { font-weight: 600; font-size: 14px; color: #1a73e8; margin-bottom: 2px; }
+        .pick-location-card .pick-desc { font-size: 12px; color: #666; }
+        
+        .pick-location-card.picking {
+            background: #fff3e0; border-color: #ff9800; animation: pulse-border 1.5s infinite;
+        }
+        .pick-location-card.picking .pick-icon { background: #ff9800; animation: bounce-icon 0.6s infinite alternate; }
+        .pick-location-card.picking .pick-title { color: #e65100; }
+        
+        @keyframes pulse-border {
+            0%, 100% { border-color: #ff9800; box-shadow: 0 0 0 0 rgba(255,152,0,0.3); }
+            50% { border-color: #ff9800; box-shadow: 0 0 0 8px rgba(255,152,0,0); }
+        }
+        @keyframes bounce-icon {
+            from { transform: translateY(0); }
+            to { transform: translateY(-4px); }
+        }
+        
+        .selected-location-info {
+            background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 8px;
+            padding: 12px 14px; margin-bottom: 16px; font-size: 13px; display: none;
+        }
+        .selected-location-info.show { display: block; }
+        .selected-location-info .loc-row { display: flex; align-items: flex-start; gap: 8px; padding: 3px 0; }
+        .selected-location-info .loc-icon { color: #4caf50; margin-top: 2px; flex-shrink: 0; }
+        .selected-location-info .loc-value { font-weight: 500; color: #333; word-break: break-word; }
+        .selected-location-info .loc-label-text { font-size: 11px; color: #666; }
+        
+        .dwss-form-group { margin-bottom: 13px; }
+        .dwss-form-group label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 12px; color: #444; }
+        .dwss-form-group label .required { color: #e53935; }
+        .dwss-form-group input,
+        .dwss-form-group select,
+        .dwss-form-group textarea {
+            width: 100%; padding: 9px 10px; border: 1.5px solid #ddd; border-radius: 6px;
+            font-size: 13px; box-sizing: border-box; font-family: inherit;
+            transition: border-color 0.2s; background: #fff;
+        }
+        .dwss-form-group input:focus,
+        .dwss-form-group select:focus,
+        .dwss-form-group textarea:focus {
+            outline: none; border-color: #1a73e8; box-shadow: 0 0 0 3px rgba(26,115,232,0.08);
+        }
+        .dwss-form-group .field-error { font-size: 10px; color: #e53935; margin-top: 3px; display: none; }
+        .dwss-form-group.has-error input,
+        .dwss-form-group.has-error select { border-color: #e53935; }
+        .dwss-form-group.has-error .field-error { display: block; }
+        .dwss-form-row { display: flex; gap: 10px; }
+        .dwss-form-row > * { flex: 1; }
+        
+        .panel-footer {
+            padding: 14px 22px; border-top: 1px solid #e8e8e8;
+            background: #fff; flex-shrink: 0; display: flex; justify-content: flex-end; gap: 8px;
+        }
+        .dwss-btn {
+            padding: 9px 18px; border: none; border-radius: 6px;
+            cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.2s;
+        }
+        .dwss-btn-primary { background: #1a73e8; color: #fff; }
+        .dwss-btn-primary:hover { background: #1557b0; }
+        .dwss-btn-cancel { background: #f0f0f0; color: #333; }
+        .dwss-btn-cancel:hover { background: #e0e0e0; }
+        .dwss-btn-danger { background: #e53935; color: #fff; }
+        .dwss-btn-danger:hover { background: #b71c1c; }
+        
+        /* ========== ★ 列表容器 - 可滾動 ========== */
+        .site-list-container {
+            width: 340px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            /* 限制最大高度 = 地圖高度 + 提示文字高度 */
+            max-height: 582px; /* 550px map + 32px hint */
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        
+        .site-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            border-bottom: 1px solid #e8e8e8;
+            flex-shrink: 0;
+            background: #fff;
+            border-radius: 8px 8px 0 0;
+        }
+        .site-list-header h2 {
+            margin: 0;
+            font-size: 16px;
+            color: #333;
+        }
+        .site-list-header .search-box {
+            display: flex;
+            align-items: center;
+            gap: 0;
+        }
+        .site-list-header .search-box input {
+            padding: 7px 10px;
+            border: 1.5px solid #ddd;
+            border-radius: 6px 0 0 6px;
+            font-size: 12px;
+            width: 150px;
+            outline: none;
+        }
+        .site-list-header .search-box input:focus {
+            border-color: #1a73e8;
+        }
+        .site-list-header .search-box button {
+            padding: 7px 10px;
+            border: 1.5px solid #ddd;
+            border-left: none;
+            border-radius: 0 6px 6px 0;
+            background: #f5f5f5;
+            cursor: pointer;
+            color: #666;
+            font-size: 12px;
+        }
+        .site-list-header .search-box button:hover {
+            background: #e0e0e0;
+        }
+        
+        /* ★ 列表本體 - 可滾動 */
+        .site-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 12px;
+            /* 自定義滾動條 */
+            scrollbar-width: thin;
+            scrollbar-color: #c0c0c0 transparent;
+        }
+        .site-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        .site-list::-webkit-scrollbar-track {
+            background: transparent;
+            border-radius: 3px;
+        }
+        .site-list::-webkit-scrollbar-thumb {
+            background: #c0c0c0;
+            border-radius: 3px;
+        }
+        .site-list::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+        
+        /* 列表項 */
+        .site-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            transition: background 0.15s;
+            position: relative;
+        }
+        .site-item:hover {
+            background: #f5f7fa;
+        }
+        .site-item.active {
+            background: #e8f0fe;
+            border: 1px solid #c5d9f5;
+        }
+        .site-item .site-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #e8f0fe;
+            color: #1a73e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+        .site-item.active .site-icon {
+            background: #1a73e8;
+            color: #fff;
+        }
+        .site-item .site-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .site-item .site-info h3 {
+            margin: 0 0 2px 0;
+            font-size: 13px;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .site-item .site-info p {
+            margin: 0;
+            font-size: 11px;
+            color: #999;
+        }
+        
+        /* 列表操作按鈕 */
+        .site-item-actions {
+            display: none;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .site-item:hover .site-item-actions {
+            display: flex;
+        }
+        .site-item-actions button {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            font-size: 11px;
+            color: #fff;
+            transition: opacity 0.15s;
+        }
+        .site-item-actions button:hover { opacity: 0.8; }
+        .edit-btn-sm { background: #1a73e8; }
+        .delete-btn-sm { background: #e53935; }
+        
+        /* 列表底部資訊 */
+        .site-list-footer {
+            padding: 8px 16px;
+            border-top: 1px solid #e8e8e8;
+            font-size: 11px;
+            color: #999;
+            text-align: center;
+            flex-shrink: 0;
+            background: #fff;
+            border-radius: 0 0 8px 8px;
+        }
+        
+        /* ========== 按鈕 ========== */
+        .add-site-btn {
+            display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;
+            background: #1a73e8; color: #fff; border: none; border-radius: 8px;
+            cursor: pointer; font-size: 14px; font-weight: 500; margin-bottom: 14px;
+        }
+        .add-site-btn:hover { background: #1557b0; }
+        
+        /* ========== 統計卡片 ========== */
+        .site-stats { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+        .stat-card {
+            flex: 1; min-width: 130px; background: #fff; border-radius: 8px;
+            padding: 12px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            display: flex; align-items: center; gap: 10px;
+        }
+        .stat-icon {
+            width: 38px; height: 38px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center; font-size: 16px; color: #fff;
+        }
+        .stat-icon.blue { background: #1a73e8; }
+        .stat-icon.green { background: #0d9488; }
+        .stat-icon.orange { background: #f59e0b; }
+        .stat-value { font-size: 20px; font-weight: 700; color: #333; }
+        .stat-label { font-size: 11px; color: #888; }
+        
+        /* ========== 刪除對話框 ========== */
+        .delete-dialog-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 100000; align-items: center; justify-content: center;
+        }
+        .delete-dialog-overlay.show { display: flex; }
+        .delete-dialog { background: #fff; border-radius: 12px; width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .delete-dialog-header {
+            padding: 16px 20px; border-bottom: 1px solid #e8e8e8;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .delete-dialog-header h3 { margin: 0; font-size: 16px; }
+        .delete-dialog-body { padding: 20px; }
+        .delete-dialog-footer {
+            padding: 14px 20px; border-top: 1px solid #e8e8e8;
+            display: flex; justify-content: flex-end; gap: 8px;
+        }
+        
+        /* ========== 響應式 ========== */
+        @media (max-width: 1000px) {
+            .map-and-list { flex-direction: column; }
+            .site-list-container { 
+                width: 100%; 
+                max-height: 400px;
+            }
+            .site-panel { width: 100%; right: -100%; }
+            #site-map { height: 350px; }
+        }
+    </style>
 </head>
 <body>
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
     <script src="scripts/sidebar.js"></script>
 
-    <!-- 主内容区域 -->
     <div class="main-content">
         <div class="header">
-            <h1 data-i18n="site.locations">Site Location</h1>
+            <h1>Site Location</h1>
             <div class="header-controls">
                 <div class="user-date-row">
                     <div class="date-display">
                         <i class="fas fa-calendar-alt"></i>
                         <span id="current-date">September 19, 2025</span>
                     </div>
-                    <button class="user-btn">
-                        <i class="fas fa-user"></i>
-                        <span data-i18n="user.name">John Doe</span>
-                    </button>
+                    <button class="user-btn"><i class="fas fa-user"></i><span>John Doe</span></button>
                 </div>
             </div>
         </div>
         
         <div class="search-buttons">
             <form id="search-form" action="#" method="get">
-                <input type="text" name="search" placeholder="Search sites, reports, or data..." data-i18n-placeholder="search.sites" />
-                <button type="submit" data-i18n="search">Search</button>
+                <input type="text" name="search" placeholder="Search sites, reports, or data..." />
+                <button type="submit">Search</button>
             </form>
         </div>
 
         <div class="site-locations-page">
-            <h2><i class="fas fa-map-marked-alt"></i> <span data-i18n="site.locations.management">Site Locations</span></h2>
+            <h2><i class="fas fa-map-marked-alt"></i> Site Locations</h2>
+            
+            <div class="site-stats">
+                <div class="stat-card">
+                    <div class="stat-icon blue"><i class="fas fa-map-pin"></i></div>
+                    <div><div class="stat-value" id="stat-total">5</div><div class="stat-label">Total Sites</div></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+                    <div><div class="stat-value" id="stat-active">3</div><div class="stat-label">Active</div></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div><div class="stat-value" id="stat-attention">1</div><div class="stat-label">Need Attention</div></div>
+                </div>
+            </div>
+            
+            <button class="add-site-btn" id="add-site-btn">
+                <i class="fas fa-plus-circle"></i> Register New Site
+            </button>
             
             <div class="map-and-list">
-                <div class="map-container">
-                    <div id="site-map" data-i18n="interactive.map">Interactive Map Would Appear Here</div>
+                <div class="map-container" id="map-container">
+                    <div id="site-map"></div>
+                    <div class="map-hint">
+                        <i class="fas fa-info-circle"></i> 
+                        <strong>Tip:</strong> Click a marker to see details. Use <em>Edit</em> or <em>Delete</em> buttons in the popup.
+                    </div>
                 </div>
                 
+                <!-- ★ 列表容器 - 可滾動 -->
                 <div class="site-list-container">
                     <div class="site-list-header">
-                        <h2 data-i18n="site.list">Site List</h2>
+                        <h2>Site List</h2>
                         <div class="search-box">
-                            <input type="text" placeholder="Search sites..." id="site-search" data-i18n-placeholder="search.sites.placeholder">
+                            <input type="text" placeholder="Search sites..." id="site-search">
                             <button><i class="fas fa-search"></i></button>
                         </div>
                     </div>
-                    
-                    <div class="site-list">
-                        <div class="site-item active" data-lat="22.3193" data-lng="114.1694">
-                            <div class="site-icon">
-                                <i class="fas fa-water"></i>
-                            </div>
-                            <div class="site-info">
-                                <h3 data-i18n="site.treatment">Treatment Plant</h3>
-                                <p><span data-i18n="last.updated">Last updated</span>: 15-Aug-25</p>
-                            </div>
-                        </div>
-                        
-                        <div class="site-item" data-lat="22.3293" data-lng="114.1594">
-                            <div class="site-icon">
-                                <i class="fas fa-road"></i>
-                            </div>
-                            <div class="site-info">
-                                <h3 data-i18n="site.pipeline">Pipeline</h3>
-                                <p><span data-i18n="last.updated">Last updated</span>: 14-Aug-25</p>
-                            </div>
-                        </div>
-                        
-                        <div class="site-item" data-lat="22.3393" data-lng="114.1794">
-                            <div class="site-icon">
-                                <i class="fas fa-tint"></i>
-                            </div>
-                            <div class="site-info">
-                                <h3 data-i18n="site.reservoir">Reservoir</h3>
-                                <p><span data-i18n="last.updated">Last updated</span>: 13-Aug-25</p>
-                            </div>
-                        </div>
-                        
-                        <div class="site-item" data-lat="22.3093" data-lng="114.1894">
-                            <div class="site-icon">
-                                <i class="fas fa-network-wired"></i>
-                            </div>
-                            <div class="site-info">
-                                <h3 data-i18n="site.distribution">Distribution</h3>
-                                <p><span data-i18n="last.updated">Last updated</span>: 12-Aug-25</p>
-                            </div>
-                        </div>
-                        
-                        <div class="site-item" data-lat="22.3493" data-lng="114.1494">
-                            <div class="site-icon">
-                                <i class="fas fa-gas-pump"></i>
-                            </div>
-                            <div class="site-info">
-                                <h3 data-i18n="site.pump">Pump Station</h3>
-                                <p><span data-i18n="last.updated">Last updated</span>: 11-Aug-25</p>
-                            </div>
-                        </div>
+                    <div class="site-list" id="site-list"></div>
+                    <div class="site-list-footer" id="site-list-footer">
+                        Showing <span id="list-count">5</span> site(s)
                     </div>
                 </div>
             </div>
         </div>
         
         <footer>
-            <p data-i18n="copyright">© 2025 AEL DWSS System. All rights reserved.</p>
-            <p data-i18n="platform">AEL DWSS Platform</p>
+            <p>© 2025 AEL DWSS System. All rights reserved.</p>
+            <p>AEL DWSS Platform</p>
         </footer>
     </div>
 
-    <!-- 添加语言脚本 -->
+    <!-- 側邊面板 -->
+    <div class="site-panel" id="site-panel">
+        <div class="panel-header">
+            <h3 id="panel-title">Register New Site</h3>
+            <button class="panel-close" id="panel-close">&times;</button>
+        </div>
+        <div class="panel-body">
+            <div class="pick-location-card" id="pick-location-card">
+                <div class="pick-icon"><i class="fas fa-map-pin"></i></div>
+                <div class="pick-text">
+                    <div class="pick-title">Pick Location on Map</div>
+                    <div class="pick-desc">Click here, then click on the map. Drag the pin to adjust.</div>
+                </div>
+            </div>
+            
+            <div class="selected-location-info" id="selected-location-info">
+                <div class="loc-row">
+                    <span class="loc-icon"><i class="fas fa-check-circle"></i></span>
+                    <span class="loc-value" id="loc-address">-</span>
+                </div>
+                <div class="loc-row">
+                    <span class="loc-icon"></span>
+                    <span class="loc-label-text">District: <strong id="loc-district">-</strong></span>
+                </div>
+            </div>
+            
+            <form id="site-form" autocomplete="off">
+                <input type="hidden" id="site-id" value="">
+                <input type="hidden" id="site-lat" value="">
+                <input type="hidden" id="site-lng" value="">
+                
+                <div class="dwss-form-group">
+                    <label><span class="required">*</span> Site Name</label>
+                    <input type="text" id="site-name" placeholder="e.g. Tai Po Treatment Plant">
+                    <div class="field-error">Site name is required.</div>
+                </div>
+                <div class="dwss-form-group">
+                    <label><span class="required">*</span> Category</label>
+                    <select id="site-category">
+                        <option value="">-- Select Category --</option>
+                        <option value="Treatment Plant">Treatment Plant</option>
+                        <option value="Pipeline">Pipeline</option>
+                        <option value="Reservoir">Reservoir</option>
+                        <option value="Distribution">Distribution</option>
+                        <option value="Pump Station">Pump Station</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <div class="field-error">Please select a category.</div>
+                </div>
+                <div class="dwss-form-group">
+                    <label>Status</label>
+                    <select id="site-status">
+                        <option value="active">Active</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="attention">Needs Attention</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+                <div class="dwss-form-group">
+                    <label>Description</label>
+                    <textarea id="site-description" rows="2" placeholder="Brief description of works..."></textarea>
+                </div>
+                <div class="dwss-form-group">
+                    <label>Site Manager</label>
+                    <input type="text" id="site-contact" placeholder="e.g. Mr. Chan">
+                </div>
+                <div class="dwss-form-group">
+                    <label>Progress (%)</label>
+                    <input type="number" id="site-progress" min="0" max="100" placeholder="0 - 100">
+                </div>
+            </form>
+        </div>
+        <div class="panel-footer">
+            <button class="dwss-btn dwss-btn-cancel" id="panel-cancel">Cancel</button>
+            <button class="dwss-btn dwss-btn-primary" id="panel-save">Save Site</button>
+        </div>
+    </div>
+
+    <!-- 刪除對話框 -->
+    <div class="delete-dialog-overlay" id="delete-dialog-overlay">
+        <div class="delete-dialog">
+            <div class="delete-dialog-header">
+                <h3>Confirm Deletion</h3>
+                <button class="panel-close" id="delete-dialog-close">&times;</button>
+            </div>
+            <div class="delete-dialog-body">
+                <p>Are you sure you want to delete <strong id="delete-site-name"></strong>?</p>
+                <p style="color:#e53935;font-size:13px;">This action cannot be undone.</p>
+            </div>
+            <div class="delete-dialog-footer">
+                <button class="dwss-btn dwss-btn-cancel" id="delete-dialog-cancel">Cancel</button>
+                <button class="dwss-btn dwss-btn-danger" id="delete-dialog-confirm">Delete</button>
+            </div>
+        </div>
+    </div>
 
     <script>
-            // 搜索功能
-            const siteSearch = document.getElementById('site-search');
-            const siteItems = document.querySelectorAll('.site-item');
+        (function() {
+            const STORAGE_KEY = 'dwss_site_data_v9';
             
-            if (siteSearch) {
-                siteSearch.addEventListener('input', function() {
-                    const searchTerm = this.value.toLowerCase();
-                    
-                    siteItems.forEach(item => {
-                        const siteName = item.querySelector('h3').textContent.toLowerCase();
-                        if (siteName.includes(searchTerm)) {
-                            item.style.display = 'flex';
-                        } else {
-                            item.style.display = 'none';
-                        }
-                    });
+            const defaultSiteData = [
+    {
+        id: 1,
+        name: 'Stonecutters Island Sewage Treatment Works',
+        category: 'Treatment Plant',
+        icon: 'fa-water',
+        lat: 22.3477,
+        lng: 114.1358,
+        lastUpdated: '15-Aug-25',
+        status: 'active',
+        description: 'Major sewage treatment facility serving Kowloon and Hong Kong Island. Phase 2 expansion in progress.',
+        contact: 'Mr. Chan Tai Man',
+        progress: 78
+    },
+    {
+        id: 2,
+        name: 'Mong Kok Water Main Replacement',
+        category: 'Pipeline',
+        icon: 'fa-road',
+        lat: 22.3193,
+        lng: 114.1694,
+        lastUpdated: '14-Aug-25',
+        status: 'in-progress',
+        description: 'Replacement of aging water mains along Nathan Road. Night work to minimize traffic disruption.',
+        contact: 'Mr. Lee Kwok Wai',
+        progress: 45
+    },
+    {
+        id: 3,
+        name: 'Kowloon Reservoir Maintenance',
+        category: 'Reservoir',
+        icon: 'fa-tint',
+        lat: 22.3556,
+        lng: 114.1497,
+        lastUpdated: '13-Aug-25',
+        status: 'active',
+        description: 'Routine maintenance and structural inspection of Kowloon Reservoir dam and overflow systems.',
+        contact: 'Ms. Wong Siu Ling',
+        progress: 92
+    },
+    {
+        id: 4,
+        name: 'Pok Fu Lam Service Reservoir',
+        category: 'Distribution',
+        icon: 'fa-network-wired',
+        lat: 22.2660,
+        lng: 114.1383,
+        lastUpdated: '12-Aug-25',
+        status: 'active',
+        description: 'Fresh water service reservoir supplying Western District. Valve and pipeline upgrades ongoing.',
+        contact: 'Mr. Ho Cheuk Yin',
+        progress: 60
+    },
+    {
+        id: 5,
+        name: 'Sheung Shui Pumping Station Upgrade',
+        category: 'Pump Station',
+        icon: 'fa-gas-pump',
+        lat: 22.5013,
+        lng: 114.1281,
+        lastUpdated: '11-Aug-25',
+        status: 'attention',
+        description: 'High-pressure pumping station serving northern New Territories. Equipment replacement required.',
+        contact: 'Ms. Cheung Mei Ling',
+        progress: 33
+    }
+];
+            
+            function getIconForCategory(cat) {
+                const map = {
+                    'Treatment Plant': 'fa-water', 'Pipeline': 'fa-road',
+                    'Reservoir': 'fa-tint', 'Distribution': 'fa-network-wired',
+                    'Pump Station': 'fa-gas-pump', 'Other': 'fa-hard-hat'
+                };
+                return map[cat] || 'fa-map-pin';
+            }
+            
+            function loadSiteData() {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (stored) { try { return JSON.parse(stored); } catch(e) {} }
+                return JSON.parse(JSON.stringify(defaultSiteData));
+            }
+            
+            function saveSiteData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(siteData)); }
+            function getNextId() {
+                if (siteData.length === 0) return 1;
+                return Math.max(...siteData.map(s => s.id)) + 1;
+            }
+            function formatDate() {
+                const now = new Date();
+                const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                return `${String(now.getDate()).padStart(2,'0')}-${months[now.getMonth()]}-${String(now.getFullYear()).slice(-2)}`;
+            }
+            
+            let siteData = loadSiteData();
+            let map = null;
+            let markers = {};
+            let currentSiteId = null;
+            let deleteTargetId = null;
+            let isPickingLocation = false;
+            let pickMarker = null;
+            
+            const siteListContainer = document.getElementById('site-list');
+            const siteSearch = document.getElementById('site-search');
+            const addSiteBtn = document.getElementById('add-site-btn');
+            const sitePanel = document.getElementById('site-panel');
+            const panelTitle = document.getElementById('panel-title');
+            const panelClose = document.getElementById('panel-close');
+            const panelCancel = document.getElementById('panel-cancel');
+            const panelSave = document.getElementById('panel-save');
+            const pickLocationCard = document.getElementById('pick-location-card');
+            const selectedLocationInfo = document.getElementById('selected-location-info');
+            const locAddress = document.getElementById('loc-address');
+            const locDistrict = document.getElementById('loc-district');
+            const deleteDialogOverlay = document.getElementById('delete-dialog-overlay');
+            const deleteSiteNameEl = document.getElementById('delete-site-name');
+            const deleteDialogClose = document.getElementById('delete-dialog-close');
+            const deleteDialogCancel = document.getElementById('delete-dialog-cancel');
+            const deleteDialogConfirm = document.getElementById('delete-dialog-confirm');
+            const listCount = document.getElementById('list-count');
+            
+            // ==================== 圖標 ====================
+            function createCustomIcon(iconName, isActive) {
+                const bg = isActive ? '#1a73e8' : '#555';
+                const s = isActive ? 44 : 40;
+                const fs = isActive ? 18 : 15;
+                return L.divIcon({
+                    html: `<div style="background:${bg};width:${s}px;height:${s}px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:${fs}px;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,0.3);"><i class="fas ${iconName}"></i></div>`,
+                    className: '', iconSize: [s, s], iconAnchor: [s/2, s/2], popupAnchor: [0, -s/2-5]
                 });
             }
             
-            // 添加工地點擊事件
-            siteItems.forEach(item => {
-                item.addEventListener('click', function() {
-                    // 移除所有active類
-                    siteItems.forEach(site => {
-                        site.classList.remove('active');
+            function createPickIcon() {
+                return L.divIcon({
+                    html: `<div style="background:#e53935;width:36px;height:36px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;border:3px solid #fff;box-shadow:0 3px 14px rgba(229,57,53,0.5);"><i class="fas fa-map-pin" style="transform:rotate(45deg);"></i></div>`,
+                    className: '', iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36]
+                });
+            }
+            
+            function updateAllMarkerIcons() {
+                Object.keys(markers).forEach(id => {
+                    const site = siteData.find(s => s.id == id);
+                    if (site && markers[id]) {
+                        markers[id].setIcon(createCustomIcon(site.icon, site.id === currentSiteId));
+                    }
+                });
+            }
+            
+            function selectSite(siteId, flyTo) {
+                const site = siteData.find(s => s.id === siteId);
+                if (!site) return;
+                currentSiteId = siteId;
+                document.querySelectorAll('.site-item').forEach(el => {
+                    el.classList.toggle('active', parseInt(el.dataset.id) === siteId);
+                });
+                updateAllMarkerIcons();
+                if (flyTo && markers[siteId]) {
+                    map.flyTo([site.lat, site.lng], 15, { duration: 0.8 });
+                }
+                if (markers[siteId]) markers[siteId].openPopup();
+            }
+            
+            // ==================== 全局函數 ====================
+            window._dwssEditSite = function(siteId) {
+                const site = siteData.find(s => s.id === siteId);
+                if (site) openPanel(site);
+            };
+            
+            window._dwssDeleteSite = function(siteId) {
+                const site = siteData.find(s => s.id === siteId);
+                if (site) openDeleteConfirm(site);
+            };
+            
+            // ==================== 渲染 ====================
+            function renderSiteList() {
+                siteListContainer.innerHTML = '';
+                if (siteData.length === 0) {
+                    siteListContainer.innerHTML = '<div style="text-align:center;padding:40px;color:#999;"><i class="fas fa-map-pin" style="font-size:40px;display:block;margin-bottom:12px;"></i>No sites registered yet.</div>';
+                } else {
+                    siteData.forEach(site => {
+                        const el = document.createElement('div');
+                        el.className = 'site-item' + (site.id === currentSiteId ? ' active' : '');
+                        el.dataset.id = site.id;
+                        el.innerHTML = `
+                            <div class="site-icon"><i class="fas ${site.icon}"></i></div>
+                            <div class="site-info"><h3>${site.name}</h3><p>Last updated: ${site.lastUpdated}</p></div>
+                            <div class="site-item-actions">
+                                <button class="edit-btn-sm" title="Edit"><i class="fas fa-edit"></i></button>
+                                <button class="delete-btn-sm" title="Delete"><i class="fas fa-trash"></i></button>
+                            </div>`;
+                        el.addEventListener('click', function(e) {
+                            if (e.target.closest('button')) return;
+                            selectSite(site.id, true);
+                        });
+                        el.querySelector('.edit-btn-sm').onclick = function(e) { e.stopPropagation(); openPanel(site); };
+                        el.querySelector('.delete-btn-sm').onclick = function(e) { e.stopPropagation(); openDeleteConfirm(site); };
+                        siteListContainer.appendChild(el);
+                    });
+                }
+                // 更新底部計數
+                if (listCount) listCount.textContent = siteData.length;
+            }
+            
+            function renderMapMarkers() {
+                Object.values(markers).forEach(m => m.remove());
+                markers = {};
+                
+                siteData.forEach(site => {
+                    const icon = createCustomIcon(site.icon, site.id === currentSiteId);
+                    const popupHtml = `
+                        <div class="site-popup">
+                            <h4><i class="fas ${site.icon}"></i> ${site.name}</h4>
+                            <p><b>Status:</b> ${site.status}</p>
+                            <p><b>Progress:</b> ${site.progress}%</p>
+                            <p><b>Updated:</b> ${site.lastUpdated}</p>
+                            <p>${site.description||''}</p>
+                            <p><b>${site.contact||''}</b></p>
+                            <div class="popup-actions">
+                                <button class="popup-btn edit" onclick="window._dwssEditSite(${site.id}); return false;">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button class="popup-btn delete" onclick="window._dwssDeleteSite(${site.id}); return false;">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>`;
+                    
+                    const marker = L.marker([site.lat, site.lng], { icon })
+                        .addTo(map)
+                        .bindPopup(popupHtml, { closeButton: true });
+                    
+                    marker.on('click', function() {
+                        selectSite(site.id, false);
                     });
                     
-                    // 添加active類到當前項
-                    this.classList.add('active');
+                    markers[site.id] = marker;
                 });
-            });
-    
+            }
+            
+            // ==================== 反向地理編碼 ====================
+            function reverseGeocode(lat, lng, callback) {
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.display_name) {
+                            const district = data.address?.suburb || data.address?.county || 
+                                           data.address?.city_district || data.address?.district || 'Hong Kong';
+                            callback(data.display_name, district);
+                        } else {
+                            callback('Address not found', 'Unknown');
+                        }
+                    })
+                    .catch(() => callback('Unable to fetch address', 'Unknown'));
+            }
+            
+            // ==================== 選點 ====================
+            function enterPickMode() {
+                if (isPickingLocation) return;
+                isPickingLocation = true;
+                pickLocationCard.classList.add('picking');
+                pickLocationCard.querySelector('.pick-title').textContent = 'Now click on the map...';
+                pickLocationCard.querySelector('.pick-desc').textContent = 'Click anywhere on the map to place the red pin';
+                pickLocationCard.querySelector('.pick-icon i').className = 'fas fa-crosshairs';
+                map.getContainer().style.cursor = 'crosshair';
+                if (pickMarker) { map.removeLayer(pickMarker); pickMarker = null; }
+            }
+            
+            function exitPickMode() {
+                isPickingLocation = false;
+                map.getContainer().style.cursor = '';
+                pickLocationCard.classList.remove('picking');
+                pickLocationCard.querySelector('.pick-title').textContent = 'Pick Location on Map';
+                pickLocationCard.querySelector('.pick-desc').textContent = 'Click here, then click on the map. Drag the pin to adjust.';
+                pickLocationCard.querySelector('.pick-icon i').className = 'fas fa-map-pin';
+            }
+            
+            function placePickMarker(lat, lng) {
+                if (pickMarker) map.removeLayer(pickMarker);
+                pickMarker = L.marker([lat, lng], { icon: createPickIcon(), draggable: true }).addTo(map);
+                pickMarker.on('dragend', function() {
+                    const pos = pickMarker.getLatLng();
+                    updateSelectedLocation(pos.lat, pos.lng);
+                });
+                updateSelectedLocation(lat, lng);
+                exitPickMode();
+                map.flyTo([lat, lng], 15, { duration: 0.6 });
+            }
+            
+            function updateSelectedLocation(lat, lng) {
+                document.getElementById('site-lat').value = lat.toFixed(6);
+                document.getElementById('site-lng').value = lng.toFixed(6);
+                selectedLocationInfo.classList.add('show');
+                locAddress.textContent = 'Fetching address...';
+                locDistrict.textContent = '...';
+                reverseGeocode(lat, lng, function(address, district) {
+                    locAddress.textContent = address.length > 100 ? address.substring(0, 97) + '...' : address;
+                    locDistrict.textContent = district;
+                });
+            }
+            
+            function clearPickMarker() {
+                if (pickMarker) { map.removeLayer(pickMarker); pickMarker = null; }
+                document.getElementById('site-lat').value = '';
+                document.getElementById('site-lng').value = '';
+                selectedLocationInfo.classList.remove('show');
+                exitPickMode();
+            }
+            
+            // ==================== 面板 ====================
+            function openPanel(site) {
+                if (site) {
+                    panelTitle.innerHTML = '<i class="fas fa-edit"></i> Edit Site';
+                    document.getElementById('site-id').value = site.id;
+                    document.getElementById('site-name').value = site.name;
+                    document.getElementById('site-category').value = site.category;
+                    document.getElementById('site-status').value = site.status;
+                    document.getElementById('site-lat').value = site.lat;
+                    document.getElementById('site-lng').value = site.lng;
+                    document.getElementById('site-description').value = site.description || '';
+                    document.getElementById('site-contact').value = site.contact || '';
+                    document.getElementById('site-progress').value = site.progress || 0;
+                    updateSelectedLocation(site.lat, site.lng);
+                    exitPickMode();
+                    if (pickMarker) map.removeLayer(pickMarker);
+                    pickMarker = L.marker([site.lat, site.lng], { icon: createPickIcon(), draggable: true }).addTo(map);
+                    pickMarker.on('dragend', function() {
+                        const pos = pickMarker.getLatLng();
+                        updateSelectedLocation(pos.lat, pos.lng);
+                    });
+                    map.flyTo([site.lat, site.lng], 15, { duration: 0.6 });
+                } else {
+                    panelTitle.innerHTML = '<i class="fas fa-plus-circle"></i> Register New Site';
+                    document.getElementById('site-id').value = '';
+                    document.getElementById('site-form').reset();
+                    document.getElementById('site-status').value = 'active';
+                    document.getElementById('site-lat').value = '';
+                    document.getElementById('site-lng').value = '';
+                    selectedLocationInfo.classList.remove('show');
+                    clearPickMarker();
+                    exitPickMode();
+                }
+                document.querySelectorAll('#site-form .dwss-form-group').forEach(g => g.classList.remove('has-error'));
+                sitePanel.classList.add('show');
+                setTimeout(() => map.invalidateSize(), 400);
+            }
+            
+            function closePanel() {
+                sitePanel.classList.remove('show');
+                clearPickMarker();
+                exitPickMode();
+            }
+            
+            // ==================== 儲存 ====================
+            function validateForm() {
+                let valid = true;
+                const name = document.getElementById('site-name').value.trim();
+                const category = document.getElementById('site-category').value;
+                const lat = parseFloat(document.getElementById('site-lat').value);
+                const lng = parseFloat(document.getElementById('site-lng').value);
+                
+                const nameGrp = document.getElementById('site-name').closest('.dwss-form-group');
+                const catGrp = document.getElementById('site-category').closest('.dwss-form-group');
+                
+                if (!name) { nameGrp.classList.add('has-error'); valid = false; }
+                else { nameGrp.classList.remove('has-error'); }
+                
+                if (!category) { catGrp.classList.add('has-error'); valid = false; }
+                else { catGrp.classList.remove('has-error'); }
+                
+                if (isNaN(lat) || isNaN(lng)) {
+                    alert('Please select a location on the map first.\n\nClick "Pick Location on Map" then click on the map.');
+                    valid = false;
+                }
+                return valid;
+            }
+            
+            function saveSiteFromForm() {
+                if (!validateForm()) return;
+                const id = document.getElementById('site-id').value;
+                const name = document.getElementById('site-name').value.trim();
+                const category = document.getElementById('site-category').value;
+                const status = document.getElementById('site-status').value;
+                const lat = parseFloat(document.getElementById('site-lat').value);
+                const lng = parseFloat(document.getElementById('site-lng').value);
+                const description = document.getElementById('site-description').value.trim();
+                const contact = document.getElementById('site-contact').value.trim();
+                const progress = parseInt(document.getElementById('site-progress').value) || 0;
+                const icon = getIconForCategory(category);
+                const lastUpdated = formatDate();
+                
+                if (id) {
+                    const site = siteData.find(s => s.id == id);
+                    if (site) Object.assign(site, { name, category, icon, lat, lng, status, description, contact, progress, lastUpdated });
+                } else {
+                    const newSite = { id: getNextId(), name, category, icon, lat, lng, lastUpdated, status, description, contact, progress };
+                    siteData.push(newSite);
+                    currentSiteId = newSite.id;
+                }
+                saveSiteData();
+                refreshAll();
+                closePanel();
+                const savedId = id ? parseInt(id) : currentSiteId;
+                if (savedId) selectSite(savedId, true);
+            }
+            
+            // ==================== 刪除 ====================
+            function openDeleteConfirm(site) {
+                deleteTargetId = site.id;
+                deleteSiteNameEl.textContent = site.name;
+                deleteDialogOverlay.classList.add('show');
+            }
+            function closeDeleteDialog() { deleteDialogOverlay.classList.remove('show'); deleteTargetId = null; }
+            function confirmDelete() {
+                if (deleteTargetId === null) return;
+                siteData = siteData.filter(s => s.id !== deleteTargetId);
+                saveSiteData();
+                if (currentSiteId === deleteTargetId) currentSiteId = siteData.length > 0 ? siteData[0].id : null;
+                refreshAll();
+                closeDeleteDialog();
+                if (currentSiteId) selectSite(currentSiteId, true);
+            }
+            
+            // ==================== 搜索 ====================
+            function setupSearch() {
+                if (!siteSearch) return;
+                siteSearch.addEventListener('input', function() {
+                    const term = this.value.toLowerCase();
+                    let visibleCount = 0;
+                    document.querySelectorAll('.site-item').forEach(el => {
+                        const name = el.querySelector('h3').textContent.toLowerCase();
+                        const id = parseInt(el.dataset.id);
+                        const match = name.includes(term);
+                        el.style.display = match ? 'flex' : 'none';
+                        if (match) visibleCount++;
+                        if (markers[id]) markers[id].setOpacity(match ? 1 : 0.15);
+                    });
+                    if (!term) {
+                        Object.values(markers).forEach(m => m.setOpacity(1));
+                        if (listCount) listCount.textContent = siteData.length;
+                    } else {
+                        if (listCount) listCount.textContent = visibleCount;
+                    }
+                });
+            }
+            
+            function updateStats() {
+                document.getElementById('stat-total').textContent = siteData.length;
+                document.getElementById('stat-active').textContent = siteData.filter(s => s.status === 'active').length;
+                document.getElementById('stat-attention').textContent = siteData.filter(s => s.status === 'attention').length;
+            }
+            
+            function refreshAll() {
+                renderSiteList();
+                Object.values(markers).forEach(m => m.remove());
+                markers = {};
+                renderMapMarkers();
+                updateStats();
+            }
+            
+            // ==================== 事件 ====================
+            function bindEvents() {
+                addSiteBtn.onclick = () => openPanel(null);
+                panelClose.onclick = closePanel;
+                panelCancel.onclick = closePanel;
+                panelSave.onclick = saveSiteFromForm;
+                
+                pickLocationCard.onclick = function() {
+                    if (isPickingLocation) { exitPickMode(); return; }
+                    enterPickMode();
+                };
+                
+                document.getElementById('site-form').addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') { e.preventDefault(); saveSiteFromForm(); }
+                });
+                
+                deleteDialogClose.onclick = closeDeleteDialog;
+                deleteDialogCancel.onclick = closeDeleteDialog;
+                deleteDialogConfirm.onclick = confirmDelete;
+                deleteDialogOverlay.addEventListener('click', function(e) {
+                    if (e.target === deleteDialogOverlay) closeDeleteDialog();
+                });
+                
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape' && sitePanel.classList.contains('show')) closePanel();
+                });
+            }
+            
+            function setupMapClick() {
+                map.on('click', function(e) {
+                    if (!isPickingLocation) return;
+                    placePickMarker(e.latlng.lat, e.latlng.lng);
+                });
+            }
+            
+            // ==================== 初始化 ====================
+            function initMap() {
+                map = L.map('site-map', { 
+                    center: [22.35, 114.13], zoom: 11, zoomControl: true 
+                });
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+                }).addTo(map);
+                map.whenReady(() => setupMapClick());
+            }
+            
+            function init() {
+                initMap();
+                refreshAll();
+                setupSearch();
+                bindEvents();
+                if (siteData.length > 0) { currentSiteId = siteData[0].id; selectSite(siteData[0].id, true); }
+                console.log('[DWSS] Ready. Site list is now scrollable.');
+            }
+            
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+            
+            window.DWSS_SiteLocations = {
+                getMap: () => map, getSiteData: () => siteData,
+                selectSiteById: (id) => selectSite(id, true),
+                openNewSiteForm: () => openPanel(null), refreshAll,
+                resetData: () => {
+                    if (confirm('Reset all site data to defaults?')) {
+                        siteData = JSON.parse(JSON.stringify(defaultSiteData));
+                        saveSiteData();
+                        currentSiteId = siteData[0]?.id || null;
+                        refreshAll();
+                    }
+                }
+            };
+        })();
     </script>
-    
 </body>
 </html>
