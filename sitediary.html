@@ -360,25 +360,26 @@
             }
             
             function handleEdit(e) {
-                const id = e.currentTarget.getAttribute('data-id');
-                const doc = diaryData.find(d => d.id === id);
-                if (doc) {
-                    sessionStorage.setItem('editDocument', JSON.stringify({
-                        id: doc.id,
-                        status: doc.status,
-                        statusText: getStatusText(doc.status),
-                        site: doc.site,
-                        date: formatDate(doc.date),
-                        submittedBy: doc.submittedBy,
-                        type: doc.type,
-                        pdfUrl: doc.pdfUrl || '',
-                        pdfData: doc.pdfData || ''
-                    }));
-                    window.location.href = 'editpdf.html';
-                } else {
-                    alert('Document not found');
-                }
-            }
+    const id = e.currentTarget.getAttribute('data-id');
+    const doc = diaryData.find(d => d.id === id);
+    if (doc) {
+        sessionStorage.setItem('editDocument', JSON.stringify({
+            id: doc.id,
+            status: doc.status,
+            statusText: getStatusText(doc.status),
+            site: doc.site,
+            date: formatDate(doc.date),
+            submittedBy: doc.submittedBy,
+            type: doc.type,
+            pdfUrl: doc.pdfUrl || '',
+            pdfData: doc.pdfData || '',
+            annotations: doc.annotations || []   // 传递已有的标注数据
+        }));
+        window.location.href = 'editpdf.html';
+    } else {
+        alert('Document not found');
+    }
+}
             
             function handleDelete(e) {
                 const id = e.currentTarget.getAttribute('data-id');
