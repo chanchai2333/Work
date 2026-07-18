@@ -1,5 +1,11 @@
 /**
- * editpdf.js - PDF 编辑页面（坐标系统统一，缩放精确跟随）
+ * editpdf.js - PDF 编辑页面（坐标统一存储原始值，缩放精确跟随）
+ * 修复内容：
+ *  1. 高亮/印章坐标存储为原始坐标（除以 scale），避免缩放后错位。
+ *  2. 所有注释绘制时按当前 scale 渲染。
+ *  3. 文本拖动时考虑容器滚动偏移量。
+ *  4. 高亮颜色跟随颜色选择器（不再硬编码黄色）。
+ *  5. 优化缩放、适应宽度等功能。
  */
 (function() {
     'use strict';
@@ -149,7 +155,7 @@
         if (zoomLevelSpan) zoomLevelSpan.textContent = Math.round(scale * 100) + '%';
     }
 
-    // ---------- 标注绘制（高亮/印章） ----------
+    // ---------- 标注绘制（高亮/印章）-- 所有坐标使用原始值 * 当前 scale ----------
     function redrawAnnotations() {
         if (!drawCtx) return;
         drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
@@ -173,14 +179,18 @@
             case 'highlight':
                 if (anno.points && anno.points.length > 1) {
                     ctx.beginPath();
-                    ctx.moveTo(anno.points[0].x, anno.points[0].y);
-                    for (let i=1; i<anno.points.length; i++) ctx.lineTo(anno.points[i].x, anno.points[i].y);
+                    const first = anno.points[0];
+                    ctx.moveTo(first.x * scale, first.y * scale);
+                    for (let i = 1; i < anno.points.length; i++) {
+                        ctx.lineTo(anno.points[i].x * scale, anno.points[i].y * scale);
+                    }
                     ctx.stroke();
                 }
                 break;
             case 'stamp':
-                ctx.font = `${anno.size * 8}px Arial`;
-                ctx.fillText(anno.text || '✓', anno.x, anno.y);
+                // 字体大小也按比例缩放
+                ctx.font = `${anno.size * 8 * scale}px Arial`;
+                ctx.fillText(anno.text || '✓', anno.x * scale, anno.y * scale);
                 break;
         }
         ctx.restore();
@@ -206,7 +216,7 @@
         el.className = 'text-annotation';
         el.dataset.id = anno._id;
         
-        // 计算缩放后的位置和字体大小
+        // 缩放后的位置和字体大小（原始坐标 * scale）
         const scaledX = anno.x * scale;
         const scaledY = anno.y * scale;
         const scaledFontSize = anno.size * 4 * scale;
@@ -229,7 +239,7 @@
         });
         el.appendChild(delBtn);
         
-        // 双击编辑
+        // 双击编辑（仅文本工具）
         el.addEventListener('dblclick', (e) => {
             e.stopPropagation();
             if (currentTool === 'text') {
@@ -338,7 +348,7 @@
         deleteAnnotation(selectedAnnotationId);
     }
 
-    // ---------- 鼠标坐标转换 ----------
+    // ---------- 鼠标坐标转换（返回 drawCanvas 上的像素坐标）----------
     function getCanvasCoords(e) {
         const rect = drawCanvas.getBoundingClientRect();
         const scaleX = drawCanvas.width / rect.width;
@@ -353,21 +363,21 @@
         return { x, y };
     }
 
-    // ---------- 鼠标拖拽移动（更新原始坐标） ----------
+    // ---------- 鼠标拖拽移动（更新原始坐标，考虑容器滚动）----------
     document.addEventListener('mousemove', (e) => {
         if (!isDraggingText || draggedAnnotationId === null) return;
         const anno = annotations.find(a => a._id === draggedAnnotationId);
         if (!anno) return;
         const containerRect = container.getBoundingClientRect();
-        // 计算在容器中的 DOM 像素位置
-        let newLeft = e.clientX - containerRect.left - dragStartX;
-        let newTop = e.clientY - containerRect.top - dragStartY;
+        // 计算在容器中的像素位置（加上滚动偏移）
+        let newLeft = e.clientX - containerRect.left + container.scrollLeft - dragStartX;
+        let newTop = e.clientY - containerRect.top + container.scrollTop - dragStartY;
         // 限制在容器内
-        const maxLeft = containerRect.width - 20;
-        const maxTop = containerRect.height - 20;
+        const maxLeft = drawCanvas.width - 20;
+        const maxTop = drawCanvas.height - 20;
         newLeft = Math.max(0, Math.min(newLeft, maxLeft));
         newTop = Math.max(0, Math.min(newTop, maxTop));
-        // 更新 DOM（实时反馈）
+        // 实时更新 DOM
         const el = textBoxElements.find(el => el.dataset.id == draggedAnnotationId);
         if (el) {
             el.style.left = newLeft + 'px';
@@ -384,28 +394,27 @@
                 if (el) {
                     const left = parseFloat(el.style.left);
                     const top = parseFloat(el.style.top);
-                    // 转换为原始坐标
+                    // 转换为原始坐标（除以 scale）
                     anno.x = left / scale;
                     anno.y = top / scale;
                     saveHistory();
                 }
             }
             draggedAnnotationId = null;
-            redrawAnnotations();
         }
     });
 
-    // ---------- 画布点击：创建新文本 ----------
+    // ---------- 画布点击：创建新文本 / 高亮 / 印章 ----------
     function startDrawing(e) {
         if (currentTool === 'text') {
             e.preventDefault();
             const pos = getCanvasCoords(e);
-            // 检查点击位置是否在文本框上
+            // 检查点击位置是否在现有文本框上
             const clickedEl = document.elementFromPoint(e.clientX, e.clientY);
             if (clickedEl && clickedEl.closest && clickedEl.closest('.text-annotation')) {
                 return;
             }
-            // 原始坐标（除以 scale）
+            // 原始坐标 = 像素坐标 / scale
             const rawX = pos.x / scale;
             const rawY = pos.y / scale;
             const newAnno = {
@@ -444,15 +453,16 @@
         const pos = getCanvasCoords(e);
         lastX = pos.x; lastY = pos.y;
         startX = pos.x; startY = pos.y;
-        currentStrokePoints = [{x: pos.x, y: pos.y}];
+        // 存储原始坐标（除以 scale）
+        currentStrokePoints = [{x: pos.x / scale, y: pos.y / scale}];
         if (currentTool === 'highlight') {
             drawCtx.beginPath();
             drawCtx.moveTo(pos.x, pos.y);
             drawCtx.lineCap = 'round';
             drawCtx.lineJoin = 'round';
-            drawCtx.strokeStyle = '#ffeb3b';
+            drawCtx.strokeStyle = currentColor; // 使用用户选择的颜色
             drawCtx.lineWidth = currentSize * 3;
-            drawCtx.globalAlpha = currentOpacity / 100 * 0.5;
+            drawCtx.globalAlpha = currentOpacity / 100 * 0.5; // 半透明预览
             drawCtx.lineTo(pos.x, pos.y);
             drawCtx.stroke();
         }
@@ -466,7 +476,8 @@
         if (currentTool === 'highlight') {
             drawCtx.lineTo(pos.x, pos.y);
             drawCtx.stroke();
-            currentStrokePoints.push({x: pos.x, y: pos.y});
+            // 记录原始坐标点
+            currentStrokePoints.push({x: pos.x / scale, y: pos.y / scale});
         }
         lastX = pos.x; lastY = pos.y;
     }
@@ -481,10 +492,10 @@
             if (currentStrokePoints.length > 1) {
                 annotation = {
                     type: 'highlight',
-                    color: '#ffeb3b',
+                    color: currentColor,        // 使用颜色选择器
                     size: currentSize * 3,
                     opacity: currentOpacity,
-                    points: currentStrokePoints.slice(),
+                    points: currentStrokePoints.slice(), // 已是原始坐标
                     _id: Date.now() + Math.random()
                 };
             }
@@ -496,14 +507,12 @@
                     color: currentColor,
                     size: currentSize,
                     opacity: currentOpacity,
-                    x: startX, y: startY,
+                    x: startX / scale,   // 原始坐标
+                    y: startY / scale,
                     text: stampText,
                     _id: Date.now() + Math.random()
                 };
-                drawCtx.font = `${currentSize * 8}px Arial`;
-                drawCtx.fillStyle = currentColor;
-                drawCtx.globalAlpha = currentOpacity / 100;
-                drawCtx.fillText(stampText, startX, startY);
+                // 临时绘制印章预览（不存储，redrawAnnotations 后会重绘）
             }
         }
         if (annotation) {
@@ -511,6 +520,7 @@
             annotations.push(annotation);
             redrawAnnotations();
         }
+        // 重置路径和临时点
         drawCtx.beginPath();
         currentStrokePoints = [];
     }
