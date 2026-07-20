@@ -338,26 +338,27 @@
             }
             
             function handleView(e) {
-                const id = e.currentTarget.getAttribute('data-id');
-                const doc = diaryData.find(d => d.id === id);
-                if (doc) {
-                    // 若存在上传的 PDF（Base64），则使用 Data URL；否则使用模板 PDF
-                    let pdfUrl = doc.pdfData ? 'data:application/pdf;base64,' + doc.pdfData : 'Site diary template.pdf';
-                    sessionStorage.setItem('currentDocument', JSON.stringify({
-                        id: doc.id,
-                        status: doc.status,
-                        statusText: getStatusText(doc.status),
-                        site: doc.site,
-                        date: formatDate(doc.date),
-                        submittedBy: doc.submittedBy,
-                        type: doc.type,
-                        pdfUrl: pdfUrl
-                    }));
-                    window.location.href = 'sitediarydocument.html';
-                } else {
-                    alert('Document not found');
-                }
-            }
+    const id = e.currentTarget.getAttribute('data-id');
+    const doc = diaryData.find(d => d.id === id);
+    if (doc) {
+        // 获取完整的文档数据，包括 pdfData 和 annotations
+        const fullDoc = {
+            id: doc.id,
+            status: doc.status,
+            statusText: getStatusText(doc.status),
+            site: doc.site,
+            date: formatDate(doc.date),
+            submittedBy: doc.submittedBy,
+            type: doc.type,
+            pdfData: doc.pdfData || null,        // Base64 PDF 数据
+            annotations: doc.annotations || []   // 已有的注释
+        };
+        sessionStorage.setItem('currentDocument', JSON.stringify(fullDoc));
+        window.location.href = 'sitediarydocument.html';
+    } else {
+        alert('Document not found');
+    }
+}
             
             function handleEdit(e) {
     const id = e.currentTarget.getAttribute('data-id');
