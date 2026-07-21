@@ -38,7 +38,7 @@
             cursor: crosshair;
             border: none;
             padding: 0;
-            z-index: 15; /* 高于文本框 */
+            z-index: 15; /* 低于文本框 */
         }
         .tool-btn.active {
             background: #2ecc71;
@@ -58,7 +58,7 @@
             white-space: pre-wrap;
             word-wrap: break-word;
             outline: none;
-            z-index: 10;
+            z-index: 25; /* 高于 draw-canvas */
             user-select: none;
             box-sizing: border-box;
         }
@@ -69,7 +69,7 @@
             border: 2px solid #3498db;
             background: rgba(255,255,255,0.95);
             cursor: text;
-            z-index: 20;
+            z-index: 30; /* 编辑时更高 */
         }
         .text-annotation.locked {
             cursor: default;
@@ -253,22 +253,17 @@
                 <div class="meta-item"><span class="meta-label">Submitted By:</span><span class="meta-value" id="docSubmittedBy">N/A</span></div>
             </div>
             
-            <!-- Ribbon 工具栏（仅保留 Highlight，移除 Underline/Strikeout） -->
+            <!-- Ribbon 工具栏 -->
             <div class="pdf-toolbar-ribbon">
-                <!-- 选择与编辑 -->
                 <div class="ribbon-group">
                     <span class="ribbon-group-label">Select</span>
                     <button class="tool-btn active" data-tool="select"><i class="fas fa-mouse-pointer"></i> Select</button>
                 </div>
-                
-                <!-- 注释工具 -->
                 <div class="ribbon-group">
                     <span class="ribbon-group-label">Annotate</span>
                     <button class="tool-btn" data-tool="text"><i class="fas fa-font"></i> Text</button>
                     <button class="tool-btn" data-tool="highlight"><i class="fas fa-highlighter"></i> Highlight</button>
                 </div>
-                
-                <!-- 形状工具 -->
                 <div class="ribbon-group">
                     <span class="ribbon-group-label">Shapes</span>
                     <button class="tool-btn" data-tool="rectangle"><i class="fas fa-square"></i> Rect</button>
@@ -276,8 +271,6 @@
                     <button class="tool-btn" data-tool="arrow"><i class="fas fa-arrow-right"></i> Arrow</button>
                     <button class="tool-btn" data-tool="line"><i class="fas fa-minus"></i> Line</button>
                 </div>
-                
-                <!-- 属性控制 -->
                 <div class="ribbon-group" style="flex:1; justify-content:flex-end;">
                     <div class="property-controls">
                         <div class="property-group"><label>Color:</label><input type="color" id="color-picker" value="#3498db"></div>
@@ -292,7 +285,6 @@
                     <button class="nav-btn" id="prev-page"><i class="fas fa-chevron-left"></i></button>
                     <span class="page-info">Pages <span id="current-page">1</span> of <span id="total-pages">1</span></span>
                     <button class="nav-btn" id="next-page"><i class="fas fa-chevron-right"></i></button>
-                    <!-- Zoom 控件已移除 -->
                     <div style="margin-left:20px;display:flex;gap:10px;">
                         <button class="btn" id="undo-btn" style="background:#f39c12;color:white;padding:4px 12px;border-radius:4px;"><i class="fas fa-undo"></i> Undo</button>
                         <button class="btn lock-btn" id="lock-btn" style="padding:4px 12px;border-radius:4px;"><i class="fas fa-lock"></i> Lock</button>

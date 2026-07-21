@@ -1,6 +1,5 @@
 /**
- * editpdf.js - PDF 编辑页面（移除 Underline/Strikeout）
- * 保留：Select、Text、Highlight、矩形、椭圆、箭头、线条
+ * editpdf.js - PDF 编辑页面（移除文本框右边界限制）
  */
 (function() {
     'use strict';
@@ -320,7 +319,7 @@
         }
     }
 
-    // ---------- 标注绘制（移除 underline/strikeout） ----------
+    // ---------- 标注绘制 ----------
     function redrawAnnotations() {
         if (!drawCtx) return;
         drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
@@ -446,18 +445,23 @@
         deleteAnnotation(selectedAnnotationId);
     }
 
-    // ---------- 鼠标坐标转换 ----------
+    // ---------- 坐标转换（基于 PDF Canvas 边界） ----------
     function getCanvasCoords(e) {
-        const rect = drawCanvas.getBoundingClientRect();
-        const scaleX = drawCanvas.width / rect.width;
-        const scaleY = drawCanvas.height / rect.height;
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
         let clientX, clientY;
-        if (e.touches) { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; }
-        else { clientX = e.clientX; clientY = e.clientY; }
+        if (e.touches) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
         let x = (clientX - rect.left) * scaleX;
         let y = (clientY - rect.top) * scaleY;
-        x = Math.min(Math.max(0, x), drawCanvas.width);
-        y = Math.min(Math.max(0, y), drawCanvas.height);
+        x = Math.min(Math.max(0, x), canvas.width);
+        y = Math.min(Math.max(0, y), canvas.height);
         return { x, y };
     }
 
@@ -562,10 +566,12 @@
         const containerRect = container.getBoundingClientRect();
         let visualX = e.clientX - containerRect.left + container.scrollLeft - dragStartX;
         let visualY = e.clientY - containerRect.top + container.scrollTop - dragStartY;
+        // 不再限制右边界和下边界
         let newRawX = visualX / scale;
         let newRawY = visualY / scale;
-        newRawX = Math.max(0, Math.min(newRawX, (drawCanvas.width / scale) - 20));
-        newRawY = Math.max(0, Math.min(newRawY, (drawCanvas.height / scale) - 20));
+        // 仅限制最小值为 0，允许拖拽到任何位置（包括右侧超出 PDF 边界）
+        newRawX = Math.max(0, newRawX);
+        newRawY = Math.max(0, newRawY);
         
         const el = textBoxElements.find(el => el.dataset.id == draggedAnnotationId);
         if (el) {
@@ -599,7 +605,7 @@
         container.addEventListener('scroll', updateTextPositions);
     }
 
-    // ---------- 绘制事件 ----------
+    // ---------- 绘制事件（绑定到容器） ----------
     function startDrawing(e) {
         if (currentTool === 'select') {
             startDragAnnotation(e);
@@ -609,6 +615,7 @@
         if (currentTool === 'text') {
             e.preventDefault();
             const pos = getCanvasCoords(e);
+            // 检测是否点击在文本框上
             const clickedEl = document.elementFromPoint(e.clientX, e.clientY);
             if (clickedEl && clickedEl.closest && clickedEl.closest('.text-annotation')) return;
             
@@ -897,16 +904,23 @@
         window.location.href = 'sitediary.html';
     }
 
-    // ---------- 绑定事件 ----------
+    // ---------- 绑定事件（绑定到容器） ----------
     function bindDrawingEvents() {
-        if (!drawCanvas) return;
-        drawCanvas.addEventListener('mousedown', startDrawing);
-        drawCanvas.addEventListener('mousemove', draw);
-        drawCanvas.addEventListener('mouseup', stopDrawing);
-        drawCanvas.addEventListener('mouseleave', stopDrawing);
-        drawCanvas.addEventListener('touchstart', startDrawing);
-        drawCanvas.addEventListener('touchmove', draw);
-        drawCanvas.addEventListener('touchend', stopDrawing);
+        if (!container) return;
+        container.removeEventListener('mousedown', startDrawing);
+        container.removeEventListener('mousemove', draw);
+        container.removeEventListener('mouseup', stopDrawing);
+        container.removeEventListener('mouseleave', stopDrawing);
+        container.addEventListener('mousedown', startDrawing);
+        container.addEventListener('mousemove', draw);
+        container.addEventListener('mouseup', stopDrawing);
+        container.addEventListener('mouseleave', stopDrawing);
+        container.removeEventListener('touchstart', startDrawing);
+        container.removeEventListener('touchmove', draw);
+        container.removeEventListener('touchend', stopDrawing);
+        container.addEventListener('touchstart', startDrawing, { passive: false });
+        container.addEventListener('touchmove', draw, { passive: false });
+        container.addEventListener('touchend', stopDrawing, { passive: false });
     }
 
     function bindActionButtons() {
@@ -936,6 +950,7 @@
             drawCtx.font = '20px Arial';
             drawCtx.fillText('No PDF attached. You can still add annotations.', 30, 100);
         }
+        drawCanvas.style.pointerEvents = 'none';
         setupTools();
         bindDrawingEvents();
         setupNavigation();

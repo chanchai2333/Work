@@ -1,5 +1,5 @@
 // ===== Site Diary Document Viewer (PDF.js + Annotations) =====
-// 固定 100% 缩放，移除 Zoom 功能
+// 完全使用 DOM 渲染文本框，与 editpdf.html 保持一致，固定 scale=1
 (function() {
     'use strict';
 
@@ -9,10 +9,12 @@
     let totalPages = 0;
     let annotations = [];
     let currentDocId = null;
+    const scale = 1.0; // 固定缩放为 1
 
     // ---------- DOM 引用 ----------
     const pdfCanvas = document.getElementById('pdf-canvas');
     const annoCanvas = document.getElementById('annotation-canvas');
+    const textContainer = document.getElementById('text-annotation-container');
     const ctx = pdfCanvas.getContext('2d');
     const annoCtx = annoCanvas.getContext('2d');
     const loadingEl = document.getElementById('pdf-loading');
@@ -21,6 +23,7 @@
     const controlsEl = document.getElementById('pdf-controls');
     const currentPageSpan = document.getElementById('pdf-current-page');
     const totalPagesSpan = document.getElementById('pdf-total-pages');
+    const zoomLevelSpan = document.getElementById('pdf-zoom-level');
     const printBtn = document.getElementById('print-pdf-btn');
     const downloadBtn = document.getElementById('download-pdf-btn');
 
@@ -48,36 +51,12 @@
         }
     }
 
-    // ---------- 绘制注释 ----------
+    // ---------- 绘制非文本注释（高亮、形状等） ----------
     function drawAnnotation(anno, scale) {
         if (!annoCtx) return;
         const ctx = annoCtx;
 
         switch (anno.type) {
-            case 'text': {
-                // 与 editpdf.js 中 div 的 padding 保持一致
-                const padX = 6 * scale;
-                const padY = 2 * scale;
-                const x = anno.x * scale + padX;
-                const y = anno.y * scale + padY;
-                const fontSize = anno.size * 4 * scale;
-                const opacity = (anno.opacity || 100) / 100;
-
-                ctx.save();
-                ctx.globalAlpha = opacity;
-                ctx.fillStyle = anno.color || '#000000';
-                ctx.font = fontSize + 'px Arial';
-                ctx.textBaseline = 'top';
-                ctx.textAlign = 'left';
-
-                const lines = (anno.text || '').split('\n');
-                const lineHeight = fontSize * 1.4;
-                lines.forEach((line, i) => {
-                    ctx.fillText(line, x, y + i * lineHeight);
-                });
-                ctx.restore();
-                break;
-            }
             case 'highlight':
                 ctx.save();
                 ctx.globalAlpha = (anno.opacity || 100) / 100 * 0.4;
@@ -174,38 +153,69 @@
         if (!annoCtx) return;
         annoCtx.clearRect(0, 0, annoCanvas.width, annoCanvas.height);
         annotations.forEach(anno => {
-            drawAnnotation(anno, scale);
+            if (anno.type !== 'text') {
+                drawAnnotation(anno, scale);
+            }
         });
     }
 
-    // ---------- 渲染单页，固定 scale = 1.0 ----------
+    // ---------- 渲染文本框（DOM 方式） ----------
+    function renderTextAnnotations(scale) {
+        // 清空容器
+        textContainer.innerHTML = '';
+        const textAnnos = annotations.filter(a => a.type === 'text');
+        textAnnos.forEach(anno => {
+            const el = document.createElement('div');
+            el.className = 'text-annotation-view';
+            el.textContent = anno.text || '';
+            el.style.color = anno.color || '#000000';
+            el.style.opacity = (anno.opacity || 100) / 100;
+            el.style.fontSize = (anno.size * 4 * scale) + 'px';
+            el.style.left = (anno.x * scale) + 'px';
+            el.style.top = (anno.y * scale) + 'px';
+            // 与 editpdf.html 完全相同的样式
+            textContainer.appendChild(el);
+        });
+    }
+
+    // ---------- 适应宽度（固定 scale=1，仅用于首次定位） ----------
+    function fitToWidth() {
+        // 固定 scale=1，不做缩放
+        zoomLevelSpan.textContent = '100%';
+        return Promise.resolve();
+    }
+
+    // ---------- 渲染单页 ----------
     function renderPage(pageNum) {
         if (!pdfDoc) return Promise.reject('No PDF document');
         return pdfDoc.getPage(pageNum).then(page => {
-            // 使用 scale = 1.0 获取原始尺寸的 viewport
             const viewport = page.getViewport({ scale: 1.0 });
-            // 设置 Canvas 像素尺寸为 viewport 尺寸（即 100% 原始尺寸）
+            // 设置 Canvas 的像素尺寸
             pdfCanvas.width = viewport.width;
             pdfCanvas.height = viewport.height;
             annoCanvas.width = viewport.width;
             annoCanvas.height = viewport.height;
 
-            // 设置 CSS 尺寸为相同像素值，确保 1:1 显示，不缩放
+            // 设置 CSS 尺寸为像素值，防止缩放
             const widthPx = viewport.width + 'px';
             const heightPx = viewport.height + 'px';
             pdfCanvas.style.width = widthPx;
             pdfCanvas.style.height = heightPx;
             annoCanvas.style.width = widthPx;
             annoCanvas.style.height = heightPx;
+            // 文本容器尺寸与父容器一致（由 CSS 控制）
 
             // 渲染 PDF
             const renderContext = { canvasContext: ctx, viewport: viewport };
             return page.render(renderContext).promise;
         }).then(() => {
-            // 绘制注释，scale 固定为 1.0
+            // 绘制非文本注释
             redrawAnnotations(1.0);
+            // 渲染文本框
+            renderTextAnnotations(1.0);
             currentPageSpan.textContent = pageNum;
             currentPage = pageNum;
+            zoomLevelSpan.textContent = '100%';
         }).catch(err => {
             console.error('Render page error:', err);
             throw err;
@@ -294,8 +304,7 @@
             printBtn.style.display = 'inline-flex';
             downloadBtn.style.display = 'inline-flex';
 
-            // 直接渲染第一页，scale 固定为 1.0
-            return renderPage(currentPage);
+            return fitToWidth().then(() => renderPage(currentPage));
         }).catch(err => {
             console.error('PDF loading error:', err);
             loadingEl.style.display = 'none';
@@ -351,7 +360,7 @@
             });
     }
 
-    // ---------- 导航（只保留翻页） ----------
+    // ---------- 导航（移除缩放） ----------
     function setupControls() {
         document.getElementById('pdf-prev').addEventListener('click', () => {
             if (currentPage > 1) renderPage(currentPage - 1);
@@ -359,7 +368,8 @@
         document.getElementById('pdf-next').addEventListener('click', () => {
             if (currentPage < totalPages) renderPage(currentPage + 1);
         });
-        // 移除 zoom 监听
+        // 缩放按钮已移除，无需处理
+        // 窗口 resize 时保持固定 scale=1，不做自适应
     }
 
     // ---------- 按钮事件 ----------
