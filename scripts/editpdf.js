@@ -1,5 +1,6 @@
 /**
- * editpdf.js - PDF 编辑页面（移除文本框右边界限制）
+ * editpdf.js - PDF 编辑页面
+ * 修正了 Scroll 偏移量抵消所引起的二次滾動和坐標錯位問題
  */
 (function() {
     'use strict';
@@ -44,7 +45,6 @@
     let dragStartX = 0, dragStartY = 0;
     let draggedAnnotationId = null;
 
-    // 拖拽绘制注释
     let isDraggingAnnotation = false;
     let dragAnnoStartX = 0, dragAnnoStartY = 0;
     let draggedAnnoId = null;
@@ -159,15 +159,16 @@
 
     // ---------- 文本框位置更新 ----------
     function updateTextPositions() {
-        const scrollLeft = container ? container.scrollLeft : 0;
-        const scrollTop = container ? container.scrollTop : 0;
+        const offsetX = canvas.offsetLeft || 0;
+        const offsetY = canvas.offsetTop || 0;
         
         textBoxElements.forEach(el => {
             const id = el.dataset.id;
             const anno = annotations.find(a => a._id == id);
             if (!anno) return;
-            el.style.left = (anno.x * scale - scrollLeft) + 'px';
-            el.style.top = (anno.y * scale - scrollTop) + 'px';
+            // 修正：移除 scrollLeft / scrollTop。因為容器滾動會自然帶動內部的絕對定位元素
+            el.style.left = (anno.x * scale + offsetX) + 'px';
+            el.style.top = (anno.y * scale + offsetY) + 'px';
             el.style.fontSize = (anno.size * 4 * scale) + 'px';
         });
     }
@@ -445,11 +446,8 @@
         deleteAnnotation(selectedAnnotationId);
     }
 
-    // ---------- 坐标转换（基于 PDF Canvas 边界） ----------
+    // ---------- 精确坐标转换（基于 canvas 边界） ----------
     function getCanvasCoords(e) {
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
         let clientX, clientY;
         if (e.touches) {
             clientX = e.touches[0].clientX;
@@ -458,6 +456,10 @@
             clientX = e.clientX;
             clientY = e.clientY;
         }
+
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
         let x = (clientX - rect.left) * scaleX;
         let y = (clientY - rect.top) * scaleY;
         x = Math.min(Math.max(0, x), canvas.width);
@@ -564,19 +566,22 @@
         const anno = annotations.find(a => a._id === draggedAnnotationId);
         if (!anno || anno.locked) return;
         const containerRect = container.getBoundingClientRect();
+        const offsetX = canvas.offsetLeft || 0;
+        const offsetY = canvas.offsetTop || 0;
+        
         let visualX = e.clientX - containerRect.left + container.scrollLeft - dragStartX;
         let visualY = e.clientY - containerRect.top + container.scrollTop - dragStartY;
-        // 不再限制右边界和下边界
-        let newRawX = visualX / scale;
-        let newRawY = visualY / scale;
-        // 仅限制最小值为 0，允许拖拽到任何位置（包括右侧超出 PDF 边界）
+        
+        let newRawX = (visualX - offsetX) / scale;
+        let newRawY = (visualY - offsetY) / scale;
         newRawX = Math.max(0, newRawX);
         newRawY = Math.max(0, newRawY);
         
         const el = textBoxElements.find(el => el.dataset.id == draggedAnnotationId);
         if (el) {
-            el.style.left = (newRawX * scale - container.scrollLeft) + 'px';
-            el.style.top = (newRawY * scale - container.scrollTop) + 'px';
+            // 修正：移除 container.scrollLeft 偏移
+            el.style.left = (newRawX * scale + offsetX) + 'px';
+            el.style.top = (newRawY * scale + offsetY) + 'px';
         }
     });
 
@@ -587,8 +592,11 @@
             if (anno && !anno.locked) {
                 const el = textBoxElements.find(el => el.dataset.id == draggedAnnotationId);
                 if (el) {
-                    const left = parseFloat(el.style.left) + container.scrollLeft;
-                    const top = parseFloat(el.style.top) + container.scrollTop;
+                    const offsetX = canvas.offsetLeft || 0;
+                    const offsetY = canvas.offsetTop || 0;
+                    // 修正：移除 container.scrollLeft 偏移
+                    const left = parseFloat(el.style.left) - offsetX;
+                    const top = parseFloat(el.style.top) - offsetY;
                     anno.x = left / scale;
                     anno.y = top / scale;
                     saveHistory();
@@ -615,7 +623,6 @@
         if (currentTool === 'text') {
             e.preventDefault();
             const pos = getCanvasCoords(e);
-            // 检测是否点击在文本框上
             const clickedEl = document.elementFromPoint(e.clientX, e.clientY);
             if (clickedEl && clickedEl.closest && clickedEl.closest('.text-annotation')) return;
             
@@ -650,7 +657,6 @@
             return;
         }
         
-        // 高亮 - 自由绘制
         if (currentTool === 'highlight') {
             e.preventDefault();
             isDrawing = true;
@@ -671,7 +677,6 @@
             return;
         }
         
-        // 矩形、椭圆、箭头、线条 - 拖拽绘制
         if (currentTool === 'rectangle' || currentTool === 'ellipse' || currentTool === 'arrow' || currentTool === 'line') {
             e.preventDefault();
             isDrawing = true;
@@ -695,14 +700,12 @@
         e.preventDefault();
         const pos = getCanvasCoords(e);
         
-        // 高亮 - 自由绘制
         if (currentTool === 'highlight') {
             drawCtx.lineTo(pos.x, pos.y);
             drawCtx.stroke();
             currentStrokePoints.push({x: pos.x / scale, y: pos.y / scale});
         }
         
-        // 拖拽绘制类 - 实时预览
         if (currentTool === 'rectangle' || currentTool === 'ellipse' || currentTool === 'arrow' || currentTool === 'line') {
             redrawAnnotations();
             drawCtx.save();
@@ -775,7 +778,6 @@
         const pos = e ? getCanvasCoords(e) : {x: lastX, y: lastY};
         let annotation = null;
         
-        // 高亮 - 自由绘制
         if (currentTool === 'highlight') {
             if (currentStrokePoints.length > 1) {
                 annotation = {
@@ -791,7 +793,6 @@
             currentStrokePoints = [];
         }
         
-        // 拖拽绘制类
         if (currentTool === 'rectangle' || currentTool === 'ellipse' || currentTool === 'arrow' || currentTool === 'line') {
             const endX = pos.x / scale;
             const endY = pos.y / scale;
@@ -904,7 +905,7 @@
         window.location.href = 'sitediary.html';
     }
 
-    // ---------- 绑定事件（绑定到容器） ----------
+    // ---------- 绑定事件 ----------
     function bindDrawingEvents() {
         if (!container) return;
         container.removeEventListener('mousedown', startDrawing);

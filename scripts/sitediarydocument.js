@@ -1,5 +1,5 @@
 // ===== Site Diary Document Viewer (PDF.js + Annotations) =====
-// 完全使用 DOM 渲染文本框，与 editpdf.html 保持一致，固定 scale=1
+// 完全使用 DOM 渲染文本框，與 editpdf.html 保持一致，固定 scale=1
 (function() {
     'use strict';
 
@@ -161,7 +161,6 @@
 
     // ---------- 渲染文本框（DOM 方式） ----------
     function renderTextAnnotations(scale) {
-        // 清空容器
         textContainer.innerHTML = '';
         const textAnnos = annotations.filter(a => a.type === 'text');
         textAnnos.forEach(anno => {
@@ -173,14 +172,12 @@
             el.style.fontSize = (anno.size * 4 * scale) + 'px';
             el.style.left = (anno.x * scale) + 'px';
             el.style.top = (anno.y * scale) + 'px';
-            // 与 editpdf.html 完全相同的样式
             textContainer.appendChild(el);
         });
     }
 
     // ---------- 适应宽度（固定 scale=1，仅用于首次定位） ----------
     function fitToWidth() {
-        // 固定 scale=1，不做缩放
         zoomLevelSpan.textContent = '100%';
         return Promise.resolve();
     }
@@ -190,28 +187,36 @@
         if (!pdfDoc) return Promise.reject('No PDF document');
         return pdfDoc.getPage(pageNum).then(page => {
             const viewport = page.getViewport({ scale: 1.0 });
+            
             // 设置 Canvas 的像素尺寸
             pdfCanvas.width = viewport.width;
             pdfCanvas.height = viewport.height;
             annoCanvas.width = viewport.width;
             annoCanvas.height = viewport.height;
 
-            // 设置 CSS 尺寸为像素值，防止缩放
             const widthPx = viewport.width + 'px';
             const heightPx = viewport.height + 'px';
             pdfCanvas.style.width = widthPx;
             pdfCanvas.style.height = heightPx;
             annoCanvas.style.width = widthPx;
             annoCanvas.style.height = heightPx;
-            // 文本容器尺寸与父容器一致（由 CSS 控制）
 
-            // 渲染 PDF
             const renderContext = { canvasContext: ctx, viewport: viewport };
             return page.render(renderContext).promise;
         }).then(() => {
-            // 绘制非文本注释
+            // 同步對齊覆蓋層與 PDF 畫布
+            const offsetX = pdfCanvas.offsetLeft || 0;
+            const offsetY = pdfCanvas.offsetTop || 0;
+            
+            annoCanvas.style.left = offsetX + 'px';
+            annoCanvas.style.top = offsetY + 'px';
+            
+            textContainer.style.left = offsetX + 'px';
+            textContainer.style.top = offsetY + 'px';
+            textContainer.style.width = pdfCanvas.style.width;
+            textContainer.style.height = pdfCanvas.style.height;
+
             redrawAnnotations(1.0);
-            // 渲染文本框
             renderTextAnnotations(1.0);
             currentPageSpan.textContent = pageNum;
             currentPage = pageNum;
@@ -276,7 +281,6 @@
                 const bytes = new Uint8Array(binary.length);
                 for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
                 pdfSource = { data: bytes };
-                console.log('PDF source from Base64, size:', bytes.length);
             } catch (e) {
                 loadingEl.style.display = 'none';
                 errorEl.textContent = 'Invalid PDF data (Base64 decode failed).';
@@ -285,7 +289,6 @@
             }
         } else {
             pdfSource = { url: pdfSrc };
-            console.log('PDF source from URL:', pdfSrc);
         }
 
         loadingEl.style.display = 'flex';
@@ -360,7 +363,7 @@
             });
     }
 
-    // ---------- 导航（移除缩放） ----------
+    // ---------- 导航 ----------
     function setupControls() {
         document.getElementById('pdf-prev').addEventListener('click', () => {
             if (currentPage > 1) renderPage(currentPage - 1);
@@ -368,8 +371,6 @@
         document.getElementById('pdf-next').addEventListener('click', () => {
             if (currentPage < totalPages) renderPage(currentPage + 1);
         });
-        // 缩放按钮已移除，无需处理
-        // 窗口 resize 时保持固定 scale=1，不做自适应
     }
 
     // ---------- 按钮事件 ----------

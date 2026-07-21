@@ -27,9 +27,8 @@
         }
         .pdf-canvas-wrapper {
             position: relative;
-            width: 100%;
-            display: flex;
-            justify-content: center;
+            /* 改為 inline-block 讓容器尺寸緊貼 canvas，完美對齊座標 */
+            display: inline-block; 
         }
         #pdf-canvas {
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -44,7 +43,7 @@
             display: block;
             background: transparent;
         }
-        /* 文本框 DOM 容器，与 annotation-canvas 重叠 */
+        /* 文本框 DOM 容器，與 annotation-canvas 重疊 */
         #text-annotation-container {
             position: absolute;
             top: 0;
