@@ -1,6 +1,7 @@
 /**
  * editpdf.js - PDF 编辑页面
- * 修正了 Scroll 偏移量抵消所引起的二次滾動和坐標錯位問題
+ * 修正了多頁 PDF 標註殘留問題
+ * 引入高解像度渲染 (renderScale = 2.0)，提升 PDF 與手繪標註的清晰度
  */
 (function() {
     'use strict';
@@ -9,6 +10,7 @@
     let pdfDoc = null;
     let currentPage = 1;
     let scale = 1.0;
+    const renderScale = 2.0; // 加入渲染倍率，提升清晰度達到 Retina 標準
     let totalPages = 0;
     let currentTool = 'select';
     let isDrawing = false;
@@ -104,8 +106,11 @@
             showError('Failed to load PDF. You can still add annotations.');
             canvas.style.display = 'none';
             drawCanvas.style.display = 'block';
-            drawCanvas.width = 800;
-            drawCanvas.height = 1000;
+            drawCanvas.width = 800 * renderScale;
+            drawCanvas.height = 1000 * renderScale;
+            drawCanvas.style.width = '800px';
+            drawCanvas.style.height = '1000px';
+            drawCtx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
             drawCtx.fillStyle = '#ffffff';
             drawCtx.fillRect(0, 0, 800, 1000);
             drawCtx.fillStyle = '#666';
@@ -117,25 +122,40 @@
     // ---------- 核心渲染函数 ----------
     function renderPage(pageNum) {
         if (!pdfDoc) {
-            drawCanvas.width = 800; drawCanvas.height = 1000;
-            drawCtx.fillStyle = '#ffffff'; drawCtx.fillRect(0,0,800,1000);
+            drawCanvas.width = 800 * renderScale; 
+            drawCanvas.height = 1000 * renderScale;
+            drawCanvas.style.width = '800px'; 
+            drawCanvas.style.height = '1000px';
+            drawCtx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+            drawCtx.fillStyle = '#ffffff'; 
+            drawCtx.fillRect(0,0,800,1000);
             updateZoomLevel();
             renderTextAnnotations();
             return;
         }
         pdfDoc.getPage(pageNum).then(page => {
-            const viewport = page.getViewport({ scale: scale });
+            // 使用 renderScale 提升內部渲染解像度
+            const viewport = page.getViewport({ scale: scale * renderScale });
+            const cssViewport = page.getViewport({ scale: scale });
+            
             canvas.width = viewport.width;
             canvas.height = viewport.height;
             drawCanvas.width = viewport.width;
             drawCanvas.height = viewport.height;
-            canvas.style.width = viewport.width + 'px';
-            canvas.style.height = viewport.height + 'px';
-            drawCanvas.style.width = viewport.width + 'px';
-            drawCanvas.style.height = viewport.height + 'px';
+            
+            canvas.style.width = cssViewport.width + 'px';
+            canvas.style.height = cssViewport.height + 'px';
+            drawCanvas.style.width = cssViewport.width + 'px';
+            drawCanvas.style.height = cssViewport.height + 'px';
+            
+            // 設定縮放，使得後續所有 draw 坐標可以直接使用 CSS 像素邏輯
+            drawCtx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
             
             const renderContext = { canvasContext: ctx, viewport: viewport };
             page.render(renderContext);
+            
+            currentPageSpan.textContent = pageNum;
+            currentPage = pageNum;
             
             redrawAnnotations();
             renderTextAnnotations();
@@ -147,8 +167,6 @@
                 updateTextPositions();
             });
             
-            currentPageSpan.textContent = pageNum;
-            currentPage = pageNum;
             updateZoomLevel();
         });
     }
@@ -166,7 +184,6 @@
             const id = el.dataset.id;
             const anno = annotations.find(a => a._id == id);
             if (!anno) return;
-            // 修正：移除 scrollLeft / scrollTop。因為容器滾動會自然帶動內部的絕對定位元素
             el.style.left = (anno.x * scale + offsetX) + 'px';
             el.style.top = (anno.y * scale + offsetY) + 'px';
             el.style.fontSize = (anno.size * 4 * scale) + 'px';
@@ -177,7 +194,8 @@
         textBoxElements.forEach(el => { if (el.parentNode) el.parentNode.removeChild(el); });
         textBoxElements = [];
         
-        const textAnnos = annotations.filter(a => a.type === 'text');
+        const textAnnos = annotations.filter(a => a.type === 'text' && (a.page === currentPage || (a.page === undefined && currentPage === 1)));
+        
         textAnnos.forEach(anno => {
             const el = createTextBoxElement(anno);
             container.appendChild(el);
@@ -323,9 +341,17 @@
     // ---------- 标注绘制 ----------
     function redrawAnnotations() {
         if (!drawCtx) return;
+        // 清除時需暫時恢復 transform 狀態以清空整個物理畫布
+        drawCtx.save();
+        drawCtx.setTransform(1, 0, 0, 1, 0, 0);
         drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+        drawCtx.restore();
+        
         annotations.forEach(anno => {
             if (anno.type === 'text') return;
+            if (anno.page !== undefined && anno.page !== currentPage) return;
+            if (anno.page === undefined && currentPage !== 1) return;
+            
             drawAnnotation(anno);
         });
     }
@@ -446,10 +472,10 @@
         deleteAnnotation(selectedAnnotationId);
     }
 
-    // ---------- 精确坐标转换（基于 canvas 边界） ----------
+    // ---------- 精确坐标转换（基于 canvas CSS边界） ----------
     function getCanvasCoords(e) {
         let clientX, clientY;
-        if (e.touches) {
+        if (e.touches && e.touches.length > 0) {
             clientX = e.touches[0].clientX;
             clientY = e.touches[0].clientY;
         } else {
@@ -458,12 +484,11 @@
         }
 
         const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        let x = (clientX - rect.left) * scaleX;
-        let y = (clientY - rect.top) * scaleY;
-        x = Math.min(Math.max(0, x), canvas.width);
-        y = Math.min(Math.max(0, y), canvas.height);
+        // 直接使用相對於元素邊界的 CSS 像素
+        let x = clientX - rect.left;
+        let y = clientY - rect.top;
+        x = Math.min(Math.max(0, x), rect.width);
+        y = Math.min(Math.max(0, y), rect.height);
         return { x, y };
     }
 
@@ -510,6 +535,9 @@
         for (let i = annotations.length - 1; i >= 0; i--) {
             const anno = annotations[i];
             if (anno.type === 'text' || anno.locked) continue;
+            if (anno.page !== undefined && anno.page !== currentPage) continue;
+            if (anno.page === undefined && currentPage !== 1) continue;
+            
             if (hitTestAnnotation(anno, rawX, rawY)) {
                 isDraggingAnnotation = true;
                 draggedAnnoId = anno._id;
@@ -579,7 +607,6 @@
         
         const el = textBoxElements.find(el => el.dataset.id == draggedAnnotationId);
         if (el) {
-            // 修正：移除 container.scrollLeft 偏移
             el.style.left = (newRawX * scale + offsetX) + 'px';
             el.style.top = (newRawY * scale + offsetY) + 'px';
         }
@@ -594,7 +621,6 @@
                 if (el) {
                     const offsetX = canvas.offsetLeft || 0;
                     const offsetY = canvas.offsetTop || 0;
-                    // 修正：移除 container.scrollLeft 偏移
                     const left = parseFloat(el.style.left) - offsetX;
                     const top = parseFloat(el.style.top) - offsetY;
                     anno.x = left / scale;
@@ -637,6 +663,7 @@
                 y: rawY,
                 text: 'Click to edit',
                 locked: false,
+                page: currentPage,
                 _id: Date.now() + Math.random()
             };
             saveHistory();
@@ -786,6 +813,7 @@
                     size: currentSize * 3,
                     opacity: currentOpacity,
                     points: currentStrokePoints.slice(),
+                    page: currentPage, 
                     _id: Date.now() + Math.random()
                 };
             }
@@ -806,6 +834,7 @@
                     startY: startY,
                     endX: endX,
                     endY: endY,
+                    page: currentPage, 
                     _id: Date.now() + Math.random()
                 };
             }
@@ -943,8 +972,11 @@
         else {
             canvas.style.display = 'none';
             drawCanvas.style.display = 'block';
-            drawCanvas.width = 800;
-            drawCanvas.height = 1000;
+            drawCanvas.width = 800 * renderScale;
+            drawCanvas.height = 1000 * renderScale;
+            drawCanvas.style.width = '800px';
+            drawCanvas.style.height = '1000px';
+            drawCtx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
             drawCtx.fillStyle = '#ffffff';
             drawCtx.fillRect(0, 0, 800, 1000);
             drawCtx.fillStyle = '#666';
