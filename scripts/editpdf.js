@@ -1,6 +1,6 @@
 /**
- * editpdf.js - PDF 编辑页面（修复 highlight/形状 鼠标位置同步）
- * 使用 drawCanvas 边界获取坐标，确保物理像素精确
+ * editpdf.js - PDF 编辑页面（修复坐标同步和右半部分问题）
+ * 统一使用 pdfCanvas 的边界计算所有坐标，确保一致性
  */
 (function() {
     'use strict';
@@ -168,17 +168,30 @@
         if (zoomLevelSpan) zoomLevelSpan.textContent = Math.round(scale * 100) + '%';
     }
 
+    // ---------- 获取 pdfCanvas 相对于 container 的偏移（统一使用 getBoundingClientRect） ----------
+    function getCanvasOffset() {
+        if (!canvas || !container) return { offsetX: 0, offsetY: 0 };
+        const canvasRect = canvas.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        return {
+            offsetX: canvasRect.left - containerRect.left,
+            offsetY: canvasRect.top - containerRect.top
+        };
+    }
+
     // ---------- 文本框位置更新 ----------
     function updateTextPositions() {
-        const offsetX = canvas.offsetLeft || 0;
-        const offsetY = canvas.offsetTop || 0;
+        const { offsetX, offsetY } = getCanvasOffset();
+        const scrollLeft = container ? container.scrollLeft : 0;
+        const scrollTop = container ? container.scrollTop : 0;
         
         textBoxElements.forEach(el => {
             const id = el.dataset.id;
             const anno = annotations.find(a => a._id == id);
             if (!anno) return;
-            el.style.left = (anno.x * scale + offsetX) + 'px';
-            el.style.top = (anno.y * scale + offsetY) + 'px';
+            // 位置 = 原始坐标 * scale + offset - 滚动
+            el.style.left = (anno.x * scale + offsetX - scrollLeft) + 'px';
+            el.style.top = (anno.y * scale + offsetY - scrollTop) + 'px';
             el.style.fontSize = (anno.size * 4 * scale) + 'px';
         });
     }
@@ -463,7 +476,7 @@
         deleteAnnotation(selectedAnnotationId);
     }
 
-    // ---------- 坐标转换（使用 drawCanvas 边界） ----------
+    // ---------- 坐标转换（使用 pdfCanvas 边界，返回物理像素） ----------
     function getCanvasCoords(e) {
         let clientX, clientY;
         if (e.touches && e.touches.length > 0) {
@@ -474,14 +487,13 @@
             clientY = e.clientY;
         }
 
-        // 使用 drawCanvas 的边界，确保与绘制画布完全匹配
-        const rect = drawCanvas.getBoundingClientRect();
-        const scaleX = drawCanvas.width / rect.width;
-        const scaleY = drawCanvas.height / rect.height;
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
         let x = (clientX - rect.left) * scaleX;
         let y = (clientY - rect.top) * scaleY;
-        x = Math.min(Math.max(0, x), drawCanvas.width);
-        y = Math.min(Math.max(0, y), drawCanvas.height);
+        x = Math.min(Math.max(0, x), canvas.width);
+        y = Math.min(Math.max(0, y), canvas.height);
         return { x, y };
     }
 
@@ -588,8 +600,7 @@
         const anno = annotations.find(a => a._id === draggedAnnotationId);
         if (!anno || anno.locked) return;
         const containerRect = container.getBoundingClientRect();
-        const offsetX = canvas.offsetLeft || 0;
-        const offsetY = canvas.offsetTop || 0;
+        const { offsetX, offsetY } = getCanvasOffset();
         
         let visualX = e.clientX - containerRect.left + container.scrollLeft - dragStartX;
         let visualY = e.clientY - containerRect.top + container.scrollTop - dragStartY;
@@ -601,8 +612,8 @@
         
         const el = textBoxElements.find(el => el.dataset.id == draggedAnnotationId);
         if (el) {
-            el.style.left = (newRawX * scale + offsetX) + 'px';
-            el.style.top = (newRawY * scale + offsetY) + 'px';
+            el.style.left = (newRawX * scale + offsetX - container.scrollLeft) + 'px';
+            el.style.top = (newRawY * scale + offsetY - container.scrollTop) + 'px';
         }
     });
 
@@ -613,10 +624,9 @@
             if (anno && !anno.locked) {
                 const el = textBoxElements.find(el => el.dataset.id == draggedAnnotationId);
                 if (el) {
-                    const offsetX = canvas.offsetLeft || 0;
-                    const offsetY = canvas.offsetTop || 0;
-                    const left = parseFloat(el.style.left) - offsetX;
-                    const top = parseFloat(el.style.top) - offsetY;
+                    const { offsetX, offsetY } = getCanvasOffset();
+                    const left = parseFloat(el.style.left) + container.scrollLeft - offsetX;
+                    const top = parseFloat(el.style.top) + container.scrollTop - offsetY;
                     anno.x = left / scale;
                     anno.y = top / scale;
                     saveHistory();
