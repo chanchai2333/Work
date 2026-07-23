@@ -11,7 +11,6 @@
     let currentDocId = null;
     
     // 雙重縮放設定：保持 CSS 視覺佈局 1.0，內部渲染像素改為 2.0 
-    // 2.0 已經達到 Retina 螢幕的高清標準，能有效節省記憶體並縮小最終檔案體積
     const baseScale = 1.0; 
     const renderScale = 2.0;
 
@@ -326,51 +325,56 @@
         });
     }
 
-    // ---------- 生成包含注释的 PDF（高質量壓縮，維持清晰度並大幅減小體積） ----------
-    function generateAnnotatedPDF() {
+    // ---------- 生成包含注释的 PDF（支持多页） ----------
+    async function generateAnnotatedPDF() {
         const wrapper = document.getElementById('pdf-canvas-wrapper');
-        if (!wrapper) { 
+        if (!wrapper) {
             alert('PDF content not available.');
-            return Promise.reject('No wrapper');
+            throw new Error('No wrapper');
         }
-        
-        // 使用 2.0 縮放，足以保持視覺清晰度，同時大幅度減少像素總數
-        return html2canvas(wrapper, { 
-            scale: 2.0, 
-            useCORS: true, 
-            backgroundColor: '#ffffff',
-            logging: false
-        }).then(canvas => {
-            // 使用 JPEG 並設定 0.85 質量，這是畫質與體積的最佳平衡點
-            const imgData = canvas.toDataURL('image/jpeg', 0.85);
-            const { jsPDF } = window.jspdf;
-            
-            // 啟用 jsPDF 的內建壓縮，進一步縮小體積
-            const pdf = new jsPDF({
-                orientation: 'p',
-                unit: 'mm',
-                format: 'a4',
-                compress: true
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+            orientation: 'p',
+            unit: 'mm',
+            format: 'a4',
+            compress: true
+        });
+
+        let firstPage = true;
+
+        // 循环所有页面
+        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+            // 渲染该页（等待完成）
+            await renderPage(pageNum);
+            // 等待 DOM 更新
+            await new Promise(resolve => requestAnimationFrame(resolve));
+
+            // 截图当前 wrapper（包含 PDF 和注释）
+            const canvas = await html2canvas(wrapper, {
+                scale: 2.0,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false
             });
-            
+
+            const imgData = canvas.toDataURL('image/jpeg', 0.85);
             const imgWidth = 210;
             const pageHeight = 297;
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
-            let heightLeft = imgHeight;
-            let position = 0;
-            
-            // 恢復使用 'FAST' 寫入圖片
-            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-            heightLeft -= pageHeight;
-            
-            while (heightLeft > 0) {
-                position = heightLeft - imgHeight;
+
+            if (firstPage) {
+                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
+                firstPage = false;
+            } else {
                 pdf.addPage();
-                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-                heightLeft -= pageHeight;
+                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
             }
-            return pdf;
-        });
+        }
+
+        // 恢复到第一页（方便后续查看）
+        await renderPage(1);
+        return pdf;
     }
 
     // ---------- 另存为（使用 File System Access API，支持时弹出保存对话框） ----------
@@ -414,7 +418,7 @@
         });
     }
 
-    // ---------- 下载（使用另存为） ----------
+    // ---------- 下载 ----------
     function downloadPDF() {
         generateAnnotatedPDF().then(pdf => {
             saveAsPDF(pdf);

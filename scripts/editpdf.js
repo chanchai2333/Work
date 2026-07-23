@@ -1,7 +1,6 @@
 /**
- * editpdf.js - PDF 编辑页面
- * 修正了多頁 PDF 標註殘留問題
- * 引入高解像度渲染 (renderScale = 2.0)，提升 PDF 與手繪標註的清晰度
+ * editpdf.js - PDF 编辑页面（修复 highlight/形状 鼠标位置同步）
+ * 使用 drawCanvas 边界获取坐标，确保物理像素精确
  */
 (function() {
     'use strict';
@@ -10,7 +9,7 @@
     let pdfDoc = null;
     let currentPage = 1;
     let scale = 1.0;
-    const renderScale = 2.0; // 加入渲染倍率，提升清晰度達到 Retina 標準
+    const renderScale = 2.0;
     let totalPages = 0;
     let currentTool = 'select';
     let isDrawing = false;
@@ -110,12 +109,11 @@
             drawCanvas.height = 1000 * renderScale;
             drawCanvas.style.width = '800px';
             drawCanvas.style.height = '1000px';
-            drawCtx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
             drawCtx.fillStyle = '#ffffff';
-            drawCtx.fillRect(0, 0, 800, 1000);
+            drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
             drawCtx.fillStyle = '#666';
-            drawCtx.font = '20px Arial';
-            drawCtx.fillText('PDF could not be loaded. You can still annotate.', 30, 100);
+            drawCtx.font = `${20 * renderScale}px Arial`;
+            drawCtx.fillText('PDF could not be loaded. You can still annotate.', 30 * renderScale, 100 * renderScale);
         });
     }
 
@@ -126,15 +124,13 @@
             drawCanvas.height = 1000 * renderScale;
             drawCanvas.style.width = '800px'; 
             drawCanvas.style.height = '1000px';
-            drawCtx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
             drawCtx.fillStyle = '#ffffff'; 
-            drawCtx.fillRect(0,0,800,1000);
+            drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
             updateZoomLevel();
             renderTextAnnotations();
             return;
         }
         pdfDoc.getPage(pageNum).then(page => {
-            // 使用 renderScale 提升內部渲染解像度
             const viewport = page.getViewport({ scale: scale * renderScale });
             const cssViewport = page.getViewport({ scale: scale });
             
@@ -147,9 +143,6 @@
             canvas.style.height = cssViewport.height + 'px';
             drawCanvas.style.width = cssViewport.width + 'px';
             drawCanvas.style.height = cssViewport.height + 'px';
-            
-            // 設定縮放，使得後續所有 draw 坐標可以直接使用 CSS 像素邏輯
-            drawCtx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
             
             const renderContext = { canvasContext: ctx, viewport: viewport };
             page.render(renderContext);
@@ -341,11 +334,7 @@
     // ---------- 标注绘制 ----------
     function redrawAnnotations() {
         if (!drawCtx) return;
-        // 清除時需暫時恢復 transform 狀態以清空整個物理畫布
-        drawCtx.save();
-        drawCtx.setTransform(1, 0, 0, 1, 0, 0);
         drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-        drawCtx.restore();
         
         annotations.forEach(anno => {
             if (anno.type === 'text') return;
@@ -363,9 +352,11 @@
         ctx.globalAlpha = (anno.opacity || 100) / 100;
         ctx.strokeStyle = anno.color || '#3498db';
         ctx.fillStyle = anno.color || '#3498db';
-        ctx.lineWidth = anno.size || 3;
+        ctx.lineWidth = (anno.size || 3) * renderScale;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
+        
+        const s = scale * renderScale;
         
         switch (anno.type) {
             case 'highlight':
@@ -373,28 +364,28 @@
                     ctx.globalAlpha = (anno.opacity || 100) / 100 * 0.4;
                     ctx.beginPath();
                     const first = anno.points[0];
-                    ctx.moveTo(first.x * scale, first.y * scale);
+                    ctx.moveTo(first.x * s, first.y * s);
                     for (let i = 1; i < anno.points.length; i++) {
-                        ctx.lineTo(anno.points[i].x * scale, anno.points[i].y * scale);
+                        ctx.lineTo(anno.points[i].x * s, anno.points[i].y * s);
                     }
                     ctx.stroke();
                 }
                 break;
             case 'rectangle':
                 if (anno.startX !== undefined && anno.endX !== undefined) {
-                    const x = Math.min(anno.startX, anno.endX) * scale;
-                    const y = Math.min(anno.startY, anno.endY) * scale;
-                    const w = Math.abs(anno.endX - anno.startX) * scale;
-                    const h = Math.abs(anno.endY - anno.startY) * scale;
+                    const x = Math.min(anno.startX, anno.endX) * s;
+                    const y = Math.min(anno.startY, anno.endY) * s;
+                    const w = Math.abs(anno.endX - anno.startX) * s;
+                    const h = Math.abs(anno.endY - anno.startY) * s;
                     ctx.strokeRect(x, y, w, h);
                 }
                 break;
             case 'ellipse':
                 if (anno.startX !== undefined && anno.endX !== undefined) {
-                    const cx = (anno.startX + anno.endX) / 2 * scale;
-                    const cy = (anno.startY + anno.endY) / 2 * scale;
-                    const rx = Math.abs(anno.endX - anno.startX) / 2 * scale;
-                    const ry = Math.abs(anno.endY - anno.startY) / 2 * scale;
+                    const cx = (anno.startX + anno.endX) / 2 * s;
+                    const cy = (anno.startY + anno.endY) / 2 * s;
+                    const rx = Math.abs(anno.endX - anno.startX) / 2 * s;
+                    const ry = Math.abs(anno.endY - anno.startY) / 2 * s;
                     ctx.beginPath();
                     ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
                     ctx.stroke();
@@ -402,16 +393,16 @@
                 break;
             case 'arrow':
                 if (anno.startX !== undefined && anno.endX !== undefined) {
-                    const fromX = anno.startX * scale;
-                    const fromY = anno.startY * scale;
-                    const toX = anno.endX * scale;
-                    const toY = anno.endY * scale;
+                    const fromX = anno.startX * s;
+                    const fromY = anno.startY * s;
+                    const toX = anno.endX * s;
+                    const toY = anno.endY * s;
                     ctx.beginPath();
                     ctx.moveTo(fromX, fromY);
                     ctx.lineTo(toX, toY);
                     ctx.stroke();
                     const angle = Math.atan2(toY - fromY, toX - fromX);
-                    const headLen = 10 * scale / 2;
+                    const headLen = 10 * s / 2;
                     ctx.beginPath();
                     ctx.moveTo(toX, toY);
                     ctx.lineTo(toX - headLen * Math.cos(angle - 0.5), toY - headLen * Math.sin(angle - 0.5));
@@ -423,8 +414,8 @@
             case 'line':
                 if (anno.startX !== undefined && anno.endX !== undefined) {
                     ctx.beginPath();
-                    ctx.moveTo(anno.startX * scale, anno.startY * scale);
-                    ctx.lineTo(anno.endX * scale, anno.endY * scale);
+                    ctx.moveTo(anno.startX * s, anno.startY * s);
+                    ctx.lineTo(anno.endX * s, anno.endY * s);
                     ctx.stroke();
                 }
                 break;
@@ -472,7 +463,7 @@
         deleteAnnotation(selectedAnnotationId);
     }
 
-    // ---------- 精确坐标转换（基于 canvas CSS边界） ----------
+    // ---------- 坐标转换（使用 drawCanvas 边界） ----------
     function getCanvasCoords(e) {
         let clientX, clientY;
         if (e.touches && e.touches.length > 0) {
@@ -483,18 +474,21 @@
             clientY = e.clientY;
         }
 
-        const rect = canvas.getBoundingClientRect();
-        // 直接使用相對於元素邊界的 CSS 像素
-        let x = clientX - rect.left;
-        let y = clientY - rect.top;
-        x = Math.min(Math.max(0, x), rect.width);
-        y = Math.min(Math.max(0, y), rect.height);
+        // 使用 drawCanvas 的边界，确保与绘制画布完全匹配
+        const rect = drawCanvas.getBoundingClientRect();
+        const scaleX = drawCanvas.width / rect.width;
+        const scaleY = drawCanvas.height / rect.height;
+        let x = (clientX - rect.left) * scaleX;
+        let y = (clientY - rect.top) * scaleY;
+        x = Math.min(Math.max(0, x), drawCanvas.width);
+        y = Math.min(Math.max(0, y), drawCanvas.height);
         return { x, y };
     }
 
     // ---------- 检测点是否在绘制注释内 ----------
     function hitTestAnnotation(anno, px, py) {
-        const tolerance = 10 / scale;
+        const s = scale * renderScale;
+        const tolerance = 10 * renderScale / s;
         switch (anno.type) {
             case 'highlight':
                 if (anno.points && anno.points.length > 1) {
@@ -530,8 +524,8 @@
     function startDragAnnotation(e) {
         if (currentTool !== 'select') return;
         const pos = getCanvasCoords(e);
-        const rawX = pos.x / scale;
-        const rawY = pos.y / scale;
+        const rawX = pos.x / (renderScale * scale);
+        const rawY = pos.y / (renderScale * scale);
         for (let i = annotations.length - 1; i >= 0; i--) {
             const anno = annotations[i];
             if (anno.type === 'text' || anno.locked) continue;
@@ -553,8 +547,8 @@
     function moveDragAnnotation(e) {
         if (!isDraggingAnnotation || draggedAnnoId === null) return;
         const pos = getCanvasCoords(e);
-        const rawX = pos.x / scale;
-        const rawY = pos.y / scale;
+        const rawX = pos.x / (renderScale * scale);
+        const rawY = pos.y / (renderScale * scale);
         const anno = annotations.find(a => a._id === draggedAnnoId);
         if (!anno || anno.locked) return;
 
@@ -639,7 +633,7 @@
         container.addEventListener('scroll', updateTextPositions);
     }
 
-    // ---------- 绘制事件（绑定到容器） ----------
+    // ---------- 绘制事件 ----------
     function startDrawing(e) {
         if (currentTool === 'select') {
             startDragAnnotation(e);
@@ -652,8 +646,8 @@
             const clickedEl = document.elementFromPoint(e.clientX, e.clientY);
             if (clickedEl && clickedEl.closest && clickedEl.closest('.text-annotation')) return;
             
-            const rawX = pos.x / scale;
-            const rawY = pos.y / scale;
+            const rawX = pos.x / (renderScale * scale);
+            const rawY = pos.y / (renderScale * scale);
             const newAnno = {
                 type: 'text',
                 color: currentColor,
@@ -690,14 +684,14 @@
             const pos = getCanvasCoords(e);
             lastX = pos.x; lastY = pos.y;
             startX = pos.x; startY = pos.y;
-            currentStrokePoints = [{x: pos.x / scale, y: pos.y / scale}];
+            currentStrokePoints = [{x: pos.x / (renderScale * scale), y: pos.y / (renderScale * scale)}];
             
             drawCtx.beginPath();
             drawCtx.moveTo(pos.x, pos.y);
             drawCtx.lineCap = 'round';
             drawCtx.lineJoin = 'round';
             drawCtx.strokeStyle = currentColor;
-            drawCtx.lineWidth = currentSize * 3;
+            drawCtx.lineWidth = currentSize * 3 * renderScale;
             drawCtx.globalAlpha = currentOpacity / 100 * 0.4;
             drawCtx.lineTo(pos.x, pos.y);
             drawCtx.stroke();
@@ -708,8 +702,8 @@
             e.preventDefault();
             isDrawing = true;
             const pos = getCanvasCoords(e);
-            startX = pos.x / scale;
-            startY = pos.y / scale;
+            startX = pos.x / (renderScale * scale);
+            startY = pos.y / (renderScale * scale);
             lastX = pos.x;
             lastY = pos.y;
             return;
@@ -730,7 +724,7 @@
         if (currentTool === 'highlight') {
             drawCtx.lineTo(pos.x, pos.y);
             drawCtx.stroke();
-            currentStrokePoints.push({x: pos.x / scale, y: pos.y / scale});
+            currentStrokePoints.push({x: pos.x / (renderScale * scale), y: pos.y / (renderScale * scale)});
         }
         
         if (currentTool === 'rectangle' || currentTool === 'ellipse' || currentTool === 'arrow' || currentTool === 'line') {
@@ -738,41 +732,42 @@
             drawCtx.save();
             drawCtx.globalAlpha = currentOpacity / 100;
             drawCtx.strokeStyle = currentColor;
-            drawCtx.lineWidth = currentSize;
+            drawCtx.lineWidth = currentSize * renderScale;
             drawCtx.lineCap = 'round';
             drawCtx.lineJoin = 'round';
             
-            const endX = pos.x / scale;
-            const endY = pos.y / scale;
+            const endX = pos.x / (renderScale * scale);
+            const endY = pos.y / (renderScale * scale);
+            const s = scale * renderScale;
             
             switch (currentTool) {
                 case 'rectangle':
-                    const rx = Math.min(startX, endX) * scale;
-                    const ry = Math.min(startY, endY) * scale;
-                    const rw = Math.abs(endX - startX) * scale;
-                    const rh = Math.abs(endY - startY) * scale;
+                    const rx = Math.min(startX, endX) * s;
+                    const ry = Math.min(startY, endY) * s;
+                    const rw = Math.abs(endX - startX) * s;
+                    const rh = Math.abs(endY - startY) * s;
                     drawCtx.strokeRect(rx, ry, rw, rh);
                     break;
                 case 'ellipse':
-                    const cx = (startX + endX) / 2 * scale;
-                    const cy = (startY + endY) / 2 * scale;
-                    const rx2 = Math.abs(endX - startX) / 2 * scale;
-                    const ry2 = Math.abs(endY - startY) / 2 * scale;
+                    const cx = (startX + endX) / 2 * s;
+                    const cy = (startY + endY) / 2 * s;
+                    const rx2 = Math.abs(endX - startX) / 2 * s;
+                    const ry2 = Math.abs(endY - startY) / 2 * s;
                     drawCtx.beginPath();
                     drawCtx.ellipse(cx, cy, rx2, ry2, 0, 0, Math.PI * 2);
                     drawCtx.stroke();
                     break;
                 case 'arrow':
-                    const fromX = startX * scale;
-                    const fromY = startY * scale;
-                    const toX = endX * scale;
-                    const toY = endY * scale;
+                    const fromX = startX * s;
+                    const fromY = startY * s;
+                    const toX = endX * s;
+                    const toY = endY * s;
                     drawCtx.beginPath();
                     drawCtx.moveTo(fromX, fromY);
                     drawCtx.lineTo(toX, toY);
                     drawCtx.stroke();
                     const angle = Math.atan2(toY - fromY, toX - fromX);
-                    const headLen = 10 * scale / 2;
+                    const headLen = 10 * s / 2;
                     drawCtx.beginPath();
                     drawCtx.moveTo(toX, toY);
                     drawCtx.lineTo(toX - headLen * Math.cos(angle - 0.5), toY - headLen * Math.sin(angle - 0.5));
@@ -782,8 +777,8 @@
                     break;
                 case 'line':
                     drawCtx.beginPath();
-                    drawCtx.moveTo(startX * scale, startY * scale);
-                    drawCtx.lineTo(endX * scale, endY * scale);
+                    drawCtx.moveTo(startX * s, startY * s);
+                    drawCtx.lineTo(endX * s, endY * s);
                     drawCtx.stroke();
                     break;
             }
@@ -822,8 +817,8 @@
         }
         
         if (currentTool === 'rectangle' || currentTool === 'ellipse' || currentTool === 'arrow' || currentTool === 'line') {
-            const endX = pos.x / scale;
-            const endY = pos.y / scale;
+            const endX = pos.x / (renderScale * scale);
+            const endY = pos.y / (renderScale * scale);
             if (Math.abs(endX - startX) > 0.5 || Math.abs(endY - startY) > 0.5) {
                 annotation = {
                     type: currentTool,
@@ -976,12 +971,11 @@
             drawCanvas.height = 1000 * renderScale;
             drawCanvas.style.width = '800px';
             drawCanvas.style.height = '1000px';
-            drawCtx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
             drawCtx.fillStyle = '#ffffff';
-            drawCtx.fillRect(0, 0, 800, 1000);
+            drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
             drawCtx.fillStyle = '#666';
-            drawCtx.font = '20px Arial';
-            drawCtx.fillText('No PDF attached. You can still add annotations.', 30, 100);
+            drawCtx.font = `${20 * renderScale}px Arial`;
+            drawCtx.fillText('No PDF attached. You can still add annotations.', 30 * renderScale, 100 * renderScale);
         }
         drawCanvas.style.pointerEvents = 'none';
         setupTools();
