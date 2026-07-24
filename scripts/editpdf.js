@@ -145,53 +145,60 @@
             drawCanvas.style.height = cssViewport.height + 'px';
             
             const renderContext = { canvasContext: ctx, viewport: viewport };
-            page.render(renderContext);
-            
-            currentPageSpan.textContent = pageNum;
-            currentPage = pageNum;
-            
-            redrawAnnotations();
-            renderTextAnnotations();
-            if (container) {
-                container.scrollTop = 0;
-                container.scrollLeft = 0;
-            }
-            requestAnimationFrame(() => {
-                updateTextPositions();
+            page.render(renderContext).promise.then(() => {
+                alignDrawCanvas();
+                currentPageSpan.textContent = pageNum;
+                currentPage = pageNum;
+                
+                redrawAnnotations();
+                renderTextAnnotations();
+                if (container) {
+                    container.scrollTop = 0;
+                    container.scrollLeft = 0;
+                }
+                requestAnimationFrame(() => {
+                    alignDrawCanvas();
+                    updateTextPositions();
+                });
+                
+                updateZoomLevel();
             });
-            
-            updateZoomLevel();
         });
+    }
+
+    function alignDrawCanvas() {
+        if (!canvas || !drawCanvas) return;
+        drawCanvas.style.position = 'absolute';
+        drawCanvas.style.left = canvas.offsetLeft + 'px';
+        drawCanvas.style.top = canvas.offsetTop + 'px';
     }
 
     function updateZoomLevel() {
         if (zoomLevelSpan) zoomLevelSpan.textContent = Math.round(scale * 100) + '%';
     }
 
-    // ---------- 获取 pdfCanvas 相对于 container 的偏移（统一使用 getBoundingClientRect） ----------
+    // ---------- 获取 pdfCanvas 相对于 container 的偏移 ----------
     function getCanvasOffset() {
-        if (!canvas || !container) return { offsetX: 0, offsetY: 0 };
-        const canvasRect = canvas.getBoundingClientRect();
+        const targetCanvas = (canvas && canvas.offsetWidth > 0) ? canvas : drawCanvas;
+        if (!targetCanvas || !container) return { offsetX: 0, offsetY: 0 };
+        const canvasRect = targetCanvas.getBoundingClientRect();
         const containerRect = container.getBoundingClientRect();
         return {
-            offsetX: canvasRect.left - containerRect.left,
-            offsetY: canvasRect.top - containerRect.top
+            offsetX: canvasRect.left - containerRect.left + container.scrollLeft,
+            offsetY: canvasRect.top - containerRect.top + container.scrollTop
         };
     }
 
     // ---------- 文本框位置更新 ----------
     function updateTextPositions() {
         const { offsetX, offsetY } = getCanvasOffset();
-        const scrollLeft = container ? container.scrollLeft : 0;
-        const scrollTop = container ? container.scrollTop : 0;
         
         textBoxElements.forEach(el => {
             const id = el.dataset.id;
             const anno = annotations.find(a => a._id == id);
             if (!anno) return;
-            // 位置 = 原始坐标 * scale + offset - 滚动
-            el.style.left = (anno.x * scale + offsetX - scrollLeft) + 'px';
-            el.style.top = (anno.y * scale + offsetY - scrollTop) + 'px';
+            el.style.left = (anno.x * scale + offsetX) + 'px';
+            el.style.top = (anno.y * scale + offsetY) + 'px';
             el.style.fontSize = (anno.size * 4 * scale) + 'px';
         });
     }
@@ -373,7 +380,7 @@
         
         switch (anno.type) {
             case 'highlight':
-                if (anno.points && anno.points.length > 1) {
+                if (anno.points && anno.points.length > 0) {
                     ctx.globalAlpha = (anno.opacity || 100) / 100 * 0.4;
                     ctx.beginPath();
                     const first = anno.points[0];
@@ -476,7 +483,7 @@
         deleteAnnotation(selectedAnnotationId);
     }
 
-    // ---------- 坐标转换（使用 pdfCanvas 边界，返回物理像素） ----------
+    // ---------- 坐标转换（精确转换物理像素） ----------
     function getCanvasCoords(e) {
         let clientX, clientY;
         if (e.touches && e.touches.length > 0) {
@@ -487,23 +494,27 @@
             clientY = e.clientY;
         }
 
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
+        const targetCanvas = (canvas && canvas.offsetWidth > 0) ? canvas : drawCanvas;
+        const rect = targetCanvas.getBoundingClientRect();
+        if (!rect.width || !rect.height) return { x: 0, y: 0 };
+
+        const scaleX = targetCanvas.width / rect.width;
+        const scaleY = targetCanvas.height / rect.height;
         let x = (clientX - rect.left) * scaleX;
         let y = (clientY - rect.top) * scaleY;
-        x = Math.min(Math.max(0, x), canvas.width);
-        y = Math.min(Math.max(0, y), canvas.height);
+        
+        x = Math.min(Math.max(0, x), targetCanvas.width);
+        y = Math.min(Math.max(0, y), targetCanvas.height);
         return { x, y };
     }
 
     // ---------- 检测点是否在绘制注释内 ----------
     function hitTestAnnotation(anno, px, py) {
         const s = scale * renderScale;
-        const tolerance = 10 * renderScale / s;
+        const tolerance = 10 / scale;
         switch (anno.type) {
             case 'highlight':
-                if (anno.points && anno.points.length > 1) {
+                if (anno.points && anno.points.length > 0) {
                     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
                     anno.points.forEach(p => {
                         if (p.x < minX) minX = p.x;
@@ -564,8 +575,11 @@
         const anno = annotations.find(a => a._id === draggedAnnoId);
         if (!anno || anno.locked) return;
 
-        const deltaX = rawX - (anno.startX !== undefined ? anno.startX : anno.points[0].x) - dragAnnoOffsetX;
-        const deltaY = rawY - (anno.startY !== undefined ? anno.startY : anno.points[0].y) - dragAnnoOffsetY;
+        const currentOriginX = (anno.startX !== undefined) ? anno.startX : anno.points[0].x;
+        const currentOriginY = (anno.startY !== undefined) ? anno.startY : anno.points[0].y;
+        
+        const deltaX = rawX - dragAnnoOffsetX - currentOriginX;
+        const deltaY = rawY - dragAnnoOffsetY - currentOriginY;
 
         if (anno.points) {
             anno.points.forEach(p => { p.x += deltaX; p.y += deltaY; });
@@ -575,13 +589,7 @@
             anno.endX += deltaX;
             anno.endY += deltaY;
         }
-        if (anno.points) {
-            dragAnnoOffsetX += deltaX;
-            dragAnnoOffsetY += deltaY;
-        } else {
-            dragAnnoOffsetX += deltaX;
-            dragAnnoOffsetY += deltaY;
-        }
+
         redrawAnnotations();
         e.preventDefault();
     }
@@ -612,8 +620,8 @@
         
         const el = textBoxElements.find(el => el.dataset.id == draggedAnnotationId);
         if (el) {
-            el.style.left = (newRawX * scale + offsetX - container.scrollLeft) + 'px';
-            el.style.top = (newRawY * scale + offsetY - container.scrollTop) + 'px';
+            el.style.left = (newRawX * scale + offsetX) + 'px';
+            el.style.top = (newRawY * scale + offsetY) + 'px';
         }
     });
 
@@ -625,8 +633,8 @@
                 const el = textBoxElements.find(el => el.dataset.id == draggedAnnotationId);
                 if (el) {
                     const { offsetX, offsetY } = getCanvasOffset();
-                    const left = parseFloat(el.style.left) + container.scrollLeft - offsetX;
-                    const top = parseFloat(el.style.top) + container.scrollTop - offsetY;
+                    const left = parseFloat(el.style.left) - offsetX;
+                    const top = parseFloat(el.style.top) - offsetY;
                     anno.x = left / scale;
                     anno.y = top / scale;
                     saveHistory();
@@ -645,6 +653,7 @@
 
     // ---------- 绘制事件 ----------
     function startDrawing(e) {
+        alignDrawCanvas();
         if (currentTool === 'select') {
             startDragAnnotation(e);
             return;
@@ -811,6 +820,9 @@
         let annotation = null;
         
         if (currentTool === 'highlight') {
+            if (currentStrokePoints.length === 1) {
+                currentStrokePoints.push({ ...currentStrokePoints[0] });
+            }
             if (currentStrokePoints.length > 1) {
                 annotation = {
                     type: 'highlight',
@@ -848,8 +860,8 @@
         if (annotation) {
             saveHistory();
             annotations.push(annotation);
-            redrawAnnotations();
         }
+        redrawAnnotations();
     }
 
     // ---------- 工具切换 ----------
@@ -966,6 +978,11 @@
         document.getElementById('delete-selected-btn')?.addEventListener('click', deleteSelected);
         if (lockBtn) lockBtn.addEventListener('click', toggleLock);
     }
+
+    window.addEventListener('resize', () => {
+        alignDrawCanvas();
+        updateTextPositions();
+    });
 
     // ---------- 初始化 ----------
     document.addEventListener('DOMContentLoaded', () => {
