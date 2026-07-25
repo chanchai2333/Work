@@ -1,31 +1,440 @@
-document.addEventListener('DOMContentLoaded', function() {
-    // 同步日期显示
-    const storedDate = sessionStorage.getItem('globalDate');
-    const dateSpan = document.querySelector('.date-display span');
-    if (storedDate && dateSpan) dateSpan.textContent = storedDate;
-    else if (dateSpan) dateSpan.textContent = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+// ===== Safety Inspection Document Viewer (PDF.js + Annotations) =====
+(function() {
+    'use strict';
 
-    // 读取数据
-    const inspectionData = JSON.parse(sessionStorage.getItem('currentInspection'));
-    if (inspectionData) {
-        document.getElementById('docId').textContent = inspectionData.id || 'N/A';
-        document.getElementById('docTitle').textContent = `${inspectionData.site} - Safety Inspection`;
-        document.getElementById('docSite').textContent = inspectionData.site || 'N/A';
-        document.getElementById('docDate').textContent = inspectionData.date || 'N/A';
-        document.getElementById('docInspector').textContent = inspectionData.inspector || 'N/A';
-        
-        const statusEl = document.getElementById('docStatus');
-        if (statusEl) {
-            statusEl.textContent = inspectionData.statusText || 'Draft';
-            statusEl.className = `doc-status status-${inspectionData.status || 'draft'}`;
+    // ---------- 全局变量 ----------
+    let pdfDoc = null;
+    let currentPage = 1;
+    let totalPages = 0;
+    let annotations = [];
+    let currentDocId = null;
+    
+    const baseScale = 1.0; 
+    const renderScale = 2.0;
+
+    // ---------- DOM 引用 ----------
+    const pdfCanvas = document.getElementById('pdf-canvas');
+    const annoCanvas = document.getElementById('annotation-canvas');
+    const textContainer = document.getElementById('text-annotation-container');
+    const ctx = pdfCanvas.getContext('2d');
+    const annoCtx = annoCanvas.getContext('2d');
+    const loadingEl = document.getElementById('pdf-loading');
+    const errorEl = document.getElementById('pdf-error');
+    const noPdfEl = document.getElementById('no-pdf-message');
+    const controlsEl = document.getElementById('pdf-controls');
+    const currentPageSpan = document.getElementById('pdf-current-page');
+    const totalPagesSpan = document.getElementById('pdf-total-pages');
+    const printBtn = document.getElementById('print-pdf-btn');
+    const downloadBtn = document.getElementById('download-pdf-btn');
+
+    // ---------- 辅助函数 ----------
+    function syncGlobalDate() {
+        const stored = sessionStorage.getItem('globalDate');
+        const span = document.querySelector('.date-display span');
+        if (stored && span) span.textContent = stored;
+        else if (span) {
+            span.textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
         }
-    } else {
-        console.warn('No inspection data found');
-        document.getElementById('docId').textContent = 'No data';
     }
 
-    // 按钮事件
-    document.getElementById('back-to-inspection-btn').addEventListener('click', () => window.location.href = 'safetyinspect.html');
-    document.getElementById('print-btn').addEventListener('click', () => window.print());
-    document.getElementById('export-pdf-btn').addEventListener('click', () => alert('PDF export feature is under development.'));
-});
+    function loadAnnotationsFromStorage(docId) {
+        const STORAGE_KEY = 'inspectionData';
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (!stored) return [];
+        try {
+            const inspectionData = JSON.parse(stored);
+            const doc = inspectionData.find(d => d.id === docId);
+            return doc && doc.annotations ? doc.annotations : [];
+        } catch (e) {
+            console.error('Failed to load annotations:', e);
+            return [];
+        }
+    }
+
+    // ---------- 绘制非文本注释 ----------
+    function drawAnnotation(anno, scale) {
+        if (!annoCtx) return;
+        const ctx = annoCtx;
+
+        switch (anno.type) {
+            case 'highlight':
+                ctx.save();
+                ctx.globalAlpha = (anno.opacity || 100) / 100 * 0.4;
+                ctx.strokeStyle = anno.color || '#3498db';
+                ctx.lineWidth = (anno.size || 3) * scale;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                if (anno.points && anno.points.length > 1) {
+                    ctx.beginPath();
+                    const first = anno.points[0];
+                    ctx.moveTo(first.x * scale, first.y * scale);
+                    for (let i = 1; i < anno.points.length; i++) {
+                        ctx.lineTo(anno.points[i].x * scale, anno.points[i].y * scale);
+                    }
+                    ctx.stroke();
+                }
+                ctx.restore();
+                break;
+            case 'rectangle':
+                ctx.save();
+                ctx.globalAlpha = (anno.opacity || 100) / 100;
+                ctx.strokeStyle = anno.color || '#3498db';
+                ctx.lineWidth = (anno.size || 3) * scale;
+                if (anno.startX !== undefined && anno.endX !== undefined) {
+                    const x = Math.min(anno.startX, anno.endX) * scale;
+                    const y = Math.min(anno.startY, anno.endY) * scale;
+                    const w = Math.abs(anno.endX - anno.startX) * scale;
+                    const h = Math.abs(anno.endY - anno.startY) * scale;
+                    ctx.strokeRect(x, y, w, h);
+                }
+                ctx.restore();
+                break;
+            case 'ellipse':
+                ctx.save();
+                ctx.globalAlpha = (anno.opacity || 100) / 100;
+                ctx.strokeStyle = anno.color || '#3498db';
+                ctx.lineWidth = (anno.size || 3) * scale;
+                if (anno.startX !== undefined && anno.endX !== undefined) {
+                    const cx = (anno.startX + anno.endX) / 2 * scale;
+                    const cy = (anno.startY + anno.endY) / 2 * scale;
+                    const rx = Math.abs(anno.endX - anno.startX) / 2 * scale;
+                    const ry = Math.abs(anno.endY - anno.startY) / 2 * scale;
+                    ctx.beginPath();
+                    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                ctx.restore();
+                break;
+            case 'arrow':
+                ctx.save();
+                ctx.globalAlpha = (anno.opacity || 100) / 100;
+                ctx.strokeStyle = anno.color || '#3498db';
+                ctx.fillStyle = anno.color || '#3498db';
+                ctx.lineWidth = (anno.size || 3) * scale;
+                if (anno.startX !== undefined && anno.endX !== undefined) {
+                    const fromX = anno.startX * scale;
+                    const fromY = anno.startY * scale;
+                    const toX = anno.endX * scale;
+                    const toY = anno.endY * scale;
+                    ctx.beginPath();
+                    ctx.moveTo(fromX, fromY);
+                    ctx.lineTo(toX, toY);
+                    ctx.stroke();
+                    const angle = Math.atan2(toY - fromY, toX - fromX);
+                    const headLen = 10 * scale / 2;
+                    ctx.beginPath();
+                    ctx.moveTo(toX, toY);
+                    ctx.lineTo(toX - headLen * Math.cos(angle - 0.5), toY - headLen * Math.sin(angle - 0.5));
+                    ctx.moveTo(toX, toY);
+                    ctx.lineTo(toX - headLen * Math.cos(angle + 0.5), toY - headLen * Math.sin(angle + 0.5));
+                    ctx.stroke();
+                }
+                ctx.restore();
+                break;
+            case 'line':
+                ctx.save();
+                ctx.globalAlpha = (anno.opacity || 100) / 100;
+                ctx.strokeStyle = anno.color || '#3498db';
+                ctx.lineWidth = (anno.size || 3) * scale;
+                if (anno.startX !== undefined && anno.endX !== undefined) {
+                    ctx.beginPath();
+                    ctx.moveTo(anno.startX * scale, anno.startY * scale);
+                    ctx.lineTo(anno.endX * scale, anno.endY * scale);
+                    ctx.stroke();
+                }
+                ctx.restore();
+                break;
+            default:
+                break;
+        }
+    }
+
+    function redrawAnnotations(scale) {
+        if (!annoCtx) return;
+        annoCtx.clearRect(0, 0, annoCanvas.width, annoCanvas.height);
+        annotations.forEach(anno => {
+            if (anno.type !== 'text') {
+                if (anno.page !== undefined && anno.page !== currentPage) return;
+                if (anno.page === undefined && currentPage !== 1) return;
+                
+                drawAnnotation(anno, scale);
+            }
+        });
+    }
+
+    // ---------- 渲染文本框 ----------
+    function renderTextAnnotations(scale) {
+        textContainer.innerHTML = '';
+        const textAnnos = annotations.filter(a => a.type === 'text' && (a.page === currentPage || (a.page === undefined && currentPage === 1)));
+        
+        textAnnos.forEach(anno => {
+            const el = document.createElement('div');
+            el.className = 'text-annotation-view';
+            el.textContent = anno.text || '';
+            el.style.color = anno.color || '#000000';
+            el.style.opacity = (anno.opacity || 100) / 100;
+            el.style.fontSize = (anno.size * 4 * scale) + 'px';
+            el.style.left = (anno.x * scale) + 'px';
+            el.style.top = (anno.y * scale) + 'px';
+            textContainer.appendChild(el);
+        });
+    }
+
+    function fitToWidth() {
+        return Promise.resolve();
+    }
+
+    function renderPage(pageNum) {
+        if (!pdfDoc) return Promise.reject('No PDF document');
+        return pdfDoc.getPage(pageNum).then(page => {
+            const viewport = page.getViewport({ scale: renderScale });
+            const cssViewport = page.getViewport({ scale: baseScale });
+            
+            pdfCanvas.width = viewport.width;
+            pdfCanvas.height = viewport.height;
+            annoCanvas.width = viewport.width;
+            annoCanvas.height = viewport.height;
+
+            const widthPx = cssViewport.width + 'px';
+            const heightPx = cssViewport.height + 'px';
+            
+            pdfCanvas.style.width = widthPx;
+            pdfCanvas.style.height = heightPx;
+            annoCanvas.style.width = widthPx;
+            annoCanvas.style.height = heightPx;
+
+            const renderContext = { canvasContext: ctx, viewport: viewport };
+            return page.render(renderContext).promise;
+        }).then(() => {
+            const offsetX = pdfCanvas.offsetLeft || 0;
+            const offsetY = pdfCanvas.offsetTop || 0;
+            
+            annoCanvas.style.left = offsetX + 'px';
+            annoCanvas.style.top = offsetY + 'px';
+            
+            textContainer.style.left = offsetX + 'px';
+            textContainer.style.top = offsetY + 'px';
+            textContainer.style.width = pdfCanvas.style.width;
+            textContainer.style.height = pdfCanvas.style.height;
+
+            currentPageSpan.textContent = pageNum;
+            currentPage = pageNum;
+
+            redrawAnnotations(renderScale);
+            renderTextAnnotations(baseScale);
+            
+        }).catch(err => {
+            console.error('Render page error:', err);
+            throw err;
+        });
+    }
+
+    function loadDocument() {
+        const documentDataRaw = sessionStorage.getItem('currentDocument');
+        if (!documentDataRaw) {
+            loadingEl.style.display = 'none';
+            errorEl.textContent = 'No document data available. Please go back and select a record.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        let documentData;
+        try {
+            documentData = JSON.parse(documentDataRaw);
+        } catch (e) {
+            loadingEl.style.display = 'none';
+            errorEl.textContent = 'Invalid document data.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        currentDocId = documentData.id;
+        document.getElementById('docId').textContent = documentData.id || 'N/A';
+        document.getElementById('docTitle').textContent = `${documentData.site || ''} - Safety Inspection`;
+        document.getElementById('docSite').textContent = documentData.site || 'N/A';
+        document.getElementById('docDate').textContent = documentData.date || 'N/A';
+        document.getElementById('docAuthor').textContent = documentData.inspector || documentData.submittedBy || 'N/A';
+        const statusEl = document.getElementById('docStatus');
+        if (statusEl) {
+            statusEl.textContent = documentData.statusText || 'Draft';
+            statusEl.className = `doc-status status-${documentData.status || 'draft'}`;
+        }
+
+        annotations = loadAnnotationsFromStorage(currentDocId);
+
+        let pdfSrc = documentData.pdfData || documentData.pdfUrl || null;
+        if (!pdfSrc) {
+            loadingEl.style.display = 'none';
+            noPdfEl.style.display = 'block';
+            printBtn.style.display = 'none';
+            downloadBtn.style.display = 'none';
+            return;
+        }
+
+        let pdfSource;
+        if (typeof pdfSrc === 'string' && pdfSrc.startsWith('data:application/pdf;base64,')) {
+            pdfSource = { url: pdfSrc };
+        } else if (typeof pdfSrc === 'string' && pdfSrc.length > 1000 && !pdfSrc.startsWith('http')) {
+            try {
+                const binary = atob(pdfSrc);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                pdfSource = { data: bytes };
+            } catch (e) {
+                loadingEl.style.display = 'none';
+                errorEl.textContent = 'Invalid PDF data (Base64 decode failed).';
+                errorEl.style.display = 'block';
+                return;
+            }
+        } else {
+            pdfSource = { url: pdfSrc };
+        }
+
+        loadingEl.style.display = 'flex';
+        errorEl.style.display = 'none';
+        noPdfEl.style.display = 'none';
+        printBtn.style.display = 'none';
+        downloadBtn.style.display = 'none';
+
+        pdfjsLib.getDocument(pdfSource).promise.then(pdf => {
+            pdfDoc = pdf;
+            totalPages = pdf.numPages;
+            totalPagesSpan.textContent = totalPages;
+            currentPage = 1;
+            controlsEl.style.display = 'flex';
+            loadingEl.style.display = 'none';
+            printBtn.style.display = 'inline-flex';
+            downloadBtn.style.display = 'inline-flex';
+
+            return fitToWidth().then(() => renderPage(currentPage));
+        }).catch(err => {
+            console.error('PDF loading error:', err);
+            loadingEl.style.display = 'none';
+            errorEl.textContent = 'Failed to load PDF: ' + (err.message || 'Unknown error');
+            errorEl.style.display = 'block';
+            printBtn.style.display = 'none';
+            downloadBtn.style.display = 'none';
+        });
+    }
+
+    async function generateAnnotatedPDF() {
+        const wrapper = document.getElementById('pdf-canvas-wrapper');
+        if (!wrapper) {
+            alert('PDF content not available.');
+            throw new Error('No wrapper');
+        }
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+            orientation: 'p',
+            unit: 'mm',
+            format: 'a4',
+            compress: true
+        });
+
+        let firstPage = true;
+
+        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+            await renderPage(pageNum);
+            await new Promise(resolve => requestAnimationFrame(resolve));
+
+            const canvas = await html2canvas(wrapper, {
+                scale: 2.0,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false
+            });
+
+            const imgData = canvas.toDataURL('image/jpeg', 0.85);
+            const imgWidth = 210;
+            const pageHeight = 297;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            if (firstPage) {
+                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
+                firstPage = false;
+            } else {
+                pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
+            }
+        }
+
+        await renderPage(1);
+        return pdf;
+    }
+
+    async function saveAsPDF(pdf) {
+        if (window.showSaveFilePicker) {
+            try {
+                const blob = pdf.output('blob');
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: 'safety_inspection_with_annotations.pdf',
+                    types: [{
+                        description: 'PDF Document',
+                        accept: { 'application/pdf': ['.pdf'] }
+                    }]
+                });
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                return;
+            } catch (err) {
+                console.warn('Save file picker failed, falling back to default download.', err);
+            }
+        }
+        pdf.save('safety_inspection_with_annotations.pdf');
+    }
+
+    function printPDF() {
+        generateAnnotatedPDF().then(pdf => {
+            const pdfBlob = pdf.output('blob');
+            const url = URL.createObjectURL(pdfBlob);
+            const win = window.open(url, '_blank');
+            if (win) {
+                win.onload = function() {
+                    win.print();
+                };
+            } else {
+                alert('Please allow pop-ups to print.');
+            }
+        }).catch(err => {
+            alert('Print failed: ' + err.message);
+        });
+    }
+
+    function downloadPDF() {
+        generateAnnotatedPDF().then(pdf => {
+            saveAsPDF(pdf);
+        }).catch(err => {
+            alert('Download failed: ' + err.message);
+        });
+    }
+
+    function setupControls() {
+        document.getElementById('pdf-prev').addEventListener('click', () => {
+            if (currentPage > 1) renderPage(currentPage - 1);
+        });
+        document.getElementById('pdf-next').addEventListener('click', () => {
+            if (currentPage < totalPages) renderPage(currentPage + 1);
+        });
+    }
+
+    function bindEvents() {
+        const backBtn = document.getElementById('back-to-inspection-btn');
+        if (backBtn) {
+            backBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.href = 'safetyinspect.html';
+            });
+        }
+        if (printBtn) printBtn.addEventListener('click', printPDF);
+        if (downloadBtn) downloadBtn.addEventListener('click', downloadPDF);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        syncGlobalDate();
+        loadDocument();
+        setupControls();
+        bindEvents();
+    });
+})();

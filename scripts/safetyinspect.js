@@ -202,12 +202,14 @@ document.addEventListener("DOMContentLoaded", function() {
                 statusText: getStatusText(doc.status),
                 site: doc.site,
                 date: formatDisplayDate(doc.date),
+                inspector: doc.inspector,
                 submittedBy: doc.inspector,  // editpdf 使用 submittedBy 字段
                 type: 'Safety Inspection',   // 固定类型，或可从数据中读取
                 pdfData: doc.pdfData || '',
                 annotations: doc.annotations || []
             }));
-            window.location.href = 'editpdf.html';
+            // 已修復：將原先的 'editpdf.html' 更改為 'editsafetypdf.html'
+            window.location.href = 'editsafetypdf.html'; 
         } else {
             alert('Document not found');
         }
