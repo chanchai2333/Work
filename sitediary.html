@@ -72,11 +72,8 @@
             </div>
         </div>
         
+        <!-- 搜索栏已移除，仅保留 Add New 按钮 -->
         <div class="search-buttons">
-            <form id="search-form" action="#" method="get">
-                <input type="text" name="search" data-i18n-placeholder="search.placeholder" placeholder="Search sites, reports, or data..." />
-                <button type="submit" data-i18n="search">Search</button>
-            </form>
             <div class="nav-buttons">
                 <button id="add-diary-btn"><i class="fas fa-plus"></i> <span data-i18n="add.new.diary">Add New Diary</span></button>
             </div>
@@ -338,49 +335,48 @@
             }
             
             function handleView(e) {
-    const id = e.currentTarget.getAttribute('data-id');
-    const doc = diaryData.find(d => d.id === id);
-    if (doc) {
-        // 获取完整的文档数据，包括 pdfData 和 annotations
-        const fullDoc = {
-            id: doc.id,
-            status: doc.status,
-            statusText: getStatusText(doc.status),
-            site: doc.site,
-            date: formatDate(doc.date),
-            submittedBy: doc.submittedBy,
-            type: doc.type,
-            pdfData: doc.pdfData || null,        // Base64 PDF 数据
-            annotations: doc.annotations || []   // 已有的注释
-        };
-        sessionStorage.setItem('currentDocument', JSON.stringify(fullDoc));
-        window.location.href = 'sitediarydocument.html';
-    } else {
-        alert('Document not found');
-    }
-}
+                const id = e.currentTarget.getAttribute('data-id');
+                const doc = diaryData.find(d => d.id === id);
+                if (doc) {
+                    const fullDoc = {
+                        id: doc.id,
+                        status: doc.status,
+                        statusText: getStatusText(doc.status),
+                        site: doc.site,
+                        date: formatDate(doc.date),
+                        submittedBy: doc.submittedBy,
+                        type: doc.type,
+                        pdfData: doc.pdfData || null,
+                        annotations: doc.annotations || []
+                    };
+                    sessionStorage.setItem('currentDocument', JSON.stringify(fullDoc));
+                    window.location.href = 'sitediarydocument.html';
+                } else {
+                    alert('Document not found');
+                }
+            }
             
             function handleEdit(e) {
-    const id = e.currentTarget.getAttribute('data-id');
-    const doc = diaryData.find(d => d.id === id);
-    if (doc) {
-        sessionStorage.setItem('editDocument', JSON.stringify({
-            id: doc.id,
-            status: doc.status,
-            statusText: getStatusText(doc.status),
-            site: doc.site,
-            date: formatDate(doc.date),
-            submittedBy: doc.submittedBy,
-            type: doc.type,
-            pdfUrl: doc.pdfUrl || '',
-            pdfData: doc.pdfData || '',
-            annotations: doc.annotations || []   // 传递已有的标注数据
-        }));
-        window.location.href = 'editpdf.html';
-    } else {
-        alert('Document not found');
-    }
-}
+                const id = e.currentTarget.getAttribute('data-id');
+                const doc = diaryData.find(d => d.id === id);
+                if (doc) {
+                    sessionStorage.setItem('editDocument', JSON.stringify({
+                        id: doc.id,
+                        status: doc.status,
+                        statusText: getStatusText(doc.status),
+                        site: doc.site,
+                        date: formatDate(doc.date),
+                        submittedBy: doc.submittedBy,
+                        type: doc.type,
+                        pdfUrl: doc.pdfUrl || '',
+                        pdfData: doc.pdfData || '',
+                        annotations: doc.annotations || []
+                    }));
+                    window.location.href = 'editpdf.html';
+                } else {
+                    alert('Document not found');
+                }
+            }
             
             function handleDelete(e) {
                 const id = e.currentTarget.getAttribute('data-id');
@@ -451,7 +447,7 @@
                 if (addBtn && modal) {
                     addBtn.addEventListener('click', () => {
                         modal.style.display = 'flex';
-                        form.reset(); // 重置表单，包括文件输入
+                        form.reset();
                     });
                 }
                 if (cancelBtn && modal) {
@@ -469,7 +465,6 @@
                     form.addEventListener('submit', async (e) => {
                         e.preventDefault();
                         
-                        // 获取基本字段
                         const id = document.getElementById('input-diary-id').value.trim();
                         const status = document.getElementById('input-status').value;
                         const site = document.getElementById('input-site').value.trim();
@@ -477,7 +472,6 @@
                         const submittedBy = document.getElementById('input-submitted-by').value.trim();
                         const type = document.getElementById('input-type').value;
                         
-                        // 处理 PDF 文件
                         let pdfData = null;
                         const file = fileInput.files[0];
                         if (file) {
@@ -496,7 +490,7 @@
                             date,
                             submittedBy,
                             type,
-                            pdfData: pdfData // 存储 Base64，无文件则为 null
+                            pdfData: pdfData
                         };
                         diaryData.unshift(newDiary);
                         saveData();

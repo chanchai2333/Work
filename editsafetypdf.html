@@ -3,20 +3,213 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AEL DWSS - Edit Safety Inspection</title>
+    <title data-i18n="platform">AEL DWSS - Edit Safety Inspection</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/editpdf.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="scripts/theme-config.js"></script>
     <style>
-        .pdf-canvas-container { position: relative; overflow: auto; background: #e0e0e0; border-radius: 8px; }
-        #pdf-canvas { display: block; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-        .draw-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        .tool-btn.active { background: #2ecc71; color: white; }
+        .pdf-canvas-container {
+            position: relative;
+            overflow: auto;
+            background: #e0e0e0;
+            border-radius: 8px;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        #pdf-canvas {
+            display: block;
+            margin: 0 !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            border: none;
+            padding: 0;
+            background: white;
+            z-index: 1;
+        }
+        #draw-canvas {
+            display: block;
+            margin: 0 !important;
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: auto;
+            cursor: crosshair;
+            border: none;
+            padding: 0;
+            z-index: 15; /* 低於文本框 */
+        }
+        .tool-btn.active {
+            background: #2ecc71;
+            color: white;
+            border-color: #27ae60;
+        }
+        .text-annotation {
+            position: absolute;
+            cursor: move;
+            min-width: 20px;
+            min-height: 20px;
+            padding: 2px 6px;
+            background: transparent;
+            border: 1px solid transparent;
+            font-family: Arial, sans-serif;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            outline: none;
+            z-index: 25; /* 高於 draw-canvas */
+            user-select: none;
+            box-sizing: border-box;
+        }
+        .text-annotation:hover {
+            border: 1px dashed #3498db;
+        }
+        .text-annotation.editing {
+            border: 2px solid #3498db;
+            background: rgba(255,255,255,0.95);
+            cursor: text;
+            z-index: 30; /* 編輯時更高 */
+        }
+        .text-annotation.locked {
+            cursor: default;
+            border: 1px solid transparent !important;
+            background: transparent !important;
+        }
+        .text-annotation .delete-btn {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 18px;
+            height: 18px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 12px;
+            line-height: 18px;
+            text-align: center;
+            cursor: pointer;
+            display: none;
+        }
+        .text-annotation:hover .delete-btn {
+            display: block;
+        }
+        .text-annotation.locked .delete-btn {
+            display: none !important;
+        }
+        .text-annotation .delete-btn:hover {
+            background: #c0392b;
+        }
+        .lock-btn {
+            background: #9b59b6 !important;
+        }
+        .lock-btn:hover {
+            background: #8e44ad !important;
+        }
+        .lock-btn.unlock {
+            background: #27ae60 !important;
+        }
+        .lock-btn.unlock:hover {
+            background: #2ecc71 !important;
+        }
+        /* Ribbon 工具欄 */
+        .pdf-toolbar-ribbon {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 20px;
+            background: #f8fafc;
+            padding: 8px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            border: 1px solid #e2e8f0;
+            align-items: center;
+        }
+        .ribbon-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-right: 1px solid #e2e8f0;
+        }
+        .ribbon-group:last-child {
+            border-right: none;
+        }
+        .ribbon-group-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+            margin-right: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .tool-btn {
+            padding: 4px 10px;
+            border: 1px solid transparent;
+            background: transparent;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #1e293b;
+            transition: 0.15s;
+            white-space: nowrap;
+        }
+        .tool-btn:hover {
+            background: #eef2f6;
+            border-color: #d1d9e6;
+        }
+        .tool-btn.active {
+            background: #2d7ee7;
+            color: #fff;
+            border-color: #2d7ee7;
+        }
+        .tool-btn i {
+            font-size: 13px;
+        }
+        .property-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding: 4px 0;
+        }
+        .property-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: #475569;
+        }
+        .property-group label {
+            font-weight: 500;
+        }
+        .property-group input[type="color"] {
+            width: 24px;
+            height: 24px;
+            border: 1px solid #d1d9e6;
+            border-radius: 4px;
+            padding: 2px;
+            cursor: pointer;
+        }
+        .property-group input[type="range"] {
+            width: 60px;
+            cursor: pointer;
+        }
+        .property-group span {
+            min-width: 28px;
+            font-size: 11px;
+        }
+        /* 隱藏 Zoom 按鈕 */
+        .pdf-controls .zoom-controls {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
+    <!-- 側邊欄 -->
     <div class="sidebar">
         <div class="logo"><div class="logo-icon"><i class="fas fa-water"></i></div><h2>AEL DWSS</h2></div>
         <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
@@ -31,68 +224,74 @@
         </ul>
     </div>
 
+    <!-- 主內容 -->
     <div class="main-content">
         <div class="header">
-            <h1>Edit Safety Inspection</h1>
+            <h1 data-i18n="safety.inspection">Safety Inspection</h1>
             <div class="header-controls">
                 <div class="user-date-row">
                     <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
-                    <button class="user-btn"><i class="fas fa-user"></i><span>John Doe</span></button>
+                    <button class="user-btn"><i class="fas fa-user"></i><span data-i18n="user.name">John Doe</span></button>
                 </div>
             </div>
         </div>
 
         <div class="edit-pdf-page">
             <div class="document-header">
-                <h2><i class="fas fa-file-pdf"></i> <span id="docTitle">Edit Document</span> <span class="doc-status" id="docStatus"></span></h2>
+                <h2><i class="fas fa-file-pdf"></i><span id="docTitle">Edit Safety Inspection</span></h2>
                 <div class="document-actions">
                     <button class="btn" id="save-btn"><i class="fas fa-save"></i> Save Changes</button>
                     <button class="btn" id="cancel-btn"><i class="fas fa-times"></i> Cancel</button>
                     <button class="btn" id="back-btn"><i class="fas fa-arrow-left"></i> Back</button>
                 </div>
             </div>
+
             <div class="document-meta">
-                <div class="meta-item"><span class="meta-label">Document ID:</span><span class="meta-value" id="docId">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Inspection ID:</span><span class="meta-value" id="docId">N/A</span></div>
                 <div class="meta-item"><span class="meta-label">Site:</span><span class="meta-value" id="docSite">N/A</span></div>
                 <div class="meta-item"><span class="meta-label">Date:</span><span class="meta-value" id="docDate">N/A</span></div>
                 <div class="meta-item"><span class="meta-label">Inspector:</span><span class="meta-value" id="docInspector">N/A</span></div>
             </div>
-            <div class="pdf-toolbar">
-                <div class="toolbar-section">
-                    <h3>Annotation Tools</h3>
-                    <div class="tool-buttons">
-                        <button class="tool-btn active" data-tool="select"><i class="fas fa-mouse-pointer"></i> Select</button>
-                        <button class="tool-btn" data-tool="text"><i class="fas fa-font"></i> Text</button>
-                        <button class="tool-btn" data-tool="highlight"><i class="fas fa-highlighter"></i> Highlight</button>
-                        <button class="tool-btn" data-tool="draw"><i class="fas fa-pen"></i> Draw</button>
-                        <button class="tool-btn" data-tool="shape"><i class="fas fa-square"></i> Shapes</button>
-                        <button class="tool-btn" data-tool="stamp"><i class="fas fa-stamp"></i> Stamp</button>
-                    </div>
+
+            <!-- Ribbon 工具欄 -->
+            <div class="pdf-toolbar-ribbon">
+                <div class="ribbon-group">
+                    <span class="ribbon-group-label">Select</span>
+                    <button class="tool-btn active" data-tool="select"><i class="fas fa-mouse-pointer"></i> Select</button>
                 </div>
-                <div class="toolbar-section">
-                    <h3>Properties</h3>
+                <div class="ribbon-group">
+                    <span class="ribbon-group-label">Annotate</span>
+                    <button class="tool-btn" data-tool="text"><i class="fas fa-font"></i> Text</button>
+                    <button class="tool-btn" data-tool="highlight"><i class="fas fa-highlighter"></i> Highlight</button>
+                </div>
+                <div class="ribbon-group">
+                    <span class="ribbon-group-label">Shapes</span>
+                    <button class="tool-btn" data-tool="rectangle"><i class="fas fa-square"></i> Rect</button>
+                    <button class="tool-btn" data-tool="ellipse"><i class="fas fa-circle"></i> Oval</button>
+                    <button class="tool-btn" data-tool="arrow"><i class="fas fa-arrow-right"></i> Arrow</button>
+                    <button class="tool-btn" data-tool="line"><i class="fas fa-minus"></i> Line</button>
+                </div>
+                <div class="ribbon-group" style="flex:1; justify-content:flex-end;">
                     <div class="property-controls">
                         <div class="property-group"><label>Color:</label><input type="color" id="color-picker" value="#3498db"></div>
                         <div class="property-group"><label>Size:</label><input type="range" id="size-slider" min="1" max="10" value="3"><span id="size-value">3px</span></div>
                         <div class="property-group"><label>Opacity:</label><input type="range" id="opacity-slider" min="10" max="100" value="100"><span id="opacity-value">100%</span></div>
                     </div>
                 </div>
-                <div class="toolbar-section"><h3>Pages</h3><div class="page-thumbnails" id="page-thumbnails"></div></div>
             </div>
+
             <div class="pdf-editor-container">
                 <div class="pdf-controls">
                     <button class="nav-btn" id="prev-page"><i class="fas fa-chevron-left"></i></button>
-                    <span class="page-info">Page <span id="current-page">1</span> of <span id="total-pages">1</span></span>
+                    <span class="page-info">Pages <span id="current-page">1</span> of <span id="total-pages">1</span></span>
                     <button class="nav-btn" id="next-page"><i class="fas fa-chevron-right"></i></button>
-                    <div class="zoom-controls">
-                        <button class="zoom-btn" id="zoom-out"><i class="fas fa-search-minus"></i> Zoom Out</button>
-                        <span class="zoom-level">100%</span>
-                        <button class="zoom-btn" id="zoom-in"><i class="fas fa-search-plus"></i> Zoom In</button>
-                        <button class="zoom-btn" id="fit-width">Fit Width</button>
-                        <button class="zoom-btn" id="fit-page">Fit Page</button>
+                    <div style="margin-left:20px;display:flex;gap:10px;">
+                        <button class="btn" id="undo-btn" style="background:#f39c12;color:white;padding:4px 12px;border-radius:4px;"><i class="fas fa-undo"></i> Undo</button>
+                        <button class="btn lock-btn" id="lock-btn" style="padding:4px 12px;border-radius:4px;"><i class="fas fa-lock"></i> Lock</button>
+                        <button class="btn" id="delete-selected-btn" style="background:#e74c3c;color:white;padding:4px 12px;border-radius:4px;"><i class="fas fa-trash"></i> Delete Selected</button>
                     </div>
                 </div>
-                <div class="pdf-canvas-container">
+                <div class="pdf-canvas-container" id="pdf-container">
                     <canvas id="pdf-canvas"></canvas>
                     <canvas id="draw-canvas" class="draw-layer"></canvas>
                 </div>
@@ -103,6 +302,7 @@
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
     <script src="scripts/editsafetypdf.js"></script>
+
     <script>
         (function() {
             function saveSidebarState() {
@@ -114,10 +314,17 @@
                 if (sidebar && localStorage.getItem('sidebarCollapsed') === 'true') sidebar.classList.add('collapsed');
             }
             function bindToggleEvent() {
-                const toggle = document.querySelector('.toggle-btn');
-                if (toggle) toggle.addEventListener('click', () => setTimeout(saveSidebarState, 50));
+                const toggleBtn = document.querySelector('.toggle-btn');
+                if (toggleBtn) toggleBtn.addEventListener('click', () => setTimeout(saveSidebarState, 50));
             }
-            document.addEventListener('DOMContentLoaded', () => { restoreSidebarState(); bindToggleEvent(); });
+            document.addEventListener('DOMContentLoaded', () => {
+                restoreSidebarState();
+                bindToggleEvent();
+                const storedDate = sessionStorage.getItem('globalDate');
+                const dateSpan = document.querySelector('.date-display span');
+                if (storedDate && dateSpan) dateSpan.textContent = storedDate;
+                else if (dateSpan) dateSpan.textContent = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+            });
         })();
     </script>
 </body>

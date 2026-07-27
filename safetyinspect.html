@@ -27,11 +27,8 @@
                 </div>
             </div>
         </div>
+        <!-- 搜索栏已移除，仅保留 Add New 按钮 -->
         <div class="search-buttons">
-            <form id="search-form" action="#" method="get">
-                <input type="text" name="search" placeholder="Search inspections, reports, or data..." data-i18n-placeholder="search.inspections" />
-                <button type="submit" data-i18n="search">Search</button>
-            </form>
             <div class="nav-buttons">
                 <button id="add-inspection-btn">
                     <i class="fas fa-plus"></i>
@@ -118,9 +115,10 @@
     <div class="modal" id="add-inspect-modal" style="display:none;">
         <div class="modal-content">
             <h3 data-i18n="add.new.inspection">Add New Inspection</h3>
-            <form id="add-inspect-form">
+            <form id="add-inspect-form" enctype="multipart/form-data">
                 <label data-i18n="inspection.id">Inspection ID</label>
                 <input type="text" id="input-inspect-id" required>
+
                 <label data-i18n="status">Status</label>
                 <select id="input-inspect-status" required>
                     <option value="draft" data-i18n="status.draft">Draft</option>
@@ -130,12 +128,20 @@
                     <option value="reopen" data-i18n="status.reopen">Reopen</option>
                     <option value="cancelled" data-i18n="status.cancelled">Cancelled</option>
                 </select>
+
                 <label data-i18n="site">Site</label>
                 <input type="text" id="input-inspect-site" required>
+
                 <label data-i18n="date">Date</label>
                 <input type="date" id="input-inspect-date" required>
+
                 <label data-i18n="inspector">Inspector</label>
                 <input type="text" id="input-inspect-by" required>
+
+                <!-- PDF 上传 -->
+                <label for="input-inspect-pdf">Upload PDF (optional)</label>
+                <input type="file" id="input-inspect-pdf" accept=".pdf">
+
                 <div class="modal-actions">
                     <button type="submit" class="btn" data-i18n="save">Save</button>
                     <button type="button" class="btn" id="cancel-add-inspect" data-i18n="cancel">Cancel</button>

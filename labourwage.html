@@ -30,10 +30,6 @@
         </div>
         
         <div class="search-buttons">
-            <form id="search-form" action="#" method="get">
-                <input type="text" name="search" placeholder="Search labour wage records..." data-i18n-placeholder="search.wage.records" />
-                <button type="submit" data-i18n="search">Search</button>
-            </form>
             <div class="nav-buttons">
                 <button id="add-wage-btn"><i class="fas fa-plus"></i> <span data-i18n="add.new.wage">Add New Wage Record</span></button>
             </div>
@@ -117,12 +113,11 @@
                                 <th data-i18n="site">Site</th>
                                 <th data-i18n="period">Period</th>
                                 <th data-i18n="submitted.by">Submitted By</th>
-                                <th data-i18n="total.amount">Total Amount</th>
                                 <th data-i18n="actions">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="wage-table-body">
-                            <tr id="loading-row"><td colspan="8" style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin"></i> Loading wage records...</td></tr>
+                            <tr id="loading-row"><td colspan="7" style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin"></i> Loading wage records...</td></tr>
                         </tbody>
                     </table>
                     <div id="no-results-message" class="no-results" style="display: none;">No matching wage records found. Please try different filters.</div>
@@ -140,7 +135,7 @@
     <div class="modal" id="add-wage-modal" style="display: none;">
         <div class="modal-content">
             <h3 data-i18n="add.new.wage">Add New Wage Record</h3>
-            <form id="add-wage-form">
+            <form id="add-wage-form" enctype="multipart/form-data">
                 <label data-i18n="document.type">Document Type</label>
                 <select id="input-type" required>
                     <option value="GF527A">GF527A - Return on Construction Site Employment</option>
@@ -170,8 +165,11 @@
                 <input type="date" id="input-period-end" required>
                 <label data-i18n="submitted.by">Submitted By</label>
                 <input type="text" id="input-submitted-by" required>
-                <label data-i18n="total.amount">Total Amount (HKD)</label>
-                <input type="number" id="input-amount" min="0" step="0.01" required>
+                
+                <!-- PDF 上传字段 (对齐 Site Diary 功能) -->
+                <label for="input-pdf">Upload PDF (optional)</label>
+                <input type="file" id="input-pdf" accept=".pdf">
+
                 <div class="modal-actions">
                     <button type="submit" class="btn" data-i18n="save">Save</button>
                     <button type="button" class="btn" id="cancel-add-wage" data-i18n="cancel">Cancel</button>
@@ -182,7 +180,6 @@
 
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
-    <script src="scripts/labourwage.js"></script>
     <script src="scripts/sidebar.js"></script>
 
     <!-- 侧边栏状态持久化 -->
@@ -258,7 +255,6 @@
         .labour-wage-page .delete-btn { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; }
         .labour-wage-page .delete-btn:hover { background: linear-gradient(135deg, #c0392b, #e74c3c); transform: translateY(-2px); }
         .labour-wage-page .action-btn i { margin-right: 4px; font-size: 1rem; }
-        .labour-wage-page .wage-table td:nth-child(7) { text-align: right; font-weight: 600; }
         .labour-wage-page .no-results { text-align: center; padding: 40px; color: #7f8c8d; font-style: italic; background: #f9f9f9; border-radius: 8px; margin: 20px 0; }
         @media (max-width: 768px) {
             .labour-wage-page .action-buttons { flex-direction: column; gap: 5px; }
@@ -268,286 +264,330 @@
     </style>
 
     <script>
-        // 辅助函数：格式化金额用于显示（带货币符号和千位分隔符）
-        function formatAmountDisplay(amount) {
-            if (!amount || amount === '-' || amount === '') return '-';
-            const num = parseFloat(amount);
-            if (isNaN(num)) return amount;
-            return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-
-        // 辅助函数：格式化金额用于存储（无逗号，两位小数）
-        function formatAmountForStorage(amount) {
-            if (amount === undefined || amount === null || amount === '') return '-';
-            if (typeof amount === 'number') return amount.toFixed(2);
-            const parsed = parseFloat(amount);
-            if (isNaN(parsed)) return '-';
-            return parsed.toFixed(2);
-        }
-
-        // 排序函数：按 periodStart 降序（最新在前）
-        function sortByDateDesc(data) {
-            return [...data].sort((a, b) => {
-                if (!a.periodStart) return 1;
-                if (!b.periodStart) return -1;
-                return b.periodStart.localeCompare(a.periodStart);
-            });
-        }
-
-        // 页面加载完成后执行
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(function() {
-                const loadingRow = document.getElementById('loading-row');
-                if (loadingRow) loadingRow.innerHTML = '<td colspan="8" style="text-align: center; padding: 40px;"><i class="fas fa-spinner fa-spin"></i> Loading wage records...</td>';
-                initLabourWagePage();
-            }, 100);
-        });
-        
-        function initLabourWagePage() {
-            if (typeof LanguageConfig !== 'undefined') LanguageConfig.init();
-            initWageData();
-            setupEventListeners();
-            updateStats();
-        }
-        
-        function initWageData() {
+        // ==================== 页面全局逻辑 ====================
+        (function() {
+            // 全局数据与过滤器状态
             let wageData = [];
-            const storedData = sessionStorage.getItem('wageData') || localStorage.getItem('wageData');
-            if (storedData && storedData !== 'null' && storedData !== '[]') {
-                try { wageData = JSON.parse(storedData); } catch(e) { wageData = getDefaultWageData(); }
-            } else {
-                wageData = getDefaultWageData();
+            let currentFilters = {
+                type: "all",
+                status: "all",
+                site: "all"
+            };
+
+            // 排序函数：按 periodStart 降序
+            function sortByDateDesc(data) {
+                return [...data].sort((a, b) => {
+                    if (!a.periodStart) return 1;
+                    if (!b.periodStart) return -1;
+                    return b.periodStart.localeCompare(a.periodStart);
+                });
             }
-            // 确保金额存储格式为无逗号两位小数
-            wageData = wageData.map(item => {
-                if (item.amount && item.amount !== '-') {
-                    item.amount = formatAmountForStorage(item.amount);
+
+            // 辅助函数：匹配站点类型
+            function getSiteType(siteName) {
+                if (!siteName) return 'other';
+                const lower = siteName.toLowerCase();
+                if (lower.includes('treatment')) return 'treatment';
+                if (lower.includes('pipeline')) return 'pipeline';
+                if (lower.includes('reservoir')) return 'reservoir';
+                if (lower.includes('distribution')) return 'distribution';
+                if (lower.includes('pump')) return 'pump';
+                return 'other';
+            }
+
+            // 辅助函数：读取PDF文件为Base64
+            function readFileAsBase64(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result.split(',')[1]);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            function initLabourWagePage() {
+                if (typeof LanguageConfig !== 'undefined') LanguageConfig.init();
+                initWageData();
+                setupEventListeners();
+                updateStats();
+            }
+            
+            function initWageData() {
+                const storedData = sessionStorage.getItem('wageData') || localStorage.getItem('wageData');
+                if (storedData && storedData !== 'null' && storedData !== '[]') {
+                    try { wageData = JSON.parse(storedData); } catch(e) { wageData = getDefaultWageData(); }
+                } else {
+                    wageData = getDefaultWageData();
                 }
-                return item;
-            });
-            sessionStorage.setItem('wageData', JSON.stringify(wageData));
-            renderWageTable(wageData);
-            return wageData;
-        }
-        
-        function getDefaultWageData() {
-            return [
-                { id: "GF-527A-1", type: "GF527A", typeText: "GF527A - Return on Construction Site Employment", status: "draft", statusText: "Draft", site: "Treatment Plant", period: "01-Sep-2025 to 07-Sep-2025", submittedBy: "John Doe", amount: "-", periodStart: "2025-09-01", periodEnd: "2025-09-07" },
-                { id: "GF527-2003-LW-1", type: "GF527-2003", typeText: "GF527 (2003) - Labour Wage", status: "submitted", statusText: "Submitted", site: "Pipeline", period: "01-Sep-2025 to 15-Sep-2025", submittedBy: "Jane Smith", amount: "98750.00", periodStart: "2025-09-01", periodEnd: "2025-09-15" },
-                { id: "GF527-2017-LW-1", type: "GF527-2017", typeText: "GF527 (2017) - Labour Wage", status: "endorsed", statusText: "Endorsed", site: "Reservoir", period: "01-Aug-2025 to 31-Aug-2025", submittedBy: "Robert Johnson", amount: "215320.75", periodStart: "2025-08-01", periodEnd: "2025-08-31" },
-                { id: "GF-527A-2", type: "GF527A", typeText: "GF527A - Return on Construction Site Employment", status: "confirm", statusText: "Client's Site Representative to Confirm", site: "Distribution", period: "10-Sep-2025 to 16-Sep-2025", submittedBy: "Sarah Williams", amount: "-", periodStart: "2025-09-10", periodEnd: "2025-09-16" },
-                { id: "GF527-2003-LW-2", type: "GF527-2003", typeText: "GF527 (2003) - Labour Wage", status: "double-check", statusText: "Contractor/Contractor's Agent Double Check", site: "Pump Station", period: "05-Sep-2025 to 11-Sep-2025", submittedBy: "Michael Brown", amount: "64320.00", periodStart: "2025-09-05", periodEnd: "2025-09-11" }
-            ];
-        }
-        
-        function renderWageTable(wageData) {
-            const tbody = document.getElementById('wage-table-body');
-            const noResults = document.getElementById('no-results-message');
-            if (!tbody) return;
-            const loadingRow = document.getElementById('loading-row');
-            if (loadingRow) loadingRow.remove();
-            tbody.innerHTML = '';
-            
-            // 先排序：按 periodStart 降序（最新在前）
-            const sortedData = sortByDateDesc(wageData);
-            
-            if (!sortedData || sortedData.length === 0) {
-                if (noResults) noResults.style.display = 'block';
-                return;
+                
+                saveData();
+                renderWageTable();
             }
-            sortedData.forEach(item => {
-                const amountDisplay = formatAmountDisplay(item.amount);
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${item.id}</td>
-                    <td>${item.typeText}</td>
-                    <td><span class="status-badge status-${item.status}">${item.statusText}</span></td>
-                    <td>${item.site}</td>
-                    <td>${item.period}</td>
-                    <td>${item.submittedBy}</td>
-                    <td>${amountDisplay}</td>
-                    <td class="action-buttons">
-                        <button class="action-btn view-btn" data-id="${item.id}"><i class="fas fa-eye"></i></button>
-                        <button class="action-btn edit-btn" data-id="${item.id}"><i class="fas fa-edit"></i></button>
-                        <button class="action-btn delete-btn" data-id="${item.id}"><i class="fas fa-trash"></i></button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-            updateStats(sortedData);
-            bindActionButtons();
-        }
-        
-        function setupEventListeners() {
-            const addWageBtn = document.getElementById('add-wage-btn');
-            const modal = document.getElementById('add-wage-modal');
-            const cancelBtn = document.getElementById('cancel-add-wage');
-            const addForm = document.getElementById('add-wage-form');
-            if (addWageBtn && modal) addWageBtn.addEventListener('click', () => modal.style.display = 'flex');
-            if (cancelBtn && modal) cancelBtn.addEventListener('click', () => { modal.style.display = 'none'; document.getElementById('add-wage-form').reset(); });
-            if (addForm) {
-                addForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    const type = document.getElementById('input-type').value;
-                    const status = document.getElementById('input-status').value;
-                    const site = document.getElementById('input-site').value;
-                    const periodStart = document.getElementById('input-period-start').value;
-                    const periodEnd = document.getElementById('input-period-end').value;
-                    const submittedBy = document.getElementById('input-submitted-by').value;
-                    let amountValue = document.getElementById('input-amount').value;
-                    if (amountValue === '') amountValue = '0';
-                    const amountNum = parseFloat(amountValue);
-                    const amountStored = isNaN(amountNum) ? '-' : amountNum.toFixed(2);
-                    
-                    let wageData = JSON.parse(sessionStorage.getItem('wageData') || '[]');
-                    let newId = "", typeText = "";
-                    if (type === "GF527A") {
-                        const maxId = wageData.filter(i => i.type === "GF527A").map(i => { let p = i.id.split('-'); return p.length>2 ? parseInt(p[2])||0 : 0; }).reduce((a,b)=>Math.max(a,b),0);
-                        newId = `GF-527A-${maxId+1}`;
-                        typeText = "GF527A - Return on Construction Site Employment";
-                    } else if (type === "GF527-2003") {
-                        const maxId = wageData.filter(i => i.type === "GF527-2003").map(i => { let p = i.id.split('-'); return p.length>3 ? parseInt(p[3])||0 : 0; }).reduce((a,b)=>Math.max(a,b),0);
-                        newId = `GF527-2003-LW-${maxId+1}`;
-                        typeText = "GF527 (2003) - Labour Wage";
-                    } else {
-                        const maxId = wageData.filter(i => i.type === "GF527-2017").map(i => { let p = i.id.split('-'); return p.length>3 ? parseInt(p[3])||0 : 0; }).reduce((a,b)=>Math.max(a,b),0);
-                        newId = `GF527-2017-LW-${maxId+1}`;
-                        typeText = "GF527 (2017) - Labour Wage";
+
+            function saveData() {
+                sessionStorage.setItem('wageData', JSON.stringify(wageData));
+                localStorage.setItem('wageData', JSON.stringify(wageData));
+            }
+            
+            function getDefaultWageData() {
+                return [
+                    { id: "GF-527A-1", type: "GF527A", typeText: "GF527A - Return on Construction Site Employment", status: "draft", statusText: "Draft", site: "Treatment Plant", period: "01-Sep-2025 to 07-Sep-2025", submittedBy: "John Doe", periodStart: "2025-09-01", periodEnd: "2025-09-07" },
+                    { id: "GF527-2003-LW-1", type: "GF527-2003", typeText: "GF527 (2003) - Labour Wage", status: "submitted", statusText: "Submitted", site: "Pipeline", period: "01-Sep-2025 to 15-Sep-2025", submittedBy: "Jane Smith", periodStart: "2025-09-01", periodEnd: "2025-09-15" },
+                    { id: "GF527-2017-LW-1", type: "GF527-2017", typeText: "GF527 (2017) - Labour Wage", status: "endorsed", statusText: "Endorsed", site: "Reservoir", period: "01-Aug-2025 to 31-Aug-2025", submittedBy: "Robert Johnson", periodStart: "2025-08-01", periodEnd: "2025-08-31" },
+                    { id: "GF-527A-2", type: "GF527A", typeText: "GF527A - Return on Construction Site Employment", status: "confirm", statusText: "Client's Site Representative to Confirm", site: "Distribution", period: "10-Sep-2025 to 16-Sep-2025", submittedBy: "Sarah Williams", periodStart: "2025-09-10", periodEnd: "2025-09-16" },
+                    { id: "GF527-2003-LW-2", type: "GF527-2003", typeText: "GF527 (2003) - Labour Wage", status: "double-check", statusText: "Contractor/Contractor's Agent Double Check", site: "Pump Station", period: "05-Sep-2025 to 11-Sep-2025", submittedBy: "Michael Brown", periodStart: "2025-09-05", periodEnd: "2025-09-11" }
+                ];
+            }
+            
+            // 渲染表格 (支援複合篩選)
+            function renderWageTable() {
+                const tbody = document.getElementById('wage-table-body');
+                const noResults = document.getElementById('no-results-message');
+                if (!tbody) return;
+                tbody.innerHTML = '';
+                
+                // 套用所有過濾條件
+                const filtered = wageData.filter(item => {
+                    if (currentFilters.type !== "all" && item.type !== currentFilters.type) return false;
+                    if (currentFilters.status !== "all" && item.status !== currentFilters.status) return false;
+                    if (currentFilters.site !== "all") {
+                        const siteType = getSiteType(item.site);
+                        if (siteType !== currentFilters.site) return false;
                     }
-                    const statusTextMap = { draft:"Draft", submitted:"Submitted", endorsed:"Endorsed", cancelled:"Cancelled", confirm:"Client's Site Representative to Confirm", "double-check":"Contractor/Contractor's Agent Double Check" };
-                    function fmt(d) { let date = new Date(d); return `${date.getDate().toString().padStart(2,'0')}-${date.toLocaleString('en-US',{month:'short'})}-${date.getFullYear()}`; }
-                    const newWage = {
-                        id: newId, type, typeText, status, statusText: statusTextMap[status],
-                        site, period: `${fmt(periodStart)} to ${fmt(periodEnd)}`, submittedBy,
-                        amount: amountStored,
-                        periodStart, periodEnd
-                    };
-                    wageData.push(newWage);
-                    sessionStorage.setItem('wageData', JSON.stringify(wageData));
-                    renderWageTable(wageData);
-                    modal.style.display = 'none';
-                    document.getElementById('add-wage-form').reset();
-                    alert('Wage record added successfully!');
+                    return true;
                 });
+
+                const sortedData = sortByDateDesc(filtered);
+                
+                if (sortedData.length === 0) {
+                    if (noResults) noResults.style.display = 'block';
+                } else {
+                    if (noResults) noResults.style.display = 'none';
+                    sortedData.forEach(item => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${item.id}</td>
+                            <td>${item.typeText}</td>
+                            <td><span class="status-badge status-${item.status}">${item.statusText}</span></td>
+                            <td>${item.site}</td>
+                            <td>${item.period}</td>
+                            <td>${item.submittedBy}</td>
+                            <td class="action-buttons">
+                                <button class="action-btn view-btn" data-id="${item.id}"><i class="fas fa-eye"></i></button>
+                                <button class="action-btn edit-btn" data-id="${item.id}"><i class="fas fa-edit"></i></button>
+                                <button class="action-btn delete-btn" data-id="${item.id}"><i class="fas fa-trash"></i></button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+
+                updateStats();
+                bindActionButtons();
             }
-            setupFilterEvents();
-        }
-        
-        function setupFilterEvents() {
-            document.querySelectorAll('.filter-group').forEach(group => {
-                const toggle = group.querySelector('.filter-toggle');
-                const options = group.querySelector('.filter-options');
-                if (!toggle || !options) return;
-                toggle.addEventListener('click', e => {
-                    e.stopPropagation();
-                    document.querySelectorAll('.filter-options').forEach(opt => opt !== options && opt.classList.remove('open'));
-                    options.classList.toggle('open');
-                });
-                group.querySelectorAll('.filter-option').forEach(opt => {
-                    opt.addEventListener('click', e => {
+            
+            function setupEventListeners() {
+                // Modal Events
+                const addWageBtn = document.getElementById('add-wage-btn');
+                const modal = document.getElementById('add-wage-modal');
+                const cancelBtn = document.getElementById('cancel-add-wage');
+                const addForm = document.getElementById('add-wage-form');
+                const fileInput = document.getElementById('input-pdf');
+                
+                if (addWageBtn && modal) {
+                    addWageBtn.addEventListener('click', () => {
+                        modal.style.display = 'flex';
+                        addForm.reset();
+                    });
+                }
+                
+                if (cancelBtn && modal) {
+                    cancelBtn.addEventListener('click', () => { 
+                        modal.style.display = 'none'; 
+                        addForm.reset(); 
+                    });
+                }
+                
+                // Modal Submit
+                if (addForm) {
+                    addForm.addEventListener('submit', async function(e) {
+                        e.preventDefault();
+                        const type = document.getElementById('input-type').value;
+                        const status = document.getElementById('input-status').value;
+                        const site = document.getElementById('input-site').value;
+                        const periodStart = document.getElementById('input-period-start').value;
+                        const periodEnd = document.getElementById('input-period-end').value;
+                        const submittedBy = document.getElementById('input-submitted-by').value;
+                        
+                        // 讀取上傳的PDF
+                        let pdfData = null;
+                        const file = fileInput.files[0];
+                        if (file) {
+                            try {
+                                pdfData = await readFileAsBase64(file);
+                            } catch (err) {
+                                alert('Failed to read PDF file.');
+                                return;
+                            }
+                        }
+
+                        // ID 產生邏輯
+                        let newId = "", typeText = "";
+                        if (type === "GF527A") {
+                            const maxId = wageData.filter(i => i.type === "GF527A").map(i => { let p = i.id.split('-'); return p.length>2 ? parseInt(p[2])||0 : 0; }).reduce((a,b)=>Math.max(a,b),0);
+                            newId = `GF-527A-${maxId+1}`;
+                            typeText = "GF527A - Return on Construction Site Employment";
+                        } else if (type === "GF527-2003") {
+                            const maxId = wageData.filter(i => i.type === "GF527-2003").map(i => { let p = i.id.split('-'); return p.length>3 ? parseInt(p[3])||0 : 0; }).reduce((a,b)=>Math.max(a,b),0);
+                            newId = `GF527-2003-LW-${maxId+1}`;
+                            typeText = "GF527 (2003) - Labour Wage";
+                        } else {
+                            const maxId = wageData.filter(i => i.type === "GF527-2017").map(i => { let p = i.id.split('-'); return p.length>3 ? parseInt(p[3])||0 : 0; }).reduce((a,b)=>Math.max(a,b),0);
+                            newId = `GF527-2017-LW-${maxId+1}`;
+                            typeText = "GF527 (2017) - Labour Wage";
+                        }
+                        
+                        const statusTextMap = { draft:"Draft", submitted:"Submitted", endorsed:"Endorsed", cancelled:"Cancelled", confirm:"Client's Site Representative to Confirm", "double-check":"Contractor/Contractor's Agent Double Check" };
+                        function fmt(d) { let date = new Date(d); return `${date.getDate().toString().padStart(2,'0')}-${date.toLocaleString('en-US',{month:'short'})}-${date.getFullYear()}`; }
+                        
+                        const newWage = {
+                            id: newId, type, typeText, status, statusText: statusTextMap[status],
+                            site, period: `${fmt(periodStart)} to ${fmt(periodEnd)}`, submittedBy,
+                            periodStart, periodEnd,
+                            pdfData: pdfData
+                        };
+                        
+                        wageData.push(newWage);
+                        saveData();
+                        renderWageTable();
+                        
+                        modal.style.display = 'none';
+                        addForm.reset();
+                        alert('Wage record added successfully!');
+                    });
+                }
+                
+                setupFilterEvents();
+            }
+            
+            // 下拉菜單過濾事件
+            function setupFilterEvents() {
+                document.querySelectorAll('.filter-group').forEach(group => {
+                    const toggle = group.querySelector('.filter-toggle');
+                    const options = group.querySelector('.filter-options');
+                    if (!toggle || !options) return;
+                    
+                    toggle.addEventListener('click', e => {
                         e.stopPropagation();
-                        group.querySelectorAll('.filter-option').forEach(o => o.classList.remove('active'));
-                        opt.classList.add('active');
-                        toggle.querySelector('span').textContent = opt.textContent;
-                        const filterType = opt.dataset.filter, filterValue = opt.dataset.value;
-                        applyFilters(filterType, filterValue);
-                        options.classList.remove('open');
+                        document.querySelectorAll('.filter-options').forEach(opt => opt !== options && opt.classList.remove('open'));
+                        options.classList.toggle('open');
+                    });
+                    
+                    group.querySelectorAll('.filter-option').forEach(opt => {
+                        opt.addEventListener('click', e => {
+                            e.stopPropagation();
+                            group.querySelectorAll('.filter-option').forEach(o => o.classList.remove('active'));
+                            opt.classList.add('active');
+                            toggle.querySelector('span').textContent = opt.textContent;
+                            
+                            const filterType = opt.dataset.filter;
+                            const filterValue = opt.dataset.value;
+                            
+                            // 更新全域複合篩選變數
+                            currentFilters[filterType] = filterValue;
+                            
+                            renderWageTable();
+                            options.classList.remove('open');
+                        });
                     });
                 });
-            });
-            document.addEventListener('click', () => document.querySelectorAll('.filter-options').forEach(opt => opt.classList.remove('open')));
-        }
-        
-        function applyFilters(filterType, filterValue) {
-            const stored = sessionStorage.getItem('wageData');
-            if (!stored) return;
-            let all = JSON.parse(stored);
-            let filtered = all.filter(item => {
-                if (filterType === 'type' && filterValue !== 'all') return item.type === filterValue;
-                if (filterType === 'status' && filterValue !== 'all') return item.status === filterValue;
-                if (filterType === 'site' && filterValue !== 'all') return item.site.toLowerCase().includes(filterValue);
-                return true;
-            });
-            renderWageTable(filtered);
-        }
-        
-        function bindActionButtons() {
-            // 查看按钮 - 跳转到 labourwagedocument.html
-            document.querySelectorAll('.view-btn').forEach(btn => {
-                btn.removeEventListener('click', handleView);
-                btn.addEventListener('click', handleView);
-            });
-            // 编辑按钮 - 跳转到 editlabour.html
-            document.querySelectorAll('.edit-btn').forEach(btn => {
-                btn.removeEventListener('click', handleEdit);
-                btn.addEventListener('click', handleEdit);
-            });
-            // 删除按钮
-            document.querySelectorAll('.delete-btn').forEach(btn => {
-                btn.removeEventListener('click', handleDelete);
-                btn.addEventListener('click', handleDelete);
-            });
-        }
-        
-        function handleView(e) {
-            const wageId = e.currentTarget.getAttribute('data-id');
-            const stored = sessionStorage.getItem('wageData');
-            if (!stored) return;
-            const all = JSON.parse(stored);
-            const record = all.find(r => r.id === wageId);
-            if (record) {
-                sessionStorage.setItem('currentWageRecord', JSON.stringify(record));
-                window.location.href = 'labourwagedocument.html';
-            } else {
-                alert('Record not found');
+                
+                document.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-options').forEach(opt => opt.classList.remove('open'));
+                });
             }
-        }
-        
-        function handleEdit(e) {
-            const wageId = e.currentTarget.getAttribute('data-id');
-            const stored = sessionStorage.getItem('wageData');
-            if (!stored) return;
-            const all = JSON.parse(stored);
-            const record = all.find(r => r.id === wageId);
-            if (record) {
-                sessionStorage.setItem('currentWageRecord', JSON.stringify(record));
-                window.location.href = 'editlabour.html';
-            } else {
-                alert('Record not found');
+            
+            // 綁定按鈕事件
+            function bindActionButtons() {
+                document.querySelectorAll('.view-btn').forEach(btn => {
+                    btn.removeEventListener('click', handleView);
+                    btn.addEventListener('click', handleView);
+                });
+                
+                document.querySelectorAll('.edit-btn').forEach(btn => {
+                    btn.removeEventListener('click', handleEdit);
+                    btn.addEventListener('click', handleEdit);
+                });
+                
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.removeEventListener('click', handleDelete);
+                    btn.addEventListener('click', handleDelete);
+                });
             }
-        }
-        
-        function handleDelete(e) {
-            const wageId = e.currentTarget.getAttribute('data-id');
-            if (confirm('Are you sure you want to delete this wage record?')) {
-                let all = JSON.parse(sessionStorage.getItem('wageData') || '[]');
-                all = all.filter(r => r.id !== wageId);
-                sessionStorage.setItem('wageData', JSON.stringify(all));
-                renderWageTable(all);
-                alert('Wage record deleted successfully!');
+            
+            function handleView(e) {
+                const wageId = e.currentTarget.getAttribute('data-id');
+                const record = wageData.find(r => r.id === wageId);
+                if (record) {
+                    sessionStorage.setItem('currentWageRecord', JSON.stringify(record));
+                    window.location.href = 'labourwagedocument.html';
+                } else {
+                    alert('Record not found');
+                }
             }
-        }
-        
-        function updateStats(wageData = null) {
-            if (!wageData) wageData = JSON.parse(sessionStorage.getItem('wageData') || '[]');
-            const totalEl = document.getElementById('total-records-count');
-            if (totalEl) totalEl.textContent = wageData.length;
-            const monthEl = document.getElementById('month-count');
-            if (monthEl) {
-                const now = new Date();
-                const currMonth = now.getMonth(), currYear = now.getFullYear();
-                const monthCount = wageData.filter(r => {
-                    if (r.periodStart) {
-                        try {
-                            const d = new Date(r.periodStart);
-                            return d.getMonth() === currMonth && d.getFullYear() === currYear;
-                        } catch(e) { return false; }
-                    }
-                    return false;
-                }).length;
-                monthEl.textContent = monthCount;
+            
+            function handleEdit(e) {
+                const wageId = e.currentTarget.getAttribute('data-id');
+                const record = wageData.find(r => r.id === wageId);
+                if (record) {
+                    sessionStorage.setItem('currentWageRecord', JSON.stringify(record));
+                    window.location.href = 'editlabour.html';
+                } else {
+                    alert('Record not found');
+                }
             }
-        }
+            
+            function handleDelete(e) {
+                const wageId = e.currentTarget.getAttribute('data-id');
+                if (confirm('Are you sure you want to delete this wage record?')) {
+                    wageData = wageData.filter(r => r.id !== wageId);
+                    saveData();
+                    renderWageTable();
+                }
+            }
+            
+            // 更新本月與總數統計
+            function updateStats() {
+                const totalEl = document.getElementById('total-records-count');
+                if (totalEl) totalEl.textContent = wageData.length;
+                
+                const monthEl = document.getElementById('month-count');
+                if (monthEl) {
+                    const now = new Date();
+                    const currMonth = now.getMonth(), currYear = now.getFullYear();
+                    const monthCount = wageData.filter(r => {
+                        if (r.periodStart) {
+                            try {
+                                const d = new Date(r.periodStart);
+                                return d.getMonth() === currMonth && d.getFullYear() === currYear;
+                            } catch(e) { return false; }
+                        }
+                        return false;
+                    }).length;
+                    monthEl.textContent = monthCount;
+                }
+            }
+
+            // 頁面初始化
+            document.addEventListener('DOMContentLoaded', function() {
+                setTimeout(function() {
+                    const loadingRow = document.getElementById('loading-row');
+                    if (loadingRow) loadingRow.innerHTML = '<td colspan="7" style="text-align: center; padding: 40px;"><i class="fas fa-spinner fa-spin"></i> Loading wage records...</td>';
+                    initLabourWagePage();
+                }, 100);
+            });
+
+        })();
     </script>
 </body>
 </html>

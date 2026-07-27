@@ -5,7 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AEL DWSS - Labour Wage Document</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles/main.css">
     <script src="scripts/theme-config.js"></script>
+    <!-- PDF.js 及匯出工具 CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         /* 基础样式重置 */
         * {
@@ -304,6 +312,10 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(52,152,219,0.4);
         }
+        .document-actions .btn-print { background: #27ae60; color: white; }
+        .document-actions .btn-print:hover { background: #219653; }
+        .document-actions .btn-download { background: #8e44ad; color: white; }
+        .document-actions .btn-download:hover { background: #732d91; }
 
         .document-meta {
             background: #f8f9fa;
@@ -338,63 +350,105 @@
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
+        /* PDF 檢視器與 Canvas 標註樣式 (參照 sitediarydocument.html) */
         .pdf-viewer-container {
             margin-top: 25px;
-            background: #f9f9f9;
+            background: #e0e0e0;
             border-radius: 8px;
             padding: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            flex: 1;
+            min-height: 500px;
             display: flex;
             flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            flex: 1;
+        }
+
+        .pdf-canvas-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        #pdf-canvas {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            background: white;
+            display: block;
+        }
+
+        #annotation-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            display: block;
+            background: transparent;
+        }
+
+        #text-annotation-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
+
+        .text-annotation-view {
+            position: absolute;
+            cursor: default;
+            min-width: 20px;
+            min-height: 20px;
+            padding: 2px 6px;
+            background: transparent;
+            border: 1px solid transparent;
+            font-family: Arial, sans-serif;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            outline: none;
+            user-select: none;
+            box-sizing: border-box;
+            pointer-events: none;
         }
 
         .pdf-controls {
+            margin-top: 15px;
             display: flex;
             gap: 12px;
-            margin-bottom: 15px;
+            align-items: center;
             flex-wrap: wrap;
         }
 
-        .pdf-control-btn {
+        .pdf-controls button {
+            padding: 6px 16px;
             background: #3498db;
             color: white;
             border: none;
             border-radius: 6px;
-            padding: 10px 15px;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 5px;
             font-size: 0.9rem;
-            transition: background 0.3s ease;
+            transition: background 0.2s;
         }
 
-        .pdf-control-btn:hover {
+        .pdf-controls button:hover {
             background: #2980b9;
         }
 
-        .pdf-viewer-content {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: white;
-            border-radius: 6px;
-            border: 1px solid #eaeaea;
-            min-height: 400px;
+        .pdf-controls span {
+            font-weight: 500;
         }
 
-        .no-pdf-message {
-            text-align: center;
-            color: #666;
-            padding: 40px;
-        }
+        .pdf-loading { color: #666; font-size: 1.1rem; }
+        .pdf-error { color: #e74c3c; font-size: 1.1rem; }
+        .no-pdf-message { text-align: center; color: #888; }
+        .no-pdf-message i { font-size: 48px; color: #ccc; margin-bottom: 16px; }
 
-        .no-pdf-message i {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            color: #bbb;
+        /* 隱藏不需要的縮放按鈕 */
+        #pdf-zoom-out, #pdf-zoom-in, .zoom-controls-label, #pdf-zoom-level {
+            display: none !important;
         }
 
         footer {
@@ -465,8 +519,8 @@
                     <h2><i class="fas fa-file-alt"></i> <span id="docTitle">Labour Wage Document</span> <span class="doc-status" id="docStatus">Draft</span></h2>
                 </div>
                 <div class="document-actions">
-                    <button class="btn" id="export-pdf-btn"><i class="fas fa-file-pdf"></i> Export PDF</button>
-                    <button class="btn" id="print-btn"><i class="fas fa-print"></i> Print</button>
+                    <button class="btn btn-print" id="print-pdf-btn" style="display:none;"><i class="fas fa-print"></i> Print PDF</button>
+                    <button class="btn btn-download" id="download-pdf-btn" style="display:none;"><i class="fas fa-download"></i> Download PDF</button>
                     <button class="btn" id="back-to-wage-btn"><i class="fas fa-arrow-left"></i> Back to Labour Wage</button>
                 </div>
             </div>
@@ -480,19 +534,23 @@
                 <div class="meta-item"><span class="meta-label">Total Amount:</span><span class="meta-value" id="docAmount">N/A</span></div>
             </div>
 
-            <div class="pdf-viewer-container">
-                <div class="pdf-controls">
-                    <button class="pdf-control-btn" id="pdf-zoom-in"><i class="fas fa-search-plus"></i> Zoom In</button>
-                    <button class="pdf-control-btn" id="pdf-zoom-out"><i class="fas fa-search-minus"></i> Zoom Out</button>
-                    <button class="pdf-control-btn" id="pdf-fit-width"><i class="fas fa-arrows-alt-h"></i> Fit Width</button>
-                    <button class="pdf-control-btn" id="pdf-fit-page"><i class="fas fa-expand"></i> Fit Page</button>
+            <div class="pdf-viewer-container" id="pdf-viewer-container">
+                <div class="pdf-canvas-wrapper" id="pdf-canvas-wrapper">
+                    <canvas id="pdf-canvas"></canvas>
+                    <canvas id="annotation-canvas"></canvas>
+                    <div id="text-annotation-container"></div>
                 </div>
-                <div class="pdf-viewer-content" id="pdf-content">
-                    <div class="no-pdf-message">
-                        <i class="fas fa-file-pdf"></i>
-                        <h3>No PDF document available for this wage record</h3>
-                        <p>The PDF preview will appear here when available</p>
-                    </div>
+                <div id="pdf-loading" class="pdf-loading"><i class="fas fa-spinner fa-spin"></i> Loading PDF...</div>
+                <div id="pdf-error" class="pdf-error" style="display:none;"><i class="fas fa-exclamation-circle"></i> Failed to load PDF document.</div>
+                <div id="no-pdf-message" class="no-pdf-message" style="display:none;">
+                    <i class="fas fa-file-pdf"></i>
+                    <h3>No PDF document available for this wage record</h3>
+                    <p>The PDF preview will appear here when available</p>
+                </div>
+                <div class="pdf-controls" id="pdf-controls" style="display:none;">
+                    <button id="pdf-prev"><i class="fas fa-chevron-left"></i> Prev</button>
+                    <span id="pdf-page-info">Page <span id="pdf-current-page">1</span> of <span id="pdf-total-pages">1</span></span>
+                    <button id="pdf-next">Next <i class="fas fa-chevron-right"></i></button>
                 </div>
             </div>
 
@@ -503,7 +561,7 @@
         </div>
     </div>
 
-    <!-- 侧边栏状态持久化（与 labourwage.html 完全一致） -->
+    <!-- 侧边栏状态持久化脚本 -->
     <script>
         (function() {
             function saveSidebarState() {
@@ -529,14 +587,11 @@
             function bindToggleEvent() {
                 const toggleBtn = document.querySelector('.toggle-btn');
                 if (toggleBtn) {
-                    // 移除可能存在的旧监听器，避免重复绑定
                     toggleBtn.removeEventListener('click', saveSidebarState);
                     toggleBtn.addEventListener('click', function() {
-                        // 先切换侧边栏状态
                         const sidebar = document.querySelector('.sidebar');
                         if (sidebar) {
                             sidebar.classList.toggle('collapsed');
-                            // 保存状态
                             const isCollapsed = sidebar.classList.contains('collapsed');
                             localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
                         }
@@ -547,7 +602,6 @@
             document.addEventListener('DOMContentLoaded', function() {
                 restoreSidebarState();
                 bindToggleEvent();
-                // 同步日期显示
                 const storedDate = sessionStorage.getItem('globalDate');
                 const dateSpan = document.querySelector('.date-display span');
                 if (storedDate && dateSpan) {
@@ -559,13 +613,235 @@
         })();
     </script>
 
-    <!-- 原有文档加载逻辑 -->
+    <!-- 整合 PDF.js 檢視、標註與匯出完整邏輯 -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const wageRecord = JSON.parse(sessionStorage.getItem('currentWageRecord'));
-            if (wageRecord) {
+        (function() {
+            'use strict';
+
+            let pdfDoc = null;
+            let currentPage = 1;
+            let totalPages = 0;
+            let annotations = [];
+            let currentDocId = null;
+            
+            const baseScale = 1.0; 
+            const renderScale = 2.0;
+
+            const pdfCanvas = document.getElementById('pdf-canvas');
+            const annoCanvas = document.getElementById('annotation-canvas');
+            const textContainer = document.getElementById('text-annotation-container');
+            const ctx = pdfCanvas.getContext('2d');
+            const annoCtx = annoCanvas.getContext('2d');
+            const loadingEl = document.getElementById('pdf-loading');
+            const errorEl = document.getElementById('pdf-error');
+            const noPdfEl = document.getElementById('no-pdf-message');
+            const controlsEl = document.getElementById('pdf-controls');
+            const currentPageSpan = document.getElementById('pdf-current-page');
+            const totalPagesSpan = document.getElementById('pdf-total-pages');
+            const printBtn = document.getElementById('print-pdf-btn');
+            const downloadBtn = document.getElementById('download-pdf-btn');
+
+            function loadAnnotationsFromStorage(docId) {
+                const STORAGE_KEY = 'labourWageData'; // 對應 Labour Wage 的儲存鍵名或通用格式
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (!stored) return [];
+                try {
+                    const wageData = JSON.parse(stored);
+                    const doc = wageData.find(d => d.id === docId);
+                    return doc && doc.annotations ? doc.annotations : [];
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            function drawAnnotation(anno, scale) {
+                if (!annoCtx) return;
+                const ctx = annoCtx;
+
+                switch (anno.type) {
+                    case 'highlight':
+                        ctx.save();
+                        ctx.globalAlpha = (anno.opacity || 100) / 100 * 0.4;
+                        ctx.strokeStyle = anno.color || '#3498db';
+                        ctx.lineWidth = (anno.size || 3) * scale;
+                        ctx.lineCap = 'round';
+                        ctx.lineJoin = 'round';
+                        if (anno.points && anno.points.length > 1) {
+                            ctx.beginPath();
+                            const first = anno.points[0];
+                            ctx.moveTo(first.x * scale, first.y * scale);
+                            for (let i = 1; i < anno.points.length; i++) {
+                                ctx.lineTo(anno.points[i].x * scale, anno.points[i].y * scale);
+                            }
+                            ctx.stroke();
+                        }
+                        ctx.restore();
+                        break;
+                    case 'rectangle':
+                        ctx.save();
+                        ctx.globalAlpha = (anno.opacity || 100) / 100;
+                        ctx.strokeStyle = anno.color || '#3498db';
+                        ctx.lineWidth = (anno.size || 3) * scale;
+                        if (anno.startX !== undefined && anno.endX !== undefined) {
+                            const x = Math.min(anno.startX, anno.endX) * scale;
+                            const y = Math.min(anno.startY, anno.endY) * scale;
+                            const w = Math.abs(anno.endX - anno.startX) * scale;
+                            const h = Math.abs(anno.endY - anno.startY) * scale;
+                            ctx.strokeRect(x, y, w, h);
+                        }
+                        ctx.restore();
+                        break;
+                    case 'ellipse':
+                        ctx.save();
+                        ctx.globalAlpha = (anno.opacity || 100) / 100;
+                        ctx.strokeStyle = anno.color || '#3498db';
+                        ctx.lineWidth = (anno.size || 3) * scale;
+                        if (anno.startX !== undefined && anno.endX !== undefined) {
+                            const cx = (anno.startX + anno.endX) / 2 * scale;
+                            const cy = (anno.startY + anno.endY) / 2 * scale;
+                            const rx = Math.abs(anno.endX - anno.startX) / 2 * scale;
+                            const ry = Math.abs(anno.endY - anno.startY) / 2 * scale;
+                            ctx.beginPath();
+                            ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+                            ctx.stroke();
+                        }
+                        ctx.restore();
+                        break;
+                    case 'arrow':
+                        ctx.save();
+                        ctx.globalAlpha = (anno.opacity || 100) / 100;
+                        ctx.strokeStyle = anno.color || '#3498db';
+                        ctx.fillStyle = anno.color || '#3498db';
+                        ctx.lineWidth = (anno.size || 3) * scale;
+                        if (anno.startX !== undefined && anno.endX !== undefined) {
+                            const fromX = anno.startX * scale;
+                            const fromY = anno.startY * scale;
+                            const toX = anno.endX * scale;
+                            const toY = anno.endY * scale;
+                            ctx.beginPath();
+                            ctx.moveTo(fromX, fromY);
+                            ctx.lineTo(toX, toY);
+                            ctx.stroke();
+                            const angle = Math.atan2(toY - fromY, toX - fromX);
+                            const headLen = 10 * scale / 2;
+                            ctx.beginPath();
+                            ctx.moveTo(toX, toY);
+                            ctx.lineTo(toX - headLen * Math.cos(angle - 0.5), toY - headLen * Math.sin(angle - 0.5));
+                            ctx.moveTo(toX, toY);
+                            ctx.lineTo(toX - headLen * Math.cos(angle + 0.5), toY - headLen * Math.sin(angle + 0.5));
+                            ctx.stroke();
+                        }
+                        ctx.restore();
+                        break;
+                    case 'line':
+                        ctx.save();
+                        ctx.globalAlpha = (anno.opacity || 100) / 100;
+                        ctx.strokeStyle = anno.color || '#3498db';
+                        ctx.lineWidth = (anno.size || 3) * scale;
+                        if (anno.startX !== undefined && anno.endX !== undefined) {
+                            ctx.beginPath();
+                            ctx.moveTo(anno.startX * scale, anno.startY * scale);
+                            ctx.lineTo(anno.endX * scale, anno.endY * scale);
+                            ctx.stroke();
+                        }
+                        ctx.restore();
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            function redrawAnnotations(scale) {
+                if (!annoCtx) return;
+                annoCtx.clearRect(0, 0, annoCanvas.width, annoCanvas.height);
+                annotations.forEach(anno => {
+                    if (anno.type !== 'text') {
+                        if (anno.page !== undefined && anno.page !== currentPage) return;
+                        if (anno.page === undefined && currentPage !== 1) return;
+                        drawAnnotation(anno, scale);
+                    }
+                });
+            }
+
+            function renderTextAnnotations(scale) {
+                textContainer.innerHTML = '';
+                const textAnnos = annotations.filter(a => a.type === 'text' && (a.page === currentPage || (a.page === undefined && currentPage === 1)));
+                textAnnos.forEach(anno => {
+                    const el = document.createElement('div');
+                    el.className = 'text-annotation-view';
+                    el.textContent = anno.text || '';
+                    el.style.color = anno.color || '#000000';
+                    el.style.opacity = (anno.opacity || 100) / 100;
+                    el.style.fontSize = (anno.size * 4 * scale) + 'px';
+                    el.style.left = (anno.x * scale) + 'px';
+                    el.style.top = (anno.y * scale) + 'px';
+                    textContainer.appendChild(el);
+                });
+            }
+
+            function renderPage(pageNum) {
+                if (!pdfDoc) return Promise.reject('No PDF document');
+                return pdfDoc.getPage(pageNum).then(page => {
+                    const viewport = page.getViewport({ scale: renderScale });
+                    const cssViewport = page.getViewport({ scale: baseScale });
+                    
+                    pdfCanvas.width = viewport.width;
+                    pdfCanvas.height = viewport.height;
+                    annoCanvas.width = viewport.width;
+                    annoCanvas.height = viewport.height;
+
+                    const widthPx = cssViewport.width + 'px';
+                    const heightPx = cssViewport.height + 'px';
+                    
+                    pdfCanvas.style.width = widthPx;
+                    pdfCanvas.style.height = heightPx;
+                    annoCanvas.style.width = widthPx;
+                    annoCanvas.style.height = heightPx;
+
+                    const renderContext = { canvasContext: ctx, viewport: viewport };
+                    return page.render(renderContext).promise;
+                }).then(() => {
+                    const offsetX = pdfCanvas.offsetLeft || 0;
+                    const offsetY = pdfCanvas.offsetTop || 0;
+                    
+                    annoCanvas.style.left = offsetX + 'px';
+                    annoCanvas.style.top = offsetY + 'px';
+                    
+                    textContainer.style.left = offsetX + 'px';
+                    textContainer.style.top = offsetY + 'px';
+                    textContainer.style.width = pdfCanvas.style.width;
+                    textContainer.style.height = pdfCanvas.style.height;
+
+                    currentPageSpan.textContent = pageNum;
+                    currentPage = pageNum;
+
+                    redrawAnnotations(renderScale);
+                    renderTextAnnotations(baseScale);
+                });
+            }
+
+            function loadDocument() {
+                const wageRecordRaw = sessionStorage.getItem('currentWageRecord');
+                if (!wageRecordRaw) {
+                    loadingEl.style.display = 'none';
+                    errorEl.textContent = 'No wage record data available.';
+                    errorEl.style.display = 'block';
+                    return;
+                }
+
+                let wageRecord;
+                try {
+                    wageRecord = JSON.parse(wageRecordRaw);
+                } catch (e) {
+                    loadingEl.style.display = 'none';
+                    errorEl.textContent = 'Invalid wage record data.';
+                    errorEl.style.display = 'block';
+                    return;
+                }
+
+                currentDocId = wageRecord.id;
                 document.getElementById('docId').textContent = wageRecord.id || 'N/A';
-                document.getElementById('docTitle').textContent = `${wageRecord.typeText} - ${wageRecord.site}`;
+                document.getElementById('docTitle').textContent = `${wageRecord.typeText || 'Labour Wage'} - ${wageRecord.site || ''}`;
                 document.getElementById('docType').textContent = wageRecord.typeText || 'N/A';
                 document.getElementById('docSite').textContent = wageRecord.site || 'N/A';
                 document.getElementById('docPeriod').textContent = wageRecord.period || 'N/A';
@@ -577,22 +853,165 @@
                 statusElement.className = 'doc-status';
                 const statusMap = { draft:'status-draft', submitted:'status-submitted', endorsed:'status-endorsed', cancelled:'status-cancelled', confirm:'status-confirm', 'double-check':'status-double-check' };
                 if (statusMap[wageRecord.status]) statusElement.classList.add(statusMap[wageRecord.status]);
-                
-                if (wageRecord.pdfUrl) {
-                    setTimeout(() => {
-                        const pdfContent = document.getElementById('pdf-content');
-                        pdfContent.innerHTML = `<div style="text-align: center; padding: 20px;"><i class="fas fa-file-pdf" style="font-size: 4rem; color: #e74c3c; margin-bottom: 15px;"></i><h3>PDF Preview: ${wageRecord.id}</h3><p>PDF preview will be displayed here in production.</p><button class="btn" style="margin-top: 15px;"><i class="fas fa-download"></i> Download PDF</button></div>`;
-                    }, 100);
+
+                annotations = loadAnnotationsFromStorage(currentDocId);
+                if ((!annotations || annotations.length === 0) && wageRecord.annotations) {
+                    annotations = wageRecord.annotations;
                 }
+
+                let pdfSrc = wageRecord.pdfData || wageRecord.pdfUrl || null;
+                if (!pdfSrc) {
+                    loadingEl.style.display = 'none';
+                    noPdfEl.style.display = 'block';
+                    printBtn.style.display = 'none';
+                    downloadBtn.style.display = 'none';
+                    return;
+                }
+
+                let pdfSource;
+                if (typeof pdfSrc === 'string' && pdfSrc.startsWith('data:application/pdf;base64,')) {
+                    pdfSource = { url: pdfSrc };
+                } else if (typeof pdfSrc === 'string' && pdfSrc.length > 1000 && !pdfSrc.startsWith('http')) {
+                    try {
+                        const binary = atob(pdfSrc);
+                        const bytes = new Uint8Array(binary.length);
+                        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                        pdfSource = { data: bytes };
+                    } catch (e) {
+                        pdfSource = { url: pdfSrc };
+                    }
+                } else {
+                    pdfSource = { url: pdfSrc };
+                }
+
+                loadingEl.style.display = 'flex';
+                errorEl.style.display = 'none';
+                noPdfEl.style.display = 'none';
+                printBtn.style.display = 'none';
+                downloadBtn.style.display = 'none';
+
+                pdfjsLib.getDocument(pdfSource).promise.then(pdf => {
+                    pdfDoc = pdf;
+                    totalPages = pdf.numPages;
+                    totalPagesSpan.textContent = totalPages;
+                    currentPage = 1;
+                    controlsEl.style.display = 'flex';
+                    loadingEl.style.display = 'none';
+                    printBtn.style.display = 'inline-flex';
+                    downloadBtn.style.display = 'inline-flex';
+
+                    return renderPage(currentPage);
+                }).catch(err => {
+                    loadingEl.style.display = 'none';
+                    noPdfEl.style.display = 'block';
+                    printBtn.style.display = 'none';
+                    downloadBtn.style.display = 'none';
+                });
             }
-            document.getElementById('back-to-wage-btn').addEventListener('click', () => window.location.href = 'labourwage.html');
-            document.getElementById('print-btn').addEventListener('click', () => window.print());
-            document.getElementById('export-pdf-btn').addEventListener('click', () => alert('PDF export functionality would be implemented here.'));
-            document.getElementById('pdf-zoom-in').addEventListener('click', () => alert('Zoom In functionality would be implemented here.'));
-            document.getElementById('pdf-zoom-out').addEventListener('click', () => alert('Zoom Out functionality would be implemented here.'));
-            document.getElementById('pdf-fit-width').addEventListener('click', () => alert('Fit Width functionality would be implemented here.'));
-            document.getElementById('pdf-fit-page').addEventListener('click', () => alert('Fit Page functionality would be implemented here.'));
-        });
+
+            async function generateAnnotatedPDF() {
+                const wrapper = document.getElementById('pdf-canvas-wrapper');
+                if (!wrapper) throw new Error('No wrapper');
+
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({
+                    orientation: 'p',
+                    unit: 'mm',
+                    format: 'a4',
+                    compress: true
+                });
+
+                let firstPage = true;
+                for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+                    await renderPage(pageNum);
+                    await new Promise(resolve => requestAnimationFrame(resolve));
+
+                    const canvas = await html2canvas(wrapper, {
+                        scale: 2.0,
+                        useCORS: true,
+                        backgroundColor: '#ffffff',
+                        logging: false
+                    });
+
+                    const imgData = canvas.toDataURL('image/jpeg', 0.85);
+                    const imgWidth = 210;
+                    const pageHeight = 297;
+                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+                    if (firstPage) {
+                        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
+                        firstPage = false;
+                    } else {
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
+                    }
+                }
+                await renderPage(1);
+                return pdf;
+            }
+
+            async function saveAsPDF(pdf) {
+                if (window.showSaveFilePicker) {
+                    try {
+                        const blob = pdf.output('blob');
+                        const handle = await window.showSaveFilePicker({
+                            suggestedName: 'labour_wage_document.pdf',
+                            types: [{
+                                description: 'PDF Document',
+                                accept: { 'application/pdf': ['.pdf'] }
+                            }]
+                        });
+                        const writable = await handle.createWritable();
+                        await writable.write(blob);
+                        await writable.close();
+                        return;
+                    } catch (err) {}
+                }
+                pdf.save('labour_wage_document.pdf');
+            }
+
+            function printPDF() {
+                generateAnnotatedPDF().then(pdf => {
+                    const pdfBlob = pdf.output('blob');
+                    const url = URL.createObjectURL(pdfBlob);
+                    const win = window.open(url, '_blank');
+                    if (win) {
+                        win.onload = function() { win.print(); };
+                    } else {
+                        alert('Please allow pop-ups to print.');
+                    }
+                }).catch(err => {
+                    alert('Print failed: ' + err.message);
+                });
+            }
+
+            function downloadPDF() {
+                generateAnnotatedPDF().then(pdf => {
+                    saveAsPDF(pdf);
+                }).catch(err => {
+                    alert('Download failed: ' + err.message);
+                });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+                loadDocument();
+
+                document.getElementById('pdf-prev').addEventListener('click', () => {
+                    if (currentPage > 1) renderPage(currentPage - 1);
+                });
+                document.getElementById('pdf-next').addEventListener('click', () => {
+                    if (currentPage < totalPages) renderPage(currentPage + 1);
+                });
+
+                document.getElementById('back-to-wage-btn').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    window.location.href = 'labourwage.html';
+                });
+
+                if (printBtn) printBtn.addEventListener('click', printPDF);
+                if (downloadBtn) downloadBtn.addEventListener('click', downloadPDF);
+            });
+        })();
     </script>
 </body>
 </html>
