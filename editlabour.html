@@ -307,6 +307,20 @@
             box-shadow: 0 4px 8px rgba(52,152,219,0.4);
         }
 
+        .document-actions .btn-submit {
+            background: #28a745;
+            box-shadow: 0 2px 5px rgba(40,167,69,0.3);
+        }
+        .document-actions .btn-submit:hover {
+            background: #218838;
+            box-shadow: 0 4px 8px rgba(40,167,69,0.4);
+        }
+        .document-actions .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
         .document-actions .btn-save {
             background: #2ecc71;
             box-shadow: 0 2px 5px rgba(46,204,113,0.3);
@@ -653,6 +667,7 @@
                     <h2><i class="fas fa-file-alt"></i> <span id="docTitle">Labour Wage Document</span> <span class="doc-status" id="docStatus">Draft</span></h2>
                 </div>
                 <div class="document-actions">
+                    <button class="btn btn-submit" id="submit-btn"><i class="fas fa-paper-plane"></i> Submit</button>
                     <button class="btn btn-save" id="save-btn"><i class="fas fa-save"></i> Save Changes</button>
                     <button class="btn btn-cancel" id="cancel-btn"><i class="fas fa-times"></i> Cancel</button>
                     <button class="btn" id="back-to-wage-btn"><i class="fas fa-arrow-left"></i> Back to Labour Wage</button>
@@ -809,6 +824,7 @@
             const currentPageSpan = document.getElementById('current-page');
             const totalPagesSpan = document.getElementById('total-pages');
             const lockBtn = document.getElementById('lock-btn');
+            const submitBtn = document.getElementById('submit-btn');
             
             let currentColor = '#3498db';
             let currentSize = 3;
@@ -822,25 +838,75 @@
             let draggedAnnoId = null;
             let dragAnnoOffsetX = 0, dragAnnoOffsetY = 0;
 
+            // ---------- 新增：安全同步更新資料到各種可能的 Storage 中，確保不會把原本陣列洗掉 ----------
+            function updateRecordInStorages(updatedDoc) {
+                // 掃描並更新所有可能的儲存陣列，確保只在 "含有資料的陣列" 進行替換，不自行產生覆蓋原有設定的新陣列
+                const keys = ['labourWageData', 'laborWageRecords', 'ael_dwss_wage_records', 'wageData', 'wageRecords'];
+                
+                function updateIn(storage) {
+                    keys.forEach(key => {
+                        const data = storage.getItem(key);
+                        if (data) {
+                            try {
+                                let arr = JSON.parse(data);
+                                if (Array.isArray(arr) && arr.length > 0) {
+                                    let modified = false;
+                                    for (let i = 0; i < arr.length; i++) {
+                                        if (String(arr[i].id) === String(updatedDoc.id)) {
+                                            arr[i] = { ...arr[i], ...updatedDoc };
+                                            modified = true;
+                                        }
+                                    }
+                                    // 若找到了該筆文件並完成修改，再寫回對應的儲存空間中
+                                    if (modified) {
+                                        storage.setItem(key, JSON.stringify(arr));
+                                    }
+                                }
+                            } catch(e) {
+                                console.error(`Error updating key ${key}:`, e);
+                            }
+                        }
+                    });
+                }
+                
+                updateIn(localStorage);
+                updateIn(sessionStorage);
+
+                // 同步更新當前檢視用的個別項目儲存
+                sessionStorage.setItem('currentWageRecord', JSON.stringify(updatedDoc));
+                sessionStorage.setItem('editDocument', JSON.stringify(updatedDoc));
+            }
+
+            // ---------- 獲取狀態文字 ----------
+            function getStatusText(status) {
+                const s = String(status).toLowerCase();
+                const map = {
+                    'draft': 'Draft',
+                    'submitted': 'Submitted',
+                    'endorsed': 'Endorsed',
+                    'cancelled': 'Cancelled',
+                    'confirm': 'Confirm',
+                    'double-check': 'Double Check'
+                };
+                return map[s] || status || 'Draft';
+            }
+
             function loadDocumentData() {
                 const editDocStr = sessionStorage.getItem('currentWageRecord') || sessionStorage.getItem('editDocument');
                 let doc = null;
                 if (editDocStr) {
-                    try {
-                        doc = JSON.parse(editDocStr);
-                    } catch(e) {}
+                    try { doc = JSON.parse(editDocStr); } catch(e) {}
                 }
                 
-                // 同步從 localStorage 交叉檢查，若 localStorage 中有更新且帶有 annotations 的版本，則優先採用
                 if (doc && doc.id) {
-                    const storageKeys = ['labourWageData', 'laborWageRecords', 'ael_dwss_wage_records'];
+                    const storageKeys = ['labourWageData', 'laborWageRecords', 'ael_dwss_wage_records', 'wageData'];
                     for (const key of storageKeys) {
                         const stored = localStorage.getItem(key);
                         if (stored) {
                             try {
                                 const list = JSON.parse(stored);
                                 if (Array.isArray(list)) {
-                                    const found = list.find(item => item.id == doc.id || String(item.id) === String(doc.id));
+                                    const found = list.find(item => String(item.id) === String(doc.id));
                                     if (found && found.annotations && found.annotations.length >= (doc.annotations ? doc.annotations.length : 0)) {
                                         doc = found;
                                     }
@@ -862,17 +928,30 @@
 
                 const statusElement = document.getElementById('docStatus');
                 if (statusElement) {
-                    statusElement.textContent = doc.statusText || 'Draft';
+                    const rawStatus = (doc.status || doc.Status || 'draft').toLowerCase();
+                    statusElement.textContent = getStatusText(rawStatus);
                     statusElement.className = 'doc-status';
                     const statusMap = { 
-                        draft:'status-draft', 
-                        submitted:'status-submitted', 
-                        endorsed:'status-endorsed', 
-                        cancelled:'status-cancelled', 
-                        confirm:'status-confirm', 
+                        'draft':'status-draft', 
+                        'submitted':'status-submitted', 
+                        'endorsed':'status-endorsed', 
+                        'cancelled':'status-cancelled', 
+                        'confirm':'status-confirm', 
                         'double-check':'status-double-check' 
                     };
-                    if (statusMap[doc.status]) statusElement.classList.add(statusMap[doc.status]);
+                    if (statusMap[rawStatus]) statusElement.classList.add(statusMap[rawStatus]);
+                }
+
+                // 設置 Submit 按鈕狀態
+                if (submitBtn) {
+                    const currentStatus = (doc.status || doc.Status || 'draft').toLowerCase();
+                    if (currentStatus !== 'draft') {
+                        submitBtn.disabled = true;
+                        submitBtn.title = 'Document already submitted';
+                    } else {
+                        submitBtn.disabled = false;
+                        submitBtn.title = 'Submit this document to WSG';
+                    }
                 }
 
                 annotations = doc.annotations || [];
@@ -1256,8 +1335,7 @@
                 renderTextAnnotations();
                 if (currentDoc) {
                     currentDoc.annotations = annotations;
-                    sessionStorage.setItem('currentWageRecord', JSON.stringify(currentDoc));
-                    sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
+                    updateRecordInStorages(currentDoc);
                 }
             }
 
@@ -1689,7 +1767,7 @@
                 });
             }
 
-            // ---------- 強化後的儲存函數（確保多重儲存鍵與 Session 完美同步） ----------
+            // ---------- Save Changes ----------
             function saveChanges() {
                 if (!currentDoc) { alert('No document to save.'); return; }
                 
@@ -1712,47 +1790,65 @@
                 // 2. 更新當前文檔的註釋
                 currentDoc.annotations = annotations;
                 
-                // 3. 同步更新 sessionStorage
-                sessionStorage.setItem('currentWageRecord', JSON.stringify(currentDoc));
-                sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
+                // 3. 呼叫新的安全同步函數
+                updateRecordInStorages(currentDoc);
+                
+                alert('✅ Changes saved successfully! Your annotations have been stored.');
+            }
 
-                // 4. 強制同步更新 localStorage 中所有可能被用到的清單鍵值
-                const storageKeys = ['labourWageData', 'laborWageRecords', 'labourWageRecords', 'ael_dwss_wage_records'];
-                storageKeys.forEach(key => {
-                    const stored = localStorage.getItem(key);
-                    if (stored) {
-                        try {
-                            let wageData = JSON.parse(stored);
-                            if (Array.isArray(wageData)) {
-                                const index = wageData.findIndex(d => d.id == currentDoc.id || String(d.id) === String(currentDoc.id));
-                                if (index !== -1) {
-                                    wageData[index] = { ...wageData[index], ...currentDoc, annotations: annotations };
-                                    localStorage.setItem(key, JSON.stringify(wageData));
-                                }
-                            }
-                        } catch(e) {
-                            console.error(`Error updating key ${key}:`, e);
+            // ---------- Submit Document ----------
+            function submitDocument() {
+                if (!currentDoc) {
+                    alert('No document to submit.');
+                    return;
+                }
+                const currentStatus = (currentDoc.status || currentDoc.Status || '').toLowerCase();
+                if (currentStatus !== 'draft') {
+                    alert('This document has already been submitted.');
+                    return;
+                }
+                if (!confirm('Submit this document to WSG? The status will change to "Submitted".')) {
+                    return;
+                }
+
+                // 1. 完成所有正在編輯的文本框
+                document.querySelectorAll('.text-annotation.editing').forEach(el => {
+                    const id = el.dataset.id;
+                    const anno = annotations.find(a => a._id == id);
+                    if (anno) {
+                        el.contentEditable = false;
+                        el.classList.remove('editing');
+                        const newText = el.textContent.trim();
+                        if (newText) {
+                            anno.text = newText;
+                        } else {
+                            deleteAnnotation(anno._id);
                         }
                     }
                 });
-                
-                // 確保主要的 labourWageData 必定有寫入更新
-                const WAGE_KEY = 'labourWageData';
-                let wageData = [];
-                const storedDefault = localStorage.getItem(WAGE_KEY);
-                if (storedDefault) {
-                    try { wageData = JSON.parse(storedDefault); } catch(e) { wageData = []; }
+
+                // 2. 更新資料狀態 (同時給出首字母大寫的屬性，防止外部表格讀取時大小寫不匹配)
+                currentDoc.annotations = annotations;
+                currentDoc.status = 'Submitted';
+                currentDoc.Status = 'Submitted';
+                if(currentDoc.statusText) currentDoc.statusText = 'Submitted';
+
+                // 3. 更新 UI
+                const statusElement = document.getElementById('docStatus');
+                if (statusElement) {
+                    statusElement.textContent = 'Submitted';
+                    statusElement.className = 'doc-status status-submitted';
                 }
-                const mainIndex = wageData.findIndex(d => d.id == currentDoc.id || String(d.id) === String(currentDoc.id));
-                if (mainIndex !== -1) {
-                    wageData[mainIndex] = { ...wageData[mainIndex], ...currentDoc, annotations: annotations };
-                } else {
-                    wageData.push({ ...currentDoc, annotations: annotations });
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.title = 'Document already submitted';
                 }
-                localStorage.setItem(WAGE_KEY, JSON.stringify(wageData));
-                
-                alert('✅ Changes saved successfully! Your annotations have been stored.');
-                console.log('Successfully saved annotations:', annotations);
+
+                // 4. 安全地寫入資料並跳轉
+                updateRecordInStorages(currentDoc);
+
+                alert('✅ Document submitted successfully!');
+                window.location.href = 'labourwage.html';
             }
 
             function cancelEditing() {
@@ -1790,6 +1886,7 @@
                 document.getElementById('undo-btn')?.addEventListener('click', undo);
                 document.getElementById('delete-selected-btn')?.addEventListener('click', deleteSelected);
                 if (lockBtn) lockBtn.addEventListener('click', toggleLock);
+                if (submitBtn) submitBtn.addEventListener('click', submitDocument);
             }
 
             window.addEventListener('resize', () => {

@@ -1,6 +1,6 @@
 /**
  * editsafetypdf.js - PDF 編輯頁面 (Safety Inspection)
- * 已修復：儲存邏輯 (解決 ID 型別不匹配問題)、返回路徑 (強制指向 safetyinspect.html)
+ * 新增 Submit 功能：將 draft 狀態改為 submitted-wsg
  */
 (function() {
     'use strict';
@@ -37,6 +37,7 @@
     const totalPagesSpan = document.getElementById('total-pages');
     const zoomLevelSpan = document.querySelector('.zoom-level');
     const lockBtn = document.getElementById('lock-btn');
+    const submitBtn = document.getElementById('submit-btn');
     
     let currentColor = '#3498db';
     let currentSize = 3;
@@ -59,6 +60,18 @@
         else if (dateSpan) dateSpan.textContent = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
     }
 
+    function getStatusText(status) {
+        const map = {
+            'draft': 'Draft',
+            'submitted-wsg': 'Submitted to WSG',
+            'submitted-ig': 'Submitted to IG',
+            'closed': 'Closed',
+            'reopen': 'Reopen',
+            'cancelled': 'Cancelled'
+        };
+        return map[status] || status || 'Draft';
+    }
+
     function loadDocumentData() {
         const editDocStr = sessionStorage.getItem('editDocument');
         if (!editDocStr) return null;
@@ -71,6 +84,24 @@
             document.getElementById('docDate').textContent = doc.date || 'N/A';
             document.getElementById('docInspector').textContent = doc.inspector || 'N/A';
             document.getElementById('docTitle').textContent = doc.site ? `${doc.site} - Safety Inspection` : 'Edit Safety Inspection';
+            
+            // 显示状态
+            const statusDisplay = document.getElementById('docStatusDisplay');
+            if (statusDisplay) {
+                statusDisplay.textContent = getStatusText(doc.status);
+            }
+            
+            // 设置 Submit 按钮状态
+            if (submitBtn) {
+                if (doc.status && doc.status !== 'draft') {
+                    submitBtn.disabled = true;
+                    submitBtn.title = 'Document already submitted';
+                } else {
+                    submitBtn.disabled = false;
+                    submitBtn.title = 'Submit this document to WSG';
+                }
+            }
+            
             annotations = doc.annotations || [];
             annotations.forEach((a, idx) => a._id = a._id || Date.now() + idx);
             return doc;
@@ -484,7 +515,7 @@
         deleteAnnotation(selectedAnnotationId);
     }
 
-    // ---------- 坐標轉換（精確轉換物理像素） ----------
+    // ---------- 坐標轉換 ----------
     function getCanvasCoords(e) {
         let clientX, clientY;
         if (e.touches && e.touches.length > 0) {
@@ -908,11 +939,10 @@
         });
     }
 
-    // ---------- 保存/取消/返回 (已修復邏輯) ----------
+    // ---------- 保存/取消/返回 ----------
     function saveChanges() {
         if (!currentDoc) { alert('No document to save.'); return; }
         
-        // 結束並保存所有正在編輯中的文本框
         document.querySelectorAll('.text-annotation.editing').forEach(el => {
             const id = el.dataset.id;
             const anno = annotations.find(a => a._id == id);
@@ -928,10 +958,8 @@
             }
         });
         
-        // 更新當前文檔的註釋
         currentDoc.annotations = annotations;
         
-        // 取得 localStorage 的資料
         const STORAGE_KEY = 'inspectionData';
         let inspectionData = [];
         const stored = localStorage.getItem(STORAGE_KEY);
@@ -939,36 +967,91 @@
             try { inspectionData = JSON.parse(stored); } catch(e) { console.error('解析數據失敗', e); }
         }
         
-        // 核心修復：強制將 ID 轉成字串，避免因型別不同 (如 1673892837 vs "1673892837") 而找不到
         const index = inspectionData.findIndex(d => String(d.id) === String(currentDoc.id));
         
         if (index !== -1) {
             inspectionData[index].annotations = annotations;
-            // 防呆機制：若編輯時帶有新的 PDF 資料也一併更新
             if (currentDoc.pdfData) {
                 inspectionData[index].pdfData = currentDoc.pdfData;
             }
         } else {
-            // 如果真的因為未知的理由沒找到，把這筆完整 push 進去以防遺失資料
             inspectionData.push(currentDoc);
         }
         
-        // 保存回 Storage
         localStorage.setItem(STORAGE_KEY, JSON.stringify(inspectionData));
         sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
         
         alert('✅ Annotations saved successfully!');
     }
 
+    // ---------- Submit 功能 ----------
+    function submitDocument() {
+        if (!currentDoc) {
+            alert('No document to submit.');
+            return;
+        }
+        if (currentDoc.status !== 'draft') {
+            alert('This document has already been submitted.');
+            return;
+        }
+        if (!confirm('Submit this document to WSG? The status will change to "Submitted to WSG".')) {
+            return;
+        }
+        
+        // 先保存所有编辑
+        document.querySelectorAll('.text-annotation.editing').forEach(el => {
+            const id = el.dataset.id;
+            const anno = annotations.find(a => a._id == id);
+            if (anno) {
+                el.contentEditable = false;
+                el.classList.remove('editing');
+                const newText = el.textContent.trim();
+                if (newText) {
+                    anno.text = newText;
+                } else {
+                    deleteAnnotation(anno._id);
+                }
+            }
+        });
+        
+        // 更新状态
+        currentDoc.annotations = annotations;
+        currentDoc.status = 'submitted-wsg';
+        
+        // 更新界面
+        const statusDisplay = document.getElementById('docStatusDisplay');
+        if (statusDisplay) statusDisplay.textContent = 'Submitted to WSG';
+        if (submitBtn) submitBtn.disabled = true;
+        
+        // 保存到 localStorage
+        const STORAGE_KEY = 'inspectionData';
+        let inspectionData = [];
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            try { inspectionData = JSON.parse(stored); } catch(e) { console.error('解析數據失敗', e); }
+        }
+        
+        const index = inspectionData.findIndex(d => String(d.id) === String(currentDoc.id));
+        if (index !== -1) {
+            inspectionData[index] = currentDoc;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(inspectionData));
+        } else {
+            alert('Document not found in storage.');
+            return;
+        }
+        
+        sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
+        alert('✅ Document submitted to WSG successfully!');
+        window.location.href = 'safetyinspect.html';
+    }
+
     function cancelEditing() {
         if (confirm('Cancel editing? All unsaved changes will be lost.')) {
-            // 核心修復：統一導向 safetyinspect.html
             window.location.href = 'safetyinspect.html';
         }
     }
 
     function goBack() {
-        // 核心修復：統一導向 safetyinspect.html
         window.location.href = 'safetyinspect.html';
     }
 
@@ -998,6 +1081,7 @@
         document.getElementById('undo-btn')?.addEventListener('click', undo);
         document.getElementById('delete-selected-btn')?.addEventListener('click', deleteSelected);
         if (lockBtn) lockBtn.addEventListener('click', toggleLock);
+        if (submitBtn) submitBtn.addEventListener('click', submitDocument);
     }
 
     window.addEventListener('resize', () => {

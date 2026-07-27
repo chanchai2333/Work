@@ -38,7 +38,7 @@
             cursor: crosshair;
             border: none;
             padding: 0;
-            z-index: 15; /* 低於文本框 */
+            z-index: 15;
         }
         .tool-btn.active {
             background: #2ecc71;
@@ -58,7 +58,7 @@
             white-space: pre-wrap;
             word-wrap: break-word;
             outline: none;
-            z-index: 25; /* 高於 draw-canvas */
+            z-index: 25;
             user-select: none;
             box-sizing: border-box;
         }
@@ -69,7 +69,7 @@
             border: 2px solid #3498db;
             background: rgba(255,255,255,0.95);
             cursor: text;
-            z-index: 30; /* 編輯時更高 */
+            z-index: 30;
         }
         .text-annotation.locked {
             cursor: default;
@@ -113,7 +113,18 @@
         .lock-btn.unlock:hover {
             background: #2ecc71 !important;
         }
-        /* Ribbon 工具欄 */
+        .btn-submit {
+            background: #28a745 !important;
+            color: white !important;
+        }
+        .btn-submit:hover {
+            background: #218838 !important;
+        }
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        /* Ribbon 工具栏 */
         .pdf-toolbar-ribbon {
             display: flex;
             flex-wrap: wrap;
@@ -202,14 +213,14 @@
             min-width: 28px;
             font-size: 11px;
         }
-        /* 隱藏 Zoom 按鈕 */
+        /* 隐藏 Zoom 按钮 */
         .pdf-controls .zoom-controls {
             display: none !important;
         }
     </style>
 </head>
 <body>
-    <!-- 側邊欄 -->
+    <!-- 侧边栏 -->
     <div class="sidebar">
         <div class="logo"><div class="logo-icon"><i class="fas fa-water"></i></div><h2>AEL DWSS</h2></div>
         <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
@@ -224,7 +235,7 @@
         </ul>
     </div>
 
-    <!-- 主內容 -->
+    <!-- 主内容 -->
     <div class="main-content">
         <div class="header">
             <h1 data-i18n="safety.inspection">Safety Inspection</h1>
@@ -240,6 +251,7 @@
             <div class="document-header">
                 <h2><i class="fas fa-file-pdf"></i><span id="docTitle">Edit Safety Inspection</span></h2>
                 <div class="document-actions">
+                    <button class="btn btn-submit" id="submit-btn"><i class="fas fa-paper-plane"></i> Submit</button>
                     <button class="btn" id="save-btn"><i class="fas fa-save"></i> Save Changes</button>
                     <button class="btn" id="cancel-btn"><i class="fas fa-times"></i> Cancel</button>
                     <button class="btn" id="back-btn"><i class="fas fa-arrow-left"></i> Back</button>
@@ -250,10 +262,11 @@
                 <div class="meta-item"><span class="meta-label">Inspection ID:</span><span class="meta-value" id="docId">N/A</span></div>
                 <div class="meta-item"><span class="meta-label">Site:</span><span class="meta-value" id="docSite">N/A</span></div>
                 <div class="meta-item"><span class="meta-label">Date:</span><span class="meta-value" id="docDate">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Status:</span><span class="meta-value" id="docStatusDisplay">N/A</span></div>
                 <div class="meta-item"><span class="meta-label">Inspector:</span><span class="meta-value" id="docInspector">N/A</span></div>
             </div>
 
-            <!-- Ribbon 工具欄 -->
+            <!-- Ribbon 工具栏 -->
             <div class="pdf-toolbar-ribbon">
                 <div class="ribbon-group">
                     <span class="ribbon-group-label">Select</span>

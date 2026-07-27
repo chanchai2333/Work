@@ -1,6 +1,6 @@
 /**
  * editpdf.js - PDF 编辑页面（修复坐标同步和右半部分问题）
- * 统一使用 pdfCanvas 的边界计算所有坐标，确保一致性
+ * 新增 Submit 功能，将 Draft 状态改为 Submitted to WSG
  */
 (function() {
     'use strict';
@@ -37,6 +37,7 @@
     const totalPagesSpan = document.getElementById('total-pages');
     const zoomLevelSpan = document.querySelector('.zoom-level');
     const lockBtn = document.getElementById('lock-btn');
+    const submitBtn = document.getElementById('submit-btn');
     
     let currentColor = '#3498db';
     let currentSize = 3;
@@ -70,6 +71,29 @@
             document.getElementById('docDate').textContent = doc.date || 'N/A';
             document.getElementById('docSubmittedBy').textContent = doc.submittedBy || 'N/A';
             document.getElementById('docTitle').textContent = doc.site ? `${doc.site} - ${doc.type || 'Diary'}` : 'Edit Document';
+            // 显示状态
+            const statusDisplay = document.getElementById('docStatusDisplay');
+            if (statusDisplay) {
+                const statusMap = {
+                    'draft': 'Draft',
+                    'submitted-wsg': 'Submitted to WSG',
+                    'submitted-ig': 'Submitted to IG',
+                    'closed': 'Closed',
+                    'reopen': 'Reopen',
+                    'cancelled': 'Cancelled'
+                };
+                statusDisplay.textContent = statusMap[doc.status] || doc.status || 'N/A';
+            }
+            // 如果状态不是 draft，禁用 submit 按钮
+            if (submitBtn) {
+                if (doc.status && doc.status !== 'draft') {
+                    submitBtn.disabled = true;
+                    submitBtn.title = 'Document already submitted';
+                } else {
+                    submitBtn.disabled = false;
+                    submitBtn.title = 'Submit this document';
+                }
+            }
             annotations = doc.annotations || [];
             annotations.forEach((a, idx) => a._id = a._id || Date.now() + idx);
             return doc;
@@ -910,6 +934,7 @@
     // ---------- 保存/取消/返回 ----------
     function saveChanges() {
         if (!currentDoc) { alert('No document to save.'); return; }
+        // 先结束所有编辑
         document.querySelectorAll('.text-annotation.editing').forEach(el => {
             const id = el.dataset.id;
             const anno = annotations.find(a => a._id == id);
@@ -925,6 +950,7 @@
             }
         });
         currentDoc.annotations = annotations;
+        // 保持原有状态不变（不修改 status）
         const STORAGE_KEY = 'siteDiaryData';
         let diaryData = [];
         const stored = localStorage.getItem(STORAGE_KEY);
@@ -939,6 +965,64 @@
         }
         sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
         alert('✅ Annotations saved successfully!');
+    }
+
+    // ---------- Submit 功能 ----------
+    function submitDocument() {
+        if (!currentDoc) {
+            alert('No document to submit.');
+            return;
+        }
+        // 检查状态是否为 draft
+        if (currentDoc.status !== 'draft') {
+            alert('This document has already been submitted.');
+            return;
+        }
+        // 确认提交
+        if (!confirm('Submit this document to WSG? The status will change to "Submitted to WSG".')) {
+            return;
+        }
+        // 先保存注释
+        document.querySelectorAll('.text-annotation.editing').forEach(el => {
+            const id = el.dataset.id;
+            const anno = annotations.find(a => a._id == id);
+            if (anno) {
+                el.contentEditable = false;
+                el.classList.remove('editing');
+                const newText = el.textContent.trim();
+                if (newText) {
+                    anno.text = newText;
+                } else {
+                    deleteAnnotation(anno._id);
+                }
+            }
+        });
+        // 更新 currentDoc
+        currentDoc.annotations = annotations;
+        currentDoc.status = 'submitted-wsg';
+        // 更新状态显示
+        const statusDisplay = document.getElementById('docStatusDisplay');
+        if (statusDisplay) statusDisplay.textContent = 'Submitted to WSG';
+        // 禁用提交按钮
+        if (submitBtn) submitBtn.disabled = true;
+        // 保存到 localStorage
+        const STORAGE_KEY = 'siteDiaryData';
+        let diaryData = [];
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) try { diaryData = JSON.parse(stored); } catch(e) {}
+        const index = diaryData.findIndex(d => d.id === currentDoc.id);
+        if (index !== -1) {
+            diaryData[index] = currentDoc;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(diaryData));
+        } else {
+            alert('Document not found in storage.');
+            return;
+        }
+        // 更新 sessionStorage
+        sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
+        alert('✅ Document submitted to WSG successfully!');
+        // 跳转回列表页
+        window.location.href = 'sitediary.html';
     }
 
     function cancelEditing() {
@@ -977,6 +1061,7 @@
         document.getElementById('undo-btn')?.addEventListener('click', undo);
         document.getElementById('delete-selected-btn')?.addEventListener('click', deleteSelected);
         if (lockBtn) lockBtn.addEventListener('click', toggleLock);
+        if (submitBtn) submitBtn.addEventListener('click', submitDocument);
     }
 
     window.addEventListener('resize', () => {

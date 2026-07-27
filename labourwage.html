@@ -274,6 +274,19 @@
                 site: "all"
             };
 
+            // 状态文本到 CSS 类的映射
+            function getStatusClass(statusText) {
+                const map = {
+                    'Draft': 'status-draft',
+                    'Submitted': 'status-submitted',
+                    'Endorsed': 'status-endorsed',
+                    'Cancelled': 'status-cancelled',
+                    "Client's Site Representative to Confirm": 'status-confirm',
+                    "Contractor/Contractor's Agent Double Check": 'status-double-check'
+                };
+                return map[statusText] || 'status-draft';
+            }
+
             // 排序函数：按 periodStart 降序
             function sortByDateDesc(data) {
                 return [...data].sort((a, b) => {
@@ -313,7 +326,8 @@
             }
             
             function initWageData() {
-                const storedData = sessionStorage.getItem('wageData') || localStorage.getItem('wageData');
+                // 优先从 localStorage 读取，因为 sessionStorage 可能被浏览器清除
+                const storedData = localStorage.getItem('wageData') || sessionStorage.getItem('wageData');
                 if (storedData && storedData !== 'null' && storedData !== '[]') {
                     try { wageData = JSON.parse(storedData); } catch(e) { wageData = getDefaultWageData(); }
                 } else {
@@ -365,10 +379,12 @@
                     if (noResults) noResults.style.display = 'none';
                     sortedData.forEach(item => {
                         const row = document.createElement('tr');
+                        // 根据 statusText 应用 CSS 类
+                        const statusClass = getStatusClass(item.statusText);
                         row.innerHTML = `
                             <td>${item.id}</td>
                             <td>${item.typeText}</td>
-                            <td><span class="status-badge status-${item.status}">${item.statusText}</span></td>
+                            <td><span class="status-badge ${statusClass}">${item.statusText}</span></td>
                             <td>${item.site}</td>
                             <td>${item.period}</td>
                             <td>${item.submittedBy}</td>
