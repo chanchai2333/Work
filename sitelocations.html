@@ -1061,7 +1061,8 @@
                     center: [22.35, 114.13], zoom: 11, zoomControl: true 
                 });
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+                    attribution: '© OpenStreetMap',
+                    maxZoom: 19
                 }).addTo(map);
                 map.whenReady(() => setupMapClick());
             }
