@@ -64,66 +64,111 @@
     }
 
     function loadDocumentData() {
-        const docStr = sessionStorage.getItem('editDocument') || sessionStorage.getItem('currentWageRecord');
-        if (!docStr) return null;
-        
+    // 尝试从多个可能的存储位置读取
+    var docStr = null;
+    var doc = null;
+    
+    // 1. 优先从 editDocument 读取
+    docStr = sessionStorage.getItem('editDocument');
+    if (docStr) {
         try {
-            const doc = JSON.parse(docStr);
-            currentDoc = doc;
-            
-            const docIdEl = document.getElementById('docId');
-            const docSiteEl = document.getElementById('docSite');
-            const docPeriodEl = document.getElementById('docPeriod');
-            const docAuthorEl = document.getElementById('docAuthor');
-            const docTypeEl = document.getElementById('docType');
-            const docTitleEl = document.getElementById('docTitle');
-            const docStatusEl = document.getElementById('docStatus');
-            
-            if (docIdEl) docIdEl.textContent = doc.id || 'N/A';
-            if (docSiteEl) docSiteEl.textContent = doc.site || 'N/A';
-            if (docPeriodEl) docPeriodEl.textContent = doc.period || doc.date || 'N/A';
-            if (docAuthorEl) docAuthorEl.textContent = doc.submittedBy || doc.author || 'N/A';
-            if (docTypeEl) docTypeEl.textContent = doc.typeText || doc.type || 'N/A';
-            if (docTitleEl) docTitleEl.textContent = doc.site ? `${doc.typeText || doc.type || 'Document'} - ${doc.site}` : 'Edit Document';
-            // 显示状态
-            const statusDisplay = document.getElementById('docStatusDisplay');
-            if (statusDisplay) {
-                const statusMap = {
-                    'draft': 'Draft',
-                    'submitted-wsg': 'Submitted to WSG',
-                    'submitted-ig': 'Submitted to IG',
-                    'closed': 'Closed',
-                    'reopen': 'Reopen',
-                    'cancelled': 'Cancelled'
-                };
-                statusDisplay.textContent = statusMap[doc.status] || doc.status || 'N/A';
+            doc = JSON.parse(docStr);
+            if (doc) {
+                currentDoc = doc;
+                annotations = doc.annotations || [];
+                // 更新页面信息
+                updateDocumentInfo(doc);
+                return doc;
             }
-            // 如果状态不是 draft，禁用 submit 按钮
-            if (submitBtn) {
-                if (doc.status && doc.status !== 'draft') {
-                    submitBtn.disabled = true;
-                    submitBtn.title = 'Document already submitted';
-                } else {
-                    submitBtn.disabled = false;
-                    submitBtn.title = 'Submit this document';
-                }
+        } catch(e) {}
+    }
+    
+    // 2. 尝试从 currentWageRecord 读取
+    docStr = sessionStorage.getItem('currentWageRecord');
+    if (docStr) {
+        try {
+            doc = JSON.parse(docStr);
+            if (doc) {
+                currentDoc = doc;
+                annotations = doc.annotations || [];
+                updateDocumentInfo(doc);
+                return doc;
             }
-            
-            if (docStatusEl) {
-                docStatusEl.textContent = doc.statusText || 'Draft';
-                docStatusEl.className = 'doc-status';
-                const sm = { draft:'status-draft', submitted:'status-submitted', endorsed:'status-endorsed', cancelled:'status-cancelled', confirm:'status-confirm', 'double-check':'status-double-check' };
-                if (sm[doc.status]) docStatusEl.classList.add(sm[doc.status]);
+        } catch(e) {}
+    }
+    
+    // 3. 尝试从 currentRecord 读取（通用）
+    docStr = sessionStorage.getItem('currentRecord');
+    if (docStr) {
+        try {
+            doc = JSON.parse(docStr);
+            if (doc) {
+                currentDoc = doc;
+                annotations = doc.annotations || [];
+                updateDocumentInfo(doc);
+                return doc;
             }
-            
-            annotations = doc.annotations || [];
-            annotations.forEach((a, idx) => a._id = a._id || Date.now() + idx);
-            return doc;
-        } catch(e) {
-            console.error('loadDocumentData error:', e);
-            return null;
+        } catch(e) {}
+    }
+    
+    return null;
+}
+
+function updateDocumentInfo(doc) {
+    var docIdEl = document.getElementById('docId');
+    var docSiteEl = document.getElementById('docSite');
+    var docPeriodEl = document.getElementById('docPeriod');
+    var docAuthorEl = document.getElementById('docAuthor');
+    var docTypeEl = document.getElementById('docType');
+    var docTitleEl = document.getElementById('docTitle');
+    var docStatusEl = document.getElementById('docStatus');
+    
+    if (docIdEl) docIdEl.textContent = doc.id || 'N/A';
+    if (docSiteEl) docSiteEl.textContent = doc.site || 'N/A';
+    if (docPeriodEl) docPeriodEl.textContent = doc.period || doc.date || 'N/A';
+    if (docAuthorEl) docAuthorEl.textContent = doc.submittedBy || doc.author || 'N/A';
+    if (docTypeEl) docTypeEl.textContent = doc.typeText || doc.type || 'N/A';
+    if (docTitleEl) docTitleEl.textContent = doc.site ? (doc.typeText || doc.type || 'Document') + ' - ' + doc.site : 'Edit Document';
+    
+    // 更新状态显示
+    if (docStatusEl) {
+        var statusMap = {
+            'draft': 'Draft',
+            'submitted': 'Submitted',
+            'submitted-wsg': 'Submitted to WSG',
+            'submitted-ig': 'Submitted to IG',
+            'endorsed': 'Endorsed',
+            'cancelled': 'Cancelled',
+            'confirm': 'Client\'s Site Representative to Confirm',
+            'double-check': 'Contractor/Contractor\'s Agent Double Check'
+        };
+        docStatusEl.textContent = statusMap[doc.status] || doc.statusText || 'Draft';
+        docStatusEl.className = 'doc-status';
+        var sm = { 
+            'draft':'status-draft', 
+            'submitted':'status-submitted',
+            'submitted-wsg':'status-submitted', 
+            'submitted-ig':'status-submitted',
+            'endorsed':'status-endorsed', 
+            'cancelled':'status-cancelled', 
+            'confirm':'status-confirm', 
+            'double-check':'status-double-check' 
+        };
+        if (sm[doc.status]) docStatusEl.classList.add(sm[doc.status]);
+    }
+    
+    // 检查状态，控制 Submit 按钮
+    var submitBtn = document.getElementById('submit-btn');
+    if (submitBtn) {
+        if (doc.status && doc.status !== 'draft') {
+            submitBtn.disabled = true;
+            submitBtn.title = 'Document already submitted';
+        } else {
+            submitBtn.disabled = false;
+            submitBtn.title = 'Submit this document';
         }
     }
+}
 
     function showError(msg) {
         if (container) container.innerHTML = `<div style="text-align:center;padding:40px;color:#e74c3c;"><i class="fas fa-exclamation-circle"></i> ${msg}</div>`;
@@ -866,40 +911,208 @@
     }
 
     // ---------- Submit 功能 ----------
-    function submitDocument() {
-        if (!currentDoc) {
-            alert('No document to submit.');
-            return;
-        }
-        // 检查状态是否为 draft
-        if (currentDoc.status !== 'draft') {
-            alert('This document has already been submitted.');
-            return;
-        }
-        // 确认提交
-        if (!confirm('Submit this document to WSG? The status will change to "Submitted to WSG".')) {
-            return;
-        }
-        // 先保存注释
-        document.querySelectorAll('.text-annotation.editing').forEach(el => {
-            const id = el.getAttribute('data-id');
-            const anno = annotations.find(a => a._id == id);
-            if (anno) {
-                el.contentEditable = false;
-                el.classList.remove('editing');
-                const t = el.textContent.trim();
-                if (t) anno.text = t;
-                else deleteAnnotation(anno._id);
-            }
-        });
-        // 更新 currentDoc
-        currentDoc.annotations = annotations;
-        // 保持原有状态不变（不修改 status）
-        
-        sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
-        alert('✅ Annotations saved successfully!');
-    }
+    // 在 editpdf.js 中，替换 submitDocument 函数
 
+function submitDocument() {
+    if (!currentDoc) {
+        alert('No document to submit.');
+        return;
+    }
+    
+    // 检查状态：只有 draft 才能提交
+    if (currentDoc.status !== 'draft') {
+        alert('This document has already been submitted.');
+        return;
+    }
+    
+    // 确认提交
+    if (!confirm('Submit this document? The status will change to "Submitted".')) {
+        return;
+    }
+    
+    // 保存所有正在编辑的文本框
+    document.querySelectorAll('.text-annotation.editing').forEach(function(el) {
+        var id = el.getAttribute('data-id');
+        var anno = annotations.find(function(a) { return a._id == id; });
+        if (anno) {
+            el.contentEditable = false;
+            el.classList.remove('editing');
+            var t = el.textContent.trim();
+            if (t) anno.text = t;
+            else {
+                var idx = annotations.indexOf(anno);
+                if (idx !== -1) annotations.splice(idx, 1);
+            }
+        }
+    });
+    
+    // ★★★ 更新状态 ★★★
+    currentDoc.status = 'submitted';
+    currentDoc.statusText = 'Submitted';
+    currentDoc.annotations = annotations;
+    
+    // 保存到 sessionStorage
+    sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
+    sessionStorage.setItem('currentRecord', JSON.stringify(currentDoc));
+    
+    // ★★★ 根据页面类型保存到对应的 localStorage 键 ★★★
+    saveToLocalStorage(currentDoc);
+    
+    // 更新页面状态显示
+    var statusEl = document.getElementById('docStatus');
+    if (statusEl) {
+        statusEl.textContent = 'Submitted';
+        statusEl.className = 'doc-status status-submitted';
+    }
+    
+    // 禁用 Submit 按钮
+    var submitBtn = document.getElementById('submit-btn');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.title = 'Document already submitted';
+    }
+    
+    alert('✅ Document submitted successfully! Status changed to "Submitted".');
+}
+
+/**
+ * 根据页面类型和文档类型，保存到对应的 localStorage
+ */
+function saveToLocalStorage(doc) {
+    // 1. 检测当前页面类型
+    var pageType = detectPageType();
+    
+    // 2. 构建存储键名映射
+    var storageMap = {
+        'labour': ['wageData', 'labourWageData'],
+        'sitediary': ['siteDiaryData'],
+        'safety': ['safetyInspectionData']
+    };
+    
+    // 3. 获取当前页面对应的键名列表
+    var keys = storageMap[pageType] || [];
+    
+    // 4. 如果是 labour，根据文档类型进一步判断
+    if (pageType === 'labour' && doc.type) {
+        // 如果文档类型是 GF527 相关，也保存到专门的键
+        if (doc.type && doc.type.startsWith('GF527')) {
+            if (!keys.includes('gf527Data')) keys.push('gf527Data');
+        }
+    }
+    
+    // 5. 保存到所有对应的存储键
+    keys.forEach(function(key) {
+        saveToStorageKey(key, doc);
+    });
+    
+    // 6. 通用保存：如果存在对应的 storage key，也尝试保存
+    var genericKeys = ['siteDiaryData', 'safetyInspectionData', 'wageData', 'labourWageData'];
+    genericKeys.forEach(function(key) {
+        // 如果还没有保存过这个 key，尝试读取并更新
+        if (!keys.includes(key)) {
+            var stored = localStorage.getItem(key);
+            if (stored) {
+                try {
+                    var data = JSON.parse(stored);
+                    if (Array.isArray(data)) {
+                        var idx = data.findIndex(function(d) { return d.id == doc.id; });
+                        if (idx !== -1) {
+                            data[idx] = doc;
+                            localStorage.setItem(key, JSON.stringify(data));
+                        }
+                    }
+                } catch(e) {}
+            }
+        }
+    });
+}
+
+/**
+ * 保存到指定的 localStorage 键
+ */
+function saveToStorageKey(key, doc) {
+    var stored = localStorage.getItem(key);
+    if (!stored) {
+        // 如果该键不存在，创建新数组
+        localStorage.setItem(key, JSON.stringify([doc]));
+        return;
+    }
+    
+    try {
+        var data = JSON.parse(stored);
+        if (!Array.isArray(data)) {
+            localStorage.setItem(key, JSON.stringify([doc]));
+            return;
+        }
+        
+        var idx = data.findIndex(function(d) { return d.id == doc.id; });
+        if (idx !== -1) {
+            data[idx] = doc;
+        } else {
+            data.push(doc);
+        }
+        localStorage.setItem(key, JSON.stringify(data));
+    } catch(e) {
+        console.error('Save to storage key error:', key, e);
+        localStorage.setItem(key, JSON.stringify([doc]));
+    }
+}
+
+/**
+ * 检测当前页面类型
+ */
+function detectPageType() {
+    var path = window.location.pathname;
+    var filename = path.split('/').pop();
+    
+    // 从 URL 判断
+    if (filename.includes('labour') || filename.includes('wage')) {
+        return 'labour';
+    } else if (filename.includes('sitediary') || filename.includes('diary')) {
+        return 'sitediary';
+    } else if (filename.includes('safety')) {
+        return 'safety';
+    }
+    
+    // 从页面标题判断
+    var title = document.title || '';
+    if (title.toLowerCase().includes('labour') || title.toLowerCase().includes('wage')) {
+        return 'labour';
+    } else if (title.toLowerCase().includes('sitediary') || title.toLowerCase().includes('diary')) {
+        return 'sitediary';
+    } else if (title.toLowerCase().includes('safety')) {
+        return 'safety';
+    }
+    
+    // 从 sessionStorage 的 key 判断
+    if (sessionStorage.getItem('currentWageRecord') || sessionStorage.getItem('wageData')) {
+        return 'labour';
+    } else if (sessionStorage.getItem('currentDiaryRecord') || sessionStorage.getItem('siteDiaryData')) {
+        return 'sitediary';
+    } else if (sessionStorage.getItem('currentSafetyRecord') || sessionStorage.getItem('safetyInspectionData')) {
+        return 'safety';
+    }
+    
+    // 默认返回 labour
+    return 'labour';
+}
+
+/**
+ * 从指定的 localStorage 键加载数据
+ */
+function loadFromStorageKey(key, docId) {
+    var stored = localStorage.getItem(key);
+    if (!stored) return null;
+    
+    try {
+        var data = JSON.parse(stored);
+        if (!Array.isArray(data)) return null;
+        
+        return data.find(function(d) { return d.id == docId; }) || null;
+    } catch(e) {
+        return null;
+    }
+}
     function cancelEditing() {
         if (confirm('Cancel editing? All unsaved changes will be lost.')) {
             history.back();
