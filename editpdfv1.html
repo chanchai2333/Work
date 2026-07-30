@@ -10,6 +10,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="scripts/theme-config.js"></script>
     <style>
+        /* 原有样式保持不变，以下为新增的 Submit 按钮样式 */
+        .btn-submit {
+            background: #28a745 !important;
+            color: white !important;
+        }
+        .btn-submit:hover {
+            background: #218838 !important;
+        }
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
         .pdf-canvas-container {
             position: relative;
             overflow: auto;
@@ -38,7 +50,7 @@
             cursor: crosshair;
             border: none;
             padding: 0;
-            z-index: 15; /* 低于文本框 */
+            z-index: 15;
         }
         .tool-btn.active {
             background: #2ecc71;
@@ -58,7 +70,7 @@
             white-space: pre-wrap;
             word-wrap: break-word;
             outline: none;
-            z-index: 25; /* 高于 draw-canvas */
+            z-index: 25;
             user-select: none;
             box-sizing: border-box;
         }
@@ -69,7 +81,7 @@
             border: 2px solid #3498db;
             background: rgba(255,255,255,0.95);
             cursor: text;
-            z-index: 30; /* 编辑时更高 */
+            z-index: 30;
         }
         .text-annotation.locked {
             cursor: default;
@@ -240,6 +252,7 @@
             <div class="document-header">
                 <h2><i class="fas fa-file-pdf"></i><span id="docTitle">Edit Document</span></h2>
                 <div class="document-actions">
+                    <button class="btn btn-submit" id="submit-btn"><i class="fas fa-paper-plane"></i> Submit</button>
                     <button class="btn" id="save-btn"><i class="fas fa-save"></i> Save Changes</button>
                     <button class="btn" id="cancel-btn"><i class="fas fa-times"></i> Cancel</button>
                     <button class="btn" id="back-btn"><i class="fas fa-arrow-left"></i> Back</button>
@@ -250,6 +263,7 @@
                 <div class="meta-item"><span class="meta-label">Document ID:</span><span class="meta-value" id="docId">N/A</span></div>
                 <div class="meta-item"><span class="meta-label">Site:</span><span class="meta-value" id="docSite">N/A</span></div>
                 <div class="meta-item"><span class="meta-label">Date:</span><span class="meta-value" id="docDate">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Status:</span><span class="meta-value" id="docStatusDisplay">N/A</span></div>
                 <div class="meta-item"><span class="meta-label">Submitted By:</span><span class="meta-value" id="docSubmittedBy">N/A</span></div>
             </div>
             

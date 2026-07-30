@@ -37,6 +37,20 @@
         .btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; transition: all 0.3s ease; white-space: nowrap; color: #fff; text-decoration: none; }
         .btn:hover { transform: translateY(-2px); }
         .btn-primary { background: #3498db; }
+
+        .document-actions .btn-submit {
+            background: #28a745;
+            box-shadow: 0 2px 5px rgba(40,167,69,0.3);
+        }
+        .document-actions .btn-submit:hover {
+            background: #218838;
+            box-shadow: 0 4px 8px rgba(40,167,69,0.4);
+        }
+        .document-actions .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
         .btn-primary:hover { background: #2980b9; }
         .btn-save { background: #2ecc71; }
         .btn-save:hover { background: #27ae60; }
@@ -135,6 +149,7 @@
                     <h2><i class="fas fa-file-alt"></i> <span id="docTitle">Labour Wage Document</span> <span class="doc-status" id="docStatus">Draft</span></h2>
                 </div>
                 <div class="document-actions">
+                    <button class="btn btn-submit" id="submit-btn"><i class="fas fa-paper-plane"></i> Submit</button>
                     <button class="btn btn-save" id="save-btn"><i class="fas fa-save"></i> Save Changes</button>
                     <button class="btn btn-cancel" id="cancel-btn"><i class="fas fa-times"></i> Cancel</button>
                     <button class="btn btn-primary" id="back-btn"><i class="fas fa-arrow-left"></i> Back</button>
@@ -242,10 +257,75 @@
             if (backBtn) {
                 backBtn.addEventListener('click', function() {
                     window.location.href = 'labourwage.html';
-                });
+                })
             }
-        }, 500);
-    });
-</script>
+
+            function goBack() {
+                window.location.href = 'labourwage.html';
+            }
+
+            function bindDrawingEvents() {
+                if (!container) return;
+                container.removeEventListener('mousedown', startDrawing);
+                container.removeEventListener('mousemove', draw);
+                container.removeEventListener('mouseup', stopDrawing);
+                container.removeEventListener('mouseleave', stopDrawing);
+                container.addEventListener('mousedown', startDrawing);
+                container.addEventListener('mousemove', draw);
+                container.addEventListener('mouseup', stopDrawing);
+                container.addEventListener('mouseleave', stopDrawing);
+                container.removeEventListener('touchstart', startDrawing);
+                container.removeEventListener('touchmove', draw);
+                container.removeEventListener('touchend', stopDrawing);
+                container.addEventListener('touchstart', startDrawing, { passive: false });
+                container.addEventListener('touchmove', draw, { passive: false });
+                container.addEventListener('touchend', stopDrawing, { passive: false });
+            }
+
+            function bindActionButtons() {
+                document.getElementById('save-btn')?.addEventListener('click', saveChanges);
+                document.getElementById('cancel-btn')?.addEventListener('click', cancelEditing);
+                document.getElementById('back-to-wage-btn')?.addEventListener('click', goBack);
+                document.getElementById('undo-btn')?.addEventListener('click', undo);
+                document.getElementById('delete-selected-btn')?.addEventListener('click', deleteSelected);
+                if (lockBtn) lockBtn.addEventListener('click', toggleLock);
+            }
+
+            window.addEventListener('resize', () => {
+                alignDrawCanvas();
+                updateTextPositions();
+            });
+
+            document.addEventListener('DOMContentLoaded', () => {
+                const doc = loadDocumentData();
+                if (!doc) { showError('No document data available.'); return; }
+                
+                let pdfSrc = doc.pdfData ? 'data:application/pdf;base64,' + doc.pdfData : (doc.pdfUrl || null);
+                if (pdfSrc) {
+                    loadPDF(pdfSrc);
+                } else {
+                    canvas.style.display = 'none';
+                    drawCanvas.style.display = 'block';
+                    drawCanvas.width = 800 * renderScale;
+                    drawCanvas.height = 1000 * renderScale;
+                    drawCanvas.style.width = '800px';
+                    drawCanvas.style.height = '1000px';
+                    drawCtx.fillStyle = '#ffffff';
+                    drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+                    drawCtx.fillStyle = '#666';
+                    drawCtx.font = `${20 * renderScale}px Arial`;
+                    drawCtx.fillText('No PDF attached. You can still add annotations.', 30 * renderScale, 100 * renderScale);
+                }
+                drawCanvas.style.pointerEvents = 'none';
+                setupTools();
+                bindDrawingEvents();
+                setupNavigation();
+                bindActionButtons();
+                history = [];
+                saveHistory();
+                updateLockButtonState();
+            });
+    })})();
+    </script>
 </body>
 </html>

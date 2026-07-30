@@ -42,6 +42,7 @@
     const currentPageSpan = document.getElementById('current-page');
     const totalPagesSpan = document.getElementById('total-pages');
     const lockBtn = document.getElementById('lock-btn');
+    const submitBtn = document.getElementById('submit-btn');
     
     let currentColor = '#3498db';
     let currentSize = 3;
@@ -84,6 +85,29 @@
             if (docAuthorEl) docAuthorEl.textContent = doc.submittedBy || doc.author || 'N/A';
             if (docTypeEl) docTypeEl.textContent = doc.typeText || doc.type || 'N/A';
             if (docTitleEl) docTitleEl.textContent = doc.site ? `${doc.typeText || doc.type || 'Document'} - ${doc.site}` : 'Edit Document';
+            // 显示状态
+            const statusDisplay = document.getElementById('docStatusDisplay');
+            if (statusDisplay) {
+                const statusMap = {
+                    'draft': 'Draft',
+                    'submitted-wsg': 'Submitted to WSG',
+                    'submitted-ig': 'Submitted to IG',
+                    'closed': 'Closed',
+                    'reopen': 'Reopen',
+                    'cancelled': 'Cancelled'
+                };
+                statusDisplay.textContent = statusMap[doc.status] || doc.status || 'N/A';
+            }
+            // 如果状态不是 draft，禁用 submit 按钮
+            if (submitBtn) {
+                if (doc.status && doc.status !== 'draft') {
+                    submitBtn.disabled = true;
+                    submitBtn.title = 'Document already submitted';
+                } else {
+                    submitBtn.disabled = false;
+                    submitBtn.title = 'Submit this document';
+                }
+            }
             
             if (docStatusEl) {
                 docStatusEl.textContent = doc.statusText || 'Draft';
@@ -809,6 +833,7 @@
 
     function saveChanges() {
         if (!currentDoc) { alert('No document to save.'); return; }
+       
         document.querySelectorAll('.text-annotation.editing').forEach(el => {
             const id = el.getAttribute('data-id');
             const anno = annotations.find(a => a._id == id);
@@ -821,7 +846,18 @@
             }
         });
         currentDoc.annotations = annotations;
-        
+        const STORAGE_KEY = 'siteDiaryData';
+        let diaryData = [];
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) try { diaryData = JSON.parse(stored); } catch(e) {}
+        const index = diaryData.findIndex(d => d.id === currentDoc.id);
+        if (index !== -1) {
+            diaryData[index].annotations = annotations;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(diaryData));
+        } else {
+            alert('Document not found in storage.');
+            return;
+        }
         sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
         sessionStorage.setItem('currentWageRecord', JSON.stringify(currentDoc));
         
@@ -840,6 +876,41 @@
         });
         
         alert('✅ Changes saved successfully!');
+    }
+
+    // ---------- Submit 功能 ----------
+    function submitDocument() {
+        if (!currentDoc) {
+            alert('No document to submit.');
+            return;
+        }
+        // 检查状态是否为 draft
+        if (currentDoc.status !== 'draft') {
+            alert('This document has already been submitted.');
+            return;
+        }
+        // 确认提交
+        if (!confirm('Submit this document to WSG? The status will change to "Submitted to WSG".')) {
+            return;
+        }
+        // 先保存注释
+        document.querySelectorAll('.text-annotation.editing').forEach(el => {
+            const id = el.getAttribute('data-id');
+            const anno = annotations.find(a => a._id == id);
+            if (anno) {
+                el.contentEditable = false;
+                el.classList.remove('editing');
+                const t = el.textContent.trim();
+                if (t) anno.text = t;
+                else deleteAnnotation(anno._id);
+            }
+        });
+        // 更新 currentDoc
+        currentDoc.annotations = annotations;
+        // 保持原有状态不变（不修改 status）
+        
+        sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
+        alert('✅ Annotations saved successfully!');
     }
 
     function cancelEditing() {
@@ -873,6 +944,7 @@
         document.getElementById('undo-btn')?.addEventListener('click', undo);
         document.getElementById('delete-selected-btn')?.addEventListener('click', deleteSelected);
         if (lockBtn) lockBtn.addEventListener('click', toggleLock);
+        if (submitBtn) submitBtn.addEventListener('click', submitDocument);
     }
 
     window.addEventListener('resize', () => { alignDrawCanvas(); updateTextPositions(); });
