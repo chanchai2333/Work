@@ -560,7 +560,6 @@
         alignDrawCanvas();
         if (currentTool === 'select') { startDragAnnotation(e); return; }
         if (currentTool === 'text') {
-            text: '',
             e.preventDefault();
             var clickedEl = document.elementFromPoint(e.clientX, e.clientY);
             if (clickedEl && clickedEl.closest && clickedEl.closest('.text-annotation')) return;
@@ -846,18 +845,6 @@
             }
         });
         currentDoc.annotations = annotations;
-        const STORAGE_KEY = 'siteDiaryData';
-        let diaryData = [];
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) try { diaryData = JSON.parse(stored); } catch(e) {}
-        const index = diaryData.findIndex(d => d.id === currentDoc.id);
-        if (index !== -1) {
-            diaryData[index].annotations = annotations;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(diaryData));
-        } else {
-            alert('Document not found in storage.');
-            return;
-        }
         sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
         sessionStorage.setItem('currentWageRecord', JSON.stringify(currentDoc));
         
