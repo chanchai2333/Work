@@ -3,626 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AEL DWSS - Labour Wage Document</title>
+    <title>AEL DWSS - Labour Wage</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles/main.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="scripts/theme-config.js"></script>
+    
     <style>
-        /* 基礎樣式重置 */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        body {
-            display: flex;
-            min-height: 100vh;
-            background-color: #f5f7fa;
-            color: #333;
-            overflow-x: hidden;
-        }
-
-        /* 側邊欄樣式 - 與labourwage.html統一 */
-        .sidebar {
-            width: 260px;
-            background: linear-gradient(135deg, #2c3e50, #1a2530);
-            color: white;
-            padding: 20px 0;
-            display: flex;
-            flex-direction: column;
-            flex-shrink: 0;
-            transition: all 0.3s ease;
-            box-shadow: 3px 0 15px rgba(0, 0, 0, 0.1);
-            position: relative;
-            z-index: 100;
-        }
-
-        .sidebar.collapsed {
-            width: 70px;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            padding: 0 20px 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 20px;
-        }
-
-        .logo h2 {
-            font-size: 1.6rem;
-            font-weight: 600;
-            margin-left: 12px;
-            transition: opacity 0.3s ease;
-        }
-
-        .sidebar.collapsed .logo h2 {
-            opacity: 0;
-            width: 0;
-            overflow: hidden;
-        }
-
-        .logo-icon {
-            font-size: 1.8rem;
-            background: #309ce3;
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .toggle-btn {
-            position: absolute;
-            top: 25px;
-            right: -12px;
-            background: #3498db;
-            color: white;
-            border: none;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease;
-        }
-
-        .sidebar.collapsed .toggle-btn {
-            transform: rotate(180deg);
-        }
-
-        .menu {
-            list-style: none;
-            padding: 0 15px;
-        }
-
-        .menu li {
-            margin-bottom: 5px;
-        }
-
-        .menu a {
-            display: flex;
-            align-items: center;
-            color: #ecf0f1;
-            text-decoration: none;
-            padding: 14px 15px;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-            white-space: nowrap;
-            overflow: hidden;
-        }
-
-        .menu a:hover, .menu a.active {
-            background: rgba(52, 152, 219, 0.2);
-            color: #fff;
-        }
-
-        .menu a i {
-            font-size: 1.2rem;
-            margin-right: 15px;
-            width: 24px;
-            text-align: center;
-            transition: margin 0.3s ease;
-        }
-
-        .sidebar.collapsed .menu a i {
-            margin-right: 0;
-        }
-
-        .menu-text {
-            transition: opacity 0.3s ease;
-        }
-
-        .sidebar.collapsed .menu-text {
-            opacity: 0;
-            width: 0;
-            overflow: hidden;
-        }
-
-        /* 主內容區域 */
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            padding: 30px;
-            overflow-y: auto;
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #e0e6ed;
-        }
-
-        .header h1 {
-            color: #2c3e50;
-            font-size: 2rem;
-        }
-
-        .header-controls {
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .date-display {
-            background: #eef2f6;
-            padding: 8px 15px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 500;
-            white-space: nowrap;
-            color: #308fee;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-
-        .date-display i {
-            margin-right: 8px;
-            color: #2da0ee;
-        }
-
-        .user-date-row {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .user-btn {
-            background: #2563eb;
-            color: #fff;
-            border: none;
-            border-radius: 20px;
-            padding: 10px 20px;
-            font-weight: 600;
-            font-size: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .user-btn:hover {
-            background: #1746a2;
-        }
-
-        .document-view-page {
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .document-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eaeaea;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .doc-title-section {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            flex: 1;
-            min-width: 300px;
-        }
-
-        .document-header h2 {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 1.8rem;
-            color: #2c3e50;
-            margin: 0;
-            flex-wrap: wrap;
-        }
-
-        .doc-status {
-            display: inline-block;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            min-width: 120px;
-            text-align: center;
-            margin-left: 15px;
-            white-space: nowrap;
-            align-self: flex-start;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { display: flex; min-height: 100vh; background-color: #f5f7fa; color: #333; }
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #e0e6ed; }
+        .header h1 { color: #2c3e50; font-size: 2rem; }
+        .header-controls { display: flex; align-items: center; gap: 15px; }
+        .date-display { background: #eef2f6; padding: 8px 15px; border-radius: 8px; font-size: 16px; font-weight: 500; color: #308fee; }
+        .date-display i { margin-right: 8px; }
+        .user-date-row { display: flex; align-items: center; gap: 16px; }
+        .user-btn { background: #2563eb; color: #fff; border: none; border-radius: 20px; padding: 10px 20px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        
+        .document-page { background: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .document-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eaeaea; flex-wrap: wrap; gap: 15px; }
+        .doc-title-section { flex: 1; min-width: 300px; }
+        .document-header h2 { font-size: 1.6rem; color: #2c3e50; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .doc-status { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; }
         .status-draft { background: rgba(149,165,166,0.2); color: #848f90; }
         .status-submitted { background: rgba(52,152,219,0.2); color: #2980b9; }
         .status-endorsed { background: rgba(46,204,113,0.2); color: #27ae60; }
         .status-cancelled { background: rgba(231,76,60,0.2); color: #c0392b; }
         .status-confirm { background: rgba(155,89,182,0.2); color: #8e44ad; }
         .status-double-check { background: rgba(243,156,18,0.2); color: #d35400; }
-
-        .document-actions {
-            display: flex;
-            gap: 10px;
-            align-items: flex-start;
-            flex-wrap: wrap;
+        
+        .document-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; transition: all 0.3s ease; white-space: nowrap; color: #fff; text-decoration: none; }
+        .btn:hover { transform: translateY(-2px); }
+        .btn-primary { background: #3498db; }
+        .btn-primary:hover { background: #2980b9; }
+        .btn-save { background: #2ecc71; }
+        .btn-save:hover { background: #27ae60; }
+        .btn-cancel { background: #e74c3c; }
+        .btn-cancel:hover { background: #c0392b; }
+        .btn-warning { background: #f39c12; }
+        .btn-purple { background: #9b59b6; }
+        
+        .document-meta { background: #f8f9fa; border-radius: 12px; padding: 20px 30px; margin: 20px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+        .meta-item { display: flex; flex-direction: column; }
+        .meta-label { font-weight: 600; color: #2c3e50; margin-bottom: 5px; font-size: 0.85rem; }
+        .meta-value { color: #555; font-size: 0.95rem; font-weight: 500; padding: 8px 12px; border-radius: 6px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        
+        .pdf-toolbar-ribbon { display: flex; flex-wrap: wrap; gap: 4px 16px; background: #f8fafc; padding: 8px 16px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #e2e8f0; align-items: center; }
+        .ribbon-group { display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-right: 1px solid #e2e8f0; }
+        .ribbon-group:last-child { border-right: none; }
+        .ribbon-group-label { font-size: 10px; font-weight: 600; color: #64748b; margin-right: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+        .tool-btn { padding: 4px 10px; border: 1px solid transparent; background: transparent; border-radius: 4px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; color: #1e293b; transition: 0.15s; white-space: nowrap; }
+        .tool-btn:hover { background: #eef2f6; border-color: #d1d9e6; }
+        .tool-btn.active { background: #2d7ee7; color: #fff; border-color: #2d7ee7; }
+        .tool-btn i { font-size: 13px; }
+        .property-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .property-group { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #475569; }
+        .property-group label { font-weight: 500; }
+        .property-group input[type="color"] { width: 24px; height: 24px; border: 1px solid #d1d9e6; border-radius: 4px; cursor: pointer; }
+        .property-group input[type="range"] { width: 60px; cursor: pointer; }
+        .property-group span { min-width: 28px; font-size: 11px; }
+        
+        .pdf-editor-container { display: flex; flex-direction: column; gap: 12px; }
+        .pdf-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #f1f5f9; padding: 8px 12px; border-radius: 6px; }
+        .nav-btn { background: #3498db; color: #fff; border: none; border-radius: 4px; padding: 6px 12px; cursor: pointer; }
+        .nav-btn:hover { background: #2980b9; }
+        .page-info { font-size: 14px; font-weight: 500; color: #334155; }
+        .pdf-canvas-container { position: relative; overflow: auto; background: #e0e0e0; border-radius: 8px; min-height: 500px; display: flex; justify-content: center; }
+        #pdf-canvas { display: block; box-shadow: 0 4px 12px rgba(0,0,0,0.2); background: #fff; z-index: 1; }
+        #draw-canvas { position: absolute; top: 0; left: 0; z-index: 15; }
+        
+        .text-annotation { position: absolute; cursor: move; min-width: 20px; min-height: 20px; padding: 2px 6px; background: transparent; border: 1px solid transparent; font-family: Arial, sans-serif; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word; outline: none; z-index: 25; user-select: none; box-sizing: border-box; }
+        .text-annotation:hover { border: 1px dashed #3498db; }
+        .text-annotation.editing { border: 2px solid #3498db; background: rgba(255,255,255,0.95); cursor: text; z-index: 30; }
+        .text-annotation.locked { cursor: default; border: 1px solid transparent !important; background: transparent !important; }
+        .text-annotation .delete-btn { 
+            position: absolute; top: -12px; right: -12px; width: 20px; height: 20px; 
+            background: #e74c3c; color: #fff; border: 2px solid #fff; border-radius: 50%; 
+            font-size: 12px; line-height: 20px; text-align: center; cursor: pointer; display: none; 
+            z-index: 35; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
-
-        .document-actions .btn {
-            background: #3498db;
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            padding: 8px 16px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            box-shadow: 0 2px 5px rgba(52,152,219,0.3);
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            white-space: nowrap;
+        .text-annotation:hover .delete-btn { display: block; }
+        .text-annotation.locked .delete-btn { display: none !important; }
+        .text-annotation .delete-btn:hover { background: #c0392b; }
+        
+        .tick-mark { position: absolute; z-index: 25; pointer-events: auto; color: #1a73e8; font-weight: bold; font-size: 18px; cursor: move; user-select: none; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; }
+        .tick-mark.locked { cursor: default !important; }
+        .tick-mark .delete-btn { 
+            position: absolute; top: -12px; right: -12px; width: 20px; height: 20px; 
+            background: #e74c3c; color: #fff; border: 2px solid #fff; border-radius: 50%; 
+            font-size: 12px; line-height: 20px; text-align: center; cursor: pointer; display: none; 
+            z-index: 35; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
-
-        .document-actions .btn:hover {
-            background: #2980b9;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(52,152,219,0.4);
-        }
-
-        .document-actions .btn-save {
-            background: #2ecc71;
-            box-shadow: 0 2px 5px rgba(46,204,113,0.3);
-        }
-        .document-actions .btn-save:hover {
-            background: #27ae60;
-            box-shadow: 0 4px 8px rgba(46,204,113,0.4);
-        }
-
-        .document-actions .btn-cancel {
-            background: #e74c3c;
-            box-shadow: 0 2px 5px rgba(231,76,60,0.3);
-        }
-        .document-actions .btn-cancel:hover {
-            background: #c0392b;
-            box-shadow: 0 4px 8px rgba(231,76,60,0.4);
-        }
-
-        .document-meta {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 20px 30px;
-            margin: 20px 0;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-        }
-
-        .meta-item {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .meta-label {
-            font-weight: 600;
-            color: #2c3e50;
-            margin-bottom: 5px;
-            font-size: 0.9rem;
-        }
-
-        .meta-value {
-            color: #555;
-            font-size: 1rem;
-            font-weight: 500;
-            padding: 8px 12px;
-            border-radius: 6px;
-            background: white;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        /* PDF 編輯核心樣式 */
-        .pdf-toolbar-ribbon {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px 20px;
-            background: #f8fafc;
-            padding: 8px 16px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            border: 1px solid #e2e8f0;
-            align-items: center;
-        }
-        .ribbon-group {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 8px;
-            border-right: 1px solid #e2e8f0;
-        }
-        .ribbon-group:last-child {
-            border-right: none;
-        }
-        .ribbon-group-label {
-            font-size: 11px;
-            font-weight: 600;
-            color: #64748b;
-            margin-right: 4px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        .tool-btn {
-            padding: 4px 10px;
-            border: 1px solid transparent;
-            background: transparent;
-            border-radius: 4px;
-            font-size: 12px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            color: #1e293b;
-            transition: 0.15s;
-            white-space: nowrap;
-        }
-        .tool-btn:hover {
-            background: #eef2f6;
-            border-color: #d1d9e6;
-        }
-        .tool-btn.active {
-            background: #2d7ee7;
-            color: #fff;
-            border-color: #2d7ee7;
-        }
-        .tool-btn i {
-            font-size: 13px;
-        }
-        .property-controls {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-            padding: 4px 0;
-        }
-        .property-group {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 12px;
-            color: #475569;
-        }
-        .property-group label {
-            font-weight: 500;
-        }
-        .property-group input[type="color"] {
-            width: 24px;
-            height: 24px;
-            border: 1px solid #d1d9e6;
-            border-radius: 4px;
-            padding: 2px;
-            cursor: pointer;
-        }
-        .property-group input[type="range"] {
-            width: 60px;
-            cursor: pointer;
-        }
-        .property-group span {
-            min-width: 28px;
-            font-size: 11px;
-        }
-
-        .pdf-editor-container {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            flex: 1;
-        }
-        .pdf-controls {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-            background: #f1f5f9;
-            padding: 8px 12px;
-            border-radius: 6px;
-        }
-        .nav-btn {
-            background: #3498db;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 6px 12px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .nav-btn:hover {
-            background: #2980b9;
-        }
-        .page-info {
-            font-size: 14px;
-            font-weight: 500;
-            color: #334155;
-        }
-
-        .pdf-canvas-container {
-            position: relative;
-            overflow: auto;
-            background: #e0e0e0;
-            border-radius: 8px;
-            box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
-            padding: 0 !important;
-            margin: 0 !important;
-            min-height: 500px;
-            display: flex;
-            justify-content: center;
-        }
-        #pdf-canvas {
-            display: block;
-            margin: 0 !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            border: none;
-            padding: 0;
-            background: white;
-            z-index: 1;
-        }
-        #draw-canvas {
-            display: block;
-            margin: 0 !important;
-            position: absolute;
-            top: 0;
-            left: 0;
-            pointer-events: auto;
-            cursor: crosshair;
-            border: none;
-            padding: 0;
-            z-index: 15;
-        }
-        .text-annotation {
-            position: absolute;
-            cursor: move;
-            min-width: 20px;
-            min-height: 20px;
-            padding: 2px 6px;
-            background: transparent;
-            border: 1px solid transparent;
-            font-family: Arial, sans-serif;
-            line-height: 1.4;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            outline: none;
-            z-index: 25;
-            user-select: none;
-            box-sizing: border-box;
-        }
-        .text-annotation:hover {
-            border: 1px dashed #3498db;
-        }
-        .text-annotation.editing {
-            border: 2px solid #3498db;
-            background: rgba(255,255,255,0.95);
-            cursor: text;
-            z-index: 30;
-        }
-        .text-annotation.locked {
-            cursor: default;
-            border: 1px solid transparent !important;
-            background: transparent !important;
-        }
-        .text-annotation .delete-btn {
-            position: absolute;
-            top: -10px;
-            right: -10px;
-            width: 18px;
-            height: 18px;
-            background: #e74c3c;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            font-size: 12px;
-            line-height: 18px;
-            text-align: center;
-            cursor: pointer;
-            display: none;
-        }
-        .text-annotation:hover .delete-btn {
-            display: block;
-        }
-        .text-annotation.locked .delete-btn {
-            display: none !important;
-        }
-        .text-annotation .delete-btn:hover {
-            background: #c0392b;
-        }
-        .lock-btn {
-            background: #9b59b6 !important;
-            color: white !important;
-        }
-        .lock-btn:hover {
-            background: #8e44ad !important;
-        }
-        .lock-btn.unlock {
-            background: #27ae60 !important;
-        }
-        .lock-btn.unlock:hover {
-            background: #2ecc71 !important;
-        }
-
-        footer {
-            text-align: center;
-            padding: 30px 0 20px;
-            color: #7f8c8d;
-            border-top: 1px solid #e0e6ed;
-            width: 100%;
-            background: transparent;
-            margin-top: 30px;
-        }
-
-        @media (max-width: 900px) {
-            .sidebar { width: 260px; }
-            .sidebar:not(.collapsed) { width: 260px; position: absolute; height: 100%; z-index: 1000; }
-            .logo h2, .menu-text { opacity: 0; width: 0; overflow: hidden; }
-            .sidebar:not(.collapsed) .logo h2, .sidebar:not(.collapsed) .menu-text { opacity: 1; width: auto; }
-        }
-        @media (max-width: 768px) {
-            .header { flex-direction: column; align-items: flex-start; gap: 20px; }
-            .document-header { flex-direction: column; gap: 15px; }
-            .document-actions { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
-            .document-meta { grid-template-columns: 1fr; gap: 15px; padding: 15px 20px; }
-        }
-        @media (max-width: 600px) {
-            .main-content { padding: 15px; }
-            .document-view-page { padding: 20px; }
-            .document-header h2 { font-size: 1.5rem; }
-            .doc-status { margin-left: 10px; min-width: 100px; padding: 6px 12px; font-size: 0.8rem; }
-        }
+        .tick-mark:hover .delete-btn { display: block; }
+        .tick-mark.locked .delete-btn { display: none !important; }
+        
+        footer { text-align: center; padding: 30px 0 20px; color: #7f8c8d; border-top: 1px solid #e0e6ed; margin-top: 30px; }
+        @media (max-width: 768px) { .main-content { padding: 15px; } .document-page { padding: 20px; } }
     </style>
 </head>
 <body>
-    <!-- 側邊欄 -->
     <div class="sidebar">
-        <div class="logo">
-            <div class="logo-icon"><i class="fas fa-water"></i></div>
-            <h2>AEL DWSS</h2>
-        </div>
+        <div class="logo"><div class="logo-icon"><i class="fas fa-water"></i></div><h2>AEL DWSS</h2></div>
         <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
         <ul class="menu">
             <li><a href="index.html"><i class="fas fa-home"></i><span class="menu-text">Dashboard</span></a></li>
@@ -635,19 +118,18 @@
         </ul>
     </div>
 
-    <!-- 主內容區域 -->
     <div class="main-content">
         <div class="header">
-            <h1>DWSS Management System</h1>
+            <h1>Labour Wage</h1>
             <div class="header-controls">
                 <div class="user-date-row">
-                    <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date">September 17, 2025</span></div>
+                    <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
                     <button class="user-btn"><i class="fas fa-user"></i> John Doe</button>
                 </div>
             </div>
         </div>
 
-        <div class="document-view-page">
+        <div class="document-page">
             <div class="document-header">
                 <div class="doc-title-section">
                     <h2><i class="fas fa-file-alt"></i> <span id="docTitle">Labour Wage Document</span> <span class="doc-status" id="docStatus">Draft</span></h2>
@@ -655,7 +137,7 @@
                 <div class="document-actions">
                     <button class="btn btn-save" id="save-btn"><i class="fas fa-save"></i> Save Changes</button>
                     <button class="btn btn-cancel" id="cancel-btn"><i class="fas fa-times"></i> Cancel</button>
-                    <button class="btn" id="back-to-wage-btn"><i class="fas fa-arrow-left"></i> Back to Labour Wage</button>
+                    <button class="btn btn-primary" id="back-btn"><i class="fas fa-arrow-left"></i> Back</button>
                 </div>
             </div>
 
@@ -667,7 +149,6 @@
                 <div class="meta-item"><span class="meta-label">Submitted By:</span><span class="meta-value" id="docAuthor">N/A</span></div>
             </div>
 
-            <!-- Ribbon 工具欄 -->
             <div class="pdf-toolbar-ribbon">
                 <div class="ribbon-group">
                     <span class="ribbon-group-label">Select</span>
@@ -685,6 +166,10 @@
                     <button class="tool-btn" data-tool="arrow"><i class="fas fa-arrow-right"></i> Arrow</button>
                     <button class="tool-btn" data-tool="line"><i class="fas fa-minus"></i> Line</button>
                 </div>
+                <div class="ribbon-group">
+                    <span class="ribbon-group-label">Marks</span>
+                    <button class="tool-btn" data-tool="tick"><i class="fas fa-check"></i> Tick</button>
+                </div>
                 <div class="ribbon-group" style="flex:1; justify-content:flex-end;">
                     <div class="property-controls">
                         <div class="property-group"><label>Color:</label><input type="color" id="color-picker" value="#3498db"></div>
@@ -694,21 +179,18 @@
                 </div>
             </div>
 
-            <!-- PDF 編輯及畫布區域 -->
             <div class="pdf-editor-container">
                 <div class="pdf-controls">
                     <button class="nav-btn" id="prev-page"><i class="fas fa-chevron-left"></i></button>
                     <span class="page-info">Pages <span id="current-page">1</span> of <span id="total-pages">1</span></span>
                     <button class="nav-btn" id="next-page"><i class="fas fa-chevron-right"></i></button>
-                    <div style="margin-left:20px;display:flex;gap:10px;">
-                        <button class="btn" id="undo-btn" style="background:#f39c12;color:white;padding:4px 12px;border-radius:4px;"><i class="fas fa-undo"></i> Undo</button>
-                        <button class="btn lock-btn" id="lock-btn" style="padding:4px 12px;border-radius:4px;"><i class="fas fa-lock"></i> Lock</button>
-                        <button class="btn" id="delete-selected-btn" style="background:#e74c3c;color:white;padding:4px 12px;border-radius:4px;"><i class="fas fa-trash"></i> Delete Selected</button>
-                    </div>
+                    <button class="btn btn-warning" id="undo-btn" style="padding:4px 12px;font-size:0.85rem;"><i class="fas fa-undo"></i> Undo</button>
+                    <button class="btn btn-purple lock-btn" id="lock-btn" style="padding:4px 12px;font-size:0.85rem;"><i class="fas fa-lock"></i> Lock</button>
+                    <button class="btn btn-cancel" id="delete-selected-btn" style="padding:4px 12px;font-size:0.85rem;"><i class="fas fa-trash"></i> Delete</button>
                 </div>
                 <div class="pdf-canvas-container" id="pdf-container">
                     <canvas id="pdf-canvas"></canvas>
-                    <canvas id="draw-canvas" class="draw-layer"></canvas>
+                    <canvas id="draw-canvas"></canvas>
                 </div>
             </div>
 
@@ -719,1114 +201,51 @@
         </div>
     </div>
 
-    <!-- 側邊欄狀態持久化 -->
+    <script src="scripts/language.js"></script>
+    <script src="scripts/app.js"></script>
+
+    <!-- ★ 設定預設模板 ★ -->
+    <script>
+        var LABOUR_WAGE_TEMPLATE_B64 = "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YzlkIj8+Cjx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuNC1jMDA1IDc4LjE0NzMyNiwgMjAxMi8wOC8yMy0xMzowMzowMyAgICAgICAgIj4KICAgPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICAgICAgPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIKICAgICAgICAgICAgeG1sbnM6cGRmPSJodHRwOi8vbnMuYWRvYmUuY29tL3BkZi8xLjMvIgogICAgICAgICAgICB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iCiAgICAgICAgICAgIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIKICAgICAgICAgICAgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iPgogICAgICAgICA8cGRmOlByb2R1Y2VyPkFjcm9iYXQgRGlzdGlsbGVyIDcuMCAoV2luZG93cyk8L3BkZjpQcm9kdWNlcj4KICAgICAgICAgPHhtcDpDcmVhdGVEYXRlPjIwMDYtMDMtMjBUMTc6MjE6MTMrMDg6MDA8L3htcDpDcmVhdGVEYXRlPgogICAgICAgICA8eG1wOkNyZWF0b3JUb29sPlBTY3JpcHQ1LmRsbCBWZXJzaW9uIDUuMjwveG1wOkNyZWF0b3JUb29sPgogICAgICAgICA8eG1wOk1vZGlmeURhdGU+MjAxMy0wNy0yMFQwMzoyNTo0MCswODowMDwveG1wOk1vZGlmeURhdGU+CiAgICAgICAgIDx4bXA6TWV0YWRhdGFEYXRlPjIwMTMtMDctMjBUMDM6MjU6NDArMDg6MDA8L3htcDpNZXRhZGF0YURhdGU+CiAgICAgICAgIDxkYzpmb3JtYXQ+YXBwbGljYXRpb24vcGRmPC9kYzpmb3JtYXQ+CiAgICAgICAgIDxkYzp0aXRsZT4KICAgICAgICAgICAgPHJkZjpBbHQ+CiAgICAgICAgICAgICAgIDxyZGY6bGkgeG1sOmxhbmc9IngtZGVmYXVsdCI+UmV0dXJuIG9uIENvbnN0cnVjdGlvbiBTaXRlIEVtcGxveW1lbnQ8L3JkZjpsaT4KICAgICAgICAgICAgPC9yZGY6QWx0PgogICAgICAgICA8L2RjOnRpdGxlPgogICAgICAgICA8ZGM6Y3JlYXRvcj4KICAgICAgICAgICAgPHJkZjpTZXE+CiAgICAgICAgICAgICAgIDxyZGY6bGk+bXRrdHNlPC9yZGY6bGk+CiAgICAgICAgICAgIDwvcmRmOlNlcT4KICAgICAgICAgPC9kYzpjcmVhdG9yPgogICAgICAgICA8eG1wTU06RG9jdW1lbnRJRD51dWlkOmY5ZDU5MDEzLTI4ZjgtNDI4NC1iYzEzLTQwOTI5YzQ5NDNhNTwveG1wTU06RG9jdW1lbnRJRD4KICAgICAgICAgPHhtcE1NOkluc3RhbmNlSUQ+dXVpZDpiMTE3OWNiMy1mMzZkLTRiN2YtOTQ4Mi1lMzRkMmM4MjM2MTI8L3htcE1NOkluc3RhbmNlSUQ+CiAgICAgIDwvcmRmOkRlc2NyaXB0aW9uPgogICA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgCjw/eHBhY2tldCBlbmQ9InciPz4NCmVuZHN0cmVhbQ1lbmRvYmoNNSAwIG9iag08PC9GaWx0ZXIvRmxhdGVEZWNvZGUvRmlyc3QgNi9MZW5ndGggNTIvTiAxL1R5cGUvT2JqU3RtPj5zdHJlYW0NCmjeMrQwUzBQsLHRd84vzStRMNT3zkwpjja0NACKBsXqh1QWpOoHJKanFtvZAQQYAPtTDEsNCmVuZHN0cmVhbQ1lbmRvYmoNNiAwIG9iag08PC9GaWx0ZXIvRmxhdGVEZWNvZGUvRmlyc3QgNi9MZW5ndGggMTg3L04gMS9UeXBlL09ialN0bT4+c3RyZWFtDQpo3jyOQWuEMBBG/8rcNqGgk7jWpYgg2uPC0i3txYvVgYbGZJmMLP33daF4/957nzlVgFDXebvKd2S1yI8k0nnHNIqLoR+FVP9iEZ+xsGgqa0zxhKcD4uF/tVGX68TuJmU2ew8fxGkjocyszs9x3hWmwGoTFbY84q64cJzXiVi1E8evUaB3SZz3xFBlCIP6dGGO9zRonb878aTeSFYOsBW6GJLwOj2OwtUJwety8/F3oSC6af4EGAAyQkSFDQplbmRzdHJlYW0NZW5kb2JqDTcgMCBvYmoNPDwvRGVjb2RlUGFybXM8PC9Db2x1bW5zIDQvUHJlZGljdG9yIDEyPj4vRmlsdGVyL0ZsYXRlRGVjb2RlL0lEWzw0OUUwNUZCOEVGQTZGOTQ4NjZBQjg2M0UzREYyNENENT48MjY4QTlFNkVFQjVGMDc0NkEwMjI1OUUwMEZDMDcyMTA+XS9JbmZvIDE4NyAwIFIvTGVuZ3RoIDY4L1Jvb3QgMTg5IDAgUi9TaXplIDE4OC9UeXBlL1hSZWYvV1sxIDIgMV0+PnN0cmVhbQ0KaN5iYgACJkY3MQYmBvZtQIJtAZBg6AYSfG+ABOMEECEBVDK3DCTBwDhKjCCCce5oGAxY2G+FsZj+g7gMAAEGANpACYENCmVuZHN0cmVhbQ1lbmRvYmoNc3RhcnR4cmVmDQoxMTYNCiUlRU9GDQo=";
+        if (LABOUR_WAGE_TEMPLATE_B64 && LABOUR_WAGE_TEMPLATE_B64 !== "TEMPLATE_B64" && LABOUR_WAGE_TEMPLATE_B64.length > 100) {
+            sessionStorage.setItem('DEFAULT_PDF_TEMPLATE', LABOUR_WAGE_TEMPLATE_B64);
+        }
+    </script>
+
+    <!-- ★ PDF 編輯器（共用） ★ -->
+    <script src="scripts/editpdf.js"></script>
+
+    <!-- 側邊欄 -->
     <script>
         (function() {
             function saveSidebarState() {
-                const sidebar = document.querySelector('.sidebar');
-                if (sidebar) {
-                    const isCollapsed = sidebar.classList.contains('collapsed');
-                    localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
-                }
+                var sb = document.querySelector('.sidebar');
+                if (sb) localStorage.setItem('sidebarCollapsed', sb.classList.contains('collapsed') ? 'true' : 'false');
             }
-
-            function restoreSidebarState() {
-                const sidebar = document.querySelector('.sidebar');
-                if (sidebar) {
-                    const savedState = localStorage.getItem('sidebarCollapsed');
-                    if (savedState === 'true') {
-                        sidebar.classList.add('collapsed');
-                    } else if (savedState === 'false') {
-                        sidebar.classList.remove('collapsed');
-                    }
-                }
-            }
-
-            function bindToggleEvent() {
-                const toggleBtn = document.querySelector('.toggle-btn');
-                if (toggleBtn) {
-                    toggleBtn.removeEventListener('click', saveSidebarState);
-                    toggleBtn.addEventListener('click', function() {
-                        const sidebar = document.querySelector('.sidebar');
-                        if (sidebar) {
-                            sidebar.classList.toggle('collapsed');
-                            const isCollapsed = sidebar.classList.contains('collapsed');
-                            localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
-                        }
-                    });
-                }
-            }
-
             document.addEventListener('DOMContentLoaded', function() {
-                restoreSidebarState();
-                bindToggleEvent();
-                const storedDate = sessionStorage.getItem('globalDate');
-                const dateSpan = document.querySelector('.date-display span');
-                if (storedDate && dateSpan) {
-                    dateSpan.textContent = storedDate;
-                } else if (dateSpan) {
-                    dateSpan.textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-                }
+                var sb = document.querySelector('.sidebar');
+                if (sb && localStorage.getItem('sidebarCollapsed') === 'true') sb.classList.add('collapsed');
+                var tb = document.querySelector('.toggle-btn');
+                if (tb) tb.addEventListener('click', function() { setTimeout(saveSidebarState, 50); });
+                var ds = document.querySelector('.date-display span');
+                var sd = sessionStorage.getItem('globalDate');
+                if (sd && ds) ds.textContent = sd;
+                else if (ds) ds.textContent = new Date().toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'});
             });
         })();
     </script>
-
-    <!-- PDF 編輯與繪圖完整邏輯 -->
     <script>
-        if (typeof pdfjsLib !== 'undefined') {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-        }
-
-        (function() {
-            'use strict';
-
-            let pdfDoc = null;
-            let currentPage = 1;
-            let scale = 1.0;
-            const renderScale = 2.0;
-            let totalPages = 0;
-            let currentTool = 'select';
-            let isDrawing = false;
-            let lastX = 0, lastY = 0;
-            let startX = 0, startY = 0;
-            
-            let annotations = [];
-            let currentDoc = null;
-            let selectedAnnotationId = null;
-            let history = [];
-            let textBoxElements = [];
-            
-            const canvas = document.getElementById('pdf-canvas');
-            const drawCanvas = document.getElementById('draw-canvas');
-            const ctx = canvas ? canvas.getContext('2d') : null;
-            const drawCtx = drawCanvas ? drawCanvas.getContext('2d') : null;
-            const container = document.getElementById('pdf-container');
-            const colorPicker = document.getElementById('color-picker');
-            const sizeSlider = document.getElementById('size-slider');
-            const sizeValue = document.getElementById('size-value');
-            const opacitySlider = document.getElementById('opacity-slider');
-            const opacityValue = document.getElementById('opacity-value');
-            const currentPageSpan = document.getElementById('current-page');
-            const totalPagesSpan = document.getElementById('total-pages');
-            const lockBtn = document.getElementById('lock-btn');
-            
-            let currentColor = '#3498db';
-            let currentSize = 3;
-            let currentOpacity = 100;
-            let currentStrokePoints = [];
-            let isDraggingText = false;
-            let dragStartX = 0, dragStartY = 0;
-            let draggedAnnotationId = null;
-
-            let isDraggingAnnotation = false;
-            let draggedAnnoId = null;
-            let dragAnnoOffsetX = 0, dragAnnoOffsetY = 0;
-
-            function loadDocumentData() {
-                const editDocStr = sessionStorage.getItem('currentWageRecord') || sessionStorage.getItem('editDocument');
-                let doc = null;
-                if (editDocStr) {
-                    try {
-                        doc = JSON.parse(editDocStr);
-                    } catch(e) {}
-                }
-                
-                // 同步從 localStorage 交叉檢查，若 localStorage 中有更新且帶有 annotations 的版本，則優先採用
-                if (doc && doc.id) {
-                    const storageKeys = ['labourWageData', 'laborWageRecords', 'ael_dwss_wage_records'];
-                    for (const key of storageKeys) {
-                        const stored = localStorage.getItem(key);
-                        if (stored) {
-                            try {
-                                const list = JSON.parse(stored);
-                                if (Array.isArray(list)) {
-                                    const found = list.find(item => item.id == doc.id || String(item.id) === String(doc.id));
-                                    if (found && found.annotations && found.annotations.length >= (doc.annotations ? doc.annotations.length : 0)) {
-                                        doc = found;
-                                    }
-                                }
-                            } catch(e) {}
-                        }
-                    }
-                }
-
-                if (!doc) return null;
-                currentDoc = doc;
-                
-                document.getElementById('docId').textContent = doc.id || 'N/A';
-                document.getElementById('docTitle').textContent = doc.typeText ? `${doc.typeText} - ${doc.site || ''}` : (doc.title || 'Labour Wage Document');
-                document.getElementById('docType').textContent = doc.typeText || doc.type || 'N/A';
-                document.getElementById('docSite').textContent = doc.site || 'N/A';
-                document.getElementById('docPeriod').textContent = doc.period || doc.date || 'N/A';
-                document.getElementById('docAuthor').textContent = doc.submittedBy || doc.author || 'N/A';
-
-                const statusElement = document.getElementById('docStatus');
-                if (statusElement) {
-                    statusElement.textContent = doc.statusText || 'Draft';
-                    statusElement.className = 'doc-status';
-                    const statusMap = { 
-                        draft:'status-draft', 
-                        submitted:'status-submitted', 
-                        endorsed:'status-endorsed', 
-                        cancelled:'status-cancelled', 
-                        confirm:'status-confirm', 
-                        'double-check':'status-double-check' 
-                    };
-                    if (statusMap[doc.status]) statusElement.classList.add(statusMap[doc.status]);
-                }
-
-                annotations = doc.annotations || [];
-                annotations.forEach((a, idx) => a._id = a._id || Date.now() + idx);
-                return doc;
-            }
-
-            function showError(msg) {
-                if (container) container.innerHTML = `<div style="text-align:center;padding:40px;color:#e74c3c;"><i class="fas fa-exclamation-circle"></i> ${msg}</div>`;
-            }
-
-            function loadPDF(url) {
-                let pdfSource;
-                if (url.startsWith('data:application/pdf;base64,')) {
-                    const base64Data = url.split(',')[1];
-                    try {
-                        const binaryString = atob(base64Data);
-                        const bytes = new Uint8Array(binaryString.length);
-                        for (let i=0; i<binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-                        pdfSource = { data: bytes };
-                    } catch(e) { showError('Invalid PDF data.'); return; }
-                } else {
-                    pdfSource = { url: url };
-                }
-
-                pdfjsLib.getDocument(pdfSource).promise.then(pdf => {
-                    pdfDoc = pdf;
-                    totalPages = pdf.numPages;
-                    if (totalPagesSpan) totalPagesSpan.textContent = pdf.numPages;
-                    currentPage = 1;
-                    renderPage(currentPage);
-                }).catch(err => {
-                    console.error('PDF 載入失敗:', err);
-                    showError('Failed to load PDF. You can still add annotations.');
-                    canvas.style.display = 'none';
-                    drawCanvas.style.display = 'block';
-                    drawCanvas.width = 800 * renderScale;
-                    drawCanvas.height = 1000 * renderScale;
-                    drawCanvas.style.width = '800px';
-                    drawCanvas.style.height = '1000px';
-                    drawCtx.fillStyle = '#ffffff';
-                    drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
-                    drawCtx.fillStyle = '#666';
-                    drawCtx.font = `${20 * renderScale}px Arial`;
-                    drawCtx.fillText('PDF could not be loaded. You can still annotate.', 30 * renderScale, 100 * renderScale);
-                });
-            }
-
-            function renderPage(pageNum) {
-                if (!pdfDoc) {
-                    drawCanvas.width = 800 * renderScale; 
-                    drawCanvas.height = 1000 * renderScale;
-                    drawCanvas.style.width = '800px'; 
-                    drawCanvas.style.height = '1000px';
-                    drawCtx.fillStyle = '#ffffff'; 
-                    drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
-                    renderTextAnnotations();
-                    return;
-                }
-                pdfDoc.getPage(pageNum).then(page => {
-                    const viewport = page.getViewport({ scale: scale * renderScale });
-                    const cssViewport = page.getViewport({ scale: scale });
-                    
-                    canvas.width = viewport.width;
-                    canvas.height = viewport.height;
-                    drawCanvas.width = viewport.width;
-                    drawCanvas.height = viewport.height;
-                    
-                    canvas.style.width = cssViewport.width + 'px';
-                    canvas.style.height = cssViewport.height + 'px';
-                    drawCanvas.style.width = cssViewport.width + 'px';
-                    drawCanvas.style.height = cssViewport.height + 'px';
-                    
-                    const renderContext = { canvasContext: ctx, viewport: viewport };
-                    page.render(renderContext).promise.then(() => {
-                        alignDrawCanvas();
-                        if (currentPageSpan) currentPageSpan.textContent = pageNum;
-                        currentPage = pageNum;
-                        
-                        redrawAnnotations();
-                        renderTextAnnotations();
-                        if (container) {
-                            container.scrollTop = 0;
-                            container.scrollLeft = 0;
-                        }
-                        requestAnimationFrame(() => {
-                            alignDrawCanvas();
-                            updateTextPositions();
-                        });
-                    });
-                });
-            }
-
-            function alignDrawCanvas() {
-                if (!canvas || !drawCanvas) return;
-                drawCanvas.style.position = 'absolute';
-                drawCanvas.style.left = canvas.offsetLeft + 'px';
-                drawCanvas.style.top = canvas.offsetTop + 'px';
-            }
-
-            function getCanvasOffset() {
-                const targetCanvas = (canvas && canvas.offsetWidth > 0) ? canvas : drawCanvas;
-                if (!targetCanvas || !container) return { offsetX: 0, offsetY: 0 };
-                const canvasRect = targetCanvas.getBoundingClientRect();
-                const containerRect = container.getBoundingClientRect();
-                return {
-                    offsetX: canvasRect.left - containerRect.left + container.scrollLeft,
-                    offsetY: canvasRect.top - containerRect.top + container.scrollTop
-                };
-            }
-
-            function updateTextPositions() {
-                const { offsetX, offsetY } = getCanvasOffset();
-                textBoxElements.forEach(el => {
-                    const id = el.dataset.id;
-                    const anno = annotations.find(a => a._id == id);
-                    if (!anno) return;
-                    el.style.left = (anno.x * scale + offsetX) + 'px';
-                    el.style.top = (anno.y * scale + offsetY) + 'px';
-                    el.style.fontSize = (anno.size * 4 * scale) + 'px';
-                });
-            }
-
-            function renderTextAnnotations() {
-                textBoxElements.forEach(el => { if (el.parentNode) el.parentNode.removeChild(el); });
-                textBoxElements = [];
-                
-                const textAnnos = annotations.filter(a => a.type === 'text' && (a.page === currentPage || (a.page === undefined && currentPage === 1)));
-                textAnnos.forEach(anno => {
-                    const el = createTextBoxElement(anno);
-                    container.appendChild(el);
-                    textBoxElements.push(el);
-                });
-                updateLockButtonState();
-                selectedAnnotationId = null;
-                highlightSelected();
-                updateTextPositions();
-            }
-
-            function createTextBoxElement(anno) {
-                const el = document.createElement('div');
-                el.className = 'text-annotation';
-                el.dataset.id = anno._id;
-                
-                el.textContent = anno.text || '';
-                el.style.color = anno.color;
-                el.style.opacity = (anno.opacity || 100) / 100;
-                el.contentEditable = false;
-                el.draggable = false;
-                
-                if (anno.locked) {
-                    el.classList.add('locked');
-                }
-                
-                const delBtn = document.createElement('button');
-                delBtn.className = 'delete-btn';
-                delBtn.innerHTML = '×';
-                delBtn.addEventListener('mousedown', (e) => {
-                    e.stopPropagation();
-                    if (anno.locked) return;
-                    deleteAnnotation(anno._id);
-                });
-                el.appendChild(delBtn);
-                
-                el.addEventListener('dblclick', (e) => {
-                    e.stopPropagation();
-                    if (anno.locked || currentTool !== 'text') return;
-                    el.contentEditable = true;
-                    el.classList.add('editing');
-                    el.focus();
-                    const range = document.createRange();
-                    range.selectNodeContents(el);
-                    const sel = window.getSelection();
-                    sel.removeAllRanges();
-                    sel.addRange(range);
-                });
-                
-                el.addEventListener('blur', () => {
-                    if (el.contentEditable === 'true') {
-                        el.contentEditable = false;
-                        el.classList.remove('editing');
-                        const newText = el.textContent.trim();
-                        if (newText) {
-                            anno.text = newText;
-                            saveHistory();
-                        } else {
-                            deleteAnnotation(anno._id);
-                        }
-                        redrawAnnotations();
-                        renderTextAnnotations();
-                    }
-                });
-                
-                el.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        el.blur();
-                    }
-                    if (e.key === 'Escape') el.blur();
-                });
-                
-                el.addEventListener('mousedown', (e) => {
-                    if (e.target === delBtn) return;
-                    if (anno.locked || el.contentEditable === 'true') return;
-                    e.preventDefault();
-                    isDraggingText = true;
-                    draggedAnnotationId = anno._id;
-                    const rect = el.getBoundingClientRect();
-                    dragStartX = e.clientX - rect.left;
-                    dragStartY = e.clientY - rect.top;
-                    selectAnnotation(anno._id);
-                });
-                
-                el.addEventListener('click', (e) => {
-                    if (e.target === delBtn) return;
-                    if (el.contentEditable === 'true') return;
-                    selectAnnotation(anno._id);
-                });
-                
-                return el;
-            }
-
-            function selectAnnotation(id) {
-                selectedAnnotationId = id;
-                highlightSelected();
-                updateLockButtonState();
-            }
-
-            function highlightSelected() {
-                document.querySelectorAll('.text-annotation').forEach(el => {
-                    if (el.dataset.id == selectedAnnotationId) {
-                        el.style.border = '2px solid #3498db';
-                        el.style.background = 'rgba(52,152,219,0.1)';
-                    } else {
-                        el.style.border = '1px solid transparent';
-                        el.style.background = 'transparent';
-                    }
-                });
-            }
-
-            function toggleLock() {
-                if (selectedAnnotationId === null) return;
-                const anno = annotations.find(a => a._id === selectedAnnotationId);
-                if (!anno) return;
-                saveHistory();
-                anno.locked = !anno.locked;
-                redrawAnnotations();
-                renderTextAnnotations();
-            }
-
-            function updateLockButtonState() {
-                if (!lockBtn) return;
-                const anno = selectedAnnotationId ? annotations.find(a => a._id === selectedAnnotationId) : null;
-                if (!anno) {
-                    lockBtn.innerHTML = '<i class="fas fa-lock"></i> Lock';
-                    lockBtn.classList.remove('unlock');
-                    lockBtn.disabled = true;
-                } else {
-                    lockBtn.disabled = false;
-                    if (anno.locked) {
-                        lockBtn.innerHTML = '<i class="fas fa-unlock"></i> Unlock';
-                        lockBtn.classList.add('unlock');
-                    } else {
-                        lockBtn.innerHTML = '<i class="fas fa-lock"></i> Lock';
-                        lockBtn.classList.remove('unlock');
-                    }
-                }
-            }
-
-            function redrawAnnotations() {
-                if (!drawCtx) return;
-                drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-                
-                annotations.forEach(anno => {
-                    if (anno.type === 'text') return;
-                    if (anno.page !== undefined && anno.page !== currentPage) return;
-                    if (anno.page === undefined && currentPage !== 1) return;
-                    
-                    drawAnnotation(anno);
-                });
-            }
-
-            function drawAnnotation(anno) {
-                if (!drawCtx) return;
-                const ctx = drawCtx;
-                ctx.save();
-                ctx.globalAlpha = (anno.opacity || 100) / 100;
-                ctx.strokeStyle = anno.color || '#3498db';
-                ctx.fillStyle = anno.color || '#3498db';
-                ctx.lineWidth = (anno.size || 3) * renderScale;
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                
-                const s = scale * renderScale;
-                
-                switch (anno.type) {
-                    case 'highlight':
-                        if (anno.points && anno.points.length > 0) {
-                            ctx.globalAlpha = (anno.opacity || 100) / 100 * 0.4;
-                            ctx.beginPath();
-                            const first = anno.points[0];
-                            ctx.moveTo(first.x * s, first.y * s);
-                            for (let i = 1; i < anno.points.length; i++) {
-                                ctx.lineTo(anno.points[i].x * s, anno.points[i].y * s);
-                            }
-                            ctx.stroke();
-                        }
-                        break;
-                    case 'rectangle':
-                        if (anno.startX !== undefined && anno.endX !== undefined) {
-                            const x = Math.min(anno.startX, anno.endX) * s;
-                            const y = Math.min(anno.startY, anno.endY) * s;
-                            const w = Math.abs(anno.endX - anno.startX) * s;
-                            const h = Math.abs(anno.endY - anno.startY) * s;
-                            ctx.strokeRect(x, y, w, h);
-                        }
-                        break;
-                    case 'ellipse':
-                        if (anno.startX !== undefined && anno.endX !== undefined) {
-                            const cx = (anno.startX + anno.endX) / 2 * s;
-                            const cy = (anno.startY + anno.endY) / 2 * s;
-                            const rx = Math.abs(anno.endX - anno.startX) / 2 * s;
-                            const ry = Math.abs(anno.endY - anno.startY) / 2 * s;
-                            ctx.beginPath();
-                            ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-                            ctx.stroke();
-                        }
-                        break;
-                    case 'arrow':
-                        if (anno.startX !== undefined && anno.endX !== undefined) {
-                            const fromX = anno.startX * s;
-                            const fromY = anno.startY * s;
-                            const toX = anno.endX * s;
-                            const toY = anno.endY * s;
-                            ctx.beginPath();
-                            ctx.moveTo(fromX, fromY);
-                            ctx.lineTo(toX, toY);
-                            ctx.stroke();
-                            const angle = Math.atan2(toY - fromY, toX - fromX);
-                            const headLen = 10 * s / 2;
-                            ctx.beginPath();
-                            ctx.moveTo(toX, toY);
-                            ctx.lineTo(toX - headLen * Math.cos(angle - 0.5), toY - headLen * Math.sin(angle - 0.5));
-                            ctx.moveTo(toX, toY);
-                            ctx.lineTo(toX - headLen * Math.cos(angle + 0.5), toY - headLen * Math.sin(angle + 0.5));
-                            ctx.stroke();
-                        }
-                        break;
-                    case 'line':
-                        if (anno.startX !== undefined && anno.endX !== undefined) {
-                            ctx.beginPath();
-                            ctx.moveTo(anno.startX * s, anno.startY * s);
-                            ctx.lineTo(anno.endX * s, anno.endY * s);
-                            ctx.stroke();
-                        }
-                        break;
-                }
-                ctx.restore();
-            }
-
-            function deleteAnnotation(id) {
-                const idx = annotations.findIndex(a => a._id === id);
-                if (idx === -1) return;
-                if (annotations[idx].locked) return;
-                saveHistory();
-                annotations.splice(idx, 1);
-                if (selectedAnnotationId === id) {
-                    selectedAnnotationId = null;
-                    updateLockButtonState();
-                }
-                redrawAnnotations();
-                renderTextAnnotations();
-            }
-
-            function undo() {
-                if (history.length === 0) return;
-                annotations = history.pop();
-                selectedAnnotationId = null;
-                updateLockButtonState();
-                redrawAnnotations();
-                renderTextAnnotations();
-                if (currentDoc) {
-                    currentDoc.annotations = annotations;
-                    sessionStorage.setItem('currentWageRecord', JSON.stringify(currentDoc));
-                    sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
-                }
-            }
-
-            function saveHistory() {
-                history.push(JSON.parse(JSON.stringify(annotations)));
-                if (history.length > 20) history.shift();
-            }
-
-            function deleteSelected() {
-                if (selectedAnnotationId === null) return;
-                const anno = annotations.find(a => a._id === selectedAnnotationId);
-                if (anno && anno.locked) return;
-                deleteAnnotation(selectedAnnotationId);
-            }
-
-            function getCanvasCoords(e) {
-                let clientX, clientY;
-                if (e.touches && e.touches.length > 0) {
-                    clientX = e.touches[0].clientX;
-                    clientY = e.touches[0].clientY;
-                } else {
-                    clientX = e.clientX;
-                    clientY = e.clientY;
-                }
-
-                const targetCanvas = (canvas && canvas.offsetWidth > 0) ? canvas : drawCanvas;
-                const rect = targetCanvas.getBoundingClientRect();
-                if (!rect.width || !rect.height) return { x: 0, y: 0 };
-
-                const scaleX = targetCanvas.width / rect.width;
-                const scaleY = targetCanvas.height / rect.height;
-                let x = (clientX - rect.left) * scaleX;
-                let y = (clientY - rect.top) * scaleY;
-                
-                x = Math.min(Math.max(0, x), targetCanvas.width);
-                y = Math.min(Math.max(0, y), targetCanvas.height);
-                return { x, y };
-            }
-
-            function hitTestAnnotation(anno, px, py) {
-                const tolerance = 10 / scale;
-                switch (anno.type) {
-                    case 'highlight':
-                        if (anno.points && anno.points.length > 0) {
-                            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-                            anno.points.forEach(p => {
-                                if (p.x < minX) minX = p.x;
-                                if (p.x > maxX) maxX = p.x;
-                                if (p.y < minY) minY = p.y;
-                                if (p.y > maxY) maxY = p.y;
-                            });
-                            return px >= minX - tolerance && px <= maxX + tolerance &&
-                                   py >= minY - tolerance && py <= maxY + tolerance;
-                        }
-                        return false;
-                    case 'rectangle':
-                    case 'ellipse':
-                    case 'arrow':
-                    case 'line':
-                        if (anno.startX !== undefined && anno.endX !== undefined) {
-                            const minX = Math.min(anno.startX, anno.endX) - tolerance;
-                            const maxX = Math.max(anno.startX, anno.endX) + tolerance;
-                            const minY = Math.min(anno.startY, anno.endY) - tolerance;
-                            const maxY = Math.max(anno.startY, anno.endY) + tolerance;
-                            return px >= minX && px <= maxX && py >= minY && py <= maxY;
-                        }
-                        return false;
-                    default:
-                        return false;
-                }
-            }
-
-            function startDragAnnotation(e) {
-                if (currentTool !== 'select') return;
-                const pos = getCanvasCoords(e);
-                const rawX = pos.x / (renderScale * scale);
-                const rawY = pos.y / (renderScale * scale);
-                for (let i = annotations.length - 1; i >= 0; i--) {
-                    const anno = annotations[i];
-                    if (anno.type === 'text' || anno.locked) continue;
-                    if (anno.page !== undefined && anno.page !== currentPage) continue;
-                    if (anno.page === undefined && currentPage !== 1) continue;
-                    
-                    if (hitTestAnnotation(anno, rawX, rawY)) {
-                        isDraggingAnnotation = true;
-                        draggedAnnoId = anno._id;
-                        dragAnnoOffsetX = rawX - (anno.startX !== undefined ? anno.startX : anno.points[0].x);
-                        dragAnnoOffsetY = rawY - (anno.startY !== undefined ? anno.startY : anno.points[0].y);
-                        selectAnnotation(anno._id);
-                        e.preventDefault();
-                        return;
-                    }
-                }
-            }
-
-            function moveDragAnnotation(e) {
-                if (!isDraggingAnnotation || draggedAnnoId === null) return;
-                const pos = getCanvasCoords(e);
-                const rawX = pos.x / (renderScale * scale);
-                const rawY = pos.y / (renderScale * scale);
-                const anno = annotations.find(a => a._id === draggedAnnoId);
-                if (!anno || anno.locked) return;
-
-                const currentOriginX = (anno.startX !== undefined) ? anno.startX : anno.points[0].x;
-                const currentOriginY = (anno.startY !== undefined) ? anno.startY : anno.points[0].y;
-                
-                const deltaX = rawX - dragAnnoOffsetX - currentOriginX;
-                const deltaY = rawY - dragAnnoOffsetY - currentOriginY;
-
-                if (anno.points) {
-                    anno.points.forEach(p => { p.x += deltaX; p.y += deltaY; });
-                } else if (anno.startX !== undefined) {
-                    anno.startX += deltaX;
-                    anno.startY += deltaY;
-                    anno.endX += deltaX;
-                    anno.endY += deltaY;
-                }
-
-                redrawAnnotations();
-                e.preventDefault();
-            }
-
-            function endDragAnnotation() {
-                if (isDraggingAnnotation && draggedAnnoId !== null) {
-                    saveHistory();
-                    isDraggingAnnotation = false;
-                    draggedAnnoId = null;
-                }
-            }
-
-            document.addEventListener('mousemove', (e) => {
-                if (!isDraggingText || draggedAnnotationId === null) return;
-                const anno = annotations.find(a => a._id === draggedAnnotationId);
-                if (!anno || anno.locked) return;
-                const containerRect = container.getBoundingClientRect();
-                const { offsetX, offsetY } = getCanvasOffset();
-                
-                let visualX = e.clientX - containerRect.left + container.scrollLeft - dragStartX;
-                let visualY = e.clientY - containerRect.top + container.scrollTop - dragStartY;
-                
-                let newRawX = (visualX - offsetX) / scale;
-                let newRawY = (visualY - offsetY) / scale;
-                newRawX = Math.max(0, newRawX);
-                newRawY = Math.max(0, newRawY);
-                
-                const el = textBoxElements.find(el => el.dataset.id == draggedAnnotationId);
-                if (el) {
-                    el.style.left = (newRawX * scale + offsetX) + 'px';
-                    el.style.top = (newRawY * scale + offsetY) + 'px';
-                }
-            });
-
-            document.addEventListener('mouseup', () => {
-                if (isDraggingText) {
-                    isDraggingText = false;
-                    const anno = annotations.find(a => a._id === draggedAnnotationId);
-                    if (anno && !anno.locked) {
-                        const el = textBoxElements.find(el => el.dataset.id == draggedAnnotationId);
-                        if (el) {
-                            const { offsetX, offsetY } = getCanvasOffset();
-                            const left = parseFloat(el.style.left) - offsetX;
-                            const top = parseFloat(el.style.top) - offsetY;
-                            anno.x = left / scale;
-                            anno.y = top / scale;
-                            saveHistory();
-                        }
-                    }
-                    draggedAnnotationId = null;
-                }
-                if (isDraggingAnnotation) {
-                    endDragAnnotation();
-                }
-            });
-
-            if (container) {
-                container.addEventListener('scroll', updateTextPositions);
-            }
-
-            function startDrawing(e) {
-                alignDrawCanvas();
-                if (currentTool === 'select') {
-                    startDragAnnotation(e);
-                    return;
-                }
-
-                if (currentTool === 'text') {
-                    e.preventDefault();
-                    const pos = getCanvasCoords(e);
-                    const clickedEl = document.elementFromPoint(e.clientX, e.clientY);
-                    if (clickedEl && clickedEl.closest && clickedEl.closest('.text-annotation')) return;
-                    
-                    const rawX = pos.x / (renderScale * scale);
-                    const rawY = pos.y / (renderScale * scale);
-                    const newAnno = {
-                        type: 'text',
-                        color: currentColor,
-                        size: currentSize,
-                        opacity: currentOpacity,
-                        x: rawX,
-                        y: rawY,
-                        text: 'Click to edit',
-                        locked: false,
-                        page: currentPage,
-                        _id: Date.now() + Math.random()
-                    };
-                    saveHistory();
-                    annotations.push(newAnno);
-                    redrawAnnotations();
-                    renderTextAnnotations();
-                    const newEl = textBoxElements.find(el => el.dataset.id == newAnno._id);
-                    if (newEl) {
-                        newEl.contentEditable = true;
-                        newEl.classList.add('editing');
-                        newEl.focus();
-                        const range = document.createRange();
-                        range.selectNodeContents(newEl);
-                        const sel = window.getSelection();
-                        sel.removeAllRanges();
-                        sel.addRange(range);
-                    }
-                    return;
-                }
-                
-                if (currentTool === 'highlight') {
-                    e.preventDefault();
-                    isDrawing = true;
-                    const pos = getCanvasCoords(e);
-                    lastX = pos.x; lastY = pos.y;
-                    startX = pos.x; startY = pos.y;
-                    currentStrokePoints = [{x: pos.x / (renderScale * scale), y: pos.y / (renderScale * scale)}];
-                    
-                    drawCtx.beginPath();
-                    drawCtx.moveTo(pos.x, pos.y);
-                    drawCtx.lineCap = 'round';
-                    drawCtx.lineJoin = 'round';
-                    drawCtx.strokeStyle = currentColor;
-                    drawCtx.lineWidth = currentSize * 3 * renderScale;
-                    drawCtx.globalAlpha = currentOpacity / 100 * 0.4;
-                    drawCtx.lineTo(pos.x, pos.y);
-                    drawCtx.stroke();
-                    return;
-                }
-                
-                if (currentTool === 'rectangle' || currentTool === 'ellipse' || currentTool === 'arrow' || currentTool === 'line') {
-                    e.preventDefault();
-                    isDrawing = true;
-                    const pos = getCanvasCoords(e);
-                    startX = pos.x / (renderScale * scale);
-                    startY = pos.y / (renderScale * scale);
-                    lastX = pos.x;
-                    lastY = pos.y;
-                    return;
-                }
-            }
-
-            function draw(e) {
-                if (currentTool === 'select' || currentTool === 'text') {
-                    if (currentTool === 'select' && isDraggingAnnotation) {
-                        moveDragAnnotation(e);
-                    }
-                    return;
-                }
-                if (!isDrawing) return;
-                e.preventDefault();
-                const pos = getCanvasCoords(e);
-                
-                if (currentTool === 'highlight') {
-                    drawCtx.lineTo(pos.x, pos.y);
-                    drawCtx.stroke();
-                    currentStrokePoints.push({x: pos.x / (renderScale * scale), y: pos.y / (renderScale * scale)});
-                }
-                
-                if (currentTool === 'rectangle' || currentTool === 'ellipse' || currentTool === 'arrow' || currentTool === 'line') {
-                    redrawAnnotations();
-                    drawCtx.save();
-                    drawCtx.globalAlpha = currentOpacity / 100;
-                    drawCtx.strokeStyle = currentColor;
-                    drawCtx.lineWidth = currentSize * renderScale;
-                    drawCtx.lineCap = 'round';
-                    drawCtx.lineJoin = 'round';
-                    
-                    const endX = pos.x / (renderScale * scale);
-                    const endY = pos.y / (renderScale * scale);
-                    const s = scale * renderScale;
-                    
-                    switch (currentTool) {
-                        case 'rectangle':
-                            const rx = Math.min(startX, endX) * s;
-                            const ry = Math.min(startY, endY) * s;
-                            const rw = Math.abs(endX - startX) * s;
-                            const rh = Math.abs(endY - startY) * s;
-                            drawCtx.strokeRect(rx, ry, rw, rh);
-                            break;
-                        case 'ellipse':
-                            const cx = (startX + endX) / 2 * s;
-                            const cy = (startY + endY) / 2 * s;
-                            const rx2 = Math.abs(endX - startX) / 2 * s;
-                            const ry2 = Math.abs(endY - startY) / 2 * s;
-                            drawCtx.beginPath();
-                            drawCtx.ellipse(cx, cy, rx2, ry2, 0, 0, Math.PI * 2);
-                            drawCtx.stroke();
-                            break;
-                        case 'arrow':
-                            const fromX = startX * s;
-                            const fromY = startY * s;
-                            const toX = endX * s;
-                            const toY = endY * s;
-                            drawCtx.beginPath();
-                            drawCtx.moveTo(fromX, fromY);
-                            drawCtx.lineTo(toX, toY);
-                            drawCtx.stroke();
-                            const angle = Math.atan2(toY - fromY, toX - fromX);
-                            const headLen = 10 * s / 2;
-                            drawCtx.beginPath();
-                            drawCtx.moveTo(toX, toY);
-                            drawCtx.lineTo(toX - headLen * Math.cos(angle - 0.5), toY - headLen * Math.sin(angle - 0.5));
-                            drawCtx.moveTo(toX, toY);
-                            drawCtx.lineTo(toX - headLen * Math.cos(angle + 0.5), toY - headLen * Math.sin(angle + 0.5));
-                            drawCtx.stroke();
-                            break;
-                        case 'line':
-                            drawCtx.beginPath();
-                            drawCtx.moveTo(startX * s, startY * s);
-                            drawCtx.lineTo(endX * s, endY * s);
-                            drawCtx.stroke();
-                            break;
-                    }
-                    drawCtx.restore();
-                }
-                
-                lastX = pos.x; lastY = pos.y;
-            }
-
-            function stopDrawing(e) {
-                if (currentTool === 'select' || currentTool === 'text') {
-                    if (currentTool === 'select' && isDraggingAnnotation) {
-                        endDragAnnotation();
-                    }
-                    return;
-                }
-                if (!isDrawing) return;
-                isDrawing = false;
-                const pos = e ? getCanvasCoords(e) : {x: lastX, y: lastY};
-                let annotation = null;
-                
-                if (currentTool === 'highlight') {
-                    if (currentStrokePoints.length === 1) {
-                        currentStrokePoints.push({ ...currentStrokePoints[0] });
-                    }
-                    if (currentStrokePoints.length > 1) {
-                        annotation = {
-                            type: 'highlight',
-                            color: currentColor,
-                            size: currentSize * 3,
-                            opacity: currentOpacity,
-                            points: currentStrokePoints.slice(),
-                            page: currentPage, 
-                            _id: Date.now() + Math.random()
-                        };
-                    }
-                    drawCtx.beginPath();
-                    currentStrokePoints = [];
-                }
-                
-                if (currentTool === 'rectangle' || currentTool === 'ellipse' || currentTool === 'arrow' || currentTool === 'line') {
-                    const endX = pos.x / (renderScale * scale);
-                    const endY = pos.y / (renderScale * scale);
-                    if (Math.abs(endX - startX) > 0.5 || Math.abs(endY - startY) > 0.5) {
-                        annotation = {
-                            type: currentTool,
-                            color: currentColor,
-                            size: currentSize,
-                            opacity: currentOpacity,
-                            startX: startX,
-                            startY: startY,
-                            endX: endX,
-                            endY: endY,
-                            page: currentPage, 
-                            _id: Date.now() + Math.random()
-                        };
-                    }
-                }
-                
-                if (annotation) {
-                    saveHistory();
-                    annotations.push(annotation);
-                }
-                redrawAnnotations();
-            }
-
-            function setupTools() {
-                const toolBtns = document.querySelectorAll('.tool-btn');
-                toolBtns.forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        toolBtns.forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
-                        currentTool = btn.dataset.tool;
-                        if (currentTool === 'select') {
-                            drawCanvas.style.cursor = 'default';
-                        } else if (currentTool === 'text') {
-                            drawCanvas.style.cursor = 'text';
-                        } else {
-                            drawCanvas.style.cursor = 'crosshair';
-                        }
-                        document.querySelectorAll('.text-annotation.editing').forEach(el => el.blur());
-                    });
-                });
-                if (colorPicker) colorPicker.addEventListener('input', e => currentColor = e.target.value);
-                if (sizeSlider) {
-                    sizeSlider.addEventListener('input', e => {
-                        currentSize = parseInt(e.target.value);
-                        sizeValue.textContent = currentSize + 'px';
-                    });
-                }
-                if (opacitySlider) {
-                    opacitySlider.addEventListener('input', e => {
-                        currentOpacity = parseInt(e.target.value);
-                        opacityValue.textContent = currentOpacity + '%';
-                    });
-                }
-            }
-
-            function setupNavigation() {
-                document.getElementById('prev-page')?.addEventListener('click', () => {
-                    if (pdfDoc && currentPage > 1) renderPage(currentPage - 1);
-                });
-                document.getElementById('next-page')?.addEventListener('click', () => {
-                    if (pdfDoc && currentPage < pdfDoc.numPages) renderPage(currentPage + 1);
-                });
-            }
-
-            // ---------- 強化後的儲存函數（確保多重儲存鍵與 Session 完美同步） ----------
-            function saveChanges() {
-                if (!currentDoc) { alert('No document to save.'); return; }
-                
-                // 1. 完成所有正在編輯的文本框
-                document.querySelectorAll('.text-annotation.editing').forEach(el => {
-                    const id = el.dataset.id;
-                    const anno = annotations.find(a => a._id == id);
-                    if (anno) {
-                        el.contentEditable = false;
-                        el.classList.remove('editing');
-                        const newText = el.textContent.trim();
-                        if (newText) {
-                            anno.text = newText;
-                        } else {
-                            deleteAnnotation(anno._id);
-                        }
-                    }
-                });
-                
-                // 2. 更新當前文檔的註釋
-                currentDoc.annotations = annotations;
-                
-                // 3. 同步更新 sessionStorage
-                sessionStorage.setItem('currentWageRecord', JSON.stringify(currentDoc));
-                sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
-
-                // 4. 強制同步更新 localStorage 中所有可能被用到的清單鍵值
-                const storageKeys = ['labourWageData', 'laborWageRecords', 'labourWageRecords', 'ael_dwss_wage_records'];
-                storageKeys.forEach(key => {
-                    const stored = localStorage.getItem(key);
-                    if (stored) {
-                        try {
-                            let wageData = JSON.parse(stored);
-                            if (Array.isArray(wageData)) {
-                                const index = wageData.findIndex(d => d.id == currentDoc.id || String(d.id) === String(currentDoc.id));
-                                if (index !== -1) {
-                                    wageData[index] = { ...wageData[index], ...currentDoc, annotations: annotations };
-                                    localStorage.setItem(key, JSON.stringify(wageData));
-                                }
-                            }
-                        } catch(e) {
-                            console.error(`Error updating key ${key}:`, e);
-                        }
-                    }
-                });
-                
-                // 確保主要的 labourWageData 必定有寫入更新
-                const WAGE_KEY = 'labourWageData';
-                let wageData = [];
-                const storedDefault = localStorage.getItem(WAGE_KEY);
-                if (storedDefault) {
-                    try { wageData = JSON.parse(storedDefault); } catch(e) { wageData = []; }
-                }
-                const mainIndex = wageData.findIndex(d => d.id == currentDoc.id || String(d.id) === String(currentDoc.id));
-                if (mainIndex !== -1) {
-                    wageData[mainIndex] = { ...wageData[mainIndex], ...currentDoc, annotations: annotations };
-                } else {
-                    wageData.push({ ...currentDoc, annotations: annotations });
-                }
-                localStorage.setItem(WAGE_KEY, JSON.stringify(wageData));
-                
-                alert('✅ Changes saved successfully! Your annotations have been stored.');
-                console.log('Successfully saved annotations:', annotations);
-            }
-
-            function cancelEditing() {
-                if (confirm('Cancel editing? All unsaved changes will be lost.')) {
+    // 覆蓋 Back 按鈕（喺 editpdf.js 載入之後）
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+            var backBtn = document.getElementById('back-btn');
+            if (backBtn) {
+                backBtn.addEventListener('click', function() {
                     window.location.href = 'labourwage.html';
-                }
+                });
             }
-
-            function goBack() {
-                window.location.href = 'labourwage.html';
-            }
-
-            function bindDrawingEvents() {
-                if (!container) return;
-                container.removeEventListener('mousedown', startDrawing);
-                container.removeEventListener('mousemove', draw);
-                container.removeEventListener('mouseup', stopDrawing);
-                container.removeEventListener('mouseleave', stopDrawing);
-                container.addEventListener('mousedown', startDrawing);
-                container.addEventListener('mousemove', draw);
-                container.addEventListener('mouseup', stopDrawing);
-                container.addEventListener('mouseleave', stopDrawing);
-                container.removeEventListener('touchstart', startDrawing);
-                container.removeEventListener('touchmove', draw);
-                container.removeEventListener('touchend', stopDrawing);
-                container.addEventListener('touchstart', startDrawing, { passive: false });
-                container.addEventListener('touchmove', draw, { passive: false });
-                container.addEventListener('touchend', stopDrawing, { passive: false });
-            }
-
-            function bindActionButtons() {
-                document.getElementById('save-btn')?.addEventListener('click', saveChanges);
-                document.getElementById('cancel-btn')?.addEventListener('click', cancelEditing);
-                document.getElementById('back-to-wage-btn')?.addEventListener('click', goBack);
-                document.getElementById('undo-btn')?.addEventListener('click', undo);
-                document.getElementById('delete-selected-btn')?.addEventListener('click', deleteSelected);
-                if (lockBtn) lockBtn.addEventListener('click', toggleLock);
-            }
-
-            window.addEventListener('resize', () => {
-                alignDrawCanvas();
-                updateTextPositions();
-            });
-
-            document.addEventListener('DOMContentLoaded', () => {
-                const doc = loadDocumentData();
-                if (!doc) { showError('No document data available.'); return; }
-                
-                let pdfSrc = doc.pdfData ? 'data:application/pdf;base64,' + doc.pdfData : (doc.pdfUrl || null);
-                if (pdfSrc) {
-                    loadPDF(pdfSrc);
-                } else {
-                    canvas.style.display = 'none';
-                    drawCanvas.style.display = 'block';
-                    drawCanvas.width = 800 * renderScale;
-                    drawCanvas.height = 1000 * renderScale;
-                    drawCanvas.style.width = '800px';
-                    drawCanvas.style.height = '1000px';
-                    drawCtx.fillStyle = '#ffffff';
-                    drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
-                    drawCtx.fillStyle = '#666';
-                    drawCtx.font = `${20 * renderScale}px Arial`;
-                    drawCtx.fillText('No PDF attached. You can still add annotations.', 30 * renderScale, 100 * renderScale);
-                }
-                drawCanvas.style.pointerEvents = 'none';
-                setupTools();
-                bindDrawingEvents();
-                setupNavigation();
-                bindActionButtons();
-                history = [];
-                saveHistory();
-                updateLockButtonState();
-            });
-        })();
-    </script>
+        }, 500);
+    });
+</script>
 </body>
 </html>
