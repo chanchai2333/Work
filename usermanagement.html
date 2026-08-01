@@ -6,9 +6,50 @@
     <title data-i18n="user.management">User Management - AEL DWSS System</title>
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .role-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: white;
+        }
+        .role-admin { background: #e74c3c; }
+        .role-officer { background: #3498db; }
+        .role-aei { background: #2ecc71; }
+        .role-inspector { background: #f39c12; }
+        .role-contractor { background: #95a5a6; }
+        
+        .permissions-info {
+            margin-top: 10px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+        .permissions-info h4 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+        }
+        .permissions-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .permissions-list li {
+            padding: 5px 0;
+            font-size: 14px;
+        }
+        .permissions-list li i {
+            margin-right: 8px;
+        }
+        .fa-check-circle { color: #27ae60; }
+        .fa-times-circle { color: #e74c3c; }
+    </style>
 </head>
 <body>
-    <!-- 静态侧边栏（包含 Logout 按钮） -->
+    <!-- 側邊欄 -->
     <div class="sidebar">
         <div class="logo">
             <div class="logo-icon"><i class="fas fa-water"></i></div>
@@ -16,23 +57,22 @@
         </div>
         <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
         <ul class="menu">
-            <li><a href="index.html" id="menu-dashboard"><i class="fas fa-home"></i><span class="menu-text" data-i18n="dashboard">Dashboard</span></a></li>
-            <li><a href="sitediary.html" id="menu-sitediary"><i class="fas fa-book"></i><span class="menu-text" data-i18n="site.diary">Site Diary</span></a></li>
-            <li><a href="safetyinspect.html" id="menu-safetyinspect"><i class="fas fa-clipboard-check"></i><span class="menu-text" data-i18n="safety.inspection">Safety Inspection</span></a></li>
-            <li><a href="sitelocations.html" id="menu-sitelocations"><i class="fas fa-map-marked-alt"></i><span class="menu-text" data-i18n="site.locations">Site Locations</span></a></li>
-            <li><a href="labourwage.html" id="menu-labourwage"><i class="fas fa-money-bill-wave"></i><span class="menu-text" data-i18n="labour.wage">Labour Wage</span></a></li>
-            <li><a href="settings.html" id="menu-settings"><i class="fas fa-cogs"></i><span class="menu-text" data-i18n="system.settings">System Settings</span></a></li>
-            <li class="menu-item-with-submenu">
-                <a href="#" class="submenu-toggle" id="menu-usermanagement">
-                    <i class="fas fa-users"></i><span class="menu-text" data-i18n="user.management">User Management</span><i class="fas fa-chevron-down submenu-arrow"></i>
+            <li><a href="index.html"><i class="fas fa-home"></i><span class="menu-text">Dashboard</span></a></li>
+            <li><a href="sitediary.html"><i class="fas fa-book"></i><span class="menu-text">Site Diary</span></a></li>
+            <li><a href="safetyinspect.html"><i class="fas fa-clipboard-check"></i><span class="menu-text">Safety Inspection</span></a></li>
+            <li><a href="sitelocations.html"><i class="fas fa-map-marked-alt"></i><span class="menu-text">Site Locations</span></a></li>
+            <li><a href="labourwage.html"><i class="fas fa-money-bill-wave"></i><span class="menu-text">Labour Wage</span></a></li>
+            <li><a href="settings.html"><i class="fas fa-cogs"></i><span class="menu-text">System Settings</span></a></li>
+            <li class="menu-item-with-submenu active">
+                <a href="#" class="submenu-toggle">
+                    <i class="fas fa-users"></i><span class="menu-text">User Management</span><i class="fas fa-chevron-down submenu-arrow"></i>
                 </a>
                 <ul class="submenu">
-                    <li><a href="usermanagement.html" id="submenu-users"><i class="fas fa-user"></i><span class="menu-text">Users</span></a></li>
-                    <li><a href="teams.html" id="submenu-teams"><i class="fas fa-user-friends"></i><span class="menu-text">Teams</span></a></li>
+                    <li><a href="usermanagement.html" class="active"><i class="fas fa-user"></i> Users</a></li>
+                    <li><a href="teams.html"><i class="fas fa-user-friends"></i> Teams</a></li>
                 </ul>
             </li>
         </ul>
-        <!-- 底部 Logout 按钮 -->
         <div class="sidebar-footer">
             <button id="sidebar-logout-btn" class="logout-btn">
                 <i class="fas fa-sign-out-alt"></i>
@@ -41,20 +81,19 @@
         </div>
     </div>
 
-    <!-- 主内容区域 -->
+    <!-- 主內容區域 -->
     <div class="main-content">
         <div class="header">
-            <h1 data-i18n="user.management">User Management</h1>
+            <h1>User Management</h1>
             <div class="header-controls">
                 <div class="user-date-row">
                     <div class="date-display">
                         <i class="fas fa-calendar-alt"></i>
-                        <span id="current-date">September 17, 2025</span>
+                        <span id="current-date"></span>
                     </div>
                     <button class="user-btn">
-                        <i class="fas fa-user"></i> <span data-i18n="user.name">John Doe</span>
+                        <i class="fas fa-user"></i> <span id="header-user-name">User</span>
                     </button>
-                    <!-- 右上角 Logout 按钮 -->
                     <button id="top-logout-btn" class="logout-btn-top" style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; border: none; border-radius: 20px; padding: 10px 20px; font-weight: 600; margin-left: 10px;">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </button>
@@ -64,24 +103,31 @@
 
         <div class="search-buttons">
             <form id="search-form" action="#" method="get">
-                <input type="text" name="search" data-i18n-placeholder="search.placeholder" placeholder="Search users by name, email, or role..." />
-                <button type="submit" data-i18n="search">Search</button>
+                <input type="text" name="search" placeholder="Search users by name, email, or role..." />
+                <button type="submit">Search</button>
             </form>
             <div class="nav-buttons">
-                <button id="add-user-btn"><i class="fas fa-plus"></i><span data-i18n="add.user">Add New User</span></button>
+                <button id="add-user-btn"><i class="fas fa-plus"></i> Add New User</button>
             </div>
         </div>
 
-        <!-- 用户管理主要内容区域 -->
+        <!-- 權限說明 -->
+        <div class="permissions-info">
+            <h4><i class="fas fa-shield-alt"></i> DWSS Permission Levels</h4>
+            <ul class="permissions-list">
+                <li><i class="fas fa-check-circle"></i> <strong>Admin / Officer / AEI</strong> - Full Access: Can submit and change all submission statuses</li>
+                <li><i class="fas fa-times-circle"></i> <strong>Inspector / Contractor</strong> - Submit Only: Can submit but cannot change status</li>
+            </ul>
+        </div>
+
+        <!-- 用戶管理頁面 -->
         <div class="user-management-page">
             <div class="user-stats">
-                <div class="stat-card"><div class="label" data-i18n="total.users">Total Users</div><div class="value" id="total-users-count">53</div></div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #2ecc71, #27ae60);"><div class="label" data-i18n="online.users">Online Users</div><div class="value" id="online-users-count">47</div></div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #f39c12, #d35400);"><div class="label" data-i18n="offline.users">Offline Users</div><div class="value" id="offline-users-count">6</div></div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);"><div class="label" data-i18n="admin.users">Admin Users</div><div class="value" id="admin-users-count">12</div></div>
+                <div class="stat-card"><div class="label">Total Users</div><div class="value" id="total-users-count">0</div></div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);"><div class="label">Full Access Users</div><div class="value" id="full-access-count">0</div></div>
             </div>
 
-            <!-- 筛选器区域 -->
+            <!-- 篩選器 -->
             <div class="filters-section">
                 <div class="filter-group">
                     <button class="filter-toggle"><span>All Roles</span><i class="fas fa-chevron-down"></i></button>
@@ -95,14 +141,6 @@
                     </div>
                 </div>
                 <div class="filter-group">
-                    <button class="filter-toggle"><span>All Status</span><i class="fas fa-chevron-down"></i></button>
-                    <div class="filter-options">
-                        <div class="filter-option active" data-filter="status" data-value="all">All Status</div>
-                        <div class="filter-option" data-filter="status" data-value="online">Online</div>
-                        <div class="filter-option" data-filter="status" data-value="offline">Offline</div>
-                    </div>
-                </div>
-                <div class="filter-group">
                     <button class="filter-toggle"><span>Sort by Name</span><i class="fas fa-chevron-down"></i></button>
                     <div class="filter-options">
                         <div class="filter-option active" data-filter="sort" data-value="name-asc">Name A-Z</div>
@@ -113,65 +151,120 @@
                 </div>
             </div>
 
-            <!-- 用户列表表格 -->
+            <!-- 用戶列表 -->
             <div class="content-section">
                 <div class="table-header">
-                    <div class="table-title"><i class="fas fa-users"></i><span data-i18n="user.list">User List</span></div>
-                    <div class="table-controls"><button class="action-btn refresh-btn"><i class="fas fa-sync-alt"></i><span data-i18n="refresh">Refresh</span></button></div>
+                    <div class="table-title"><i class="fas fa-users"></i> User List</div>
+                    <div class="table-controls"><button class="action-btn refresh-btn"><i class="fas fa-sync-alt"></i> Refresh</button></div>
                 </div>
                 <div class="table-container">
                     <table class="diary-table" id="users-table">
-                        <thead><tr><th width="40%" data-i18n="user.role.name">User Role / Name</th><th width="25%" data-i18n="email.address">Email Address</th><th width="15%" data-i18n="user.role">Role</th><th width="10%" data-i18n="status">Status</th><th width="10%" data-i18n="actions">Actions</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th width="25%">User Name</th>
+                                <th width="25%">Email Address</th>
+                                <th width="12%">Role</th>
+                                <th width="18%">Department</th>
+                                <th width="20%">Actions</th>
+                            </tr>
+                        </thead>
                         <tbody id="users-table-body"></tbody>
                     </table>
                 </div>
-                <div id="no-results-message" class="no-results" style="display: none;"><i class="fas fa-users-slash"></i><h3 data-i18n="no.users.found">No users found</h3><p data-i18n="adjust.filters">Try adjusting your filters or search terms</p></div>
+                <div id="no-results-message" class="no-results" style="display: none;">
+                    <i class="fas fa-users-slash"></i>
+                    <h3>No users found</h3>
+                    <p>Try adjusting your filters or search terms</p>
+                </div>
                 <div class="pagination">
-                    <div class="pagination-info"><span data-i18n="showing">Showing</span> <span id="page-start">1</span>-<span id="page-end">10</span> <span data-i18n="of">of</span> <span id="total-items">53</span> <span data-i18n="users">users</span></div>
+                    <div class="pagination-info">Showing <span id="page-start">1</span>-<span id="page-end">10</span> of <span id="total-items">0</span> users</div>
                     <div class="pagination-controls">
                         <button class="pagination-btn" id="prev-page" disabled><i class="fas fa-chevron-left"></i></button>
-                        <div class="page-numbers"><span class="page-number active">1</span><span class="page-number">2</span><span class="page-number">3</span><span class="page-number">4</span><span class="page-number">5</span></div>
                         <button class="pagination-btn" id="next-page"><i class="fas fa-chevron-right"></i></button>
                     </div>
                 </div>
             </div>
 
-            <!-- 添加用户模态框 -->
+            <!-- 添加/編輯用戶模態框 -->
             <div id="add-user-modal" class="modal" style="display: none;">
                 <div class="modal-content">
-                    <h3><i class="fas fa-user-plus"></i><span data-i18n="add.new.user">Add New User</span></h3>
+                    <h3><i class="fas fa-user-plus"></i> <span id="modal-title-text">Add New User</span></h3>
                     <form id="add-user-form">
-                        <div class="form-group"><label for="input-user-name" data-i18n="full.name">Full Name</label><input type="text" id="input-user-name" required></div>
-                        <div class="form-group"><label for="input-user-email" data-i18n="email.address">Email Address</label><input type="email" id="input-user-email" required></div>
-                        <div class="form-group"><label for="input-user-role" data-i18n="user.role">Role</label><select id="input-user-role" required><option value="" data-i18n="select.role">Select Role</option><option value="admin" data-i18n="role.admin">Administrator</option><option value="officer" data-i18n="role.officer">Administration Officer</option><option value="aei" data-i18n="role.aei">AEI</option><option value="inspector" data-i18n="role.inspector">Inspector</option><option value="contractor" data-i18n="role.contractor">Contractor</option></select></div>
-                        <div class="form-group"><label for="input-user-department" data-i18n="department">Department</label><input type="text" id="input-user-department"></div>
-                        <div class="form-group"><label for="input-user-status" data-i18n="status">Status</label><select id="input-user-status" required><option value="online" data-i18n="status.online">Online</option><option value="offline" data-i18n="status.offline">Offline</option></select></div>
-                        <div class="modal-actions"><button type="button" class="btn btn-secondary" id="cancel-add-user" data-i18n="cancel">Cancel</button><button type="submit" class="btn" data-i18n="add.user">Add User</button></div>
+                        <div class="form-group">
+                            <label for="input-user-name">Full Name</label>
+                            <input type="text" id="input-user-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="input-user-email">Email Address</label>
+                            <input type="email" id="input-user-email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="input-user-role">Role</label>
+                            <select id="input-user-role" required>
+                                <option value="">Select Role</option>
+                                <option value="admin">Administrator (Full Access)</option>
+                                <option value="officer">Administration Officer (Full Access)</option>
+                                <option value="aei">AEI (Full Access)</option>
+                                <option value="inspector">Inspector (Submit Only)</option>
+                                <option value="contractor">Contractor (Submit Only)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="input-user-department">Department</label>
+                            <input type="text" id="input-user-department">
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary" id="cancel-add-user">Cancel</button>
+                            <button type="submit" class="btn" id="submit-user-btn">Add User</button>
+                        </div>
                     </form>
                 </div>
             </div>
 
-            <footer><p data-i18n="copyright">© 2025 AEL DWSS System. All rights reserved.</p><p data-i18n="platform">AEL DWSS Platform</p></footer>
+            <footer>
+                <p>&copy; 2025 AEL DWSS System. All rights reserved.</p>
+                <p>AEL DWSS Platform</p>
+            </footer>
         </div>
     </div>
 
-    <!-- 引入脚本 -->
     <script src="scripts/language.js"></script>
-    <!-- 注意：usermanagement.html 使用内嵌脚本，不需要单独引入 usermanagement.js -->
     <script src="scripts/sidebar.js"></script>
     <script src="scripts/app.js"></script>
 
-    <!-- 内嵌用户管理逻辑 + Logout 处理 -->
     <script>
-        // ==================== 用户管理功能 ====================
-        const UserManagement = {
+        // ==================== DWSS 權限管理系統 ====================
+        var DWSSPermissions = {
+            roleHierarchy: {
+                'admin': { level: 5, canChangeStatus: true, name: 'Administrator' },
+                'officer': { level: 4, canChangeStatus: true, name: 'Administration Officer' },
+                'aei': { level: 3, canChangeStatus: true, name: 'AEI' },
+                'inspector': { level: 2, canChangeStatus: false, name: 'Inspector' },
+                'contractor': { level: 1, canChangeStatus: false, name: 'Contractor' }
+            },
+            canChangeStatus: function(role) {
+                return this.roleHierarchy[role]?.canChangeStatus || false;
+            },
+            getPermissionLevel: function(role) {
+                return this.roleHierarchy[role]?.level || 0;
+            },
+            hasFullAccess: function(role) {
+                return this.getPermissionLevel(role) >= 3;
+            },
+            getPermissionDescription: function(role) {
+                return this.canChangeStatus(role) ? 'Full Access' : 'Submit Only';
+            }
+        };
+
+        // ==================== 用戶管理功能 ====================
+        var UserManagement = {
             users: [],
-            currentFilters: { role: "all", status: "all", sort: "name-asc" },
+            currentFilters: { role: "all", sort: "name-asc" },
             currentPage: 1,
             itemsPerPage: 10,
 
-            loadUsersFromLocalStorage() {
-                const stored = localStorage.getItem('ael_dwss_users');
+            loadUsersFromLocalStorage: function() {
+                var stored = localStorage.getItem('ael_dwss_users');
                 if (stored) {
                     try {
                         this.users = JSON.parse(stored);
@@ -181,236 +274,338 @@
                     this.setDefaultUsers();
                 }
                 if (this.users.length && !this.users[0].id) {
-                    this.users = this.users.map((u, idx) => ({ ...u, id: idx + 1 }));
+                    this.users = this.users.map(function(u, idx) { return { ...u, id: idx + 1 }; });
                     this.saveUsersToLocalStorage();
                 }
             },
-            saveUsersToLocalStorage() {
+
+            saveUsersToLocalStorage: function() {
                 localStorage.setItem('ael_dwss_users', JSON.stringify(this.users));
             },
-            setDefaultUsers() {
+
+            setDefaultUsers: function() {
                 this.users = [
-                    { id:1, name:"Admin", email:"admin@rdrive.io", role:"admin", department:"System Administration", status:"online", addedDate:"2024-01-15" },
-                    { id:2, name:"Kenneth Daluz", email:"kenneth.daluz@aster-dsd.com", role:"officer", department:"Administration", status:"online", addedDate:"2024-02-10" },
-                    { id:3, name:"TANG Chi Long, Gary", email:"gcifang@dsd.gov.hk", role:"aei", department:"AEI/NWNT", status:"online", addedDate:"2024-02-15" },
-                    { id:4, name:"FUNG Wai Ching", email:"wcfung04@dsd.gov.hk", role:"aei", department:"AEI/SWH", status:"online", addedDate:"2024-03-01" },
-                    { id:5, name:"WONG Lap Pan", email:"ipwong02@dsd.gov.hk", role:"aei", department:"AEI/SWH/1", status:"online", addedDate:"2024-03-05" },
-                    { id:6, name:"CHA Chi Ming", email:"cmcha02@dsd.gov.hk", role:"aei", department:"AMI/TM", status:"online", addedDate:"2024-03-10" },
-                    { id:7, name:"John Smith", email:"john.smith@ael-dwss.com", role:"inspector", department:"Safety Inspection", status:"online", addedDate:"2024-03-15" },
-                    { id:8, name:"Sarah Johnson", email:"sarah.j@ael-dwss.com", role:"contractor", department:"Contractor Team A", status:"offline", addedDate:"2024-04-01" },
-                    { id:9, name:"Robert Chen", email:"robert.chen@dsd.gov.hk", role:"officer", department:"Documentation", status:"online", addedDate:"2024-04-05" },
-                    { id:10, name:"Emma Wilson", email:"emma.w@ael-dwss.com", role:"inspector", department:"Quality Control", status:"offline", addedDate:"2024-04-10" }
+                    { id:1, name:"Admin", email:"admin@rdrive.io", role:"admin", department:"System Administration", addedDate:"2024-01-15" },
+                    { id:2, name:"Kenneth Daluz", email:"kenneth.daluz@aster-dsd.com", role:"officer", department:"Administration", addedDate:"2024-02-10" },
+                    { id:3, name:"TANG Chi Long, Gary", email:"gcifang@dsd.gov.hk", role:"aei", department:"AEI/NWNT", addedDate:"2024-02-15" },
+                    { id:4, name:"FUNG Wai Ching", email:"wcfung04@dsd.gov.hk", role:"aei", department:"AEI/SWH", addedDate:"2024-03-01" },
+                    { id:5, name:"WONG Lap Pan", email:"ipwong02@dsd.gov.hk", role:"aei", department:"AEI/SWH/1", addedDate:"2024-03-05" },
+                    { id:6, name:"CHA Chi Ming", email:"cmcha02@dsd.gov.hk", role:"aei", department:"AMI/TM", addedDate:"2024-03-10" },
+                    { id:7, name:"John Smith", email:"john.smith@ael-dwss.com", role:"inspector", department:"Safety Inspection", addedDate:"2024-03-15" },
+                    { id:8, name:"Sarah Johnson", email:"sarah.j@ael-dwss.com", role:"contractor", department:"Contractor Team A", addedDate:"2024-04-01" },
+                    { id:9, name:"Robert Chen", email:"robert.chen@dsd.gov.hk", role:"officer", department:"Documentation", addedDate:"2024-04-05" },
+                    { id:10, name:"Emma Wilson", email:"emma.w@ael-dwss.com", role:"inspector", department:"Quality Control", addedDate:"2024-04-10" }
                 ];
                 this.saveUsersToLocalStorage();
             },
 
-            renderUserTable() {
-                const tbody = document.getElementById('users-table-body');
-                const noResults = document.getElementById('no-results-message');
+            hasFullAccess: function(role) {
+                return DWSSPermissions.hasFullAccess(role);
+            },
+
+            renderUserTable: function() {
+                var tbody = document.getElementById('users-table-body');
+                var noResults = document.getElementById('no-results-message');
                 if (!tbody) return;
                 tbody.innerHTML = '';
-                let filtered = this.users.filter(u => (this.currentFilters.role === "all" || u.role === this.currentFilters.role) && (this.currentFilters.status === "all" || u.status === this.currentFilters.status));
+                
+                var self = this;
+                var filtered = this.users.filter(function(u) {
+                    var roleMatch = self.currentFilters.role === "all" || u.role === self.currentFilters.role;
+                    return roleMatch;
+                });
+                
                 filtered = this.sortUsers(filtered, this.currentFilters.sort);
-                const total = filtered.length;
-                const start = (this.currentPage-1)*this.itemsPerPage;
-                const end = Math.min(start+this.itemsPerPage, total);
-                const paged = filtered.slice(start, end);
+                var total = filtered.length;
+                var start = (this.currentPage-1) * this.itemsPerPage;
+                var end = Math.min(start + this.itemsPerPage, total);
+                var paged = filtered.slice(start, end);
+                
                 this.updatePaginationInfo(start+1, end, total);
-                if (noResults) noResults.style.display = paged.length===0 ? 'block' : 'none';
-                paged.forEach(u => {
-                    const roleText = { admin:"Administrator", officer:"Officer", aei:"AEI", inspector:"Inspector", contractor:"Contractor" }[u.role] || u.role;
-                    const statusText = u.status==='online'?'Online':'Offline';
-                    const statusClass = u.status==='online'?'status-online':'status-offline';
-                    const row = tbody.insertRow();
-                    row.innerHTML = `
-                        <td><div class="user-info"><div class="user-name">${this.escapeHtml(u.name)}</div>${u.department?`<div class="user-department">${this.escapeHtml(u.department)}</div>`:''}</div></span>
-                        <td>${this.escapeHtml(u.email)}</span>
-                        <td><span class="role-badge role-${u.role}">${roleText}</span></span>
-                        <td><span class="status-badge ${statusClass}">${statusText}</span></span>
-                        <td><button class="action-btn edit-user-btn" data-id="${u.id}"><i class="fas fa-edit"></i> Edit</button>
-                               <button class="action-btn delete-user-btn" data-id="${u.id}" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;"><i class="fas fa-trash"></i> Delete</button></span>
-                    `;
+                if (noResults) noResults.style.display = paged.length === 0 ? 'block' : 'none';
+                
+                paged.forEach(function(u) {
+                    var roleText = DWSSPermissions.roleHierarchy[u.role]?.name || u.role;
+                    
+                    var row = tbody.insertRow();
+                    row.innerHTML = 
+                        '<td>' +
+                            '<div class="user-info">' +
+                                '<div class="user-name">' + UserManagement.escapeHtml(u.name) + '</div>' +
+                            '</div>' +
+                        '</td>' +
+                        '<td>' + UserManagement.escapeHtml(u.email) + '</td>' +
+                        '<td><span class="role-badge role-' + u.role + '">' + roleText + '</span></td>' +
+                        '<td>' + UserManagement.escapeHtml(u.department || '-') + '</td>' +
+                        '<td>' +
+                            '<button class="action-btn edit-user-btn" data-id="' + u.id + '">' +
+                                '<i class="fas fa-edit"></i> Edit' +
+                            '</button>' +
+                            '<button class="action-btn delete-user-btn" data-id="' + u.id + '" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;">' +
+                                '<i class="fas fa-trash"></i> Delete' +
+                            '</button>' +
+                        '</td>';
                 });
                 this.attachEventListeners();
             },
-            escapeHtml(str) { return str?str.replace(/[&<>]/g, m=>({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])):''; },
-            sortUsers(users, sortBy) {
-                return [...users].sort((a,b)=>{
-                    if(sortBy==='name-asc') return a.name.localeCompare(b.name);
-                    if(sortBy==='name-desc') return b.name.localeCompare(a.name);
-                    if(sortBy==='date-asc') return new Date(a.addedDate)-new Date(b.addedDate);
-                    if(sortBy==='date-desc') return new Date(b.addedDate)-new Date(a.addedDate);
+
+            escapeHtml: function(str) { 
+                if (!str) return '';
+                return str.replace(/[&<>]/g, function(m) {
+                    return { '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m];
+                }); 
+            },
+
+            sortUsers: function(users, sortBy) {
+                return [...users].sort(function(a, b) {
+                    if (sortBy === 'name-asc') return a.name.localeCompare(b.name);
+                    if (sortBy === 'name-desc') return b.name.localeCompare(a.name);
+                    if (sortBy === 'date-asc') return new Date(a.addedDate) - new Date(b.addedDate);
+                    if (sortBy === 'date-desc') return new Date(b.addedDate) - new Date(a.addedDate);
                     return 0;
                 });
             },
-            updatePaginationInfo(start,end,total) {
-                const ps=document.getElementById('page-start'), pe=document.getElementById('page-end'), ti=document.getElementById('total-items'), prev=document.getElementById('prev-page'), next=document.getElementById('next-page');
-                if(ps) ps.textContent=start;
-                if(pe) pe.textContent=end;
-                if(ti) ti.textContent=total;
-                if(prev) prev.disabled = this.currentPage===1;
-                if(next) next.disabled = this.currentPage*this.itemsPerPage >= total;
-            },
-            updateUserStats() {
-                const total=this.users.length, online=this.users.filter(u=>u.status==='online').length, offline=this.users.filter(u=>u.status==='offline').length, admin=this.users.filter(u=>u.role==='admin').length;
-                const totalEl=document.getElementById('total-users-count'), onlineEl=document.getElementById('online-users-count'), offlineEl=document.getElementById('offline-users-count'), adminEl=document.getElementById('admin-users-count');
-                if(totalEl) totalEl.textContent=total;
-                if(onlineEl) onlineEl.textContent=online;
-                if(offlineEl) offlineEl.textContent=offline;
-                if(adminEl) adminEl.textContent=admin;
+
+            updatePaginationInfo: function(start, end, total) {
+                var ps = document.getElementById('page-start');
+                var pe = document.getElementById('page-end');
+                var ti = document.getElementById('total-items');
+                var prev = document.getElementById('prev-page');
+                var next = document.getElementById('next-page');
+                if (ps) ps.textContent = start;
+                if (pe) pe.textContent = end;
+                if (ti) ti.textContent = total;
+                if (prev) prev.disabled = this.currentPage === 1;
+                if (next) next.disabled = this.currentPage * this.itemsPerPage >= total;
             },
 
-            setupFilterEvents() {
-                document.querySelectorAll('.filter-group').forEach(group=>{
-                    const toggle=group.querySelector('.filter-toggle');
-                    const options=group.querySelector('.filter-options');
-                    if(!toggle||!options) return;
-                    toggle.addEventListener('click',e=>{
-                        e.stopPropagation(); e.preventDefault();
-                        document.querySelectorAll('.filter-options').forEach(opt=>{if(opt!==options) opt.classList.remove('open','show');});
-                        options.classList.toggle('open'); options.classList.toggle('show');
+            updateUserStats: function() {
+                var total = this.users.length;
+                var fullAccess = this.users.filter(function(u) { return DWSSPermissions.hasFullAccess(u.role); }).length;
+                
+                var totalEl = document.getElementById('total-users-count');
+                var fullAccessEl = document.getElementById('full-access-count');
+                
+                if (totalEl) totalEl.textContent = total;
+                if (fullAccessEl) fullAccessEl.textContent = fullAccess;
+            },
+
+            setupFilterEvents: function() {
+                var self = this;
+                document.querySelectorAll('.filter-group').forEach(function(group) {
+                    var toggle = group.querySelector('.filter-toggle');
+                    var options = group.querySelector('.filter-options');
+                    if (!toggle || !options) return;
+                    
+                    toggle.addEventListener('click', function(e) {
+                        e.stopPropagation(); 
+                        e.preventDefault();
+                        document.querySelectorAll('.filter-options').forEach(function(opt) {
+                            if (opt !== options) { opt.classList.remove('open'); opt.classList.remove('show'); }
+                        });
+                        options.classList.toggle('open'); 
+                        options.classList.toggle('show');
                     });
-                    options.querySelectorAll('.filter-option').forEach(opt=>{
-                        opt.addEventListener('click',e=>{
-                            e.stopPropagation(); e.preventDefault();
-                            options.querySelectorAll('.filter-option').forEach(o=>o.classList.remove('active'));
+                    
+                    options.querySelectorAll('.filter-option').forEach(function(opt) {
+                        opt.addEventListener('click', function(e) {
+                            e.stopPropagation(); 
+                            e.preventDefault();
+                            options.querySelectorAll('.filter-option').forEach(function(o) { o.classList.remove('active'); });
                             opt.classList.add('active');
-                            toggle.querySelector('span').textContent=opt.textContent;
-                            const filterType=opt.dataset.filter, filterValue=opt.dataset.value;
-                            this.currentFilters[filterType]=filterValue;
-                            if(filterType==='sort') this.currentPage=1;
-                            this.renderUserTable();
-                            options.classList.remove('open','show');
+                            toggle.querySelector('span').textContent = opt.textContent;
+                            
+                            var filterType = opt.dataset.filter;
+                            var filterValue = opt.dataset.value;
+                            self.currentFilters[filterType] = filterValue;
+                            if (filterType === 'sort') self.currentPage = 1;
+                            
+                            self.renderUserTable();
+                            options.classList.remove('open');
+                            options.classList.remove('show');
                         });
                     });
                 });
-                document.addEventListener('click',()=>document.querySelectorAll('.filter-options').forEach(opt=>opt.classList.remove('open','show')));
-                document.getElementById('search-form')?.addEventListener('submit',e=>{e.preventDefault(); alert(`Searching for: ${e.target.querySelector('input').value}`);});
-                document.getElementById('prev-page')?.addEventListener('click',()=>{if(this.currentPage>1){this.currentPage--;this.renderUserTable();}});
-                document.getElementById('next-page')?.addEventListener('click',()=>{if(this.currentPage*this.itemsPerPage < this.users.length){this.currentPage++;this.renderUserTable();}});
+                
+                document.addEventListener('click', function() {
+                    document.querySelectorAll('.filter-options').forEach(function(opt) { opt.classList.remove('open'); opt.classList.remove('show'); });
+                });
+                
+                document.getElementById('search-form')?.addEventListener('submit', function(e) {
+                    e.preventDefault(); 
+                    var searchTerm = e.target.querySelector('input').value.toLowerCase();
+                    if (searchTerm) {
+                        self.users = self.users.filter(function(u) {
+                            return u.name.toLowerCase().includes(searchTerm) || 
+                                   u.email.toLowerCase().includes(searchTerm) || 
+                                   u.role.toLowerCase().includes(searchTerm);
+                        });
+                    } else {
+                        self.loadUsersFromLocalStorage();
+                    }
+                    self.renderUserTable();
+                });
+                
+                document.getElementById('prev-page')?.addEventListener('click', function() {
+                    if (self.currentPage > 1) { self.currentPage--; self.renderUserTable(); }
+                });
+                
+                document.getElementById('next-page')?.addEventListener('click', function() {
+                    if (self.currentPage * self.itemsPerPage < self.users.length) { self.currentPage++; self.renderUserTable(); }
+                });
             },
 
-            setupActionButtons() {
-                const addUserBtn=document.getElementById('add-user-btn');
-                if(addUserBtn){
-                    addUserBtn.addEventListener('click',()=>{
-                        const modalTitle=document.querySelector('#add-user-modal h3 span');
-                        const submitBtn=document.querySelector('#add-user-form button[type="submit"]');
-                        if(modalTitle) modalTitle.textContent='Add New User';
-                        if(submitBtn) submitBtn.textContent='Add User';
-                        if(submitBtn) delete submitBtn.dataset.editingUserId;
-                        document.getElementById('add-user-modal').style.display='flex';
+            setupActionButtons: function() {
+                var self = this;
+                var addUserBtn = document.getElementById('add-user-btn');
+                if (addUserBtn) {
+                    addUserBtn.addEventListener('click', function() {
+                        document.getElementById('modal-title-text').textContent = 'Add New User';
+                        var submitBtn = document.getElementById('submit-user-btn');
+                        if (submitBtn) {
+                            submitBtn.textContent = 'Add User';
+                            delete submitBtn.dataset.editingUserId;
+                        }
+                        document.getElementById('add-user-modal').style.display = 'flex';
                         document.getElementById('add-user-form').reset();
                     });
                 }
-                document.getElementById('cancel-add-user')?.addEventListener('click',()=>{
-                    document.getElementById('add-user-modal').style.display='none';
+                
+                document.getElementById('cancel-add-user')?.addEventListener('click', function() {
+                    document.getElementById('add-user-modal').style.display = 'none';
                     document.getElementById('add-user-form').reset();
                 });
-                document.querySelector('.refresh-btn')?.addEventListener('click',()=>this.renderUserTable());
-                const form=document.getElementById('add-user-form');
-                if(form){
-                    form.addEventListener('submit',e=>{
+                
+                document.querySelector('.refresh-btn')?.addEventListener('click', function() {
+                    self.loadUsersFromLocalStorage();
+                    self.renderUserTable();
+                    self.updateUserStats();
+                });
+                
+                var form = document.getElementById('add-user-form');
+                if (form) {
+                    form.addEventListener('submit', function(e) {
                         e.preventDefault();
-                        const name=document.getElementById('input-user-name').value.trim();
-                        const email=document.getElementById('input-user-email').value.trim();
-                        const role=document.getElementById('input-user-role').value;
-                        const dept=document.getElementById('input-user-department').value.trim();
-                        const status=document.getElementById('input-user-status').value;
-                        const submitBtn=document.querySelector('#add-user-form button[type="submit"]');
-                        const editingUserId=submitBtn?.dataset.editingUserId;
-                        if(editingUserId){
-                            const user=this.users.find(u=>u.id==parseInt(editingUserId));
-                            if(user){
-                                user.name=name; user.email=email; user.role=role; user.department=dept; user.status=status;
-                                alert('User updated successfully!');
+                        var name = document.getElementById('input-user-name').value.trim();
+                        var email = document.getElementById('input-user-email').value.trim();
+                        var role = document.getElementById('input-user-role').value;
+                        var dept = document.getElementById('input-user-department').value.trim();
+                        var submitBtn = document.getElementById('submit-user-btn');
+                        var editingUserId = submitBtn?.dataset.editingUserId;
+                        
+                        if (editingUserId) {
+                            var user = self.users.find(function(u) { return u.id == parseInt(editingUserId); });
+                            if (user) {
+                                user.name = name; 
+                                user.email = email; 
+                                user.role = role; 
+                                user.department = dept;
+                                alert('User "' + name + '" updated successfully!');
                             }
                         } else {
-                            const newId=this.users.length?Math.max(...this.users.map(u=>u.id))+1:1;
-                            this.users.push({id:newId,name,email,role,department:dept,status,addedDate:new Date().toISOString().split('T')[0]});
-                            alert('User added successfully!');
+                            var newId = self.users.length ? Math.max.apply(null, self.users.map(function(u) { return u.id; })) + 1 : 1;
+                            self.users.push({
+                                id: newId, name: name, email: email, role: role,
+                                department: dept, addedDate: new Date().toISOString().split('T')[0]
+                            });
+                            alert('User "' + name + '" added successfully!');
                         }
-                        this.saveUsersToLocalStorage();
-                        this.renderUserTable();
-                        this.updateUserStats();
-                        document.getElementById('add-user-modal').style.display='none';
+                        
+                        self.saveUsersToLocalStorage();
+                        self.renderUserTable();
+                        self.updateUserStats();
+                        document.getElementById('add-user-modal').style.display = 'none';
                         form.reset();
                     });
                 }
             },
 
-            attachEventListeners() {
-                document.querySelectorAll('.edit-user-btn').forEach(btn=>{
-                    const newBtn=btn.cloneNode(true);
-                    btn.parentNode.replaceChild(newBtn,btn);
-                    newBtn.addEventListener('click',()=>{
-                        const userId=parseInt(newBtn.dataset.id);
-                        const user=this.users.find(u=>u.id===userId);
-                        if(user){
-                            document.getElementById('input-user-name').value=user.name;
-                            document.getElementById('input-user-email').value=user.email;
-                            document.getElementById('input-user-role').value=user.role;
-                            document.getElementById('input-user-department').value=user.department||'';
-                            document.getElementById('input-user-status').value=user.status;
-                            const modalTitle=document.querySelector('#add-user-modal h3 span');
-                            const submitBtn=document.querySelector('#add-user-form button[type="submit"]');
-                            if(modalTitle) modalTitle.textContent='Edit User';
-                            if(submitBtn) submitBtn.textContent='Update User';
-                            if(submitBtn) submitBtn.dataset.editingUserId=userId;
-                            document.getElementById('add-user-modal').style.display='flex';
+            attachEventListeners: function() {
+                var self = this;
+                document.querySelectorAll('.edit-user-btn').forEach(function(btn) {
+                    var newBtn = btn.cloneNode(true);
+                    btn.parentNode.replaceChild(newBtn, btn);
+                    newBtn.addEventListener('click', function() {
+                        var userId = parseInt(newBtn.dataset.id);
+                        var user = self.users.find(function(u) { return u.id === userId; });
+                        if (user) {
+                            document.getElementById('input-user-name').value = user.name;
+                            document.getElementById('input-user-email').value = user.email;
+                            document.getElementById('input-user-role').value = user.role;
+                            document.getElementById('input-user-department').value = user.department || '';
+                            
+                            document.getElementById('modal-title-text').textContent = 'Edit User';
+                            var submitBtn = document.getElementById('submit-user-btn');
+                            if (submitBtn) {
+                                submitBtn.textContent = 'Update User';
+                                submitBtn.dataset.editingUserId = userId;
+                            }
+                            document.getElementById('add-user-modal').style.display = 'flex';
                         }
                     });
                 });
-                document.querySelectorAll('.delete-user-btn').forEach(btn=>{
-                    const newBtn=btn.cloneNode(true);
-                    btn.parentNode.replaceChild(newBtn,btn);
-                    newBtn.addEventListener('click',()=>{
-                        const userId=parseInt(newBtn.dataset.id);
-                        const userName=this.users.find(u=>u.id===userId)?.name;
-                        if(confirm(`Are you sure you want to delete user "${userName}"?`)){
-                            this.users=this.users.filter(u=>u.id!==userId);
-                            this.saveUsersToLocalStorage();
-                            this.renderUserTable();
-                            this.updateUserStats();
+                
+                document.querySelectorAll('.delete-user-btn').forEach(function(btn) {
+                    var newBtn = btn.cloneNode(true);
+                    btn.parentNode.replaceChild(newBtn, btn);
+                    newBtn.addEventListener('click', function() {
+                        var userId = parseInt(newBtn.dataset.id);
+                        var user = self.users.find(function(u) { return u.id === userId; });
+                        if (user && confirm('Are you sure you want to delete user "' + user.name + '"?\nThis action cannot be undone.')) {
+                            self.users = self.users.filter(function(u) { return u.id !== userId; });
+                            self.saveUsersToLocalStorage();
+                            self.renderUserTable();
+                            self.updateUserStats();
                             alert('User deleted successfully!');
                         }
                     });
                 });
             },
 
-            init() {
+            init: function() {
                 this.loadUsersFromLocalStorage();
                 this.renderUserTable();
                 this.setupFilterEvents();
                 this.setupActionButtons();
                 this.updateUserStats();
+                
+                window.DWSSPermissions = DWSSPermissions;
+                window.UserManagement = UserManagement;
             }
         };
 
-        // 初始化用户管理
-        function initUserManagement() { UserManagement.init(); }
+        // 更新右上角用戶名
+        function updateHeaderUserName() {
+            var sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+            var userName = sessionData.userName || 'User';
+            var headerUserEl = document.getElementById('header-user-name');
+            if (headerUserEl) headerUserEl.textContent = userName;
+        }
 
-        // 通用退出登录函数
+        // 退出登錄
         function performLogout() {
             sessionStorage.removeItem('isLoggedIn');
             sessionStorage.removeItem('loggedUser');
+            sessionStorage.removeItem('dwss_session');
             window.location.href = 'login.html';
         }
 
-        // 页面加载初始化
+        // 頁面初始化
         document.addEventListener('DOMContentLoaded', function() {
-            initUserManagement();
+            UserManagement.init();
+            updateHeaderUserName();
+            
             // 同步日期
-            const storedDate = sessionStorage.getItem('globalDate');
-            const dateSpan = document.querySelector('.date-display span');
+            var storedDate = sessionStorage.getItem('globalDate');
+            var dateSpan = document.querySelector('.date-display span');
             if (storedDate && dateSpan) dateSpan.textContent = storedDate;
             else if (dateSpan) dateSpan.textContent = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
             
-            // 绑定右上角 Logout 按钮
-            const topLogoutBtn = document.getElementById('top-logout-btn');
+            // Logout 按鈕
+            var topLogoutBtn = document.getElementById('top-logout-btn');
             if (topLogoutBtn) topLogoutBtn.addEventListener('click', performLogout);
-            // 绑定侧边栏底部 Logout 按钮
-            const sidebarLogoutBtn = document.getElementById('sidebar-logout-btn');
+            
+            var sidebarLogoutBtn = document.getElementById('sidebar-logout-btn');
             if (sidebarLogoutBtn) sidebarLogoutBtn.addEventListener('click', performLogout);
         });
     </script>

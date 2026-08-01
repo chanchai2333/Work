@@ -1,22 +1,10 @@
-// safetyinspect.js - 安全檢查頁面邏輯（整合 DWSS 權限控制）
+// safetyinspect.js - 安全检查页面逻辑（与 sitediary 功能对齐）
 document.addEventListener("DOMContentLoaded", function() {
-    // ---------- 權限檢查 ----------
-    DWSS_Auth.updateHeaderUser();
-    
-    // ---------- 數據管理 ----------
+    // ---------- 数据管理 ----------
     let inspectionData = [];
     const STORAGE_KEY = 'inspectionData';
 
-    // 安全檢查狀態映射
-    const SAFETY_STATUS_MAP = {
-        'draft': 'Draft',
-        'submitted-wsg': 'Submitted to WSG',
-        'submitted-ig': 'Submitted to IG',
-        'closed': 'Closed',
-        'reopen': 'Reopen',
-        'cancelled': 'Cancelled'
-    };
-
+    // 默认数据（含 pdfData 和 annotations 字段）
     const defaultInspections = [
         { id: "INSP-2025-1", status: "draft", site: "Treatment Plant", date: "2025-08-15", inspector: "John Doe", pdfData: null, annotations: [] },
         { id: "INSP-2025-2", status: "reopen", site: "Pipeline", date: "2025-08-14", inspector: "Jane Smith", pdfData: null, annotations: [] },
@@ -28,6 +16,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (stored) {
             try {
                 inspectionData = JSON.parse(stored);
+                // 确保每条记录都有 pdfData 和 annotations 字段
                 inspectionData.forEach(item => {
                     if (!item.hasOwnProperty('pdfData')) item.pdfData = null;
                     if (!item.hasOwnProperty('annotations')) item.annotations = [];
@@ -46,9 +35,10 @@ document.addEventListener("DOMContentLoaded", function() {
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(inspectionData));
     }
 
-    // ---------- 輔助函數 ----------
+    // ---------- 辅助函数 ----------
     function formatDate(dateString) {
         if (!dateString) return '';
+        // 如果已经是 "dd-mmm-yyyy" 格式（旧数据），转换为 ISO
         if (/^\d{2}-[A-Za-z]{3}-\d{4}$/.test(dateString)) {
             const parts = dateString.split('-');
             const monthMap = { 'Jan':'01','Feb':'02','Mar':'03','Apr':'04','May':'05','Jun':'06',
@@ -56,6 +46,7 @@ document.addEventListener("DOMContentLoaded", function() {
             const month = monthMap[parts[1]] || '01';
             return `${parts[2]}-${month}-${parts[0]}`;
         }
+        // 否则假设是 ISO 格式
         const date = new Date(dateString);
         if (isNaN(date)) return dateString;
         const d = String(date.getDate()).padStart(2,'0');
@@ -65,7 +56,15 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function getStatusText(status) {
-        return SAFETY_STATUS_MAP[status] || status;
+        const map = {
+            'draft': 'Draft',
+            'submitted-wsg': 'Submitted to WSG',
+            'submitted-ig': 'Submitted to IG',
+            'closed': 'Closed',
+            'reopen': 'Reopen',
+            'cancelled': 'Cancelled'
+        };
+        return map[status] || status;
     }
 
     function getSiteType(siteName) {
@@ -88,6 +87,7 @@ document.addEventListener("DOMContentLoaded", function() {
         return `${parts[2]}-${month}-${parts[0]}`;
     }
 
+    // ---------- 读取文件为 Base64 ----------
     function readFileAsBase64(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -97,25 +97,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // ---------- 生成狀態更改下拉選單（安全檢查專用） ----------
-    function generateSafetyStatusSelect(recordId) {
-        if (DWSS_Auth.canChangeStatus()) {
-            return `
-                <select class="status-change-select" data-id="${recordId}" title="Change Status">
-                    <option value="">📝 Change Status</option>
-                    <option value="draft">Draft</option>
-                    <option value="submitted-wsg">Submitted to WSG</option>
-                    <option value="submitted-ig">Submitted to IG</option>
-                    <option value="closed">Closed</option>
-                    <option value="reopen">Reopen</option>
-                    <option value="cancelled">Cancelled</option>
-                </select>
-            `;
-        }
-        return '';
-    }
-
-    // ---------- 渲染和統計 ----------
+    // ---------- 渲染和统计 ----------
     let currentFilters = { site: "all", status: "all" };
 
     function updateStats() {
@@ -152,87 +134,25 @@ document.addEventListener("DOMContentLoaded", function() {
             noResults.style.display = filtered.length === 0 ? 'block' : 'none';
         }
 
-        const userCanChangeStatus = DWSS_Auth.canChangeStatus();
-
         filtered.forEach(item => {
             const row = document.createElement('tr');
-            
-            // 根據權限生成操作按鈕
-            let actionButtons = `
-                <td>
-                    <button class="action-btn view-btn" data-id="${item.id}" title="View"><i class="fas fa-eye"></i></button>
-                    <button class="action-btn edit-btn" data-id="${item.id}" title="Edit"><i class="fas fa-edit"></i></button>
-                    ${generateSafetyStatusSelect(item.id)}
-                    <button class="action-btn delete-btn" data-id="${item.id}" title="Delete"><i class="fas fa-trash"></i></button>
-            `;
-            
-            if (!userCanChangeStatus) {
-                actionButtons += `<span class="permission-lock-hint"><i class="fas fa-lock"></i> Status change requires higher permission</span>`;
-            }
-            
-            actionButtons += `</td>`;
-            
             row.innerHTML = `
                 <td>${item.id}</td>
                 <td><span class="status-badge status-${item.status}">${getStatusText(item.status)}</span></td>
                 <td>${item.site}</td>
                 <td>${formatDisplayDate(item.date)}</td>
                 <td>${item.inspector}</td>
-                ${actionButtons}
+                <td>
+                    <button class="action-btn view-btn" data-id="${item.id}"><i class="fas fa-eye"></i></button>
+                    <button class="action-btn edit-btn" data-id="${item.id}"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn delete-btn" data-id="${item.id}"><i class="fas fa-trash"></i></button>
+                </td>
             `;
             tbody.appendChild(row);
         });
 
         attachActionEvents();
         updateStats();
-        
-        // 綁定狀態更改事件
-        if (userCanChangeStatus) {
-            bindSafetyStatusChangeEvents();
-        }
-    }
-
-    // ---------- 狀態更改事件 ----------
-    function bindSafetyStatusChangeEvents() {
-        document.querySelectorAll('.status-change-select').forEach(select => {
-            select.removeEventListener('change', handleSafetyStatusChange);
-            select.addEventListener('change', handleSafetyStatusChange);
-        });
-    }
-
-    function handleSafetyStatusChange(e) {
-        const recordId = e.target.getAttribute('data-id');
-        const newStatus = e.target.value;
-        
-        if (!newStatus) return;
-        
-        const record = inspectionData.find(r => r.id === recordId);
-        if (!record) return;
-        
-        const oldStatus = getStatusText(record.status);
-        const newStatusText = getStatusText(newStatus);
-        const user = DWSS_Auth.getCurrentUser();
-        
-        if (confirm(
-            '⚠️ Change Status Confirmation\n\n' +
-            'Inspection ID: ' + recordId + '\n' +
-            'From: ' + oldStatus + '\n' +
-            'To: ' + newStatusText + '\n' +
-            'Changed by: ' + (user ? user.userName : 'Unknown') + ' (' + DWSS_Auth.getRoleName() + ')\n\n' +
-            'Are you sure you want to change the status?'
-        )) {
-            record.status = newStatus;
-            record.statusChangedBy = user ? user.userName : 'Unknown';
-            record.statusChangedAt = new Date().toISOString();
-            record.statusChangedRole = DWSS_Auth.getRoleName();
-            
-            saveData();
-            renderInspectionTable();
-            
-            alert('✅ Status changed successfully!\n\n' + oldStatus + ' → ' + newStatusText);
-        } else {
-            e.target.value = '';
-        }
     }
 
     function attachActionEvents() {
@@ -250,7 +170,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // ---------- 操作處理 ----------
+    // ---------- 操作处理 ----------
     function handleView(e) {
         const id = e.currentTarget.getAttribute('data-id');
         const doc = inspectionData.find(d => d.id === id);
@@ -266,7 +186,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 annotations: doc.annotations || []
             };
             sessionStorage.setItem('currentDocument', JSON.stringify(fullDoc));
-            window.location.href = 'safetyinspectdocument.html';
+            window.location.href = 'safetyinspectdocument.html'; // 需自行创建对应查看页面
         } else {
             alert('Document not found');
         }
@@ -283,11 +203,12 @@ document.addEventListener("DOMContentLoaded", function() {
                 site: doc.site,
                 date: formatDisplayDate(doc.date),
                 inspector: doc.inspector,
-                submittedBy: doc.inspector,
-                type: 'Safety Inspection',
+                submittedBy: doc.inspector,  // editpdf 使用 submittedBy 字段
+                type: 'Safety Inspection',   // 固定类型，或可从数据中读取
                 pdfData: doc.pdfData || '',
                 annotations: doc.annotations || []
             }));
+            // 已修復：將原先的 'editpdf.html' 更改為 'editsafetypdf.html'
             window.location.href = 'editsafetypdf.html'; 
         } else {
             alert('Document not found');
@@ -307,7 +228,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    // ---------- 篩選器事件 ----------
+    // ---------- 筛选器事件 ----------
     function setupFilterEvents() {
         document.querySelectorAll('.filter-group').forEach(group => {
             const toggle = group.querySelector('.filter-toggle');
@@ -352,7 +273,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    // ---------- 新增檢查模態框（整合權限） ----------
+    // ---------- 新增检查模态框 ----------
     function setupAddInspectionModal() {
         const addBtn = document.getElementById('add-inspection-btn');
         const modal = document.getElementById('add-inspect-modal');
@@ -364,64 +285,17 @@ document.addEventListener("DOMContentLoaded", function() {
             addBtn.addEventListener('click', () => {
                 modal.style.display = 'flex';
                 form.reset();
-                
-                // ★★★ 根據權限調整狀態選項 ★★★
-                const statusSelect = document.getElementById('input-inspect-status');
-                if (statusSelect) {
-                    if (!DWSS_Auth.canChangeStatus()) {
-                        // 低級用戶：只能提交
-                        statusSelect.innerHTML = '<option value="submitted-wsg">Submitted to WSG</option>';
-                        statusSelect.value = 'submitted-wsg';
-                        statusSelect.disabled = true;
-                        
-                        let hint = document.getElementById('submit-only-hint');
-                        if (!hint) {
-                            hint = document.createElement('div');
-                            hint.id = 'submit-only-hint';
-                            hint.style.cssText = 'color: #856404; background: #fff3cd; padding: 10px; border-radius: 6px; margin: 10px 0; font-size: 0.85rem;';
-                            hint.innerHTML = '<i class="fas fa-info-circle"></i> <strong>Submit Only Mode:</strong> You can only submit inspections. Status changes require Admin/Officer/AEI permission.';
-                            statusSelect.parentNode.appendChild(hint);
-                        }
-                    } else {
-                        // 高級用戶：可以選擇任何狀態
-                        statusSelect.innerHTML = `
-                            <option value="draft">Draft</option>
-                            <option value="submitted-wsg">Submitted to WSG</option>
-                            <option value="submitted-ig">Submitted to IG</option>
-                            <option value="closed">Closed</option>
-                            <option value="reopen">Reopen</option>
-                            <option value="cancelled">Cancelled</option>
-                        `;
-                        statusSelect.disabled = false;
-                        
-                        const hint = document.getElementById('submit-only-hint');
-                        if (hint) hint.remove();
-                    }
-                }
-                
-                // 自動填充檢查員名稱
-                const user = DWSS_Auth.getCurrentUser();
-                const inspectorInput = document.getElementById('input-inspect-by');
-                if (user && inspectorInput) {
-                    inspectorInput.value = user.userName;
-                }
             });
         }
         if (cancelBtn && modal) {
             cancelBtn.addEventListener('click', () => {
                 modal.style.display = 'none';
                 form?.reset();
-                const hint = document.getElementById('submit-only-hint');
-                if (hint) hint.remove();
             });
         }
         if (modal) {
             modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    modal.style.display = 'none';
-                    const hint = document.getElementById('submit-only-hint');
-                    if (hint) hint.remove();
-                }
+                if (e.target === modal) modal.style.display = 'none';
             });
         }
         if (form) {
@@ -449,7 +323,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     id,
                     status,
                     site,
-                    date,
+                    date,  // ISO 格式
                     inspector,
                     pdfData: pdfData,
                     annotations: []
@@ -460,8 +334,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 updateStats();
                 modal.style.display = 'none';
                 form.reset();
-                const hint = document.getElementById('submit-only-hint');
-                if (hint) hint.remove();
                 alert('New inspection added successfully!');
             });
         }

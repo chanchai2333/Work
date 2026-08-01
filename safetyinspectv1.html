@@ -6,91 +6,8 @@
     <title data-i18n="platform">AEL DWSS - Safety Inspection</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/safetyinspect.css">
     <script src="scripts/theme-config.js"></script>
-    <style>
-        /* 狀態更改下拉選單樣式 */
-        .status-change-select {
-            padding: 6px 8px;
-            border-radius: 6px;
-            border: 1px solid #ddd;
-            font-size: 0.85rem;
-            cursor: pointer;
-            background: white;
-            min-width: 120px;
-            vertical-align: middle;
-        }
-        .status-change-select:hover {
-            border-color: #3498db;
-        }
-        .status-change-select:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 2px rgba(52,152,219,0.2);
-        }
-
-        /* 權限鎖定提示 */
-        .permission-lock-hint {
-            font-size: 0.7rem;
-            color: #e74c3c;
-            display: inline-block;
-            margin-left: 8px;
-            white-space: nowrap;
-        }
-
-        /* 操作按鈕樣式 */
-        .action-btn {
-            padding: 8px 12px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.9rem;
-            min-width: 36px;
-            min-height: 36px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            margin: 2px;
-            vertical-align: middle;
-        }
-        .view-btn { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
-        .view-btn:hover { background: linear-gradient(135deg, #2980b9, #2471a3); transform: translateY(-2px); }
-        .edit-btn { background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; }
-        .edit-btn:hover { background: linear-gradient(135deg, #27ae60, #219653); transform: translateY(-2px); }
-        .delete-btn { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; }
-        .delete-btn:hover { background: linear-gradient(135deg, #c0392b, #e74c3c); transform: translateY(-2px); }
-
-        /* 狀態標籤顏色 */
-        .status-draft { background: rgba(149,165,166,0.2); color: #848f90; }
-        .status-submitted-wsg { background: rgba(52,152,219,0.2); color: #2980b9; }
-        .status-submitted-ig { background: rgba(46,204,113,0.2); color: #27ae60; }
-        .status-closed { background: rgba(39,174,96,0.2); color: #1e8449; }
-        .status-reopen { background: rgba(243,156,18,0.2); color: #d35400; }
-        .status-cancelled { background: rgba(231,76,60,0.2); color: #c0392b; }
-
-        .status-badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            display: inline-block;
-            text-align: center;
-            white-space: nowrap;
-        }
-
-        /* 響應式設計 */
-        @media (max-width: 768px) {
-            .action-btn {
-                width: 100%;
-                margin: 2px 0;
-            }
-            .status-change-select {
-                width: 100%;
-                margin: 2px 0;
-            }
-        }
-    </style>
 </head>
 <body>
     <!-- 主内容区域 -->
@@ -110,6 +27,7 @@
                 </div>
             </div>
         </div>
+        <!-- 搜索栏已移除，仅保留 Add New 按钮 -->
         <div class="search-buttons">
             <div class="nav-buttons">
                 <button id="add-inspection-btn">
@@ -220,6 +138,7 @@
                 <label data-i18n="inspector">Inspector</label>
                 <input type="text" id="input-inspect-by" required>
 
+                <!-- PDF 上传 -->
                 <label for="input-inspect-pdf">Upload PDF (optional)</label>
                 <input type="file" id="input-inspect-pdf" accept=".pdf">
 
@@ -233,7 +152,6 @@
 
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
-    <script src="scripts/auth-check.js"></script>
     <script src="scripts/safetyinspect.js"></script>
     <script src="scripts/sidebar.js"></script>
 
