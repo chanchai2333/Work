@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AEL DWSS - Labour Wage</title>
+    <title>AEL DWSS - Site Diary</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles/main.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
@@ -123,10 +123,10 @@
         <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
         <ul class="menu">
             <li><a href="index.html"><i class="fas fa-home"></i><span class="menu-text">Dashboard</span></a></li>
-            <li><a href="sitediary.html"><i class="fas fa-book"></i><span class="menu-text">Site Diary</span></a></li>
+            <li><a href="sitediary.html" class="active"><i class="fas fa-book"></i><span class="menu-text">Site Diary</span></a></li>
             <li><a href="safetyinspect.html"><i class="fas fa-clipboard-check"></i><span class="menu-text">Safety Inspection</span></a></li>
             <li><a href="sitelocations.html"><i class="fas fa-map-marked-alt"></i><span class="menu-text">Site Locations</span></a></li>
-            <li><a href="labourwage.html" class="active"><i class="fas fa-money-bill-wave"></i><span class="menu-text">Labour Wage</span></a></li>
+            <li><a href="labourwage.html"><i class="fas fa-money-bill-wave"></i><span class="menu-text">Labour Wage</span></a></li>
             <li><a href="settings.html"><i class="fas fa-cogs"></i><span class="menu-text">System Settings</span></a></li>
             <li><a href="usermanagement.html"><i class="fas fa-user-circle"></i><span class="menu-text">User Management</span></a></li>
         </ul>
@@ -134,7 +134,7 @@
 
     <div class="main-content">
         <div class="header">
-            <h1>Labour Wage</h1>
+            <h1>Site Diary</h1>
             <div class="header-controls">
                 <div class="user-date-row">
                     <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
@@ -146,7 +146,7 @@
         <div class="document-page">
             <div class="document-header">
                 <div class="doc-title-section">
-                    <h2><i class="fas fa-file-alt"></i> <span id="docTitle">Labour Wage Document</span> <span class="doc-status" id="docStatus">Draft</span></h2>
+                    <h2><i class="fas fa-file-alt"></i> <span id="docTitle">Site Diary Document</span> <span class="doc-status" id="docStatus">Draft</span></h2>
                 </div>
                 <div class="document-actions">
                     <button class="btn btn-submit" id="submit-btn"><i class="fas fa-paper-plane"></i> Submit</button>
@@ -260,9 +260,6 @@
                 })
             }
 
-            function goBack() {
-                window.location.href = 'sitediary.html';
-            }
 
             function bindDrawingEvents() {
                 if (!container) return;
@@ -327,5 +324,15 @@
             });
     })})();
     </script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 強制設定 Site Diary 標題
+        document.title = 'AEL DWSS - Site Diary';
+        
+        // 同時確保 h1 正確
+        var h1 = document.querySelector('.header h1');
+        if (h1) h1.textContent = 'Site Diary';
+    });
+</script>
 </body>
 </html>

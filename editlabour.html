@@ -327,5 +327,15 @@
             });
     })})();
     </script>
+        <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 強制設定標題
+        document.title = 'AEL DWSS - Labour Wage';
+        
+        // 同時確保 h1 正確
+        var h1 = document.querySelector('.header h1');
+        if (h1) h1.textContent = 'Labour Wage';
+    });
+</script>
 </body>
 </html>
