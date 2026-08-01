@@ -281,7 +281,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     pdfData: record.pdfData || '',
                     annotations: record.annotations || []
                 }));
-                window.location.href = 'editlabour.html';
+                window.location.href = 'editdiary.html';
             } else {
                 alert('Document not found');
             }

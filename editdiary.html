@@ -219,13 +219,6 @@
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
 
-    <!-- ★ 設定預設模板 ★ -->
-    <script>
-        var LABOUR_WAGE_TEMPLATE_B64 = "_64"
-        if (LABOUR_WAGE_TEMPLATE_B64 && LABOUR_WAGE_TEMPLATE_B64 !== "TEMPLATE_B64" && LABOUR_WAGE_TEMPLATE_B64.length > 100) {
-            sessionStorage.setItem('DEFAULT_PDF_TEMPLATE', LABOUR_WAGE_TEMPLATE_B64);
-        }
-    </script>
 
     <!-- ★ PDF 編輯器（共用） ★ -->
     <script src="scripts/editpdf.js"></script>
@@ -250,80 +243,18 @@
         })();
     </script>
     <script>
-    // 覆蓋 Back 按鈕（喺 editpdf.js 載入之後）
+    // 覆蓋 Back 按鈕
     document.addEventListener('DOMContentLoaded', function() {
         setTimeout(function() {
             var backBtn = document.getElementById('back-btn');
             if (backBtn) {
                 backBtn.addEventListener('click', function() {
                     window.location.href = 'sitediary.html';
-                })
+                });
             }
-
-
-            function bindDrawingEvents() {
-                if (!container) return;
-                container.removeEventListener('mousedown', startDrawing);
-                container.removeEventListener('mousemove', draw);
-                container.removeEventListener('mouseup', stopDrawing);
-                container.removeEventListener('mouseleave', stopDrawing);
-                container.addEventListener('mousedown', startDrawing);
-                container.addEventListener('mousemove', draw);
-                container.addEventListener('mouseup', stopDrawing);
-                container.addEventListener('mouseleave', stopDrawing);
-                container.removeEventListener('touchstart', startDrawing);
-                container.removeEventListener('touchmove', draw);
-                container.removeEventListener('touchend', stopDrawing);
-                container.addEventListener('touchstart', startDrawing, { passive: false });
-                container.addEventListener('touchmove', draw, { passive: false });
-                container.addEventListener('touchend', stopDrawing, { passive: false });
-            }
-
-            function bindActionButtons() {
-                document.getElementById('save-btn')?.addEventListener('click', saveChanges);
-                document.getElementById('cancel-btn')?.addEventListener('click', cancelEditing);
-                document.getElementById('back-to-wage-btn')?.addEventListener('click', goBack);
-                document.getElementById('undo-btn')?.addEventListener('click', undo);
-                document.getElementById('delete-selected-btn')?.addEventListener('click', deleteSelected);
-                if (lockBtn) lockBtn.addEventListener('click', toggleLock);
-            }
-
-            window.addEventListener('resize', () => {
-                alignDrawCanvas();
-                updateTextPositions();
-            });
-
-            document.addEventListener('DOMContentLoaded', () => {
-                const doc = loadDocumentData();
-                if (!doc) { showError('No document data available.'); return; }
-                
-                let pdfSrc = doc.pdfData ? 'data:application/pdf;base64,' + doc.pdfData : (doc.pdfUrl || null);
-                if (pdfSrc) {
-                    loadPDF(pdfSrc);
-                } else {
-                    canvas.style.display = 'none';
-                    drawCanvas.style.display = 'block';
-                    drawCanvas.width = 800 * renderScale;
-                    drawCanvas.height = 1000 * renderScale;
-                    drawCanvas.style.width = '800px';
-                    drawCanvas.style.height = '1000px';
-                    drawCtx.fillStyle = '#ffffff';
-                    drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
-                    drawCtx.fillStyle = '#666';
-                    drawCtx.font = `${20 * renderScale}px Arial`;
-                    drawCtx.fillText('No PDF attached. You can still add annotations.', 30 * renderScale, 100 * renderScale);
-                }
-                drawCanvas.style.pointerEvents = 'none';
-                setupTools();
-                bindDrawingEvents();
-                setupNavigation();
-                bindActionButtons();
-                history = [];
-                saveHistory();
-                updateLockButtonState();
-            });
-    })})();
-    </script>
+        }, 500);
+    });
+</script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         // 強制設定 Site Diary 標題
@@ -334,5 +265,12 @@
         if (h1) h1.textContent = 'Site Diary';
     });
 </script>
+<!-- Site Diary 唔需要預設模板，清除任何舊模板 -->
+<script>
+    sessionStorage.removeItem('DEFAULT_PDF_TEMPLATE');
+</script>
+
+<!-- ★ PDF 編輯器（共用） ★ -->
+<script src="scripts/editpdf.js"></script>
 </body>
 </html>
