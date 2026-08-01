@@ -38,6 +38,8 @@
     const zoomLevelSpan = document.querySelector('.zoom-level');
     const lockBtn = document.getElementById('lock-btn');
     const submitBtn = document.getElementById('submit-btn');
+    const approveBtn = document.getElementById('approve-btn');
+    const rejectBtn = document.getElementById('reject-btn');
     
     let currentColor = '#3498db';
     let currentSize = 3;
@@ -1082,6 +1084,18 @@
         document.getElementById('delete-selected-btn')?.addEventListener('click', deleteSelected);
         if (lockBtn) lockBtn.addEventListener('click', toggleLock);
         if (submitBtn) submitBtn.addEventListener('click', submitDocument);
+
+        // 【新增】綁定審批按鈕
+        if (approveBtn) {
+            approveBtn.addEventListener('click', function() {
+                alert('Approve functionality not yet implemented.');
+            });
+        }
+        if (rejectBtn) {
+            rejectBtn.addEventListener('click', function() {
+                alert('Reject functionality not yet implemented.');
+            });
+        }
     }
 
     window.addEventListener('resize', () => {
@@ -1094,6 +1108,11 @@
         syncGlobalDate();
         const doc = loadDocumentData();
         if (!doc) { showError('No document data available.'); return; }
+
+        // 【新增】如果需要默认隐藏审批按钮，取消下面两行的注释
+        // if (approveBtn) approveBtn.style.display = 'none';
+        // if (rejectBtn) rejectBtn.style.display = 'none';
+
         let pdfSrc = doc.pdfData ? 'data:application/pdf;base64,' + doc.pdfData : (doc.pdfUrl || null);
         if (pdfSrc) loadPDF(pdfSrc);
         else {

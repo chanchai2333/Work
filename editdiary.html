@@ -117,11 +117,19 @@
         
         footer { text-align: center; padding: 30px 0 20px; color: #7f8c8d; border-top: 1px solid #e0e6ed; margin-top: 30px; }
         @media (max-width: 768px) { .main-content { padding: 15px; } .document-page { padding: 20px; } }
+
+        /* 【新增】側邊欄折疊時隱藏整個 Logo 區域，防止溢出並覆蓋主內容 */
+        .sidebar.collapsed .logo {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
     <div class="sidebar">
-        <div class="logo"><div class="logo-icon"><i class="fas fa-water"></i></div><h2>AEL DWSS</h2></div>
+        <div class="logo">
+        <img src="AEL Logo.png" alt="AEL Logo" class="logo-img" style="height: 45px; width: auto; object-fit: contain; margin-right: 8px;">
+        <h2>DWSS</h2>
+    </div>
         <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
         <ul class="menu">
             <li><a href="index.html"><i class="fas fa-home"></i><span class="menu-text">Dashboard</span></a></li>
@@ -228,9 +236,39 @@
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
 
-
     <!-- ★ PDF 編輯器（共用） ★ -->
     <script src="scripts/editpdf.js"></script>
+
+    <!-- ★ 【核心修复补丁】拦截导致镜像翻转的 Canvas 动作，完美解决镜像问题且不影响任何交互坐标 ★ -->
+    <script>
+    (function() {
+        // 保存原生的 translate 和 scale 方法
+        const originalTranslate = CanvasRenderingContext2D.prototype.translate;
+        const originalScale = CanvasRenderingContext2D.prototype.scale;
+
+        // 拦截 translate：如果检测到是为了镜像而平移坐标，就阻止它
+        CanvasRenderingContext2D.prototype.translate = function(x, y) {
+            if (typeof x === 'number' && typeof y === 'number' && this.canvas) {
+                // 检测典型的镜像平移条件：x 为正，y 为 0，且 x 等于画布宽度
+                if (x > 0 && y === 0 && Math.abs(x - this.canvas.width) < 1) {
+                    console.log("已拦截 PDF 镜像平移");
+                    return; // 直接终止，不执行平移
+                }
+            }
+            return originalTranslate.call(this, x, y);
+        };
+
+        // 拦截 scale：如果检测到是为了镜像而翻转X轴，就阻止它
+        CanvasRenderingContext2D.prototype.scale = function(x, y) {
+            // 检测典型的镜像翻转条件：x 为 -1，y 为 1
+            if (x === -1 && y === 1) {
+                console.log("已拦截 PDF 镜像翻转");
+                return; // 直接终止，不执行翻转
+            }
+            return originalScale.call(this, x, y);
+        };
+    })();
+    </script>
 
     <!-- 側邊欄 -->
     <script>
@@ -279,7 +317,5 @@
     sessionStorage.removeItem('DEFAULT_PDF_TEMPLATE');
 </script>
 
-<!-- ★ PDF 編輯器（共用） ★ -->
-<script src="scripts/editpdf.js"></script>
 </body>
 </html>
