@@ -27,15 +27,27 @@ function loadSidebar() {
             }
         });
     }
+
+    // 【新增】注入专用的 CSS 补丁，确保折叠时 Logo 能自动隐藏，不影响其他布局
+    if (!document.getElementById('sidebar-logo-patch')) {
+        const logoPatchStyle = document.createElement('style');
+        logoPatchStyle.id = 'sidebar-logo-patch';
+        logoPatchStyle.textContent = `
+            /* 侧边栏处于折叠状态时，隐藏整个 Logo 区域（图片和文字） */
+            .sidebar.collapsed .logo {
+                display: none !important;
+            }
+        `;
+        document.head.appendChild(logoPatchStyle);
+    }
     
-    // 侧边栏HTML - 只保留 Users 和 Teams，并添加底部 Logout 按钮
+    // 侧边栏HTML - 已替换Logo图标为图片，其余保持原功能
     const sidebarHTML = `
         <div class="sidebar">
             <div class="logo">
-                <div class="logo-icon">
-                    <i class="fas fa-water"></i>
-                </div>
-                <h2>AEL DWSS</h2>
+                <!-- 将原来的图标替换为 AEL Logo.png -->
+                <img src="AEL Logo.png" alt="AEL Logo" class="logo-img" style="height: 45px; width: auto; object-fit: contain; margin-right: 8px;">
+                <h2>DWSS</h2>
             </div>
             
             <button class="toggle-btn">
