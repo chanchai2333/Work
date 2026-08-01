@@ -104,6 +104,8 @@
         .text-annotation.locked .delete-btn { display: none !important; }
         .text-annotation .delete-btn:hover { background: #c0392b; }
         
+        .sidebar.collapsed .logo-img { display: none; }
+        
         .tick-mark { position: absolute; z-index: 25; pointer-events: auto; color: #1a73e8; font-weight: bold; font-size: 18px; cursor: move; user-select: none; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; }
         .tick-mark.locked { cursor: default !important; }
         .tick-mark .delete-btn { 
@@ -121,7 +123,9 @@
 </head>
 <body>
     <div class="sidebar">
-        <div class="logo"><div class="logo-icon"><i class="fas fa-water"></i></div><h2>AEL DWSS</h2></div>
+        <div class="logo">
+        <img src="AEL Logo.png" alt="AEL Logo" class="logo-img" style="height: 45px; width: auto; object-fit: contain; margin-right: 8px;">
+        <h2>DWSS</h2></div>
         <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
         <ul class="menu">
             <li><a href="index.html"><i class="fas fa-home"></i><span class="menu-text">Dashboard</span></a></li>
