@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEL DWSS - Labour Wage</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles/main.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="scripts/theme-config.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { display: flex; min-height: 100vh; background-color: #f5f7fa; color: #333; }
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #e0e6ed; }
+        .header h1 { color: #2c3e50; font-size: 2rem; }
+        .header-controls { display: flex; align-items: center; gap: 15px; }
+        .date-display { background: #eef2f6; padding: 8px 15px; border-radius: 8px; font-size: 16px; font-weight: 500; color: #308fee; }
+        .date-display i { margin-right: 8px; }
+        .user-date-row { display: flex; align-items: center; gap: 16px; }
+        .user-btn { background: #2563eb; color: #fff; border: none; border-radius: 20px; padding: 10px 20px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        
+        .document-page { background: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .document-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eaeaea; flex-wrap: wrap; gap: 15px; }
+        .doc-title-section { flex: 1; min-width: 300px; }
+        .document-header h2 { font-size: 1.6rem; color: #2c3e50; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .doc-status { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; }
+        .status-draft { background: rgba(149,165,166,0.2); color: #848f90; }
+        .status-submitted { background: rgba(52,152,219,0.2); color: #2980b9; }
+        .status-endorsed { background: rgba(46,204,113,0.2); color: #27ae60; }
+        .status-cancelled { background: rgba(231,76,60,0.2); color: #c0392b; }
+        .status-confirm { background: rgba(155,89,182,0.2); color: #8e44ad; }
+        .status-double-check { background: rgba(243,156,18,0.2); color: #d35400; }
+        
+        .document-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; transition: all 0.3s ease; white-space: nowrap; color: #fff; text-decoration: none; }
+        .btn:hover { transform: translateY(-2px); }
+        .btn-primary { background: #3498db; }
+
+        .document-actions .btn-submit {
+            background: #28a745;
+            box-shadow: 0 2px 5px rgba(40,167,69,0.3);
+        }
+        .document-actions .btn-submit:hover {
+            background: #218838;
+            box-shadow: 0 4px 8px rgba(40,167,69,0.4);
+        }
+        .document-actions .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        .btn-primary:hover { background: #2980b9; }
+        .btn-save { background: #2ecc71; }
+        .btn-save:hover { background: #27ae60; }
+        .btn-cancel { background: #e74c3c; }
+        .btn-cancel:hover { background: #c0392b; }
+        .btn-warning { background: #f39c12; }
+        .btn-purple { background: #9b59b6; }
+        
+        .document-meta { background: #f8f9fa; border-radius: 12px; padding: 20px 30px; margin: 20px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+        .meta-item { display: flex; flex-direction: column; }
+        .meta-label { font-weight: 600; color: #2c3e50; margin-bottom: 5px; font-size: 0.85rem; }
+        .meta-value { color: #555; font-size: 0.95rem; font-weight: 500; padding: 8px 12px; border-radius: 6px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        
+        .pdf-toolbar-ribbon { display: flex; flex-wrap: wrap; gap: 4px 16px; background: #f8fafc; padding: 8px 16px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #e2e8f0; align-items: center; }
+        .ribbon-group { display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-right: 1px solid #e2e8f0; }
+        .ribbon-group:last-child { border-right: none; }
+        .ribbon-group-label { font-size: 10px; font-weight: 600; color: #64748b; margin-right: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+        .tool-btn { padding: 4px 10px; border: 1px solid transparent; background: transparent; border-radius: 4px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; color: #1e293b; transition: 0.15s; white-space: nowrap; }
+        .tool-btn:hover { background: #eef2f6; border-color: #d1d9e6; }
+        .tool-btn.active { background: #2d7ee7; color: #fff; border-color: #2d7ee7; }
+        .tool-btn i { font-size: 13px; }
+        .property-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .property-group { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #475569; }
+        .property-group label { font-weight: 500; }
+        .property-group input[type="color"] { width: 24px; height: 24px; border: 1px solid #d1d9e6; border-radius: 4px; cursor: pointer; }
+        .property-group input[type="range"] { width: 60px; cursor: pointer; }
+        .property-group span { min-width: 28px; font-size: 11px; }
+        
+        .pdf-editor-container { display: flex; flex-direction: column; gap: 12px; }
+        .pdf-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #f1f5f9; padding: 8px 12px; border-radius: 6px; }
+        .nav-btn { background: #3498db; color: #fff; border: none; border-radius: 4px; padding: 6px 12px; cursor: pointer; }
+        .nav-btn:hover { background: #2980b9; }
+        .page-info { font-size: 14px; font-weight: 500; color: #334155; }
+        .pdf-canvas-container { position: relative; overflow: auto; background: #e0e0e0; border-radius: 8px; min-height: 500px; display: flex; justify-content: center; }
+        #pdf-canvas { display: block; box-shadow: 0 4px 12px rgba(0,0,0,0.2); background: #fff; z-index: 1; }
+        #draw-canvas { position: absolute; top: 0; left: 0; z-index: 15; }
+        
+        .text-annotation { position: absolute; cursor: move; min-width: 20px; min-height: 20px; padding: 2px 6px; background: transparent; border: 1px solid transparent; font-family: Arial, sans-serif; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word; outline: none; z-index: 25; user-select: none; box-sizing: border-box; }
+        .text-annotation:hover { border: 1px dashed #3498db; }
+        .text-annotation.editing { border: 2px solid #3498db; background: rgba(255,255,255,0.95); cursor: text; z-index: 30; }
+        .text-annotation.locked { cursor: default; border: 1px solid transparent !important; background: transparent !important; }
+        .text-annotation .delete-btn { 
+            position: absolute; top: -12px; right: -12px; width: 20px; height: 20px; 
+            background: #e74c3c; color: #fff; border: 2px solid #fff; border-radius: 50%; 
+            font-size: 12px; line-height: 20px; text-align: center; cursor: pointer; display: none; 
+            z-index: 35; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .text-annotation:hover .delete-btn { display: block; }
+        .text-annotation.locked .delete-btn { display: none !important; }
+        .text-annotation .delete-btn:hover { background: #c0392b; }
+        
+        .tick-mark { position: absolute; z-index: 25; pointer-events: auto; color: #1a73e8; font-weight: bold; font-size: 18px; cursor: move; user-select: none; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; }
+        .tick-mark.locked { cursor: default !important; }
+        .tick-mark .delete-btn { 
+            position: absolute; top: -12px; right: -12px; width: 20px; height: 20px; 
+            background: #e74c3c; color: #fff; border: 2px solid #fff; border-radius: 50%; 
+            font-size: 12px; line-height: 20px; text-align: center; cursor: pointer; display: none; 
+            z-index: 35; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .tick-mark:hover .delete-btn { display: block; }
+        .tick-mark.locked .delete-btn { display: none !important; }
+        
+        footer { text-align: center; padding: 30px 0 20px; color: #7f8c8d; border-top: 1px solid #e0e6ed; margin-top: 30px; }
+        @media (max-width: 768px) { .main-content { padding: 15px; } .document-page { padding: 20px; } }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo"><div class="logo-icon"><i class="fas fa-water"></i></div><h2>AEL DWSS</h2></div>
+        <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
+        <ul class="menu">
+            <li><a href="index.html"><i class="fas fa-home"></i><span class="menu-text">Dashboard</span></a></li>
+            <li><a href="sitediary.html"><i class="fas fa-book"></i><span class="menu-text">Site Diary</span></a></li>
+            <li><a href="safetyinspect.html"><i class="fas fa-clipboard-check"></i><span class="menu-text">Safety Inspection</span></a></li>
+            <li><a href="sitelocations.html"><i class="fas fa-map-marked-alt"></i><span class="menu-text">Site Locations</span></a></li>
+            <li><a href="labourwage.html" class="active"><i class="fas fa-money-bill-wave"></i><span class="menu-text">Labour Wage</span></a></li>
+            <li><a href="settings.html"><i class="fas fa-cogs"></i><span class="menu-text">System Settings</span></a></li>
+            <li><a href="usermanagement.html"><i class="fas fa-user-circle"></i><span class="menu-text">User Management</span></a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>Labour Wage</h1>
+            <div class="header-controls">
+                <div class="user-date-row">
+                    <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
+                    <button class="user-btn"><i class="fas fa-user"></i> John Doe</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="document-page">
+            <div class="document-header">
+                <div class="doc-title-section">
+                    <h2><i class="fas fa-file-alt"></i> <span id="docTitle">Labour Wage Document</span> <span class="doc-status" id="docStatus">Draft</span></h2>
+                </div>
+                <div class="document-actions">
+                    <button class="btn btn-submit" id="submit-btn"><i class="fas fa-paper-plane"></i> Submit</button>
+                    <button class="btn btn-save" id="save-btn"><i class="fas fa-save"></i> Save Changes</button>
+                    <button class="btn btn-cancel" id="cancel-btn"><i class="fas fa-times"></i> Cancel</button>
+                    <button class="btn btn-primary" id="back-btn"><i class="fas fa-arrow-left"></i> Back</button>
+                </div>
+            </div>
+
+            <div class="document-meta">
+                <div class="meta-item"><span class="meta-label">Document ID:</span><span class="meta-value" id="docId">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Document Type:</span><span class="meta-value" id="docType">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Site:</span><span class="meta-value" id="docSite">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Period:</span><span class="meta-value" id="docPeriod">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Submitted By:</span><span class="meta-value" id="docAuthor">N/A</span></div>
+            </div>
+
+            <div class="pdf-toolbar-ribbon">
+                <div class="ribbon-group">
+                    <span class="ribbon-group-label">Select</span>
+                    <button class="tool-btn active" data-tool="select"><i class="fas fa-mouse-pointer"></i> Select</button>
+                </div>
+                <div class="ribbon-group">
+                    <span class="ribbon-group-label">Annotate</span>
+                    <button class="tool-btn" data-tool="text"><i class="fas fa-font"></i> Text</button>
+                    <button class="tool-btn" data-tool="highlight"><i class="fas fa-highlighter"></i> Highlight</button>
+                </div>
+                <div class="ribbon-group">
+                    <span class="ribbon-group-label">Shapes</span>
+                    <button class="tool-btn" data-tool="rectangle"><i class="fas fa-square"></i> Rect</button>
+                    <button class="tool-btn" data-tool="ellipse"><i class="fas fa-circle"></i> Oval</button>
+                    <button class="tool-btn" data-tool="arrow"><i class="fas fa-arrow-right"></i> Arrow</button>
+                    <button class="tool-btn" data-tool="line"><i class="fas fa-minus"></i> Line</button>
+                </div>
+                <div class="ribbon-group">
+                    <span class="ribbon-group-label">Marks</span>
+                    <button class="tool-btn" data-tool="tick"><i class="fas fa-check"></i> Tick</button>
+                </div>
+                <div class="ribbon-group" style="flex:1; justify-content:flex-end;">
+                    <div class="property-controls">
+                        <div class="property-group"><label>Color:</label><input type="color" id="color-picker" value="#3498db"></div>
+                        <div class="property-group"><label>Size:</label><input type="range" id="size-slider" min="1" max="10" value="3"><span id="size-value">3px</span></div>
+                        <div class="property-group"><label>Opacity:</label><input type="range" id="opacity-slider" min="10" max="100" value="100"><span id="opacity-value">100%</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pdf-editor-container">
+                <div class="pdf-controls">
+                    <button class="nav-btn" id="prev-page"><i class="fas fa-chevron-left"></i></button>
+                    <span class="page-info">Pages <span id="current-page">1</span> of <span id="total-pages">1</span></span>
+                    <button class="nav-btn" id="next-page"><i class="fas fa-chevron-right"></i></button>
+                    <button class="btn btn-warning" id="undo-btn" style="padding:4px 12px;font-size:0.85rem;"><i class="fas fa-undo"></i> Undo</button>
+                    <button class="btn btn-purple lock-btn" id="lock-btn" style="padding:4px 12px;font-size:0.85rem;"><i class="fas fa-lock"></i> Lock</button>
+                    <button class="btn btn-cancel" id="delete-selected-btn" style="padding:4px 12px;font-size:0.85rem;"><i class="fas fa-trash"></i> Delete</button>
+                </div>
+                <div class="pdf-canvas-container" id="pdf-container">
+                    <canvas id="pdf-canvas"></canvas>
+                    <canvas id="draw-canvas"></canvas>
+                </div>
+            </div>
+
+            <footer>
+                <p>&copy; 2025 AEL DWSS System. All rights reserved.</p>
+                <p>AEL DWSS Platform</p>
+            </footer>
+        </div>
+    </div>
+
+    <script src="scripts/language.js"></script>
+    <script src="scripts/app.js"></script>
+
+    <!-- ★ 設定預設模板 ★ -->
+    <script>
+        var LABOUR_WAGE_TEMPLATE_B64 = "_64"
+        if (LABOUR_WAGE_TEMPLATE_B64 && LABOUR_WAGE_TEMPLATE_B64 !== "TEMPLATE_B64" && LABOUR_WAGE_TEMPLATE_B64.length > 100) {
+            sessionStorage.setItem('DEFAULT_PDF_TEMPLATE', LABOUR_WAGE_TEMPLATE_B64);
+        }
+    </script>
+
+    <!-- ★ PDF 編輯器（共用） ★ -->
+    <script src="scripts/editpdf.js"></script>
+
+    <!-- 側邊欄 -->
+    <script>
+        (function() {
+            function saveSidebarState() {
+                var sb = document.querySelector('.sidebar');
+                if (sb) localStorage.setItem('sidebarCollapsed', sb.classList.contains('collapsed') ? 'true' : 'false');
+            }
+            document.addEventListener('DOMContentLoaded', function() {
+                var sb = document.querySelector('.sidebar');
+                if (sb && localStorage.getItem('sidebarCollapsed') === 'true') sb.classList.add('collapsed');
+                var tb = document.querySelector('.toggle-btn');
+                if (tb) tb.addEventListener('click', function() { setTimeout(saveSidebarState, 50); });
+                var ds = document.querySelector('.date-display span');
+                var sd = sessionStorage.getItem('globalDate');
+                if (sd && ds) ds.textContent = sd;
+                else if (ds) ds.textContent = new Date().toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'});
+            });
+        })();
+    </script>
+    <script>
+    // 覆蓋 Back 按鈕（喺 editpdf.js 載入之後）
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+            var backBtn = document.getElementById('back-btn');
+            if (backBtn) {
+                backBtn.addEventListener('click', function() {
+                    window.location.href = 'sitediary.html';
+                })
+            }
+
+            function goBack() {
+                window.location.href = 'sitediary.html';
+            }
+
+            function bindDrawingEvents() {
+                if (!container) return;
+                container.removeEventListener('mousedown', startDrawing);
+                container.removeEventListener('mousemove', draw);
+                container.removeEventListener('mouseup', stopDrawing);
+                container.removeEventListener('mouseleave', stopDrawing);
+                container.addEventListener('mousedown', startDrawing);
+                container.addEventListener('mousemove', draw);
+                container.addEventListener('mouseup', stopDrawing);
+                container.addEventListener('mouseleave', stopDrawing);
+                container.removeEventListener('touchstart', startDrawing);
+                container.removeEventListener('touchmove', draw);
+                container.removeEventListener('touchend', stopDrawing);
+                container.addEventListener('touchstart', startDrawing, { passive: false });
+                container.addEventListener('touchmove', draw, { passive: false });
+                container.addEventListener('touchend', stopDrawing, { passive: false });
+            }
+
+            function bindActionButtons() {
+                document.getElementById('save-btn')?.addEventListener('click', saveChanges);
+                document.getElementById('cancel-btn')?.addEventListener('click', cancelEditing);
+                document.getElementById('back-to-wage-btn')?.addEventListener('click', goBack);
+                document.getElementById('undo-btn')?.addEventListener('click', undo);
+                document.getElementById('delete-selected-btn')?.addEventListener('click', deleteSelected);
+                if (lockBtn) lockBtn.addEventListener('click', toggleLock);
+            }
+
+            window.addEventListener('resize', () => {
+                alignDrawCanvas();
+                updateTextPositions();
+            });
+
+            document.addEventListener('DOMContentLoaded', () => {
+                const doc = loadDocumentData();
+                if (!doc) { showError('No document data available.'); return; }
+                
+                let pdfSrc = doc.pdfData ? 'data:application/pdf;base64,' + doc.pdfData : (doc.pdfUrl || null);
+                if (pdfSrc) {
+                    loadPDF(pdfSrc);
+                } else {
+                    canvas.style.display = 'none';
+                    drawCanvas.style.display = 'block';
+                    drawCanvas.width = 800 * renderScale;
+                    drawCanvas.height = 1000 * renderScale;
+                    drawCanvas.style.width = '800px';
+                    drawCanvas.style.height = '1000px';
+                    drawCtx.fillStyle = '#ffffff';
+                    drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+                    drawCtx.fillStyle = '#666';
+                    drawCtx.font = `${20 * renderScale}px Arial`;
+                    drawCtx.fillText('No PDF attached. You can still add annotations.', 30 * renderScale, 100 * renderScale);
+                }
+                drawCanvas.style.pointerEvents = 'none';
+                setupTools();
+                bindDrawingEvents();
+                setupNavigation();
+                bindActionButtons();
+                history = [];
+                saveHistory();
+                updateLockButtonState();
+            });
+    })})();
+    </script>
+</body>
+</html>
