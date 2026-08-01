@@ -139,6 +139,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const tbody = document.getElementById('diary-table-body');
         const noResults = document.getElementById('no-results-message');
         if (!tbody) return;
+        
 
         tbody.innerHTML = '';
 
@@ -175,9 +176,20 @@ document.addEventListener('DOMContentLoaded', function () {
             
             actionButtons += `</td>`;
             
+            // 喺 renderTable 入面
+            var approvalDisplay = '';
+            if (item.approvalStatus === 'approved') {
+                approvalDisplay = '<span class="status-badge" style="background:rgba(46,204,113,0.2);color:#27ae60;">✅ Approved</span>';
+            } else if (item.approvalStatus === 'rejected') {
+                approvalDisplay = '<span class="status-badge" style="background:rgba(231,76,60,0.2);color:#c0392b;">❌ Rejected</span>';
+            } else {
+                approvalDisplay = '<span class="status-badge" style="background:rgba(243,156,18,0.2);color:#d35400;">⏳ Pending</span>';
+            }
+
             row.innerHTML = `
                 <td>${item.id}</td>
                 <td><span class="status-badge status-${item.status}">${getStatusText(item.status)}</span></td>
+                <td>${approvalDisplay}</td>   <!-- ★ 新增 -->
                 <td>${item.site}</td>
                 <td>${formatDate(item.date)}</td>
                 <td>${item.submittedBy}</td>

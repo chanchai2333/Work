@@ -117,6 +117,7 @@
                                 <th data-i18n="document.id">ID</th>
                                 <th data-i18n="document.type">Document Type</th>
                                 <th data-i18n="status">Status</th>
+                                <th data-i18n="status">Approval</th>
                                 <th data-i18n="site">Site</th>
                                 <th data-i18n="period">Period</th>
                                 <th data-i18n="submitted.by">Submitted By</th>
@@ -389,6 +390,7 @@
             function saveData() {
                 sessionStorage.setItem('wageData', JSON.stringify(wageData));
                 localStorage.setItem('wageData', JSON.stringify(wageData));
+                 localStorage.setItem('labourWageData', JSON.stringify(wageData)); 
             }
             
             function getDefaultWageData() {
@@ -498,15 +500,31 @@
                             </td>
                         `;
                         
+                        var approvalDisplay = '';
+                        if (item.approvalStatus === 'approved') {
+                            approvalDisplay = '<span class="status-badge" style="background:rgba(46,204,113,0.2);color:#27ae60;">✅ Approved</span>';
+                        } else if (item.approvalStatus === 'rejected') {
+                            approvalDisplay = '<span class="status-badge" style="background:rgba(231,76,60,0.2);color:#c0392b;">❌ Rejected</span>';
+                        } else {
+                            approvalDisplay = '<span class="status-badge" style="background:rgba(243,156,18,0.2);color:#d35400;">⏳ Pending</span>';
+                        }
+
                         row.innerHTML = `
                             <td>${item.id}</td>
                             <td>${item.typeText}</td>
-                            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                            <td><span class="status-badge status-${item.status}">${item.statusText}</span></td>
+                            <td>${approvalDisplay}</td>   <!-- ★ 新增 -->
                             <td>${item.site}</td>
                             <td>${item.period}</td>
                             <td>${item.submittedBy}</td>
-                            ${actionButtons}
-                        `;
+                            <td class="action-buttons">
+                                <button class="action-btn view-btn" data-id="${item.id}" title="View"><i class="fas fa-eye"></i></button>
+                                <button class="action-btn edit-btn" data-id="${item.id}" title="Edit"><i class="fas fa-edit"></i></button>
+                                ${DWSS_Auth.generateStatusSelect(item.id)}
+                                <button class="action-btn delete-btn" data-id="${item.id}" title="Delete"><i class="fas fa-trash"></i></button>
+                                ${DWSS_Auth.generatePermissionHint()}
+                            </td>
+                            `;
                         tbody.appendChild(row);
                     });
                 }

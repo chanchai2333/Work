@@ -910,120 +910,6 @@ function updateDocumentInfo(doc) {
         alert('✅ Changes saved successfully!');
     }
 
-    // ========== 審批功能 ==========
-
-// 批准文件
-function approveDocument() {
-    if (!currentDoc) return;
-    
-    // 檢查權限
-    var sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
-    if (!sessionData.permissions || !sessionData.permissions.canChangeStatus) {
-        alert('❌ You do not have permission to approve documents.');
-        return;
-    }
-    
-    if (currentDoc.approvalStatus === 'approved') {
-        alert('This document has already been approved.');
-        return;
-    }
-    
-    if (!confirm('Approve this document? It will be marked as "Approved".')) return;
-    
-    currentDoc.approvalStatus = 'approved';
-    currentDoc.approvedBy = sessionData.userName || 'Unknown';
-    currentDoc.approvedDate = new Date().toISOString();
-    currentDoc.status = 'approved';
-    currentDoc.statusText = 'Approved';
-    
-    // 更新 status badge
-    var statusEl = document.getElementById('docStatus');
-    if (statusEl) {
-        statusEl.textContent = 'Approved';
-        statusEl.className = 'doc-status status-approved';
-    }
-    
-    saveChanges();
-    updateApprovalButtons();
-    alert('✅ Document approved!');
-}
-
-// 拒絕文件
-function rejectDocument() {
-    if (!currentDoc) return;
-    
-    var sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
-    if (!sessionData.permissions || !sessionData.permissions.canChangeStatus) {
-        alert('❌ You do not have permission to reject documents.');
-        return;
-    }
-    
-    if (currentDoc.approvalStatus === 'rejected') {
-        alert('This document has already been rejected.');
-        return;
-    }
-    
-    var reason = prompt('Please enter the reason for rejection:');
-    if (!reason || !reason.trim()) return;
-    
-    currentDoc.approvalStatus = 'rejected';
-    currentDoc.rejectedBy = sessionData.userName || 'Unknown';
-    currentDoc.rejectedDate = new Date().toISOString();
-    currentDoc.rejectReason = reason.trim();
-    currentDoc.status = 'rejected';
-    currentDoc.statusText = 'Rejected';
-    
-    var statusEl = document.getElementById('docStatus');
-    if (statusEl) {
-        statusEl.textContent = 'Rejected';
-        statusEl.className = 'doc-status status-rejected';
-    }
-    
-    saveChanges();
-    updateApprovalButtons();
-    alert('❌ Document rejected.');
-}
-
-// 更新審批按鈕顯示
-function updateApprovalButtons() {
-    var approveBtn = document.getElementById('approve-btn');
-    var rejectBtn = document.getElementById('reject-btn');
-    
-    var sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
-    var canApprove = sessionData.permissions && sessionData.permissions.canChangeStatus;
-    
-    if (!canApprove) {
-        if (approveBtn) approveBtn.style.display = 'none';
-        if (rejectBtn) rejectBtn.style.display = 'none';
-        return;
-    }
-    
-    // 高級用戶可以看到審批按鈕
-    if (approveBtn) {
-        approveBtn.style.display = 'inline-flex';
-        if (currentDoc && currentDoc.approvalStatus === 'approved') {
-            approveBtn.disabled = true;
-            approveBtn.style.opacity = '0.6';
-            approveBtn.title = 'Already approved';
-        } else {
-            approveBtn.disabled = false;
-            approveBtn.style.opacity = '1';
-        }
-    }
-    
-    if (rejectBtn) {
-        rejectBtn.style.display = 'inline-flex';
-        if (currentDoc && currentDoc.approvalStatus === 'rejected') {
-            rejectBtn.disabled = true;
-            rejectBtn.style.opacity = '0.6';
-            rejectBtn.title = 'Already rejected';
-        } else {
-            rejectBtn.disabled = false;
-            rejectBtn.style.opacity = '1';
-        }
-    }
-}
-
     // ---------- Submit 功能 ----------
     // 在 editpdf.js 中，替换 submitDocument 函数
 
@@ -1259,9 +1145,6 @@ function loadFromStorageKey(key, docId) {
         document.getElementById('delete-selected-btn')?.addEventListener('click', deleteSelected);
         if (lockBtn) lockBtn.addEventListener('click', toggleLock);
         if (submitBtn) submitBtn.addEventListener('click', submitDocument);
-        // ★ 審批按鈕
-        document.getElementById('approve-btn')?.addEventListener('click', approveDocument);
-        document.getElementById('reject-btn')?.addEventListener('click', rejectDocument);
     }
 
     window.addEventListener('resize', () => { alignDrawCanvas(); updateTextPositions(); });
@@ -1312,9 +1195,5 @@ function loadFromStorageKey(key, docId) {
         history = [];
         saveHistory();
         updateLockButtonState();
-
-        setTimeout(function() {
-            updateApprovalButtons();
-        }, 600);
     });
 })();

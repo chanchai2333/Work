@@ -32,8 +32,6 @@
         .status-cancelled { background: rgba(231,76,60,0.2); color: #c0392b; }
         .status-confirm { background: rgba(155,89,182,0.2); color: #8e44ad; }
         .status-double-check { background: rgba(243,156,18,0.2); color: #d35400; }
-        .status-approved { background: rgba(46,204,113,0.2); color: #27ae60; }
-        .status-rejected { background: rgba(231,76,60,0.2); color: #c0392b; }
         
         .document-actions { display: flex; gap: 10px; flex-wrap: wrap; }
         .btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; transition: all 0.3s ease; white-space: nowrap; color: #fff; text-decoration: none; }
@@ -152,13 +150,6 @@
                 </div>
                 <div class="document-actions">
                     <button class="btn btn-submit" id="submit-btn"><i class="fas fa-paper-plane"></i> Submit</button>
-                    <!-- ★ 審批按鈕（只有高級用戶可見） -->
-                    <button class="btn btn-submit" id="approve-btn" style="display:none; background: #27ae60;">
-                        <i class="fas fa-check-circle"></i> Approve
-                    </button>
-                    <button class="btn btn-cancel" id="reject-btn" style="display:none; background: #c0392b;">
-                        <i class="fas fa-times-circle"></i> Reject
-                    </button>
                     <button class="btn btn-save" id="save-btn"><i class="fas fa-save"></i> Save Changes</button>
                     <button class="btn btn-cancel" id="cancel-btn"><i class="fas fa-times"></i> Cancel</button>
                     <button class="btn btn-primary" id="back-btn"><i class="fas fa-arrow-left"></i> Back</button>
