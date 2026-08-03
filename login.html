@@ -36,9 +36,8 @@
             text-align: center;
             margin-bottom: 32px;
         }
+        /* 更新后的 Logo 样式 */
         .login-logo {
-            font-size: 3rem;
-            background: linear-gradient(135deg, #3498db, #2c3e50);
             width: 80px;
             height: 80px;
             border-radius: 50%;
@@ -46,8 +45,16 @@
             align-items: center;
             justify-content: center;
             margin: 0 auto 20px;
-            color: white;
+            background: #ffffff;
             box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            overflow: hidden;
+            padding: 6px;
+            box-sizing: border-box;
+        }
+        .login-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
         .login-header h2 {
             color: #2c3e50;
@@ -149,7 +156,7 @@
         }
         @media (max-width: 480px) {
             .login-card { padding: 30px 20px; }
-            .login-logo { width: 60px; height: 60px; font-size: 2rem; }
+            .login-logo { width: 60px; height: 60px; padding: 4px; }
             .form-control { padding: 10px 38px 10px 12px; }
         }
     </style>
@@ -158,8 +165,9 @@
     <div class="login-container">
         <div class="login-card">
             <div class="login-header">
+                <!-- 将图标替换为 AEL Logo 图片 -->
                 <div class="login-logo">
-                    <i class="fas fa-water"></i>
+                    <img src="AEL Logo.png" alt="AEL Logo">
                 </div>
                 <h2>AEL DWSS</h2>
                 <p>Sign in to access the system</p>
