@@ -916,7 +916,6 @@ function updateDocumentInfo(doc) {
 function approveDocument() {
     if (!currentDoc) return;
     
-    // 檢查權限
     var sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
     if (!sessionData.permissions || !sessionData.permissions.canChangeStatus) {
         alert('❌ You do not have permission to approve documents.');
@@ -928,7 +927,7 @@ function approveDocument() {
         return;
     }
     
-    if (!confirm('Approve this document? It will be marked as "Approved".')) return;
+    if (!confirm('Approve this document?')) return;
     
     currentDoc.approvalStatus = 'approved';
     currentDoc.approvedBy = sessionData.userName || 'Unknown';
@@ -950,7 +949,12 @@ function approveDocument() {
 
 // 拒絕文件
 function rejectDocument() {
-    if (!currentDoc) return;
+    console.log('[DWSS] Reject button clicked');
+    
+    if (!currentDoc) {
+        alert('No document loaded.');
+        return;
+    }
     
     var sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
     if (!sessionData.permissions || !sessionData.permissions.canChangeStatus) {
@@ -958,18 +962,12 @@ function rejectDocument() {
         return;
     }
     
-    if (currentDoc.approvalStatus === 'rejected') {
-        alert('This document has already been rejected.');
-        return;
-    }
-    
-    var reason = prompt('Please enter the reason for rejection:');
-    if (!reason || !reason.trim()) return;
+    // 直接用 confirm，唔使 reason
+    if (!confirm('Reject this document?')) return;
     
     currentDoc.approvalStatus = 'rejected';
     currentDoc.rejectedBy = sessionData.userName || 'Unknown';
     currentDoc.rejectedDate = new Date().toISOString();
-    currentDoc.rejectReason = reason.trim();
     currentDoc.status = 'rejected';
     currentDoc.statusText = 'Rejected';
     
@@ -981,45 +979,59 @@ function rejectDocument() {
     
     saveChanges();
     updateApprovalButtons();
+    
     alert('❌ Document rejected.');
+    console.log('[DWSS] Document rejected:', currentDoc);
 }
 
 // 更新審批按鈕顯示
 function updateApprovalButtons() {
     var approveBtn = document.getElementById('approve-btn');
     var rejectBtn = document.getElementById('reject-btn');
+    var submitBtn = document.getElementById('submit-btn');
     
     var sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
     var canApprove = sessionData.permissions && sessionData.permissions.canChangeStatus;
     
+    // 審批按鈕：只有高級用戶可見
     if (!canApprove) {
         if (approveBtn) approveBtn.style.display = 'none';
         if (rejectBtn) rejectBtn.style.display = 'none';
-        return;
-    }
-    
-    // 高級用戶可以看到審批按鈕
-    if (approveBtn) {
-        approveBtn.style.display = 'inline-flex';
-        if (currentDoc && currentDoc.approvalStatus === 'approved') {
-            approveBtn.disabled = true;
-            approveBtn.style.opacity = '0.6';
-            approveBtn.title = 'Already approved';
-        } else {
-            approveBtn.disabled = false;
-            approveBtn.style.opacity = '1';
+    } else {
+        if (approveBtn) {
+            approveBtn.style.display = 'inline-flex';
+            if (currentDoc && currentDoc.approvalStatus === 'approved') {
+                approveBtn.disabled = true;
+                approveBtn.style.opacity = '0.5';
+                approveBtn.title = 'Already approved';
+            } else {
+                approveBtn.disabled = false;
+                approveBtn.style.opacity = '1';
+            }
+        }
+        if (rejectBtn) {
+            rejectBtn.style.display = 'inline-flex';
+            if (currentDoc && currentDoc.approvalStatus === 'rejected') {
+                rejectBtn.disabled = true;
+                rejectBtn.style.opacity = '0.5';
+                rejectBtn.title = 'Already rejected';
+            } else {
+                rejectBtn.disabled = false;
+                rejectBtn.style.opacity = '1';
+            }
         }
     }
     
-    if (rejectBtn) {
-        rejectBtn.style.display = 'inline-flex';
-        if (currentDoc && currentDoc.approvalStatus === 'rejected') {
-            rejectBtn.disabled = true;
-            rejectBtn.style.opacity = '0.6';
-            rejectBtn.title = 'Already rejected';
+    // ★ Submit 按鈕：只有 Approved 先禁用
+    if (submitBtn) {
+        if (currentDoc && currentDoc.approvalStatus === 'approved') {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.5';
+            submitBtn.title = 'Document already approved';
         } else {
-            rejectBtn.disabled = false;
-            rejectBtn.style.opacity = '1';
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            submitBtn.title = 'Submit this document';
         }
     }
 }
@@ -1033,18 +1045,15 @@ function submitDocument() {
         return;
     }
     
-    // 检查状态：只有 draft 才能提交
-    if (currentDoc.status !== 'draft') {
-        alert('This document has already been submitted.');
+    // 只有 Approved 唔可以再 Submit
+    if (currentDoc.approvalStatus === 'approved') {
+        alert('This document has already been approved.');
         return;
     }
     
-    // 确认提交
-    if (!confirm('Submit this document? The status will change to "Submitted".')) {
-        return;
-    }
+    if (!confirm('Submit this document for approval?')) return;
     
-    // 保存所有正在编辑的文本框
+    // 保存 annotations
     document.querySelectorAll('.text-annotation.editing').forEach(function(el) {
         var id = el.getAttribute('data-id');
         var anno = annotations.find(function(a) { return a._id == id; });
@@ -1053,40 +1062,30 @@ function submitDocument() {
             el.classList.remove('editing');
             var t = el.textContent.trim();
             if (t) anno.text = t;
-            else {
-                var idx = annotations.indexOf(anno);
-                if (idx !== -1) annotations.splice(idx, 1);
-            }
+            else deleteAnnotation(anno._id);
         }
     });
     
-    // ★★★ 更新状态 ★★★
-    currentDoc.status = 'submitted';
-    currentDoc.statusText = 'Submitted';
     currentDoc.annotations = annotations;
     
-    // 保存到 sessionStorage
-    sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
-    sessionStorage.setItem('currentRecord', JSON.stringify(currentDoc));
+    // ★ 更新為 Pending Approval（即使之前係 Rejected/Pending 都照樣更新）
+    currentDoc.approvalStatus = 'pending';
+    currentDoc.submittedDate = new Date().toISOString();
     
-    // ★★★ 根据页面类型保存到对应的 localStorage 键 ★★★
-    saveToLocalStorage(currentDoc);
+    var sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+    currentDoc.submittedBy = sessionData.userName || currentDoc.submittedBy || 'Unknown';
     
-    // 更新页面状态显示
+    // 更新 status badge
     var statusEl = document.getElementById('docStatus');
     if (statusEl) {
-        statusEl.textContent = 'Submitted';
-        statusEl.className = 'doc-status status-submitted';
+        statusEl.textContent = 'Pending Approval';
+        statusEl.className = 'doc-status status-pending';
     }
     
-    // 禁用 Submit 按钮
-    var submitBtn = document.getElementById('submit-btn');
-    if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.title = 'Document already submitted';
-    }
+    saveChanges();
+    updateApprovalButtons();
     
-    alert('✅ Document submitted successfully! Status changed to "Submitted".');
+    alert('✅ Document submitted for approval!');
 }
 
 /**
@@ -1315,6 +1314,6 @@ function loadFromStorageKey(key, docId) {
 
         setTimeout(function() {
             updateApprovalButtons();
-        }, 600);
+        }, 700);
     });
 })();

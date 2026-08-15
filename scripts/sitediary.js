@@ -291,7 +291,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     type: record.type,
                     pdfUrl: record.pdfUrl || '',
                     pdfData: record.pdfData || '',
-                    annotations: record.annotations || []
+                    annotations: record.annotations || [],
+                    approvalStatus: record.approvalStatus || 'draft'  
                 }));
                 window.location.href = 'editdiary.html';
             } else {
