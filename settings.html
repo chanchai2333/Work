@@ -6,6 +6,13 @@
     <title>System Settings - AEL DWSS System</title>
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="scripts/auth-check.js"></script>
+    <script>
+    // 頁面載入時自動更新用戶名
+    document.addEventListener('DOMContentLoaded', function() {
+        DWSS_Auth.updateHeaderUser();
+    });
+</script>
 </head>
 <body>
     <!-- 侧边栏 -->
@@ -21,7 +28,7 @@
                         <span id="current-date">September 17, 2025</span>
                     </div>
                     <button class="user-btn">
-                        <i class="fas fa-user"></i> John Doe
+                        <i class="fas fa-user"></i> <span data-i18n="user.name"></span>
                     </button>
                 </div>
             </div>
@@ -179,6 +186,16 @@
     <script src="scripts/app.js"></script>
     <script src="scripts/sidebar.js"></script>
     <script src="scripts/language.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        DWSS_Auth.updateHeaderUser();
+    });
+    
+    // 立即執行一次（確保覆蓋）
+    setTimeout(function() {
+        DWSS_Auth.updateHeaderUser();
+    }, 100);
+</script>
 
     <script>
         // 紧急修复：手动初始化侧边栏

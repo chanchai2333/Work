@@ -236,8 +236,6 @@
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
 
-    <!-- ★ PDF 編輯器（共用） ★ -->
-    <script src="scripts/editpdf.js"></script>
 
     <!-- ★ 【核心修复补丁】拦截导致镜像翻转的 Canvas 动作，完美解决镜像问题且不影响任何交互坐标 ★ -->
     <script>
@@ -289,6 +287,8 @@
             });
         })();
     </script>
+    <script src="scripts/editpdf.js"></script>
+
     <script>
     // 覆蓋 Back 按鈕
     document.addEventListener('DOMContentLoaded', function() {
@@ -302,15 +302,6 @@
         }, 500);
     });
 </script>
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // 強制設定 Site Diary 標題
-        document.title = 'AEL DWSS - Site Diary';
-        
-        // 同時確保 h1 正確
-        var h1 = document.querySelector('.header h1');
-        if (h1) h1.textContent = 'Site Diary';
-    });
 </script>
 <!-- Site Diary 唔需要預設模板，清除任何舊模板 -->
 <script>
