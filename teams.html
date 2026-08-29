@@ -6,6 +6,7 @@
     <title>Teams - AEL DWSS System</title>
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="scripts/auth-check.js"></script> 
 </head>
 <body>
     <!-- 侧边栏将由 sidebar.js 动态插入 -->
@@ -16,7 +17,7 @@
             <div class="header-controls">
                 <div class="user-date-row">
                     <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
-                    <button class="user-btn"><i class="fas fa-user"></i> John Doe</button>
+                    <button class="user-btn"><i class="fas fa-user"></i> <span data-i18n="user.name"></span></button>
                 </div>
             </div>
         </div>
@@ -91,6 +92,20 @@
     <script src="scripts/app.js"></script>
     <script src="scripts/sidebar.js"></script>
     <script src="scripts/teams.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        DWSS_Auth.updateHeaderUser();
+    });
+    
+    // 立即執行一次（確保覆蓋）
+    setTimeout(function() {
+        DWSS_Auth.updateHeaderUser();
+    }, 100);
+</script>
+    <script>
+    // 更新用戶名
+    DWSS_Auth.updateHeaderUser();
+</script>
     
     <!-- 侧边栏状态持久化 -->
     <script>

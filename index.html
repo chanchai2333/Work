@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="scripts/auth-check.js"></script> 
 </head>
 <body>
     <!-- 侧边栏将由 sidebar.js 动态插入 -->
@@ -22,7 +23,7 @@
                         <span id="current-date">September 17, 2025</span>
                     </div>
                     <button class="user-btn">
-                        <i class="fas fa-user"></i> <span data-i18n="user.name">John Doe</span>
+                        <i class="fas fa-user"></i> <span data-i18n="user.name"></span>
                     </button>
                 </div>
             </div>
@@ -264,6 +265,20 @@
     <script src="scripts/app.js"></script>
     <script src="scripts/sidebar.js"></script>
     <script src="scripts/dashboard.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        DWSS_Auth.updateHeaderUser();
+    });
+    
+    // 立即執行一次（確保覆蓋）
+    setTimeout(function() {
+        DWSS_Auth.updateHeaderUser();
+    }, 100);
+</script>
+    <script>
+    // 頁面載入後自動更新用戶名
+    DWSS_Auth.updateHeaderUser();
+</script>
 
     <!-- 自定义脚本：更新所有卡片 KPI 及趋势图（真实数据） -->
     <script>
