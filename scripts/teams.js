@@ -190,6 +190,7 @@
             saveTeams();
             renderTeamsTable();
             updateStats();
+            alert('Team deleted successfully.');
         }
     }
     
