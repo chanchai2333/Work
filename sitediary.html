@@ -7,16 +7,7 @@
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .status-change-select {
-            padding: 6px 8px;
-            border-radius: 6px;
-            border: 1px solid #ddd;
-            font-size: 0.85rem;
-            cursor: pointer;
-            background: white;
-            min-width: 120px;
-            vertical-align: middle;
-        }
+        .status-change-select { padding: 6px 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 0.85rem; cursor: pointer; background: white; min-width: 120px; vertical-align: middle; }
         .status-change-select:hover { border-color: #3498db; }
         .status-change-select:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 2px rgba(52,152,219,0.2); }
         .permission-lock-hint { font-size: 0.7rem; color: #e74c3c; display: inline-block; margin-left: 8px; white-space: nowrap; }
@@ -37,10 +28,7 @@
         .status-approved { background: rgba(46,204,113,0.2); color: #27ae60; }
         .status-rejected { background: rgba(231,76,60,0.2); color: #c0392b; }
         .status-pending { background: rgba(243,156,18,0.2); color: #d35400; }
-        @media (max-width: 768px) {
-            .action-btn { width: 100%; margin: 2px 0; }
-            .status-change-select { width: 100%; margin: 2px 0; }
-        }
+        @media (max-width: 768px) { .action-btn { width: 100%; margin: 2px 0; } .status-change-select { width: 100%; margin: 2px 0; } }
     </style>
 </head>
 <body>
@@ -50,7 +38,6 @@
             <form id="add-diary-form" enctype="multipart/form-data">
                 <label data-i18n="diary.id">Diary ID</label>
                 <input type="text" id="input-diary-id" required>
-
                 <label data-i18n="status">Status</label>
                 <select id="input-status" required>
                     <option value="draft" data-i18n="status.draft">Draft</option>
@@ -60,25 +47,19 @@
                     <option value="reopen" data-i18n="status.reopen">Reopen</option>
                     <option value="cancelled" data-i18n="status.cancelled">Cancelled</option>
                 </select>
-
                 <label data-i18n="site">Site</label>
                 <input type="text" id="input-site" required>
-
                 <label data-i18n="date">Date</label>
                 <input type="date" id="input-date" required>
-
                 <label data-i18n="submitted.by">Submitted By</label>
                 <input type="text" id="input-submitted-by" required>
-
                 <label data-i18n="document.type">Document Type</label>
                 <select id="input-type" required>
                     <option value="Contractor Documents" data-i18n="document.type.contractor">Contractor Documents</option>
                     <option value="Sub Contractor Documents" data-i18n="document.type.subcontractor">Sub Contractor Documents</option>
                 </select>
-
                 <label for="input-pdf">Upload PDF (optional)</label>
                 <input type="file" id="input-pdf" accept=".pdf">
-
                 <div class="modal-actions">
                     <button type="submit" class="btn" data-i18n="save">Save</button>
                     <button type="button" class="btn" id="cancel-add-diary" data-i18n="cancel">Cancel</button>
@@ -92,13 +73,8 @@
             <h1 data-i18n="site.diary">Site Diary</h1>
             <div class="header-controls">
                 <div class="user-date-row">
-                    <div class="date-display">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span id="current-date">September 17, 2025</span>
-                    </div>
-                    <button class="user-btn">
-                        <i class="fas fa-user"></i> <span data-i18n="user.name">John Doe</span>
-                    </button>
+                    <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date">September 17, 2025</span></div>
+                    <button class="user-btn"><i class="fas fa-user"></i> <span data-i18n="user.name">John Doe</span></button>
                 </div>
             </div>
         </div>
@@ -114,22 +90,13 @@
             
             <div class="diary-controls-row">
                 <div class="diary-stats">
-                    <div class="stat-card">
-                        <div class="label" data-i18n="total.documents">Total Documents</div>
-                        <div class="value" id="total-documents-count">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="label" data-i18n="this.month">This Month</div>
-                        <div class="value" id="month-count">0</div>
-                    </div>
+                    <div class="stat-card"><div class="label" data-i18n="total.documents">Total Documents</div><div class="value" id="total-documents-count">0</div></div>
+                    <div class="stat-card"><div class="label" data-i18n="this.month">This Month</div><div class="value" id="month-count">0</div></div>
                 </div>
                 
                 <section class="filters-section">
                     <div class="filter-group" id="site-filter-group">
-                        <div class="filter-toggle">
-                            <span data-i18n="all.sites">All Sites</span>
-                            <i class="fas fa-chevron-down"></i>
-                        </div>
+                        <div class="filter-toggle"><span data-i18n="all.sites">All Sites</span><i class="fas fa-chevron-down"></i></div>
                         <div class="filter-options">
                             <div class="filter-option active" data-filter="site" data-value="all" data-i18n="all.sites">All Sites</div>
                             <div class="filter-option" data-filter="site" data-value="treatment" data-i18n="site.treatment">Treatment Plant</div>
@@ -141,10 +108,7 @@
                     </div>
                     
                     <div class="filter-group" id="status-filter-group">
-                        <div class="filter-toggle">
-                            <span data-i18n="all.statuses">All Statuses</span>
-                            <i class="fas fa-chevron-down"></i>
-                        </div>
+                        <div class="filter-toggle"><span data-i18n="all.statuses">All Statuses</span><i class="fas fa-chevron-down"></i></div>
                         <div class="filter-options">
                             <div class="filter-option active" data-filter="status" data-value="all" data-i18n="all.statuses">All Statuses</div>
                             <div class="filter-option" data-filter="status" data-value="draft" data-i18n="status.draft">Draft</div>
@@ -157,10 +121,7 @@
                     </div>
                     
                     <div class="filter-group" id="type-filter-group">
-                        <div class="filter-toggle">
-                            <span data-i18n="all.document.types">All Document Types</span>
-                            <i class="fas fa-chevron-down"></i>
-                        </div>
+                        <div class="filter-toggle"><span data-i18n="all.document.types">All Document Types</span><i class="fas fa-chevron-down"></i></div>
                         <div class="filter-options">
                             <div class="filter-option active" data-filter="type" data-value="all" data-i18n="all.document.types">All Document Types</div>
                             <div class="filter-option" data-filter="type" data-value="Sub Contractor Documents" data-i18n="document.type.subcontractor">Sub Contractor Documents</div>
@@ -171,10 +132,7 @@
             </div>
             
             <section class="content-section">
-                <div class="table-header">
-                    <h2 class="table-title" data-i18n="diary.entries">Site Diary Entries</h2>
-                </div>
-                
+                <div class="table-header"><h2 class="table-title" data-i18n="diary.entries">Site Diary Entries</h2></div>
                 <div class="table-container">
                     <table class="diary-table">
                         <thead>
@@ -191,9 +149,7 @@
                         </thead>
                         <tbody id="diary-table-body"></tbody>
                     </table>
-                    <div id="no-results-message" class="no-results" style="display: none;" data-i18n="no.matching.documents">
-                        No matching documents found. Please try different filters.
-                    </div>
+                    <div id="no-results-message" class="no-results" style="display: none;" data-i18n="no.matching.documents">No matching documents found. Please try different filters.</div>
                 </div>
             </section>
             
@@ -210,14 +166,226 @@
     <script src="scripts/sitediary.js"></script>
     <script src="scripts/sidebar.js"></script>
 
+    <!-- ============================================================
+         ★ Save 修正（只寫 siteDiaryData，避免重複）
+         ============================================================ -->
+    <script>
+    (function () {
+        'use strict';
+        if (window.__diaryFormFixBound2) return;
+        window.__diaryFormFixBound2 = true;
+
+        // ★ 只使用一個主 key（siteDiary.js 應該讀這個）
+        var PRIMARY_KEY = 'siteDiaryData';
+
+        function loadRecords() {
+            var raw = localStorage.getItem(PRIMARY_KEY);
+            if (!raw) return [];
+            try {
+                var d = JSON.parse(raw);
+                return Array.isArray(d) ? d : [];
+            } catch (e) { return []; }
+        }
+
+        function saveRecord(record) {
+            var list = loadRecords();
+            var idx = list.findIndex(function (r) { return String(r.id) === String(record.id); });
+            if (idx !== -1) list[idx] = record;
+            else list.push(record);
+            localStorage.setItem(PRIMARY_KEY, JSON.stringify(list));
+        }
+
+        function getValue(id) {
+            var el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function handleSubmit(e) {
+            var form = e.target;
+            if (!form || form.id !== 'add-diary-form') return;
+
+            e.preventDefault();
+            e.stopImmediatePropagation();
+
+            var id = getValue('input-diary-id');
+            var status = getValue('input-status') || 'draft';
+            var site = getValue('input-site');
+            var date = getValue('input-date');
+            var submittedBy = getValue('input-submitted-by');
+            var type = getValue('input-type');
+            var pdfInput = document.getElementById('input-pdf');
+            var pdfFile = pdfInput && pdfInput.files ? pdfInput.files[0] : null;
+
+            if (!id) { alert('❌ Please enter Diary ID.'); return; }
+            if (!site) { alert('❌ Please enter Site.'); return; }
+            if (!date) { alert('❌ Please select Date.'); return; }
+            if (!submittedBy) { alert('❌ Please enter Submitted By.'); return; }
+            if (!type) { alert('❌ Please select Document Type.'); return; }
+
+            var existing = loadRecords();
+            if (existing.some(function (r) { return String(r.id) === String(id); })) {
+                alert('❌ Diary ID "' + id + '" already exists.');
+                return;
+            }
+
+            var record = {
+                id: id,
+                status: status,
+                approvalStatus: 'pending',
+                site: site,
+                date: date,
+                submittedBy: submittedBy,
+                type: type,
+                annotations: [],
+                totalPages: 10,
+                usesTemplate: true,
+                createdAt: new Date().toISOString()
+            };
+
+            var finish = function () {
+                try {
+                    saveRecord(record);
+                } catch (err) {
+                    console.error('[SiteDiary] Save failed:', err);
+                    alert('❌ Failed to save.');
+                    return;
+                }
+                var modal = document.getElementById('add-diary-modal');
+                if (modal) modal.style.display = 'none';
+                window.location.reload();
+            };
+
+            if (pdfFile) {
+                var reader = new FileReader();
+                reader.onload = function (ev) {
+                    try {
+                        var dataUrl = ev.target.result || '';
+                        var base64 = dataUrl.indexOf(',') !== -1 ? dataUrl.split(',')[1] : dataUrl;
+                        record.pdfData = base64;
+                        record.usesTemplate = false;
+                        finish();
+                    } catch (err) {
+                        alert('❌ Failed to read PDF.');
+                    }
+                };
+                reader.onerror = function () { alert('❌ Failed to read PDF.'); };
+                reader.readAsDataURL(pdfFile);
+            } else {
+                finish();
+            }
+        }
+
+        document.addEventListener('submit', handleSubmit, true);
+    })();
+    </script>
+
+    <!-- ============================================================
+         ★ Site Diary → editdsdsitediary.html 導向
+         ============================================================ -->
+    <script>
+    (function () {
+        'use strict';
+        if (window.__dsdEditRedirectBound2) return;
+        window.__dsdEditRedirectBound2 = true;
+
+        // ★ 只讀主 key
+        var PRIMARY_KEY = 'siteDiaryData';
+
+        function findDiaryRecord(diaryId) {
+            if (!diaryId) return null;
+            var raw = localStorage.getItem(PRIMARY_KEY);
+            if (!raw) return null;
+            try {
+                var data = JSON.parse(raw);
+                if (!Array.isArray(data)) return null;
+                return data.find(function (d) { return String(d.id) === String(diaryId); }) || null;
+            } catch (e) { return null; }
+        }
+
+        function buildFallbackRecord(row, diaryId) {
+            var cells = row.cells || [];
+            var txt = function (i) { return cells[i] ? cells[i].textContent.trim() : ''; };
+            var raw = txt(1).toLowerCase();
+            var statusKey = 'draft';
+            if (raw.indexOf('wsg') !== -1) statusKey = 'submitted-wsg';
+            else if (raw.indexOf('ig') !== -1) statusKey = 'submitted-ig';
+            else if (raw.indexOf('closed') !== -1) statusKey = 'closed';
+            else if (raw.indexOf('reopen') !== -1) statusKey = 'reopen';
+            else if (raw.indexOf('cancelled') !== -1) statusKey = 'cancelled';
+            else if (raw.indexOf('submitted') !== -1) statusKey = 'submitted';
+
+            return {
+                id: diaryId, status: statusKey,
+                site: txt(3), date: txt(4), submittedBy: txt(5), type: txt(6),
+                annotations: [], totalPages: 10, usesTemplate: true
+            };
+        }
+
+        function resolveDiaryId(row, btn) {
+            if (btn && btn.dataset && btn.dataset.id) return btn.dataset.id;
+            if (btn && btn.getAttribute) {
+                var did = btn.getAttribute('data-diary-id');
+                if (did) return did;
+            }
+            if (row) {
+                if (row.dataset && row.dataset.id) return row.dataset.id;
+                if (row.dataset && row.dataset.diaryId) return row.dataset.diaryId;
+                var fc = row.cells && row.cells[0];
+                if (fc) {
+                    var t = fc.textContent.trim();
+                    if (t) return t;
+                }
+            }
+            return null;
+        }
+
+        function handleEditClick(e) {
+            var target = e.target;
+            var editBtn = target && target.closest ? target.closest('.edit-btn') : null;
+            if (!editBtn) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            var row = editBtn.closest('tr');
+            var diaryId = resolveDiaryId(row, editBtn);
+            if (!diaryId) {
+                console.warn('[DSD] Cannot resolve Diary ID');
+                return;
+            }
+
+            var record = findDiaryRecord(diaryId) || buildFallbackRecord(row, diaryId);
+            if (!Array.isArray(record.annotations)) record.annotations = [];
+            if (!record.totalPages) record.totalPages = 10;
+
+            try {
+                sessionStorage.setItem('editDocument', JSON.stringify(record));
+                sessionStorage.setItem('currentDiaryRecord', JSON.stringify(record));
+                sessionStorage.setItem('currentRecord', JSON.stringify(record));
+            } catch (err) {
+                console.error('[DSD] sessionStorage write failed:', err);
+            }
+
+            window.location.href = 'editdsdsitediary.html';
+        }
+
+        function bind() {
+            document.addEventListener('click', handleEditClick, true);
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bind);
+        } else {
+            bind();
+        }
+    })();
+    </script>
+
     <script>
         (function() {
             function saveSidebarState() {
                 const sidebar = document.querySelector('.sidebar');
-                if (sidebar) {
-                    const isCollapsed = sidebar.classList.contains('collapsed');
-                    localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
-                }
+                if (sidebar) localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed') ? 'true' : 'false');
             }
             function restoreSidebarState() {
                 const sidebar = document.querySelector('.sidebar');
