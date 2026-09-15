@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEL DWSS - Edit Site Diary (DSD)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles/main.css">
+    <script src="scripts/theme-config.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { display: flex; min-height: 100vh; background-color: #f5f7fa; color: #333; }
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #e0e6ed; }
+        .header h1 { color: #2c3e50; font-size: 2rem; }
+        .header-controls { display: flex; align-items: center; gap: 15px; }
+        .date-display { background: #eef2f6; padding: 8px 15px; border-radius: 8px; font-size: 16px; font-weight: 500; color: #308fee; }
+        .date-display i { margin-right: 8px; }
+        .user-date-row { display: flex; align-items: center; gap: 16px; }
+        .user-btn { background: #2563eb; color: #fff; border: none; border-radius: 20px; padding: 10px 20px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+
+        .document-page { background: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .document-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eaeaea; flex-wrap: wrap; gap: 15px; }
+        .doc-title-section { flex: 1; min-width: 300px; }
+        .document-header h2 { font-size: 1.6rem; color: #2c3e50; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .doc-status { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; }
+        .status-draft { background: rgba(149,165,166,0.2); color: #848f90; }
+        .status-submitted { background: rgba(52,152,219,0.2); color: #2980b9; }
+        .status-approved { background: rgba(46,204,113,0.2); color: #27ae60; }
+        .status-rejected { background: rgba(231,76,60,0.2); color: #c0392b; }
+        .status-pending { background: rgba(243,156,18,0.2); color: #d35400; }
+        .status-cancelled { background: rgba(231,76,60,0.2); color: #c0392b; }
+
+        .document-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; transition: all 0.3s ease; white-space: nowrap; color: #fff; text-decoration: none; }
+        .btn:hover { transform: translateY(-2px); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
+        .btn-primary { background: #3498db; } .btn-primary:hover { background: #2980b9; }
+        .btn-save { background: #2ecc71; } .btn-save:hover { background: #27ae60; }
+        .btn-cancel { background: #e74c3c; } .btn-cancel:hover { background: #c0392b; }
+        .btn-submit { background: #28a745; } .btn-submit:hover { background: #218838; }
+        .btn-approve { background: #27ae60; } .btn-reject { background: #c0392b; }
+        .btn-warning { background: #f39c12; } .btn-purple { background: #9b59b6; }
+
+        .document-meta { background: #f8f9fa; border-radius: 12px; padding: 20px 30px; margin: 20px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+        .meta-item { display: flex; flex-direction: column; }
+        .meta-label { font-weight: 600; color: #2c3e50; margin-bottom: 5px; font-size: 0.85rem; }
+        .meta-value { color: #555; font-size: 0.95rem; font-weight: 500; padding: 8px 12px; border-radius: 6px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+        .pdf-toolbar-ribbon { display: flex; flex-wrap: wrap; gap: 4px 16px; background: #f8fafc; padding: 8px 16px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #e2e8f0; align-items: center; }
+        .ribbon-group { display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-right: 1px solid #e2e8f0; }
+        .ribbon-group:last-child { border-right: none; }
+        .ribbon-group-label { font-size: 10px; font-weight: 600; color: #64748b; margin-right: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+        .tool-btn { padding: 4px 10px; border: 1px solid transparent; background: transparent; border-radius: 4px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; color: #1e293b; transition: 0.15s; white-space: nowrap; }
+        .tool-btn:hover { background: #eef2f6; border-color: #d1d9e6; }
+        .tool-btn.active { background: #2d7ee7; color: #fff; border-color: #2d7ee7; }
+        .tool-btn i { font-size: 13px; }
+        .property-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .property-group { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #475569; }
+        .property-group label { font-weight: 500; }
+        .property-group input[type="color"] { width: 24px; height: 24px; border: 1px solid #d1d9e6; border-radius: 4px; cursor: pointer; }
+        .property-group input[type="range"] { width: 60px; cursor: pointer; }
+        .property-group span { min-width: 28px; font-size: 11px; }
+
+        .pdf-editor-container { display: flex; flex-direction: column; gap: 12px; }
+        .pdf-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #f1f5f9; padding: 8px 12px; border-radius: 6px; }
+        .nav-btn { background: #3498db; color: #fff; border: none; border-radius: 4px; padding: 6px 12px; cursor: pointer; }
+        .nav-btn:hover { background: #2980b9; }
+        .page-info { font-size: 14px; font-weight: 500; color: #334155; }
+        .scale-info { font-size: 12px; color: #64748b; margin-left: auto; }
+
+        .pdf-canvas-container {
+            position: relative;
+            overflow-y: auto;
+            overflow-x: auto;
+            background: #e0e0e0;
+            border-radius: 8px;
+            min-height: 500px;
+            max-height: 800px;
+            padding: 24px 24px 60px;
+            text-align: center;
+        }
+        .pages-wrapper { display: inline-block; }
+        .pdf-page {
+            position: relative;
+            display: block;
+            margin: 0 auto 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            background: #fff;
+            border: 3px solid transparent;
+            transition: border-color 0.2s;
+            overflow: hidden;
+        }
+        .pdf-page.active-page { border-color: #3498db; }
+        .draw-canvas { position: absolute; top: 0; left: 0; z-index: 15; }
+        .text-layer { position: absolute; top: 0; left: 0; z-index: 20; pointer-events: none; }
+        .text-layer > * { pointer-events: auto; }
+
+        /* ===== DSD 模板樣式 ===== */
+        .dsd-template {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            padding: 12px 16px;
+            background: #fff;
+            font-family: 'Times New Roman', 'SimSun', serif;
+            font-size: 9px;
+            color: #000;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            z-index: 1;
+        }
+        .dsd-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+        .dsd-appendix { font-size: 10px; font-weight: 600; flex: 0 0 auto; }
+        .dsd-title-block { flex: 1; text-align: center; }
+        .dsd-title-cn { font-size: 18px; font-weight: 700; }
+        .dsd-contract { font-size: 11px; margin-top: 2px; }
+        .dsd-logo-block { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+        .dsd-logo-circle { width: 32px; height: 32px; border: 2px solid #0066b3; border-radius: 50%; color: #0066b3; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+        .dsd-logo-text { font-size: 8px; line-height: 1.15; }
+        .dsd-logo-text strong { color: #0066b3; font-size: 10px; }
+
+        .dsd-row-2 { display: flex; gap: 6px; margin-bottom: 4px; }
+        .dsd-row-2 .dsd-cell { flex: 1; }
+        .dsd-row-2 .dsd-cell:nth-child(1) { flex: 3; }
+        .dsd-row-2 .dsd-cell:nth-child(2),
+        .dsd-row-2 .dsd-cell:nth-child(3) { flex: 1; }
+        .dsd-row-3 { display: flex; gap: 6px; margin-bottom: 6px; }
+        .dsd-row-3 .dsd-cell-full { flex: 1; }
+        .dsd-label { font-size: 9px; margin-bottom: 1px; }
+        .dsd-line { border-bottom: 1px solid #000; height: 16px; }
+        .dsd-box { border: 1px solid #000; height: 22px; }
+
+        .dsd-main-table { width: 100%; border-collapse: collapse; table-layout: fixed; flex: 1; }
+        .dsd-main-table th, .dsd-main-table td {
+            border: 1px solid #000;
+            padding: 2px 3px;
+            font-size: 8px;
+            vertical-align: top;
+            text-align: center;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
+        .dsd-main-table th { font-weight: 600; background: #f5f5f5; }
+        .dsd-main-table th small { font-weight: normal; font-size: 7px; }
+        .dsd-main-table td.day { font-weight: 600; text-align: center; vertical-align: middle; font-size: 10px; }
+        .dsd-main-table tbody tr { height: 68px; }
+
+        .dsd-footer { font-size: 6.5px; line-height: 1.25; margin-top: 4px; }
+        .dsd-footer p { margin-bottom: 1px; }
+        .dsd-page-footer { display: flex; justify-content: space-between; font-size: 8px; margin-top: auto; padding-top: 2px; }
+
+        .text-annotation { position: absolute; cursor: move; min-width: 20px; min-height: 20px; padding: 2px 6px; background: transparent; border: 1px solid transparent; font-family: Arial, sans-serif; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word; outline: none; z-index: 25; user-select: none; box-sizing: border-box; }
+        .text-annotation:hover { border: 1px dashed #3498db; }
+        .text-annotation.editing { border: 2px solid #3498db; background: rgba(255,255,255,0.95); cursor: text; z-index: 30; }
+        .text-annotation.locked { cursor: default; border: 1px solid transparent !important; background: transparent !important; }
+        .text-annotation .delete-btn { position: absolute; top: -12px; right: -12px; width: 20px; height: 20px; background: #e74c3c; color: #fff; border: 2px solid #fff; border-radius: 50%; font-size: 12px; line-height: 20px; text-align: center; cursor: pointer; display: none; z-index: 35; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .text-annotation:hover .delete-btn { display: block; }
+        .text-annotation.locked .delete-btn { display: none !important; }
+        .text-annotation .delete-btn:hover { background: #c0392b; }
+
+        .tick-mark { position: absolute; z-index: 25; pointer-events: auto; color: #1a73e8; font-weight: bold; cursor: move; user-select: none; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; }
+        .tick-mark.locked { cursor: default !important; }
+        .tick-mark .delete-btn { position: absolute; top: -12px; right: -12px; width: 20px; height: 20px; background: #e74c3c; color: #fff; border: 2px solid #fff; border-radius: 50%; font-size: 12px; line-height: 20px; text-align: center; cursor: pointer; display: none; z-index: 35; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .tick-mark:hover .delete-btn { display: block; }
+        .tick-mark.locked .delete-btn { display: none !important; }
+
+        .loading-indicator { display: none; justify-content: center; align-items: center; gap: 10px; padding: 16px; color: #2563eb; font-weight: 600; background: #eff6ff; border-radius: 8px; margin-top: 12px; }
+        .loading-indicator.visible { display: flex; }
+
+        footer { text-align: center; padding: 30px 0 20px; color: #7f8c8d; border-top: 1px solid #e0e6ed; margin-top: 30px; }
+        @media (max-width: 768px) { .main-content { padding: 15px; } .document-page { padding: 20px; } }
+        .sidebar.collapsed .logo { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">
+            <img src="AEL Logo.png" alt="AEL Logo" class="logo-img" style="height: 45px; width: auto; object-fit: contain; margin-right: 8px;">
+            <h2>DWSS</h2>
+        </div>
+        <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
+        <ul class="menu">
+            <li><a href="index.html"><i class="fas fa-home"></i><span class="menu-text">Dashboard</span></a></li>
+            <li><a href="sitediary.html" class="active"><i class="fas fa-book"></i><span class="menu-text">Site Diary</span></a></li>
+            <li><a href="safetyinspect.html"><i class="fas fa-clipboard-check"></i><span class="menu-text">Safety Inspection</span></a></li>
+            <li><a href="sitelocations.html"><i class="fas fa-map-marked-alt"></i><span class="menu-text">Site Locations</span></a></li>
+            <li><a href="labourwage.html"><i class="fas fa-money-bill-wave"></i><span class="menu-text">Labour Wage</span></a></li>
+            <li><a href="settings.html"><i class="fas fa-cogs"></i><span class="menu-text">System Settings</span></a></li>
+            <li><a href="usermanagement.html"><i class="fas fa-user-circle"></i><span class="menu-text">User Management</span></a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>Edit Site Diary (DSD)</h1>
+            <div class="header-controls">
+                <div class="user-date-row">
+                    <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
+                    <button class="user-btn"><i class="fas fa-user"></i> John Doe</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="document-page">
+            <div class="document-header">
+                <div class="doc-title-section">
+                    <h2><i class="fas fa-file-alt"></i> <span id="docTitle">Site Diary Document</span> <span class="doc-status status-draft" id="docStatus">Draft</span></h2>
+                </div>
+                <div class="document-actions">
+                    <button class="btn btn-submit" id="submit-btn"><i class="fas fa-paper-plane"></i> Submit</button>
+                    <button class="btn btn-approve" id="approve-btn" style="display:none;"><i class="fas fa-check-circle"></i> Approve</button>
+                    <button class="btn btn-reject" id="reject-btn" style="display:none;"><i class="fas fa-times-circle"></i> Reject</button>
+                    <button class="btn btn-save" id="save-btn"><i class="fas fa-save"></i> Save Changes</button>
+                    <button class="btn btn-cancel" id="cancel-btn"><i class="fas fa-times"></i> Cancel</button>
+                    <button class="btn btn-primary" id="back-btn"><i class="fas fa-arrow-left"></i> Back</button>
+                </div>
+            </div>
+
+            <div class="document-meta">
+                <div class="meta-item"><span class="meta-label">Document ID:</span><span class="meta-value" id="docId">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Document Type:</span><span class="meta-value" id="docType">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Site:</span><span class="meta-value" id="docSite">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Period:</span><span class="meta-value" id="docPeriod">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Submitted By:</span><span class="meta-value" id="docAuthor">N/A</span></div>
+            </div>
+
+            <div class="pdf-toolbar-ribbon">
+                <div class="ribbon-group">
+                    <span class="ribbon-group-label">Select</span>
+                    <button class="tool-btn active" data-tool="select"><i class="fas fa-mouse-pointer"></i> Select</button>
+                </div>
+                <div class="ribbon-group">
+                    <span class="ribbon-group-label">Annotate</span>
+                    <button class="tool-btn" data-tool="text"><i class="fas fa-font"></i> Text</button>
+                    <button class="tool-btn" data-tool="highlight"><i class="fas fa-highlighter"></i> Highlight</button>
+                </div>
+                <div class="ribbon-group">
+                    <span class="ribbon-group-label">Shapes</span>
+                    <button class="tool-btn" data-tool="rectangle"><i class="fas fa-square"></i> Rect</button>
+                    <button class="tool-btn" data-tool="ellipse"><i class="fas fa-circle"></i> Oval</button>
+                    <button class="tool-btn" data-tool="arrow"><i class="fas fa-arrow-right"></i> Arrow</button>
+                    <button class="tool-btn" data-tool="line"><i class="fas fa-minus"></i> Line</button>
+                </div>
+                <div class="ribbon-group">
+                    <span class="ribbon-group-label">Marks</span>
+                    <button class="tool-btn" data-tool="tick"><i class="fas fa-check"></i> Tick</button>
+                </div>
+                <div class="ribbon-group" style="flex:1; justify-content:flex-end;">
+                    <div class="property-controls">
+                        <div class="property-group"><label>Color:</label><input type="color" id="color-picker" value="#3498db"></div>
+                        <div class="property-group"><label>Size:</label><input type="range" id="size-slider" min="1" max="10" value="3"><span id="size-value">3px</span></div>
+                        <div class="property-group"><label>Opacity:</label><input type="range" id="opacity-slider" min="10" max="100" value="100"><span id="opacity-value">100%</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pdf-editor-container">
+                <div class="pdf-controls">
+                    <button class="nav-btn" id="prev-page"><i class="fas fa-chevron-left"></i></button>
+                    <span class="page-info">Page <span id="current-page">1</span> of <span id="total-pages">10</span></span>
+                    <button class="nav-btn" id="next-page"><i class="fas fa-chevron-right"></i></button>
+                    <button class="btn btn-warning" id="undo-btn" style="padding:4px 12px;font-size:0.85rem;"><i class="fas fa-undo"></i> Undo</button>
+                    <button class="btn btn-purple lock-btn" id="lock-btn" style="padding:4px 12px;font-size:0.85rem;"><i class="fas fa-lock"></i> Lock</button>
+                    <button class="btn btn-cancel" id="delete-selected-btn" style="padding:4px 12px;font-size:0.85rem;"><i class="fas fa-trash"></i> Delete</button>
+                    <span class="scale-info"><i class="fas fa-info-circle"></i> 向下滾動到底部可自動載入更多頁面</span>
+                </div>
+                <div class="pdf-canvas-container" id="pdf-container">
+                    <div class="pages-wrapper" id="pages-wrapper"></div>
+                </div>
+                <div class="loading-indicator" id="loading-indicator">
+                    <i class="fas fa-spinner fa-spin"></i> Loading more pages...
+                </div>
+            </div>
+
+            <footer>
+                <p>&copy; 2025 AEL DWSS System. All rights reserved.</p>
+                <p>AEL DWSS Platform</p>
+            </footer>
+        </div>
+    </div>
+
+    <script src="scripts/language.js"></script>
+    <script src="scripts/app.js"></script>
+
+    <script>
+    (function() {
+        function saveSidebarState() {
+            var sb = document.querySelector('.sidebar');
+            if (sb) localStorage.setItem('sidebarCollapsed', sb.classList.contains('collapsed') ? 'true' : 'false');
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            var sb = document.querySelector('.sidebar');
+            if (sb && localStorage.getItem('sidebarCollapsed') === 'true') sb.classList.add('collapsed');
+            var tb = document.querySelector('.toggle-btn');
+            if (tb) tb.addEventListener('click', function() { setTimeout(saveSidebarState, 50); });
+            var ds = document.querySelector('.date-display span');
+            var sd = sessionStorage.getItem('globalDate');
+            if (sd && ds) ds.textContent = sd;
+            else if (ds) ds.textContent = new Date().toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'});
+        });
+    })();
+    </script>
+
+    <script src="scripts/editdsdsitediary.js"></script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+            var backBtn = document.getElementById('back-btn');
+            if (backBtn) {
+                backBtn.addEventListener('click', function() { window.location.href = 'sitediary.html'; });
+            }
+        }, 500);
+    });
+    </script>
+</body>
+</html>

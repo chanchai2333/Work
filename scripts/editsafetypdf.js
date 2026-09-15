@@ -983,7 +983,7 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify(inspectionData));
         sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
         
-        alert('✅ Annotations saved successfully!');
+        alert('✅ Document saved successfully!');
     }
 
     // ---------- Submit 功能 ----------

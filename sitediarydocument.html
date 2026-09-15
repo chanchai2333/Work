@@ -99,12 +99,24 @@
         .document-actions .btn-print:hover { background: #219653; }
         .document-actions .btn-download { background: #8e44ad; color: white; }
         .document-actions .btn-download:hover { background: #732d91; }
+        .document-actions .btn-export { background: #f39c12; color: white; }
+        .document-actions .btn-export:hover { background: #d68910; }
+        
         /* 移除 Zoom 按钮和显示 */
         #pdf-zoom-out, #pdf-zoom-in, .zoom-controls-label {
             display: none !important;
         }
         #pdf-zoom-level {
             display: none !important;
+        }
+        
+        /* 打印时的样式：隐藏不需要打印的部分 */
+        @media print {
+            body * { visibility: hidden; }
+            #pdf-viewer-container, #pdf-viewer-container * { visibility: visible; }
+            #pdf-viewer-container { position: absolute; left: 0; top: 0; width: 100%; }
+            #pdf-canvas { box-shadow: none !important; }
+            .pdf-controls, .document-actions, .header, .sidebar { display: none !important; }
         }
     </style>
 </head>
@@ -144,8 +156,11 @@
                     <span class="doc-status" id="docStatus">Draft</span>
                 </h2>
                 <div class="document-actions">
-                    <button class="btn btn-print" id="print-pdf-btn" style="display:none;"><i class="fas fa-print"></i> Print PDF</button>
-                    <button class="btn btn-download" id="download-pdf-btn" style="display:none;"><i class="fas fa-download"></i> Download PDF</button>
+                    <!-- ★ 强制显示这三个按钮（加了 !important，防止外部JS隐藏它们） ★ -->
+                    <button class="btn btn-export" id="export-pdf-btn" style="display:inline-block !important;"><i class="fas fa-file-export"></i> Export</button>
+                    <button class="btn btn-download" id="download-pdf-btn" style="display:inline-block !important;"><i class="fas fa-download"></i> Download</button>
+                    <button class="btn btn-print" id="print-pdf-btn" style="display:inline-block !important;"><i class="fas fa-print"></i> Print</button>
+                    
                     <button class="btn" id="back-to-diary-btn"><i class="fas fa-arrow-left"></i> Back to Diary</button>
                 </div>
             </div>
@@ -173,7 +188,6 @@
                     <button id="pdf-prev"><i class="fas fa-chevron-left"></i> Prev</button>
                     <span id="pdf-page-info">Page <span id="pdf-current-page">1</span> of <span id="pdf-total-pages">1</span></span>
                     <button id="pdf-next">Next <i class="fas fa-chevron-right"></i></button>
-                    <!-- Zoom 显示已移除 -->
                 </div>
             </div>
         </div>
@@ -183,6 +197,69 @@
     <script src="scripts/app.js"></script>
     <script src="scripts/sitediarydocument.js"></script>
     
+    <!-- ★ 三个按钮的功能实现 + 强制显示覆盖逻辑 ★ -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 强制覆盖外部逻辑，确保按钮显示
+            var exportBtn = document.getElementById('export-pdf-btn');
+            var downloadBtn = document.getElementById('download-pdf-btn');
+            var printBtn = document.getElementById('print-pdf-btn');
+            
+            if(exportBtn) exportBtn.style.display = 'inline-block';
+            if(downloadBtn) downloadBtn.style.display = 'inline-block';
+            if(printBtn) printBtn.style.display = 'inline-block';
+
+            var canvas = document.getElementById('pdf-canvas');
+            
+            // 1. 导出 PDF
+            exportBtn.addEventListener('click', function() {
+                if (!canvas || canvas.width === 0) { alert('没有可导出的PDF内容'); return; }
+                
+                const { jsPDF } = window.jspdf;
+                html2canvas(canvas).then(function(canvasImg) {
+                    var imgData = canvasImg.toDataURL('image/png');
+                    var imgWidth = 210; // A4 width in mm
+                    var pageHeight = 297; // A4 height in mm
+                    var imgHeight = canvasImg.height * imgWidth / canvasImg.width;
+                    
+                    var pdf = new jsPDF('p', 'mm', 'a4');
+                    var position = 0;
+                    
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    pdf.save('SiteDiary_Exported.pdf');
+                }).catch(function(err) {
+                    alert('导出失败: ' + err);
+                });
+            });
+
+            // 2. 下载 PDF
+            downloadBtn.addEventListener('click', function() {
+                var pdfData = window.pdfDoc;
+                if (pdfData) {
+                    pdfData.getData().then(function(data) {
+                        var blob = new Blob([data], { type: 'application/pdf' });
+                        var url = URL.createObjectURL(blob);
+                        var a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'SiteDiary_Original.pdf';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    });
+                } else {
+                    alert('已降级为导出图片 PDF');
+                    exportBtn.click();
+                }
+            });
+
+            // 3. 打印 PDF
+            printBtn.addEventListener('click', function() {
+                window.print();
+            });
+        });
+    </script>
+
     <!-- 侧边栏状态持久化 -->
     <script>
         (function() {
