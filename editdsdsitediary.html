@@ -54,7 +54,6 @@
         .nav-btn:hover { background: #2980b9; }
         .nav-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
         .page-info { font-size: 14px; font-weight: 600; color: #334155; padding: 0 4px; display: flex; align-items: center; gap: 6px; }
-
         .page-input { width: 60px; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 14px; font-weight: 700; color: #1e40af; text-align: center; background: #fff; transition: 0.15s; }
         .page-input:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 2px rgba(52,152,219,0.25); background: #f0f9ff; }
         .page-input::-webkit-inner-spin-button, .page-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
@@ -77,10 +76,7 @@
         .sidebar.collapsed .logo { display: none !important; }
 
         /* ============================================================
-           ★ 表單覆蓋層樣式
-           - 平時完全透明
-           - hover 淡藍微光
-           - focus 黃底 + 藍框
+           表單覆蓋層樣式
            ============================================================ */
         .pdf-form-overlay {
             position: absolute;
@@ -115,12 +111,9 @@
             z-index: 2;
             overflow: auto;
         }
-        .pdf-form-overlay textarea.pdf-field {
-            overflow-y: auto;
-        }
+        .pdf-form-overlay textarea.pdf-field { overflow-y: auto; }
         .pdf-form-overlay textarea.pdf-field::-webkit-scrollbar { width: 5px; }
         .pdf-form-overlay textarea.pdf-field::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-
         .pdf-form-overlay select.pdf-field {
             appearance: none;
             -webkit-appearance: none;
@@ -130,7 +123,6 @@
             padding: 0 2px;
         }
         .pdf-form-overlay select.pdf-field::-ms-expand { display: none; }
-
         .pdf-form-overlay input.pdf-date-field {
             font-family: 'Segoe UI', Arial, sans-serif;
             font-size: 10.5px;
@@ -259,7 +251,6 @@
             var totalPagesEl = document.getElementById('total-pages');
             var prevBtn = document.getElementById('prev-page');
             var nextBtn = document.getElementById('next-page');
-
             if (!pageInput || !currentPageEl || !totalPagesEl || !prevBtn || !nextBtn) return;
 
             function getCurrent() {
@@ -270,16 +261,13 @@
                 var v = parseInt(totalPagesEl.textContent, 10);
                 return isNaN(v) ? 1 : v;
             }
-
             function syncInputValue() {
                 if (document.activeElement !== pageInput) pageInput.value = getCurrent();
                 pageInput.max = getTotal();
             }
-
             var observer = new MutationObserver(syncInputValue);
             observer.observe(currentPageEl, { characterData: true, childList: true, subtree: true });
             observer.observe(totalPagesEl, { characterData: true, childList: true, subtree: true });
-
             syncInputValue();
 
             function jumpToPage(target) {
@@ -301,8 +289,7 @@
             pageInput.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter' || e.keyCode === 13) {
                     e.preventDefault();
-                    var target = parseInt(pageInput.value, 10);
-                    jumpToPage(target);
+                    jumpToPage(parseInt(pageInput.value, 10));
                     pageInput.blur();
                 } else if (e.key === 'Escape' || e.keyCode === 27) {
                     e.preventDefault();
@@ -310,7 +297,6 @@
                     pageInput.blur();
                 }
             });
-
             pageInput.addEventListener('blur', syncInputValue);
             pageInput.addEventListener('focus', function () { try { pageInput.select(); } catch (e) {} });
         }
@@ -324,55 +310,47 @@
     </script>
 
     <!-- ============================================================
-         ★ 表單覆蓋層 v2（精準對位 + 移除簽名/備註的核取方塊）
-         ------------------------------------------------------------
-         修正重點：
-         1. 重新目測 PDF 表格位置，百分比大幅修正
-         2. DSD 簽署 / 承建商簽署 / 備註 三個欄位改用純文字輸入框
-            （不再有 checkbox 方格）
-         3. 表格位置：以百分比定位，可微調 FORM_LAYOUT
+         ★ 表單覆蓋層 v3 — 精準對位（根據 90 個座標點計算）
          ============================================================ -->
     <script>
     (function () {
         'use strict';
-        if (window.__dsdFormOverlayInstalledV2) return;
-        window.__dsdFormOverlayInstalledV2 = true;
+        if (window.__dsdFormOverlayInstalledV3) return;
+        window.__dsdFormOverlayInstalledV3 = true;
 
         /* ============================================================
-           【可調參數】PDF 表格位置（用 % 定位）
-           ------------------------------------------------------------
-           如果有偏差，微調這些數字即可。
+           精準表格位置（依使用者提供的校準座標計算）
            ============================================================ */
         var FORM_LAYOUT = {
             /* 頁首資訊欄 */
             header: {
-                // 「廠房名稱 Name of Plant」下方的橫線位置
-                nameOfPlant: { left: '6%',    top: '10.8%', width: '37%', height: '3.2%' },
-                // 「工作單編號 Task Order No.」下方的橫線位置
-                taskOrderNo: { left: '6%',    top: '16.0%', width: '37%', height: '3.2%' },
-                // 「項目編號 SOR item」的方框
-                sorItem:     { left: '52.8%', top: '9.5%',  width: '10%', height: '5.2%' },
-                // 「項目編號 CE No.」的方框
-                ceNo:        { left: '77.5%', top: '9.5%',  width: '10%', height: '5.2%' }
+                // Name of Plant 下底線（輸入框以線為中心）
+                nameOfPlant: { left: '12.71%', top: '11.3%', width: '33.37%', height: '3%' },
+                // SOR item 方框
+                sorItem:     { left: '56.6%',  top: '12.6%', width: '11.0%', height: '4.0%' },
+                // CE No. 方框
+                ceNo:        { left: '81.0%',  top: '12.5%', width: '13.5%', height: '4.3%' },
+                // Task Order No. 區域
+                taskOrderNo: { left: '12.6%',  top: '19.0%', width: '14.5%', height: '5.2%' }
             },
 
             /* 主表格 */
             table: {
-                // 「星期一」資料列（第一行）的頂端 y（百分比）
-                rowStartTop: 23.4,
-                // 每一行的高度（百分比）
-                rowHeight: 8.85,
+                // 第一行（星期一）的頂端
+                rowStartTop: 36.6,
+                // 每行高度
+                rowHeight: 7.09,
 
-                // 8 個欄位的 left 與 width（百分比）
+                // 8 欄的 left 與 width
                 columns: {
-                    date:          { left: '5.6%',  width: '5.0%'  },   // Date 日期
-                    weather:       { left: '10.6%', width: '5.0%'  },   // Weather 天氣
-                    description:   { left: '15.6%', width: '24.7%' },   // Brief Description
-                    instructions:  { left: '40.3%', width: '10.4%' },   // Instructions
-                    responses:     { left: '50.7%', width: '10.8%' },   // Responses
-                    dsdSig:        { left: '61.5%', width: '10.8%' },   // Signed by DSD
-                    contractorSig: { left: '72.3%', width: '10.8%' },   // Signed by Contractor
-                    remarks:       { left: '83.1%', width: '12.0%' }    // Remarks
+                    date:          { left: '4.6%',  width: '7.6%'  },
+                    weather:       { left: '12.5%', width: '5.5%'  },
+                    description:   { left: '18.3%', width: '17.4%' },
+                    instructions:  { left: '36.0%', width: '14.5%' },
+                    responses:     { left: '50.8%', width: '11.4%' },
+                    dsdSig:        { left: '62.5%', width: '11.4%' },
+                    contractorSig: { left: '74.2%', width: '8.1%'  },
+                    remarks:       { left: '82.6%', width: '11.5%' }
                 }
             }
         };
@@ -390,7 +368,7 @@
                 try {
                     var d = JSON.parse(raw);
                     if (d && d.id) return d.id;
-                } catch (e) { /* ignore */ }
+                } catch (e) {}
             }
             return 'default';
         }
@@ -406,7 +384,7 @@
             catch (e) { console.error('[DSD] Failed to save form data', e); }
         }
 
-        /* ============ 建立欄位 ============ */
+        /* ============ 欄位建立 ============ */
         function applyPosition(el, pos) {
             el.style.position = 'absolute';
             el.style.left = pos.left;
@@ -425,10 +403,10 @@
             el.addEventListener('change', save);
         }
 
-        function createTextInput(fieldId, pos, value, pageNum, extraClass, placeholder) {
+        function createTextInput(fieldId, pos, value, pageNum, placeholder) {
             var input = document.createElement('input');
             input.type = 'text';
-            input.className = 'pdf-field' + (extraClass ? ' ' + extraClass : '');
+            input.className = 'pdf-field';
             input.dataset.fieldId = fieldId;
             input.value = value || '';
             input.autocomplete = 'off';
@@ -438,26 +416,25 @@
             return input;
         }
 
-        function createTextArea(fieldId, pos, value, pageNum, placeholder) {
+        function createTextArea(fieldId, pos, value, pageNum) {
             var ta = document.createElement('textarea');
             ta.className = 'pdf-field';
             ta.dataset.fieldId = fieldId;
             ta.value = value || '';
             ta.spellcheck = false;
-            if (placeholder) ta.placeholder = placeholder;
             applyPosition(ta, pos);
             bindFieldEvents(ta, pageNum, fieldId);
             return ta;
         }
 
         var WEATHER_OPTIONS = [
-            { v: '',          t: '' },
-            { v: '1',         t: '1' },
-            { v: '2',         t: '2' },
-            { v: '3',         t: '3' },
-            { v: 'TC',        t: 'TC' },
-            { v: 'RA',        t: 'RA' },
-            { v: 'TS',        t: 'TS' }
+            { v: '',   t: '' },
+            { v: '1',  t: '1' },
+            { v: '2',  t: '2' },
+            { v: '3',  t: '3' },
+            { v: 'TC', t: 'TC' },
+            { v: 'RA', t: 'RA' },
+            { v: 'TS', t: 'TS' }
         ];
 
         function createWeatherSelect(fieldId, pos, value, pageNum) {
@@ -487,46 +464,47 @@
             overlay.className = 'pdf-form-overlay';
             overlay.dataset.page = pageNum;
 
-            /* 1. 頁首資訊欄 */
-            // 廠房名稱 Name of Plant
+            /* -------- 1. 頁首資訊欄 -------- */
             overlay.appendChild(createTextInput(
                 'nameOfPlant',
                 FORM_LAYOUT.header.nameOfPlant,
                 pageData.nameOfPlant, pageNum
             ));
-            // 工作單編號 Task Order No.
-            overlay.appendChild(createTextInput(
-                'taskOrderNo',
-                FORM_LAYOUT.header.taskOrderNo,
-                pageData.taskOrderNo, pageNum
-            ));
-            // SOR item
             overlay.appendChild(createTextInput(
                 'sorItem',
                 FORM_LAYOUT.header.sorItem,
                 pageData.sorItem, pageNum
             ));
-            // CE No.
             overlay.appendChild(createTextInput(
                 'ceNo',
                 FORM_LAYOUT.header.ceNo,
                 pageData.ceNo, pageNum
             ));
+            overlay.appendChild(createTextInput(
+                'taskOrderNo',
+                FORM_LAYOUT.header.taskOrderNo,
+                pageData.taskOrderNo, pageNum
+            ));
 
-            /* 2. 主表格 7 行 × 8 欄 */
+            /* -------- 2. 主表格 7 行 × 8 欄 -------- */
             for (var d = 0; d < 7; d++) {
                 var rowTop = FORM_LAYOUT.table.rowStartTop + d * FORM_LAYOUT.table.rowHeight;
                 var rowH = FORM_LAYOUT.table.rowHeight;
                 var cols = FORM_LAYOUT.table.columns;
 
-                // Date 日期
+                // Date 日期 — 只放在格子下半部（避開「星期一」等標籤）
+                var datePos = {
+                    left: cols.date.left,
+                    top: (rowTop + rowH * 0.42) + '%',
+                    width: cols.date.width,
+                    height: (rowH * 0.5) + '%'
+                };
                 overlay.appendChild(createTextInput(
-                    'r' + d + '_date',
-                    { left: cols.date.left, top: rowTop + '%', width: cols.date.width, height: rowH + '%' },
-                    pageData['r' + d + '_date'], pageNum, 'pdf-date-field', 'dd/mm/yy'
+                    'r' + d + '_date', datePos,
+                    pageData['r' + d + '_date'], pageNum, 'dd/mm'
                 ));
 
-                // Weather 天氣
+                // Weather 天氣 — 下拉選單
                 overlay.appendChild(createWeatherSelect(
                     'r' + d + '_weather',
                     { left: cols.weather.left, top: rowTop + '%', width: cols.weather.width, height: rowH + '%' },
@@ -558,17 +536,17 @@
                 overlay.appendChild(createTextInput(
                     'r' + d + '_dsdSig',
                     { left: cols.dsdSig.left, top: rowTop + '%', width: cols.dsdSig.width, height: rowH + '%' },
-                    pageData['r' + d + '_dsdSig'], pageNum, '', '簽名'
+                    pageData['r' + d + '_dsdSig'], pageNum
                 ));
 
                 // ★ Signed by Contractor's Rep — 純文字（無 checkbox）
                 overlay.appendChild(createTextInput(
                     'r' + d + '_contractorSig',
                     { left: cols.contractorSig.left, top: rowTop + '%', width: cols.contractorSig.width, height: rowH + '%' },
-                    pageData['r' + d + '_contractorSig'], pageNum, '', '簽名'
+                    pageData['r' + d + '_contractorSig'], pageNum
                 ));
 
-                // Remarks 備註 — 純文字（無 checkbox）
+                // ★ Remarks 備註 — 純文字（無 checkbox）
                 overlay.appendChild(createTextArea(
                     'r' + d + '_remarks',
                     { left: cols.remarks.left, top: rowTop + '%', width: cols.remarks.width, height: rowH + '%' },
@@ -579,7 +557,7 @@
             pdfPage.appendChild(overlay);
         }
 
-        /* ============ 鉤住 Save / Submit，順便存表單 ============ */
+        /* ============ 鉤住 Save / Submit ============ */
         function hookSaveButton() {
             ['save-btn', 'submit-btn'].forEach(function (id) {
                 var btn = document.getElementById(id);
@@ -596,35 +574,26 @@
             allFormData = loadAllFormData();
 
             var pageWrapper = document.getElementById('page-wrapper');
-            if (!pageWrapper) {
-                console.warn('[DSD Form] #page-wrapper not found');
-                return;
-            }
+            if (!pageWrapper) { console.warn('[DSD Form] #page-wrapper not found'); return; }
 
-            // 監聽 PDF 渲染
             var observer = new MutationObserver(function () {
                 var pdfPage = pageWrapper.querySelector('.pdf-page');
                 if (pdfPage) injectFormFields(pdfPage);
             });
             observer.observe(pageWrapper, { childList: true, subtree: true });
 
-            // 已存在就直接注入
             var existing = pageWrapper.querySelector('.pdf-page');
             if (existing) injectFormFields(existing);
 
-            // 定期檢查（保險）
             var interval = setInterval(function () {
                 var pdfPage = pageWrapper.querySelector('.pdf-page');
-                if (pdfPage && !pdfPage.querySelector('.pdf-form-overlay')) {
-                    injectFormFields(pdfPage);
-                }
+                if (pdfPage && !pdfPage.querySelector('.pdf-form-overlay')) injectFormFields(pdfPage);
                 hookSaveButton();
             }, 800);
             setTimeout(function () { clearInterval(interval); }, 60000);
 
             hookSaveButton();
-
-            console.log('[DSD Form] Overlay v2 installed. Doc:', currentDocId);
+            console.log('[DSD Form] Overlay v3 (精準對位) installed. Doc:', currentDocId);
         }
 
         if (document.readyState === 'loading') {
@@ -639,9 +608,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         setTimeout(function() {
             var backBtn = document.getElementById('back-btn');
-            if (backBtn) {
-                backBtn.addEventListener('click', function() { window.location.href = 'sitediary.html'; });
-            }
+            if (backBtn) backBtn.addEventListener('click', function() { window.location.href = 'sitediary.html'; });
         }, 500);
     });
     </script>
