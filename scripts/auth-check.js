@@ -29,6 +29,11 @@ const DWSS_Auth = {
         return user && user.permissions && user.permissions.canChangeStatus === true;
     },
 
+    isAdmin: function() {
+    const user = this.getCurrentUser();
+    return user && user.userRole === 'admin';
+    },
+
     // 檢查是否可以管理用戶（Admin only）
     canManageUsers: function() {
         const user = this.getCurrentUser();

@@ -57,7 +57,6 @@
         .fa-check-circle { color: #27ae60; }
         .fa-times-circle { color: #e74c3c; }
 
-        /* 侧边栏折叠时隐藏整个 Logo 区域，防止溢出遮挡标题 */
         .sidebar.collapsed .logo {
             display: none !important;
         }
@@ -66,6 +65,29 @@
             font-size: 12px;
             color: #7f8c8d;
             margin-top: 2px;
+        }
+        
+        /* 權限提示標籤 */
+        .permission-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .permission-full {
+            background: #d4edda;
+            color: #155724;
+        }
+        .permission-submit {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .readonly-hint {
+            font-size: 12px;
+            color: #999;
+            font-style: italic;
         }
     </style>
 </head>
@@ -115,6 +137,7 @@
                     <button class="user-btn">
                         <i class="fas fa-user"></i> <span id="header-user-name">User</span>
                     </button>
+                    <span id="permission-indicator"></span>
                     <button id="top-logout-btn" class="logout-btn-top" style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; border: none; border-radius: 20px; padding: 10px 20px; font-weight: 600; margin-left: 10px;">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </button>
@@ -133,11 +156,12 @@
         </div>
 
         <!-- 權限說明 -->
-        <div class="permissions-info">
+        <div class="permissions-info" id="permissions-info-box">
             <h4><i class="fas fa-shield-alt"></i> DWSS Permission Levels</h4>
             <ul class="permissions-list">
                 <li><i class="fas fa-check-circle"></i> <strong>Admin / Officer / AEI</strong> - Full Access: Can submit and change all submission statuses</li>
                 <li><i class="fas fa-times-circle"></i> <strong>Inspector / Contractor</strong> - Submit Only: Can submit but cannot change status</li>
+                <li><i class="fas fa-lock"></i> <strong>User Management</strong> - Only Administrator can add, edit, or delete users</li>
             </ul>
         </div>
 
@@ -308,6 +332,18 @@
             currentPage: 1,
             itemsPerPage: 10,
             
+            // ★ 檢查是否為 Admin
+            isAdmin: function() {
+                const session = sessionStorage.getItem('dwss_session');
+                if (session) {
+                    try {
+                        const user = JSON.parse(session);
+                        return user.userRole === 'admin';
+                    } catch(e) {}
+                }
+                return false;
+            },
+            
             init: function() {
                 // 嘗試從 LocalStorage 載入以保持修改紀錄
                 var stored = localStorage.getItem('ael_dwss_users');
@@ -321,10 +357,34 @@
                 this.setupFilterEvents();
                 this.setupActionButtons();
                 this.updateUserStats();
+                this.applyPermissionUI();
             },
 
             saveUsersToLocalStorage: function() {
                 localStorage.setItem('ael_dwss_users', JSON.stringify(this.users));
+            },
+            
+            // ★ 根據權限調整 UI
+            applyPermissionUI: function() {
+                const isAdmin = this.isAdmin();
+                
+                // Add User 按鈕
+                const addUserBtn = document.getElementById('add-user-btn');
+                if (addUserBtn) {
+                    addUserBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+                }
+                
+                // 權限標籤
+                const permIndicator = document.getElementById('permission-indicator');
+                if (permIndicator) {
+                    if (isAdmin) {
+                        permIndicator.className = 'permission-badge permission-full';
+                        permIndicator.innerHTML = '<i class="fas fa-crown"></i> Administrator';
+                    } else {
+                        permIndicator.className = 'permission-badge permission-submit';
+                        permIndicator.innerHTML = '<i class="fas fa-lock"></i> Read-only';
+                    }
+                }
             },
             
             renderUserTable: function() {
@@ -333,6 +393,8 @@
                 
                 if (!tbody) return;
                 tbody.innerHTML = '';
+                
+                const isAdmin = this.isAdmin();
                 
                 let filteredUsers = this.users.filter(user => {
                     if (this.currentFilters.role !== "all" && user.role !== this.currentFilters.role) return false;
@@ -370,6 +432,17 @@
                             break;
                     }
                     
+                    // ★ 根據 Admin 權限生成操作按鈕
+                    let actionButtonsHtml = '';
+                    if (isAdmin) {
+                        actionButtonsHtml = `
+                            <button class="action-btn edit-user-btn" data-id="${user.id}"><i class="fas fa-edit"></i> Edit</button>
+                            <button class="action-btn delete-user-btn" data-id="${user.id}" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;"><i class="fas fa-trash"></i> Delete</button>
+                        `;
+                    } else {
+                        actionButtonsHtml = `<span class="readonly-hint"><i class="fas fa-lock"></i> Read-only</span>`;
+                    }
+                    
                     row.innerHTML = `
                         <td>
                             <div class="user-info">
@@ -380,15 +453,15 @@
                         <td>${this.escapeHtml(user.email)}</td>
                         <td><span class="role-badge role-${user.role}">${roleText}</span></td>
                         <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                        <td>
-                            <button class="action-btn edit-user-btn" data-id="${user.id}"><i class="fas fa-edit"></i> Edit</button>
-                            <button class="action-btn delete-user-btn" data-id="${user.id}" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;"><i class="fas fa-trash"></i> Delete</button>
-                        </td>
+                        <td>${actionButtonsHtml}</td>
                     `;
                     tbody.appendChild(row);
                 });
                 
-                this.attachEventListeners();
+                // 只有 Admin 先綁定編輯/刪除事件
+                if (isAdmin) {
+                    this.attachEventListeners();
+                }
             },
 
             escapeHtml: function(str) { 
@@ -535,6 +608,12 @@
                 const addUserBtn = document.getElementById('add-user-btn');
                 if (addUserBtn) {
                     addUserBtn.addEventListener('click', function() {
+                        // ★ 雙重檢查 Admin 權限
+                        if (!UserManagement.isAdmin()) {
+                            alert('Only Administrator can add users.');
+                            return;
+                        }
+                        
                         const modalTitle = document.querySelector('#add-user-modal h3 span');
                         const submitBtn = document.querySelector('#add-user-form button[type="submit"]');
                         if (modalTitle) modalTitle.textContent = 'Add New User';
@@ -569,6 +648,11 @@
                 if (addForm) {
                     addForm.addEventListener('submit', function(e) {
                         e.preventDefault();
+                        
+                        if (!UserManagement.isAdmin()) {
+                            alert('Only Administrator can modify users.');
+                            return;
+                        }
                         
                         const submitBtn = document.querySelector('#add-user-form button[type="submit"]');
                         const editingUserId = submitBtn ? submitBtn.dataset.editingUserId : null;
@@ -618,11 +702,15 @@
             attachEventListeners: function() {
                 // 编辑用户按钮
                 document.querySelectorAll('.edit-user-btn').forEach(btn => {
-                    // 使用 cloneNode 清除舊事件避免重複綁定
                     const newBtn = btn.cloneNode(true);
                     btn.parentNode.replaceChild(newBtn, btn);
 
                     newBtn.addEventListener('click', function() {
+                        if (!UserManagement.isAdmin()) {
+                            alert('Only Administrator can edit users.');
+                            return;
+                        }
+                        
                         const userId = parseInt(this.getAttribute('data-id'));
                         const user = UserManagement.users.find(u => u.id === userId);
                         
@@ -653,6 +741,11 @@
                     btn.parentNode.replaceChild(newBtn, btn);
 
                     newBtn.addEventListener('click', function() {
+                        if (!UserManagement.isAdmin()) {
+                            alert('Only Administrator can delete users.');
+                            return;
+                        }
+                        
                         const userId = parseInt(this.getAttribute('data-id'));
                         const userName = UserManagement.users.find(u => u.id === userId)?.name;
                         
@@ -687,7 +780,7 @@
             if (storedDate && dateSpan) dateSpan.textContent = storedDate;
             else if (dateSpan) dateSpan.textContent = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
             
-            // Logout 按鈕 (绑定顶部的独立登出按钮)
+            // Logout 按鈕
             var topLogoutBtn = document.getElementById('top-logout-btn');
             if (topLogoutBtn) {
                 topLogoutBtn.addEventListener('click', function() {
@@ -698,7 +791,7 @@
                 });
             }
 
-            // ==================== 側邊欄展開/收合事件 ====================
+            // 側邊欄展開/收合事件
             const sidebarToggleBtn = document.querySelector('.toggle-btn');
             const sidebar = document.querySelector('.sidebar');
             if (sidebarToggleBtn && sidebar) {
@@ -715,7 +808,7 @@
                 });
             }
 
-            // ==================== 子菜單展開/收合事件 ====================
+            // 子菜單展開/收合事件
             const submenuItems = document.querySelectorAll('.menu-item-with-submenu > .submenu-toggle');
             submenuItems.forEach(item => {
                 item.addEventListener('click', function(e) {
