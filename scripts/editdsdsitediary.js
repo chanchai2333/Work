@@ -164,13 +164,51 @@
     }
 
     /* ========== 載入 PDF 模板 ========== */
-    function loadPdfTemplate() {
+        
+    function base64ToUint8(base64) {
+        var binaryString = atob(base64);
+        var len = binaryString.length;
+        var bytes = new Uint8Array(len);
+        for (var i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes;
+    }
+
+    function loadPdfFromBase64() {
         return new Promise(function (resolve, reject) {
-            if (!window.pdfjsLib) {
-                reject(new Error('pdf.js 未載入'));
+            var data = window.SITE_DIARY_TEMPLATE_BASE64;
+            if (!data || typeof data !== 'string' || data.length < 100) {
+                reject(new Error('No base64 template available'));
                 return;
             }
-            pdfjsLib.getDocument(PDF_PATH).promise.then(function (pdf) {
+            try {
+                if (data.indexOf('base64,') !== -1) {
+                    data = data.split('base64,')[1];
+                }
+                var bytes = base64ToUint8(data);
+                pdfjsLib.getDocument({ data: bytes }).promise.then(resolve).catch(reject);
+            } catch (e) {
+                reject(e);
+            }
+        });
+    }
+
+    function loadPdfFromUrl(url) {
+        return new Promise(function (resolve, reject) {
+            pdfjsLib.getDocument(url).promise.then(resolve).catch(reject);
+        });
+    }
+
+    function loadPdfTemplate() {
+        // 優先：base64 內嵌（無 CORS 問題）
+        return loadPdfFromBase64()
+            .catch(function (err) {
+                console.warn('[DSD] base64 not available, trying URL:', err.message);
+                // 備用：直接從 URL 載入（需要 http:// 或 localhost）
+                return loadPdfFromUrl(PDF_PATH);
+            })
+            .then(function (pdf) {
                 return pdf.getPage(1).then(function (page) {
                     var viewport = page.getViewport({ scale: PDF_RENDER_SCALE });
                     var canvas = document.createElement('canvas');
@@ -179,16 +217,11 @@
                     var ctx = canvas.getContext('2d');
                     return page.render({ canvasContext: ctx, viewport: viewport }).promise.then(function () {
                         templateImageUrl = canvas.toDataURL('image/png');
-                        // 顯示尺寸（css px）= viewport / PDF_RENDER_SCALE * 1.0
                         pdfWidthCss = viewport.width / PDF_RENDER_SCALE;
                         pdfHeightCss = viewport.height / PDF_RENDER_SCALE;
-                        resolve();
                     });
                 });
-            }).catch(function (err) {
-                reject(err);
             });
-        });
     }
 
     /* ========== 渲染當前頁 ========== */
