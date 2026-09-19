@@ -75,9 +75,6 @@
         @media (max-width: 768px) { .main-content { padding: 15px; } .document-page { padding: 20px; } }
         .sidebar.collapsed .logo { display: none !important; }
 
-        /* ============================================================
-           表單覆蓋層樣式
-           ============================================================ */
         .pdf-form-overlay {
             position: absolute;
             top: 0; left: 0;
@@ -128,6 +125,25 @@
             font-size: 10.5px;
             text-align: center;
             padding: 0 2px;
+        }
+
+        /* ★ 工人細節子格 */
+        .pdf-form-overlay .pdf-field.worker-detail {
+            z-index: 5;
+            font-size: 6px;
+            padding: 2px 3px;
+            text-align: center;
+            line-height: 1.2;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 2px;
+        }
+        .pdf-form-overlay .pdf-field.worker-detail:hover {
+            background: rgba(52, 152, 219, 0.12);
+            box-shadow: inset 0 0 0 1px #3498db;
+        }
+        .pdf-form-overlay .pdf-field.worker-detail:focus {
+            background: rgba(255, 251, 234, 0.98);
+            box-shadow: inset 0 0 0 2px #3498db;
         }
     </style>
 </head>
@@ -310,47 +326,60 @@
     </script>
 
     <!-- ============================================================
-         ★ 表單覆蓋層 v3 — 精準對位（根據 90 個座標點計算）
+         ★ 表單覆蓋層 v9
+         ------------------------------------------------------------
+         修正：工人子格 top 改為 hardcode 每行獨立值（tops 陣列）
+               不再依賴 rowTop + topOffset 計算
          ============================================================ -->
     <script>
     (function () {
         'use strict';
-        if (window.__dsdFormOverlayInstalledV3) return;
-        window.__dsdFormOverlayInstalledV3 = true;
+        if (window.__dsdFormOverlayInstalledV9) return;
+        window.__dsdFormOverlayInstalledV9 = true;
 
         /* ============================================================
-           精準表格位置（依使用者提供的校準座標計算）
+           精準表格位置
            ============================================================ */
         var FORM_LAYOUT = {
-            /* 頁首資訊欄 */
             header: {
-                // Name of Plant 下底線（輸入框以線為中心）
-                nameOfPlant: { left: '12.71%', top: '11.3%', width: '33.37%', height: '3%' },
-                // SOR item 方框
-                sorItem:     { left: '56.6%',  top: '12.6%', width: '11.0%', height: '4.0%' },
-                // CE No. 方框
-                ceNo:        { left: '81.0%',  top: '12.5%', width: '13.5%', height: '4.3%' },
-                // Task Order No. 區域
-                taskOrderNo: { left: '12.6%',  top: '19.0%', width: '14.5%', height: '5.2%' }
+                nameOfPlant:  { left: '12.71%', top: '11.3%',  width: '33.37%', height: '3%'    },
+                sorItem:      { left: '56.6%',  top: '12.6%',  width: '11.0%',  height: '4.0%'  },
+                ceNo:         { left: '81.0%',  top: '12.5%',  width: '13.5%',  height: '4.3%'  },
+                taskOrderNo:  { left: '12.6%',  top: '19.0%',  width: '14.5%',  height: '5.2%'  },
+                headerExtraA: { left: '26.37%', top: '19.71%', width: '41.68%', height: '5.21%' },
+                headerExtraB: { left: '75.30%', top: '18.54%', width: '19.35%', height: '5.37%' }
             },
 
-            /* 主表格 */
             table: {
-                // 第一行（星期一）的頂端
-                rowStartTop: 36.6,
-                // 每行高度
-                rowHeight: 7.09,
+                rowStartTop: 37.35,
+                rowHeight: 6.98,
 
-                // 8 欄的 left 與 width
                 columns: {
-                    date:          { left: '4.6%',  width: '7.6%'  },
-                    weather:       { left: '12.5%', width: '5.5%'  },
-                    description:   { left: '18.3%', width: '17.4%' },
-                    instructions:  { left: '36.0%', width: '14.5%' },
-                    responses:     { left: '50.8%', width: '11.4%' },
-                    dsdSig:        { left: '62.5%', width: '11.4%' },
-                    contractorSig: { left: '74.2%', width: '8.1%'  },
-                    remarks:       { left: '82.6%', width: '11.5%' }
+                    date:          { left: '4.6%',   width: '7.6%'   },
+                    weather:       { left: '12.5%',  width: '5.5%'   },
+                    description:   { left: '18.58%', width: '17.34%' },
+                    instructions:  { left: '36.0%',  width: '14.5%'  },
+                    responses:     { left: '50.8%',  width: '11.4%'  },
+                    dsdSig:        { left: '62.5%',  width: '11.4%'  },
+                    contractorSig: { left: '74.2%',  width: '8.1%'   },
+                    remarks:       { left: '82.6%',  width: '11.5%'  }
+                },
+
+                // ★ 工人細節子格（每行 hardcode 獨立 top）
+                workerDetail: {
+                    left: '31%',
+                    width: '5.0%',
+                    height: '4%',
+                    // 每一行的工人格「頂端」絕對位置（%），依序：星期一 ~ 星期日
+                    tops: [
+                        '39.5%',   // 星期一
+                        '46.7%',   // 星期二
+                        '53.9%',   // 星期三
+                        '61.1%',   // 星期四
+                        '68.4%',   // 星期五
+                        '75.9%',   // 星期六
+                        '83.1%'    // 星期日
+                    ]
                 }
             }
         };
@@ -359,7 +388,6 @@
         var allFormData = {};
         var currentDocId = 'default';
 
-        /* ============ 工具 ============ */
         function getDocId() {
             var sources = ['editDocument', 'currentDiaryRecord', 'currentRecord'];
             for (var i = 0; i < sources.length; i++) {
@@ -384,7 +412,6 @@
             catch (e) { console.error('[DSD] Failed to save form data', e); }
         }
 
-        /* ============ 欄位建立 ============ */
         function applyPosition(el, pos) {
             el.style.position = 'absolute';
             el.style.left = pos.left;
@@ -403,10 +430,10 @@
             el.addEventListener('change', save);
         }
 
-        function createTextInput(fieldId, pos, value, pageNum, placeholder) {
+        function createTextInput(fieldId, pos, value, pageNum, placeholder, extraClass) {
             var input = document.createElement('input');
             input.type = 'text';
-            input.className = 'pdf-field';
+            input.className = 'pdf-field' + (extraClass ? ' ' + extraClass : '');
             input.dataset.fieldId = fieldId;
             input.value = value || '';
             input.autocomplete = 'off';
@@ -416,12 +443,13 @@
             return input;
         }
 
-        function createTextArea(fieldId, pos, value, pageNum) {
+        function createTextArea(fieldId, pos, value, pageNum, extraClass, placeholder) {
             var ta = document.createElement('textarea');
-            ta.className = 'pdf-field';
+            ta.className = 'pdf-field' + (extraClass ? ' ' + extraClass : '');
             ta.dataset.fieldId = fieldId;
             ta.value = value || '';
             ta.spellcheck = false;
+            if (placeholder) ta.placeholder = placeholder;
             applyPosition(ta, pos);
             bindFieldEvents(ta, pageNum, fieldId);
             return ta;
@@ -453,7 +481,6 @@
             return sel;
         }
 
-        /* ============ 注入整頁表單 ============ */
         function injectFormFields(pdfPage) {
             if (!pdfPage || pdfPage.querySelector('.pdf-form-overlay')) return;
 
@@ -464,47 +491,32 @@
             overlay.className = 'pdf-form-overlay';
             overlay.dataset.page = pageNum;
 
-            /* -------- 1. 頁首資訊欄 -------- */
-            overlay.appendChild(createTextInput(
-                'nameOfPlant',
-                FORM_LAYOUT.header.nameOfPlant,
-                pageData.nameOfPlant, pageNum
-            ));
-            overlay.appendChild(createTextInput(
-                'sorItem',
-                FORM_LAYOUT.header.sorItem,
-                pageData.sorItem, pageNum
-            ));
-            overlay.appendChild(createTextInput(
-                'ceNo',
-                FORM_LAYOUT.header.ceNo,
-                pageData.ceNo, pageNum
-            ));
-            overlay.appendChild(createTextInput(
-                'taskOrderNo',
-                FORM_LAYOUT.header.taskOrderNo,
-                pageData.taskOrderNo, pageNum
-            ));
+            /* 頁首資訊欄 */
+            overlay.appendChild(createTextInput('nameOfPlant', FORM_LAYOUT.header.nameOfPlant, pageData.nameOfPlant, pageNum));
+            overlay.appendChild(createTextInput('sorItem',     FORM_LAYOUT.header.sorItem,     pageData.sorItem,     pageNum));
+            overlay.appendChild(createTextInput('ceNo',        FORM_LAYOUT.header.ceNo,        pageData.ceNo,        pageNum));
+            overlay.appendChild(createTextInput('taskOrderNo', FORM_LAYOUT.header.taskOrderNo, pageData.taskOrderNo, pageNum));
+            overlay.appendChild(createTextInput('headerExtraA', FORM_LAYOUT.header.headerExtraA, pageData.headerExtraA, pageNum));
+            overlay.appendChild(createTextInput('headerExtraB', FORM_LAYOUT.header.headerExtraB, pageData.headerExtraB, pageNum));
 
-            /* -------- 2. 主表格 7 行 × 8 欄 -------- */
+            /* 主表格 */
+            var cols = FORM_LAYOUT.table.columns;
+            var worker = FORM_LAYOUT.table.workerDetail;
+
             for (var d = 0; d < 7; d++) {
                 var rowTop = FORM_LAYOUT.table.rowStartTop + d * FORM_LAYOUT.table.rowHeight;
                 var rowH = FORM_LAYOUT.table.rowHeight;
-                var cols = FORM_LAYOUT.table.columns;
 
-                // Date 日期 — 只放在格子下半部（避開「星期一」等標籤）
+                // Date
                 var datePos = {
                     left: cols.date.left,
                     top: (rowTop + rowH * 0.42) + '%',
                     width: cols.date.width,
                     height: (rowH * 0.5) + '%'
                 };
-                overlay.appendChild(createTextInput(
-                    'r' + d + '_date', datePos,
-                    pageData['r' + d + '_date'], pageNum, 'dd/mm'
-                ));
+                overlay.appendChild(createTextInput('r' + d + '_date', datePos, pageData['r' + d + '_date'], pageNum, 'dd/mm'));
 
-                // Weather 天氣 — 下拉選單
+                // Weather
                 overlay.appendChild(createWeatherSelect(
                     'r' + d + '_weather',
                     { left: cols.weather.left, top: rowTop + '%', width: cols.weather.width, height: rowH + '%' },
@@ -516,6 +528,20 @@
                     'r' + d + '_description',
                     { left: cols.description.left, top: rowTop + '%', width: cols.description.width, height: rowH + '%' },
                     pageData['r' + d + '_description'], pageNum
+                ));
+
+                // ★ 工人細節子格（用 hardcode 的 tops 陣列）
+                overlay.appendChild(createTextArea(
+                    'r' + d + '_workerDetail',
+                    {
+                        left: worker.left,
+                        top: worker.tops[d],
+                        width: worker.width,
+                        height: worker.height
+                    },
+                    pageData['r' + d + '_workerDetail'], pageNum,
+                    'worker-detail',
+                    '工人'
                 ));
 
                 // Instructions
@@ -532,21 +558,21 @@
                     pageData['r' + d + '_responses'], pageNum
                 ));
 
-                // ★ Signed by DSD's Rep — 純文字（無 checkbox）
+                // Signed by DSD's Rep
                 overlay.appendChild(createTextInput(
                     'r' + d + '_dsdSig',
                     { left: cols.dsdSig.left, top: rowTop + '%', width: cols.dsdSig.width, height: rowH + '%' },
                     pageData['r' + d + '_dsdSig'], pageNum
                 ));
 
-                // ★ Signed by Contractor's Rep — 純文字（無 checkbox）
+                // Signed by Contractor's Rep
                 overlay.appendChild(createTextInput(
                     'r' + d + '_contractorSig',
                     { left: cols.contractorSig.left, top: rowTop + '%', width: cols.contractorSig.width, height: rowH + '%' },
                     pageData['r' + d + '_contractorSig'], pageNum
                 ));
 
-                // ★ Remarks 備註 — 純文字（無 checkbox）
+                // Remarks
                 overlay.appendChild(createTextArea(
                     'r' + d + '_remarks',
                     { left: cols.remarks.left, top: rowTop + '%', width: cols.remarks.width, height: rowH + '%' },
@@ -557,7 +583,6 @@
             pdfPage.appendChild(overlay);
         }
 
-        /* ============ 鉤住 Save / Submit ============ */
         function hookSaveButton() {
             ['save-btn', 'submit-btn'].forEach(function (id) {
                 var btn = document.getElementById(id);
@@ -568,7 +593,6 @@
             });
         }
 
-        /* ============ 初始化 ============ */
         function init() {
             currentDocId = getDocId();
             allFormData = loadAllFormData();
@@ -593,7 +617,7 @@
             setTimeout(function () { clearInterval(interval); }, 60000);
 
             hookSaveButton();
-            console.log('[DSD Form] Overlay v3 (精準對位) installed. Doc:', currentDocId);
+            console.log('[DSD Form] Overlay v9 (工人格 hardcode). Doc:', currentDocId);
         }
 
         if (document.readyState === 'loading') {
