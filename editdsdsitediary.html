@@ -127,15 +127,17 @@
             padding: 0 2px;
         }
 
-        /* ★ 工人細節子格 */
+        /* ★ 工人細節子格（縮小字體，可容納 3 行） */
         .pdf-form-overlay .pdf-field.worker-detail {
             z-index: 5;
-            font-size: 6px;
-            padding: 2px 3px;
+            font-size: 6.5px;
+            padding: 1px 2px;
             text-align: center;
-            line-height: 1.2;
+            line-height: 1.1;
             background: rgba(255, 255, 255, 0.5);
             border-radius: 2px;
+            overflow: hidden;
+            word-break: break-all;
         }
         .pdf-form-overlay .pdf-field.worker-detail:hover {
             background: rgba(52, 152, 219, 0.12);
@@ -211,7 +213,6 @@
                     <span id="current-page" style="display:none;">1</span>
                     <button class="nav-btn" id="next-page" title="下一頁"><i class="fas fa-chevron-right"></i></button>
                     <button class="add-pages-btn" id="add-pages-btn" title="新增 5 頁"><i class="fas fa-plus"></i> 5</button>
-                    <button class="btn btn-warning" id="undo-btn" style="padding:4px 12px;font-size:0.85rem;margin-left:12px;"><i class="fas fa-undo"></i> Undo</button>
                 </div>
 
                 <div class="pdf-canvas-container" id="pdf-container">
@@ -326,16 +327,18 @@
     </script>
 
     <!-- ============================================================
-         ★ 表單覆蓋層 v9
+         ★ 表單覆蓋層 v10
          ------------------------------------------------------------
-         修正：工人子格 top 改為 hardcode 每行獨立值（tops 陣列）
-               不再依賴 rowTop + topOffset 計算
+         更新：
+         1. 移除 Undo 按鈕（HTML 已刪）
+         2. 天氣下拉預設為 "1"（FINE 良好）
+         3. 工人子格：字體 6.5px / 高度 4.8% / 可容納 3 行
          ============================================================ -->
     <script>
     (function () {
         'use strict';
-        if (window.__dsdFormOverlayInstalledV9) return;
-        window.__dsdFormOverlayInstalledV9 = true;
+        if (window.__dsdFormOverlayInstalledV10) return;
+        window.__dsdFormOverlayInstalledV10 = true;
 
         /* ============================================================
            精準表格位置
@@ -369,8 +372,7 @@
                 workerDetail: {
                     left: '31%',
                     width: '5.0%',
-                    height: '4%',
-                    // 每一行的工人格「頂端」絕對位置（%），依序：星期一 ~ 星期日
+                    height: '4.8%',       // ← 從 4% 加大到 4.8%（可容納 3 行）
                     tops: [
                         '39.5%',   // 星期一
                         '46.7%',   // 星期二
@@ -516,11 +518,11 @@
                 };
                 overlay.appendChild(createTextInput('r' + d + '_date', datePos, pageData['r' + d + '_date'], pageNum, 'dd/mm'));
 
-                // Weather
+                // ★ Weather（預設 "1"）
                 overlay.appendChild(createWeatherSelect(
                     'r' + d + '_weather',
                     { left: cols.weather.left, top: rowTop + '%', width: cols.weather.width, height: rowH + '%' },
-                    pageData['r' + d + '_weather'], pageNum
+                    pageData['r' + d + '_weather'] || '1', pageNum
                 ));
 
                 // Brief Description
@@ -530,7 +532,7 @@
                     pageData['r' + d + '_description'], pageNum
                 ));
 
-                // ★ 工人細節子格（用 hardcode 的 tops 陣列）
+                // ★ 工人細節子格（hardcode tops）
                 overlay.appendChild(createTextArea(
                     'r' + d + '_workerDetail',
                     {
@@ -617,7 +619,7 @@
             setTimeout(function () { clearInterval(interval); }, 60000);
 
             hookSaveButton();
-            console.log('[DSD Form] Overlay v9 (工人格 hardcode). Doc:', currentDocId);
+            console.log('[DSD Form] Overlay v10 (移除 Undo + 天氣預設 1). Doc:', currentDocId);
         }
 
         if (document.readyState === 'loading') {
