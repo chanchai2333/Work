@@ -14,8 +14,8 @@
     /* ========== 配置 ========== */
     var PDF_PATH = 'SiteDiaryDSD.pdf';
     var PDF_RENDER_SCALE = 2.0;     // 內部渲染倍率（高清）
-    var DEFAULT_TOTAL_PAGES = 50;   // 預設頁數
-    var PAGES_TO_ADD = 5;           // 每次點「+5」增加頁數
+    var DEFAULT_TOTAL_PAGES = 1;   // 預設頁數
+    var PAGES_TO_ADD = 1;           // 每次點「+5」增加頁數
     var MAX_HISTORY = 20;
     var STORAGE_KEY = 'siteDiaryData';
 
@@ -94,6 +94,9 @@
         var c = document.getElementById('current-page');
         if (t) t.textContent = totalVirtualPages;
         if (c) c.textContent = activePageNum;
+
+        /* ★ 同步給 HTML 兜底腳本，避免被覆蓋回原值 */
+        window.__dsdDesiredTotalPages = totalVirtualPages;
 
         var prevBtn = document.getElementById('prev-page');
         var nextBtn = document.getElementById('next-page');
@@ -1053,8 +1056,16 @@
                 if (activePageNum < totalVirtualPages) {
                     goToPage(activePageNum + 1);
                 } else {
-                    // 到最後一頁 → 自動加 5 頁再前往
                     totalVirtualPages += PAGES_TO_ADD;
+                    /* ★ 同步到 currentDoc + sessionStorage */
+                    if (currentDoc) {
+                        currentDoc.totalPages = totalVirtualPages;
+                        try {
+                            sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
+                            sessionStorage.setItem('currentDiaryRecord', JSON.stringify(currentDoc));
+                            sessionStorage.setItem('currentRecord', JSON.stringify(currentDoc));
+                        } catch (e) {}
+                    }
                     updatePageInfo();
                     goToPage(activePageNum + 1);
                 }
@@ -1063,6 +1074,15 @@
         if (addBtn) {
             addBtn.addEventListener('click', function () {
                 totalVirtualPages += PAGES_TO_ADD;
+                /* ★ 同步到 currentDoc + sessionStorage，重新整理也記得 */
+                if (currentDoc) {
+                    currentDoc.totalPages = totalVirtualPages;
+                    try {
+                        sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
+                        sessionStorage.setItem('currentDiaryRecord', JSON.stringify(currentDoc));
+                        sessionStorage.setItem('currentRecord', JSON.stringify(currentDoc));
+                    } catch (e) {}
+                }
                 updatePageInfo();
                 // 短暫提示
                 addBtn.style.background = '#047857';
@@ -1261,15 +1281,15 @@
 
             updateDocumentInfo(currentDoc);
 
-            // 決定總頁數
+            // 決定總頁數（優先使用 currentDoc.totalPages，即 Period 計算的結果）
             var maxAnnotated = 1;
             annotations.forEach(function (a) {
                 if ((a.page || 1) > maxAnnotated) maxAnnotated = a.page;
             });
             var savedTotal = currentDoc.totalPages || 0;
-            var needed = Math.max(DEFAULT_TOTAL_PAGES, maxAnnotated, savedTotal);
-            totalVirtualPages = Math.ceil(needed / PAGES_TO_ADD) * PAGES_TO_ADD;
-            if (totalVirtualPages < DEFAULT_TOTAL_PAGES) totalVirtualPages = DEFAULT_TOTAL_PAGES;
+            var needed = Math.max(1, maxAnnotated, savedTotal);
+            totalVirtualPages = needed;
+            if (totalVirtualPages < 1) totalVirtualPages = 1;
 
             updatePageInfo();
 

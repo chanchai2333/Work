@@ -28,7 +28,39 @@
         .status-approved { background: rgba(46,204,113,0.2); color: #27ae60; }
         .status-rejected { background: rgba(231,76,60,0.2); color: #c0392b; }
         .status-pending { background: rgba(243,156,18,0.2); color: #d35400; }
-        @media (max-width: 768px) { .action-btn { width: 100%; margin: 2px 0; } .status-change-select { width: 100%; margin: 2px 0; } }
+
+        /* ★ Period 輸入框樣式 */
+        .period-inputs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .period-inputs input[type="date"] {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            min-width: 0;
+        }
+        .period-inputs input[type="date"]:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52,152,219,0.15);
+        }
+        .period-inputs .period-sep {
+            color: #64748b;
+            font-weight: 700;
+            flex: 0 0 auto;
+            user-select: none;
+        }
+
+        @media (max-width: 768px) {
+            .action-btn { width: 100%; margin: 2px 0; }
+            .status-change-select { width: 100%; margin: 2px 0; }
+        }
     </style>
 </head>
 <body>
@@ -49,8 +81,15 @@
                 </select>
                 <label data-i18n="site">Site</label>
                 <input type="text" id="input-site" required>
-                <label data-i18n="date">Date</label>
-                <input type="date" id="input-date" required>
+
+                <!-- ★ Period 改成兩個日期 -->
+                <label data-i18n="period">Period</label>
+                <div class="period-inputs">
+                    <input type="date" id="input-date-start" required>
+                    <span class="period-sep">~</span>
+                    <input type="date" id="input-date-end" required>
+                </div>
+
                 <label data-i18n="submitted.by">Submitted By</label>
                 <input type="text" id="input-submitted-by" required>
                 <label data-i18n="document.type">Document Type</label>
@@ -141,7 +180,8 @@
                                 <th data-i18n="status">Status</th>
                                 <th data-i18n="Approval status">Approval Status</th>
                                 <th data-i18n="site">Site</th>
-                                <th data-i18n="date">Date</th>
+                                <!-- ★ Date → Period -->
+                                <th data-i18n="period">Period</th>
                                 <th data-i18n="submitted.by">Submitted By</th>
                                 <th data-i18n="document.type">Document Type</th>
                                 <th data-i18n="actions">Actions</th>
@@ -167,15 +207,14 @@
     <script src="scripts/sidebar.js"></script>
 
     <!-- ============================================================
-         ★ Save 修正（只寫 siteDiaryData，避免重複）
+         ★ Save 修正（Period 版本）
          ============================================================ -->
     <script>
     (function () {
         'use strict';
-        if (window.__diaryFormFixBound2) return;
-        window.__diaryFormFixBound2 = true;
+        if (window.__diaryFormFixBound3) return;
+        window.__diaryFormFixBound3 = true;
 
-        // ★ 只使用一個主 key（siteDiary.js 應該讀這個）
         var PRIMARY_KEY = 'siteDiaryData';
 
         function loadRecords() {
@@ -200,6 +239,14 @@
             return el ? el.value.trim() : '';
         }
 
+        /* 格式化日期：YYYY-MM-DD → DD/MM/YYYY */
+        function fmtDate(yyyymmdd) {
+            if (!yyyymmdd) return '';
+            var parts = yyyymmdd.split('-');
+            if (parts.length !== 3) return yyyymmdd;
+            return parts[2] + '/' + parts[1] + '/' + parts[0];
+        }
+
         function handleSubmit(e) {
             var form = e.target;
             if (!form || form.id !== 'add-diary-form') return;
@@ -210,7 +257,8 @@
             var id = getValue('input-diary-id');
             var status = getValue('input-status') || 'draft';
             var site = getValue('input-site');
-            var date = getValue('input-date');
+            var startDate = getValue('input-date-start');
+            var endDate = getValue('input-date-end');
             var submittedBy = getValue('input-submitted-by');
             var type = getValue('input-type');
             var pdfInput = document.getElementById('input-pdf');
@@ -218,7 +266,12 @@
 
             if (!id) { alert('❌ Please enter Diary ID.'); return; }
             if (!site) { alert('❌ Please enter Site.'); return; }
-            if (!date) { alert('❌ Please select Date.'); return; }
+            if (!startDate) { alert('❌ Please select Period start date.'); return; }
+            if (!endDate) { alert('❌ Please select Period end date.'); return; }
+            if (startDate > endDate) {
+                alert('❌ Period start date must be earlier than or equal to end date.');
+                return;
+            }
             if (!submittedBy) { alert('❌ Please enter Submitted By.'); return; }
             if (!type) { alert('❌ Please select Document Type.'); return; }
 
@@ -228,12 +281,18 @@
                 return;
             }
 
+            /* ★ Period 顯示格式："01/08/2026 ~ 15/08/2026" */
+            var periodStr = fmtDate(startDate) + ' ~ ' + fmtDate(endDate);
+
             var record = {
                 id: id,
                 status: status,
                 approvalStatus: 'pending',
                 site: site,
-                date: date,
+                date: periodStr,            // 表格顯示用（相容）
+                startDate: startDate,       // 排序用
+                endDate: endDate,           // 排序用
+                period: periodStr,          // 顯示用
                 submittedBy: submittedBy,
                 type: type,
                 annotations: [],
@@ -285,10 +344,9 @@
     <script>
     (function () {
         'use strict';
-        if (window.__dsdEditRedirectBound2) return;
-        window.__dsdEditRedirectBound2 = true;
+        if (window.__dsdEditRedirectBound3) return;
+        window.__dsdEditRedirectBound3 = true;
 
-        // ★ 只讀主 key
         var PRIMARY_KEY = 'siteDiaryData';
 
         function findDiaryRecord(diaryId) {
@@ -377,6 +435,129 @@
             document.addEventListener('DOMContentLoaded', bind);
         } else {
             bind();
+        }
+    })();
+    </script>
+
+    <!-- ============================================================
+         ★ 新增：表格按日期倒序排列（最新在最上面）
+         ------------------------------------------------------------
+         策略：
+         1. 用 MutationObserver 監聽 tbody 變化
+         2. 每次 sitediary.js 渲染完成後，延遲 100ms 執行排序
+         3. 用 _sorting flag 防止無限迴圈
+         4. 按 startDate || date || createdAt 倒序排序
+         ============================================================ -->
+    <script>
+    (function () {
+        'use strict';
+        if (window.__diarySortBound) return;
+        window.__diarySortBound = true;
+
+        var PRIMARY_KEY = 'siteDiaryData';
+        var _sorting = false;
+        var _sortTimer = null;
+
+        function loadRecords() {
+            try {
+                var raw = localStorage.getItem(PRIMARY_KEY);
+                if (!raw) return [];
+                var d = JSON.parse(raw);
+                return Array.isArray(d) ? d : [];
+            } catch (e) { return []; }
+        }
+
+        /* 從記錄中取得排序 key（越新越大） */
+        function getSortKey(record) {
+            if (!record) return '';
+            /* 優先使用 startDate（Period 開始日） */
+            if (record.startDate) return record.startDate;
+            /* 相容舊資料：date 可能是 "2026-08-31" 或 "31/08/2026" */
+            if (record.date) {
+                var d = record.date;
+                var m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                if (m) return d;
+                var m2 = d.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                if (m2) return m2[3] + '-' + m2[2] + '-' + m2[1];
+                /* 若是 period 字串 "31/08/2026 ~ 15/09/2026"，取開始日 */
+                var m3 = d.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+                if (m3) return m3[3] + '-' + m3[2] + '-' + m3[1];
+            }
+            if (record.createdAt) return record.createdAt;
+            return '';
+        }
+
+        function sortTableByDate() {
+            if (_sorting) return;
+            var tbody = document.getElementById('diary-table-body');
+            if (!tbody) return;
+
+            var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+            if (rows.length < 2) return;
+
+            var records = loadRecords();
+            var map = {};
+            records.forEach(function (r) {
+                if (r && r.id != null) map[String(r.id)] = r;
+            });
+
+            var sortedRows = rows.slice().sort(function (a, b) {
+                var idA = a.cells && a.cells[0] ? a.cells[0].textContent.trim() : '';
+                var idB = b.cells && b.cells[0] ? b.cells[0].textContent.trim() : '';
+                var keyA = getSortKey(map[idA]);
+                var keyB = getSortKey(map[idB]);
+                /* 倒序：新的在前 */
+                if (keyA < keyB) return 1;
+                if (keyA > keyB) return -1;
+                return 0;
+            });
+
+            /* 檢查是否已經正確排序（避免不必要 DOM 操作） */
+            var same = true;
+            for (var i = 0; i < rows.length; i++) {
+                if (rows[i] !== sortedRows[i]) { same = false; break; }
+            }
+            if (same) return;
+
+            _sorting = true;
+            try {
+                /* 用 DocumentFragment 一次性重排，避免多次 reflow */
+                var frag = document.createDocumentFragment();
+                sortedRows.forEach(function (row) {
+                    frag.appendChild(row);   // appendChild 會自動從原位置移除
+                });
+                tbody.appendChild(frag);
+            } catch (e) {
+                console.error('[Sort] Failed to sort:', e);
+            }
+            _sorting = false;
+        }
+
+        function scheduleSort() {
+            if (_sortTimer) clearTimeout(_sortTimer);
+            _sortTimer = setTimeout(sortTableByDate, 100);
+        }
+
+        function bindSort() {
+            var tbody = document.getElementById('diary-table-body');
+            if (!tbody) {
+                setTimeout(bindSort, 300);
+                return;
+            }
+            var observer = new MutationObserver(function () {
+                if (_sorting) return;
+                scheduleSort();
+            });
+            observer.observe(tbody, { childList: true });
+
+            /* 初次執行 */
+            scheduleSort();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bindSort);
+        } else {
+            bindSort();
         }
     })();
     </script>

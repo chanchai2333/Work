@@ -127,7 +127,7 @@
             padding: 0 2px;
         }
 
-        /* ★ 工人細節子格（縮小字體，可容納 3 行） */
+        /* ★ 工人細節子格 */
         .pdf-form-overlay .pdf-field.worker-detail {
             z-index: 5;
             font-size: 6.5px;
@@ -147,6 +147,156 @@
             background: rgba(255, 251, 234, 0.98);
             box-shadow: inset 0 0 0 2px #3498db;
         }
+
+        /* ★ 簽名格 */
+        .pdf-form-overlay .pdf-field.signature-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            overflow: hidden;
+            padding: 2px;
+            z-index: 5;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 2px;
+        }
+        .pdf-form-overlay .pdf-field.signature-cell:hover {
+            background: rgba(52, 152, 219, 0.12);
+            box-shadow: inset 0 0 0 1px #3498db;
+        }
+        .pdf-form-overlay .pdf-field.signature-cell .signature-img {
+            max-width: 100%;
+            max-height: 100%;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+            display: block;
+            transform: scale(1.15);
+        }
+        .pdf-form-overlay .pdf-field.signature-cell .signature-placeholder {
+            font-size: 9px;
+            color: #cbd5e1;
+            font-style: italic;
+            user-select: none;
+            pointer-events: none;
+        }
+
+        /* ★ 簽名板 Modal */
+        .signature-modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(2px);
+            z-index: 99999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .signature-modal-overlay.visible { display: flex; }
+        .signature-modal {
+            background: #fff;
+            border-radius: 12px;
+            width: 960px;
+            max-width: 95vw;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: sigSlideIn 0.2s ease-out;
+        }
+        @keyframes sigSlideIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .signature-modal-header {
+            padding: 14px 20px;
+            background: #f1f5f9;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .signature-modal-header h3 {
+            color: #1e293b;
+            font-size: 1.05rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .signature-modal-close {
+            background: transparent;
+            border: none;
+            font-size: 1.6rem;
+            cursor: pointer;
+            color: #64748b;
+            line-height: 1;
+            padding: 0 6px;
+            transition: color 0.15s;
+        }
+        .signature-modal-close:hover { color: #e74c3c; }
+        .signature-modal-body {
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .signature-canvas-wrapper {
+            position: relative;
+            background: #fff;
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #signature-canvas {
+            display: block;
+            width: 100%;
+            height: 300px;
+            cursor: crosshair;
+            touch-action: none;
+            background: #fff;
+        }
+        .signature-canvas-hint {
+            position: absolute;
+            bottom: 8px;
+            right: 12px;
+            font-size: 11px;
+            color: #cbd5e1;
+            pointer-events: none;
+            font-style: italic;
+        }
+        .signature-modal-footer {
+            padding: 12px 20px;
+            background: #fff;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .sig-footer-right { display: flex; gap: 8px; flex-wrap: wrap; }
+        .sig-btn {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .sig-btn:hover { transform: translateY(-1px); }
+        .sig-btn-clear { background: #f1f5f9; color: #475569; }
+        .sig-btn-clear:hover { background: #e2e8f0; }
+        .sig-btn-cancel { background: #94a3b8; color: #fff; }
+        .sig-btn-cancel:hover { background: #64748b; }
+        .sig-btn-default { background: #f59e0b; color: #fff; }
+        .sig-btn-default:hover { background: #d97706; }
+        .sig-btn-save { background: #10b981; color: #fff; }
+        .sig-btn-save:hover { background: #059669; }
     </style>
 </head>
 <body>
@@ -212,7 +362,7 @@
                     </span>
                     <span id="current-page" style="display:none;">1</span>
                     <button class="nav-btn" id="next-page" title="下一頁"><i class="fas fa-chevron-right"></i></button>
-                    <button class="add-pages-btn" id="add-pages-btn" title="新增 5 頁"><i class="fas fa-plus"></i> 5</button>
+                    <button class="add-pages-btn" id="add-pages-btn" title="新增 1 頁"><i class="fas fa-plus"></i> 1</button>
                 </div>
 
                 <div class="pdf-canvas-container" id="pdf-container">
@@ -227,6 +377,30 @@
                 <p>&copy; 2025 AEL DWSS System. All rights reserved.</p>
                 <p>AEL DWSS Platform</p>
             </footer>
+        </div>
+    </div>
+
+    <!-- ★ 簽名板 Modal -->
+    <div class="signature-modal-overlay" id="signature-modal-overlay">
+        <div class="signature-modal">
+            <div class="signature-modal-header">
+                <h3><i class="fas fa-signature"></i> 手寫簽名</h3>
+                <button class="signature-modal-close" id="signature-close-btn" title="關閉">&times;</button>
+            </div>
+            <div class="signature-modal-body">
+                <div class="signature-canvas-wrapper">
+                    <canvas id="signature-canvas" width="900" height="300"></canvas>
+                    <div class="signature-canvas-hint">在此簽名（滑鼠或觸控筆）</div>
+                </div>
+            </div>
+            <div class="signature-modal-footer">
+                <button class="sig-btn sig-btn-clear" id="signature-clear-btn"><i class="fas fa-eraser"></i> 清除</button>
+                <div class="sig-footer-right">
+                    <button class="sig-btn sig-btn-cancel" id="signature-cancel-btn"><i class="fas fa-times"></i> 取消</button>
+                    <button class="sig-btn sig-btn-default" id="signature-default-btn" title="將此簽名填入全部 7 天"><i class="fas fa-copy"></i> 預設（7 天）</button>
+                    <button class="sig-btn sig-btn-save" id="signature-save-btn"><i class="fas fa-check"></i> 儲存</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -252,10 +426,170 @@
     })();
     </script>
 
+    <!-- ============================================================
+         ★ 根據 Period 自動計算頁數（必須在 editdsdsitediary.js 之前）
+         ============================================================ -->
+    <script>
+    (function() {
+        'use strict';
+        if (window.__dsdPageCountBound) return;
+        window.__dsdPageCountBound = true;
+
+        function parseDate(s) {
+            if (!s) return null;
+            s = String(s).trim();
+            var m;
+            m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (m) return new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
+            m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+            if (m) return new Date(parseInt(m[3],10), parseInt(m[2],10)-1, parseInt(m[1],10));
+            m = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+            if (m) return new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
+            return null;
+        }
+
+        function calculateTotalPages(doc) {
+            if (!doc) return 1;
+            var start = null, end = null;
+
+            if (doc.startDate) start = parseDate(doc.startDate);
+            if (doc.endDate) end = parseDate(doc.endDate);
+
+            if ((!start || !end) && doc.period) {
+                var parts = String(doc.period).split('~');
+                if (parts.length >= 2) {
+                    start = start || parseDate(parts[0]);
+                    end = end || parseDate(parts[1]);
+                }
+            }
+
+            if ((!start || !end) && doc.date) {
+                var p2 = String(doc.date).split('~');
+                if (p2.length >= 2) {
+                    start = start || parseDate(p2[0]);
+                    end = end || parseDate(p2[1]);
+                } else {
+                    var single = parseDate(doc.date);
+                    if (single) { start = single; end = single; }
+                }
+            }
+
+            if (!start || !end) return 1;
+            if (end < start) { var t = start; start = end; end = t; }
+
+            var days = Math.round((end - start) / 86400000) + 1;
+            if (days < 1) days = 1;
+
+            var pages = Math.ceil(days / 7);
+            if (pages < 1) pages = 1;
+            return pages;
+        }
+
+        function findMaxUsedPage(docId) {
+            var maxPage = 0;
+            try {
+                var raw = sessionStorage.getItem('dsd_formdata_' + docId);
+                if (raw) {
+                    var data = JSON.parse(raw);
+                    for (var k in data) {
+                        if (!data.hasOwnProperty(k)) continue;
+                        var pn = parseInt(k, 10);
+                        if (!isNaN(pn) && pn > maxPage) maxPage = pn;
+                    }
+                }
+            } catch (e) {}
+            return maxPage;
+        }
+
+        function updateTotalPages() {
+            var sources = ['editDocument', 'currentDiaryRecord', 'currentRecord'];
+            var doc = null;
+
+            for (var i = 0; i < sources.length; i++) {
+                var raw = sessionStorage.getItem(sources[i]);
+                if (!raw) continue;
+                try {
+                    var d = JSON.parse(raw);
+                    if (d && d.id) { doc = d; break; }
+                } catch (e) {}
+            }
+
+            if (!doc) {
+                console.warn('[DSD Pages] No document found');
+                return;
+            }
+
+            var pages = calculateTotalPages(doc);
+            var maxUsed = findMaxUsedPage(doc.id);
+            /* ★ 新增：尊重使用者手動 +1 已存的 totalPages */
+            var savedTotalPages = parseInt(doc.totalPages, 10) || 0;
+            var finalPages = Math.max(pages, maxUsed, savedTotalPages, 1);
+
+            for (var j = 0; j < sources.length; j++) {
+                var raw2 = sessionStorage.getItem(sources[j]);
+                if (!raw2) continue;
+                try {
+                    var d2 = JSON.parse(raw2);
+                    if (d2 && d2.id && String(d2.id) === String(doc.id)) {
+                        d2.totalPages = finalPages;
+                        sessionStorage.setItem(sources[j], JSON.stringify(d2));
+                    }
+                } catch (e) {}
+            }
+
+            console.log('[DSD Pages] Period:', doc.period || doc.date || '(none)',
+                        '| Calculated:', pages, '| Max Used:', maxUsed, '| Final:', finalPages);
+
+            window.__dsdDesiredTotalPages = finalPages;
+        }
+
+        updateTotalPages();
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', updateTotalPages);
+        }
+    })();
+    </script>
+
     <script src="scripts/dsd-template-data.js"></script>
     <script src="scripts/editdsdsitediary.js"></script>
 
+    <!-- ★ 兜底：若 editdsdsitediary.js 硬編碼 50 頁，這裡強制修正顯示 -->
+    <script>
+    (function() {
+        'use strict';
+        if (window.__dsdPageCountFixBound) return;
+        window.__dsdPageCountFixBound = true;
+
+        function fixDisplay() {
+            var desired = window.__dsdDesiredTotalPages;
+            if (!desired || desired < 1) return;
+            var totalEl = document.getElementById('total-pages');
+            if (!totalEl) return;
+            var current = parseInt(totalEl.textContent, 10);
+            if (isNaN(current) || current === desired) return;
+            totalEl.textContent = desired;
+            console.log('[DSD Pages] Display corrected:', current, '→', desired);
+        }
+
+        function bindObserver() {
+            var totalEl = document.getElementById('total-pages');
+            if (!totalEl) { setTimeout(bindObserver, 300); return; }
+            setTimeout(fixDisplay, 1500);
+            setTimeout(fixDisplay, 3000);
+            var observer = new MutationObserver(function() { fixDisplay(); });
+            observer.observe(totalEl, { childList: true, characterData: true, subtree: true });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() { setTimeout(bindObserver, 500); });
+        } else {
+            setTimeout(bindObserver, 500);
+        }
+    })();
+    </script>
+
     <!-- ★ 頁碼輸入框邏輯 -->
+    <!-- ★ 頁碼輸入框邏輯 + Next 按鈕邊界控制 -->
     <script>
     (function () {
         'use strict';
@@ -278,14 +612,45 @@
                 var v = parseInt(totalPagesEl.textContent, 10);
                 return isNaN(v) ? 1 : v;
             }
+
+            /* ★ 更新按鈕 disabled 狀態 */
+            function updateNavButtons() {
+                var cur = getCurrent();
+                var tot = getTotal();
+                prevBtn.disabled = (cur <= 1);
+                nextBtn.disabled = (cur >= tot);
+                prevBtn.style.opacity = prevBtn.disabled ? '0.5' : '1';
+                nextBtn.style.opacity = nextBtn.disabled ? '0.5' : '1';
+                prevBtn.style.cursor = prevBtn.disabled ? 'not-allowed' : 'pointer';
+                nextBtn.style.cursor = nextBtn.disabled ? 'not-allowed' : 'pointer';
+            }
+
             function syncInputValue() {
                 if (document.activeElement !== pageInput) pageInput.value = getCurrent();
                 pageInput.max = getTotal();
+                updateNavButtons();
             }
+
             var observer = new MutationObserver(syncInputValue);
             observer.observe(currentPageEl, { characterData: true, childList: true, subtree: true });
             observer.observe(totalPagesEl, { characterData: true, childList: true, subtree: true });
             syncInputValue();
+
+            /* ★ 攔截 next/prev 按鈕：超出範圍就阻止 */
+            function guardNext(e) {
+                if (getCurrent() >= getTotal()) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                }
+            }
+            function guardPrev(e) {
+                if (getCurrent() <= 1) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                }
+            }
+            nextBtn.addEventListener('click', guardNext, true);
+            prevBtn.addEventListener('click', guardPrev, true);
 
             function jumpToPage(target) {
                 var current = getCurrent();
@@ -316,6 +681,9 @@
             });
             pageInput.addEventListener('blur', syncInputValue);
             pageInput.addEventListener('focus', function () { try { pageInput.select(); } catch (e) {} });
+
+            /* 定期檢查（保險） */
+            setInterval(updateNavButtons, 500);
         }
 
         if (document.readyState === 'loading') {
@@ -326,23 +694,13 @@
     })();
     </script>
 
-    <!-- ============================================================
-         ★ 表單覆蓋層 v10
-         ------------------------------------------------------------
-         更新：
-         1. 移除 Undo 按鈕（HTML 已刪）
-         2. 天氣下拉預設為 "1"（FINE 良好）
-         3. 工人子格：字體 6.5px / 高度 4.8% / 可容納 3 行
-         ============================================================ -->
+    <!-- ★ 表單覆蓋層 v15 — 加入手寫簽名板 -->
     <script>
     (function () {
         'use strict';
-        if (window.__dsdFormOverlayInstalledV10) return;
-        window.__dsdFormOverlayInstalledV10 = true;
+        if (window.__dsdFormOverlayInstalledV15) return;
+        window.__dsdFormOverlayInstalledV15 = true;
 
-        /* ============================================================
-           精準表格位置
-           ============================================================ */
         var FORM_LAYOUT = {
             header: {
                 nameOfPlant:  { left: '12.71%', top: '11.3%',  width: '33.37%', height: '3%'    },
@@ -352,11 +710,9 @@
                 headerExtraA: { left: '26.37%', top: '19.71%', width: '41.68%', height: '5.21%' },
                 headerExtraB: { left: '75.30%', top: '18.54%', width: '19.35%', height: '5.37%' }
             },
-
             table: {
-                rowStartTop: 37.35,
+                rowTops: [37.35, 44.33, 51.31, 58.29, 65.27, 73.50, 80.70],
                 rowHeight: 6.98,
-
                 columns: {
                     date:          { left: '4.6%',   width: '7.6%'   },
                     weather:       { left: '12.5%',  width: '5.5%'   },
@@ -367,40 +723,42 @@
                     contractorSig: { left: '74.2%',  width: '8.1%'   },
                     remarks:       { left: '82.6%',  width: '11.5%'  }
                 },
-
-                // ★ 工人細節子格（每行 hardcode 獨立 top）
                 workerDetail: {
                     left: '31%',
                     width: '5.0%',
-                    height: '4.8%',       // ← 從 4% 加大到 4.8%（可容納 3 行）
-                    tops: [
-                        '39.5%',   // 星期一
-                        '46.7%',   // 星期二
-                        '53.9%',   // 星期三
-                        '61.1%',   // 星期四
-                        '68.4%',   // 星期五
-                        '75.9%',   // 星期六
-                        '83.1%'    // 星期日
-                    ]
+                    height: '4.8%',
+                    tops: ['40.5%', '47.5%', '54.5%', '61.5%', '68.5%', '76.7%', '83.9%']
                 }
             }
+        };
+
+        var FIELD_DEFAULTS = {
+            description: '沒人開工',
+            instructions: '盡快開工',
+            responses: 'ok',
+            weather: '1'
         };
 
         var FORM_KEY_PREFIX = 'dsd_formdata_';
         var allFormData = {};
         var currentDocId = 'default';
+        var currentDocObj = null;
 
-        function getDocId() {
+        function getCurrentDocObject() {
             var sources = ['editDocument', 'currentDiaryRecord', 'currentRecord'];
             for (var i = 0; i < sources.length; i++) {
                 var raw = sessionStorage.getItem(sources[i]);
                 if (!raw) continue;
                 try {
                     var d = JSON.parse(raw);
-                    if (d && d.id) return d.id;
+                    if (d && d.id) return d;
                 } catch (e) {}
             }
-            return 'default';
+            return null;
+        }
+        function getDocId() {
+            var doc = getCurrentDocObject();
+            return doc ? doc.id : 'default';
         }
         function storageKey() { return FORM_KEY_PREFIX + currentDocId; }
         function loadAllFormData() {
@@ -457,14 +815,207 @@
             return ta;
         }
 
+        function createSignatureCell(fieldId, pos, value, pageNum) {
+            var cell = document.createElement('div');
+            cell.className = 'pdf-field signature-cell';
+            cell.dataset.fieldId = fieldId;
+            cell.dataset.page = pageNum;
+            cell.title = '點擊以簽名';
+            applyPosition(cell, pos);
+            renderSignatureCellContent(cell, value);
+            cell.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+            cell.addEventListener('touchstart', function (e) { e.stopPropagation(); }, { passive: true });
+            cell.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                openSignatureModal(fieldId, pageNum);
+            });
+            return cell;
+        }
+
+        function renderSignatureCellContent(cell, value) {
+            cell.innerHTML = '';
+            if (value && typeof value === 'string' && value.indexOf('data:image') === 0) {
+                var img = document.createElement('img');
+                img.src = value;
+                img.className = 'signature-img';
+                img.alt = '簽名';
+                cell.appendChild(img);
+            } else {
+                var span = document.createElement('span');
+                span.className = 'signature-placeholder';
+                span.textContent = '點擊簽名';
+                cell.appendChild(span);
+            }
+        }
+
+        var sigModal = null, sigCanvas = null, sigCtx = null;
+        var sigTargetFieldId = null, sigTargetPage = null;
+        var sigIsDrawing = false, sigLastX = 0, sigLastY = 0, sigHasContent = false;
+
+        function initSignatureModal() {
+            sigModal = document.getElementById('signature-modal-overlay');
+            sigCanvas = document.getElementById('signature-canvas');
+            if (!sigModal || !sigCanvas) return;
+
+            sigCtx = sigCanvas.getContext('2d');
+            sigCtx.lineWidth = 7;
+            sigCtx.lineCap = 'round';
+            sigCtx.lineJoin = 'round';
+            sigCtx.strokeStyle = '#0a1a5c';
+
+            sigCanvas.addEventListener('mousedown', sigStart);
+            sigCanvas.addEventListener('mousemove', sigMove);
+            sigCanvas.addEventListener('mouseup', sigEnd);
+            sigCanvas.addEventListener('mouseleave', sigEnd);
+            sigCanvas.addEventListener('touchstart', sigStart, { passive: false });
+            sigCanvas.addEventListener('touchmove', sigMove, { passive: false });
+            sigCanvas.addEventListener('touchend', sigEnd, { passive: false });
+
+            document.getElementById('signature-close-btn').addEventListener('click', closeSignatureModal);
+            document.getElementById('signature-cancel-btn').addEventListener('click', closeSignatureModal);
+            document.getElementById('signature-clear-btn').addEventListener('click', clearSignatureCanvas);
+            document.getElementById('signature-save-btn').addEventListener('click', saveSignatureToCurrentRow);
+            document.getElementById('signature-default-btn').addEventListener('click', saveSignatureToAllRows);
+
+            sigModal.addEventListener('click', function (e) { if (e.target === sigModal) closeSignatureModal(); });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && sigModal && sigModal.classList.contains('visible')) closeSignatureModal();
+            });
+        }
+
+        function sigGetCoords(e) {
+            var rect = sigCanvas.getBoundingClientRect();
+            var cx, cy;
+            if (e.touches && e.touches.length > 0) { cx = e.touches[0].clientX; cy = e.touches[0].clientY; }
+            else { cx = e.clientX; cy = e.clientY; }
+            return {
+                x: (cx - rect.left) * (sigCanvas.width / rect.width),
+                y: (cy - rect.top) * (sigCanvas.height / rect.height)
+            };
+        }
+
+        function sigStart(e) {
+            e.preventDefault();
+            sigIsDrawing = true;
+            var p = sigGetCoords(e);
+            sigLastX = p.x; sigLastY = p.y;
+            sigCtx.beginPath();
+            sigCtx.moveTo(p.x, p.y);
+            sigCtx.lineTo(p.x + 0.1, p.y + 0.1);
+            sigCtx.stroke();
+            sigHasContent = true;
+        }
+        function sigMove(e) {
+            if (!sigIsDrawing) return;
+            e.preventDefault();
+            var p = sigGetCoords(e);
+            sigCtx.beginPath();
+            sigCtx.moveTo(sigLastX, sigLastY);
+            sigCtx.lineTo(p.x, p.y);
+            sigCtx.stroke();
+            sigLastX = p.x; sigLastY = p.y;
+        }
+        function sigEnd(e) {
+            if (!sigIsDrawing) return;
+            if (e && e.preventDefault) e.preventDefault();
+            sigIsDrawing = false;
+        }
+        function clearSignatureCanvas() {
+            if (!sigCtx) return;
+            sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+            sigHasContent = false;
+        }
+        function loadExistingSignature(base64) {
+            if (!base64 || typeof base64 !== 'string' || base64.indexOf('data:image') !== 0) {
+                clearSignatureCanvas(); return;
+            }
+            var img = new Image();
+            img.onload = function () {
+                sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+                var ratio = Math.min(sigCanvas.width / img.width, sigCanvas.height / img.height);
+                var w = img.width * ratio, h = img.height * ratio;
+                var x = (sigCanvas.width - w) / 2, y = (sigCanvas.height - h) / 2;
+                sigCtx.drawImage(img, x, y, w, h);
+                sigHasContent = true;
+            };
+            img.onerror = function () { clearSignatureCanvas(); };
+            img.src = base64;
+        }
+        function openSignatureModal(fieldId, pageNum) {
+            if (!sigModal) return;
+            sigTargetFieldId = fieldId;
+            sigTargetPage = pageNum;
+            var pageData = allFormData[pageNum] || {};
+            var existing = pageData[fieldId];
+            clearSignatureCanvas();
+            if (existing) loadExistingSignature(existing);
+            sigModal.classList.add('visible');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeSignatureModal() {
+            if (!sigModal) return;
+            sigModal.classList.remove('visible');
+            document.body.style.overflow = '';
+            clearSignatureCanvas();
+            sigTargetFieldId = null;
+            sigTargetPage = null;
+        }
+        function isCanvasBlank() {
+            if (!sigCanvas || !sigCtx) return true;
+            try {
+                var data = sigCtx.getImageData(0, 0, sigCanvas.width, sigCanvas.height).data;
+                for (var i = 0; i < data.length; i += 4) {
+                    if (data[i + 3] !== 0) return false;
+                }
+            } catch (e) { return false; }
+            return true;
+        }
+        function getSignatureBase64() {
+            if (!sigCanvas) return '';
+            if (isCanvasBlank()) return '';
+            return sigCanvas.toDataURL('image/png');
+        }
+        function saveSignatureToCurrentRow() {
+            if (!sigTargetFieldId || !sigTargetPage) { closeSignatureModal(); return; }
+            var base64 = getSignatureBase64();
+            if (!base64) {
+                if (!confirm('尚未簽名，是否清空此格簽名？')) return;
+                if (!allFormData[sigTargetPage]) allFormData[sigTargetPage] = {};
+                allFormData[sigTargetPage][sigTargetFieldId] = '';
+            } else {
+                if (!allFormData[sigTargetPage]) allFormData[sigTargetPage] = {};
+                allFormData[sigTargetPage][sigTargetFieldId] = base64;
+            }
+            persistFormData();
+            refreshSignatureCell(sigTargetPage, sigTargetFieldId);
+            closeSignatureModal();
+        }
+        function saveSignatureToAllRows() {
+            if (!sigTargetPage) { closeSignatureModal(); return; }
+            var base64 = getSignatureBase64();
+            if (!base64) {
+                if (!confirm('尚未簽名，是否清空全部 7 天簽名？')) return;
+                if (!allFormData[sigTargetPage]) allFormData[sigTargetPage] = {};
+                for (var d = 0; d < 7; d++) allFormData[sigTargetPage]['r' + d + '_contractorSig'] = '';
+            } else {
+                if (!allFormData[sigTargetPage]) allFormData[sigTargetPage] = {};
+                for (var d2 = 0; d2 < 7; d2++) allFormData[sigTargetPage]['r' + d2 + '_contractorSig'] = base64;
+            }
+            persistFormData();
+            for (var d3 = 0; d3 < 7; d3++) refreshSignatureCell(sigTargetPage, 'r' + d3 + '_contractorSig');
+            closeSignatureModal();
+        }
+        function refreshSignatureCell(pageNum, fieldId) {
+            var cell = document.querySelector('.signature-cell[data-field-id="' + fieldId + '"][data-page="' + pageNum + '"]');
+            if (!cell) return;
+            var pageData = allFormData[pageNum] || {};
+            renderSignatureCellContent(cell, pageData[fieldId]);
+        }
+
         var WEATHER_OPTIONS = [
-            { v: '',   t: '' },
-            { v: '1',  t: '1' },
-            { v: '2',  t: '2' },
-            { v: '3',  t: '3' },
-            { v: 'TC', t: 'TC' },
-            { v: 'RA', t: 'RA' },
-            { v: 'TS', t: 'TS' }
+            { v: '', t: '' }, { v: '1', t: '1' }, { v: '2', t: '2' },
+            { v: '3', t: '3' }, { v: 'TC', t: 'TC' }, { v: 'RA', t: 'RA' }, { v: 'TS', t: 'TS' }
         ];
 
         function createWeatherSelect(fieldId, pos, value, pageNum) {
@@ -493,91 +1044,76 @@
             overlay.className = 'pdf-form-overlay';
             overlay.dataset.page = pageNum;
 
-            /* 頁首資訊欄 */
-            overlay.appendChild(createTextInput('nameOfPlant', FORM_LAYOUT.header.nameOfPlant, pageData.nameOfPlant, pageNum));
+            var defaultPlantName = pageData.nameOfPlant || (currentDocObj && currentDocObj.site) || '';
+            overlay.appendChild(createTextInput('nameOfPlant', FORM_LAYOUT.header.nameOfPlant, defaultPlantName, pageNum));
             overlay.appendChild(createTextInput('sorItem',     FORM_LAYOUT.header.sorItem,     pageData.sorItem,     pageNum));
             overlay.appendChild(createTextInput('ceNo',        FORM_LAYOUT.header.ceNo,        pageData.ceNo,        pageNum));
-            overlay.appendChild(createTextInput('taskOrderNo', FORM_LAYOUT.header.taskOrderNo, pageData.taskOrderNo, pageNum));
+            var defaultTaskOrderNo = pageData.taskOrderNo || (currentDocObj && currentDocObj.id) || '';
+            overlay.appendChild(createTextInput('taskOrderNo', FORM_LAYOUT.header.taskOrderNo, defaultTaskOrderNo, pageNum));
             overlay.appendChild(createTextInput('headerExtraA', FORM_LAYOUT.header.headerExtraA, pageData.headerExtraA, pageNum));
             overlay.appendChild(createTextInput('headerExtraB', FORM_LAYOUT.header.headerExtraB, pageData.headerExtraB, pageNum));
 
-            /* 主表格 */
             var cols = FORM_LAYOUT.table.columns;
             var worker = FORM_LAYOUT.table.workerDetail;
+            var rowTops = FORM_LAYOUT.table.rowTops;
+            var rowH = FORM_LAYOUT.table.rowHeight;
 
             for (var d = 0; d < 7; d++) {
-                var rowTop = FORM_LAYOUT.table.rowStartTop + d * FORM_LAYOUT.table.rowHeight;
-                var rowH = FORM_LAYOUT.table.rowHeight;
+                var rowTopNum = rowTops[d];
+                var rowTopStr = rowTopNum + '%';
 
-                // Date
-                var datePos = {
+                overlay.appendChild(createTextInput('r' + d + '_date', {
                     left: cols.date.left,
-                    top: (rowTop + rowH * 0.42) + '%',
+                    top: (rowTopNum + rowH * 0.42) + '%',
                     width: cols.date.width,
                     height: (rowH * 0.5) + '%'
-                };
-                overlay.appendChild(createTextInput('r' + d + '_date', datePos, pageData['r' + d + '_date'], pageNum, 'dd/mm'));
+                }, pageData['r' + d + '_date'], pageNum, 'dd/mm'));
 
-                // ★ Weather（預設 "1"）
                 overlay.appendChild(createWeatherSelect(
                     'r' + d + '_weather',
-                    { left: cols.weather.left, top: rowTop + '%', width: cols.weather.width, height: rowH + '%' },
-                    pageData['r' + d + '_weather'] || '1', pageNum
+                    { left: cols.weather.left, top: rowTopStr, width: cols.weather.width, height: rowH + '%' },
+                    pageData['r' + d + '_weather'] || FIELD_DEFAULTS.weather, pageNum
                 ));
 
-                // Brief Description
                 overlay.appendChild(createTextArea(
                     'r' + d + '_description',
-                    { left: cols.description.left, top: rowTop + '%', width: cols.description.width, height: rowH + '%' },
-                    pageData['r' + d + '_description'], pageNum
+                    { left: cols.description.left, top: rowTopStr, width: cols.description.width, height: rowH + '%' },
+                    pageData['r' + d + '_description'] || FIELD_DEFAULTS.description, pageNum
                 ));
 
-                // ★ 工人細節子格（hardcode tops）
                 overlay.appendChild(createTextArea(
                     'r' + d + '_workerDetail',
-                    {
-                        left: worker.left,
-                        top: worker.tops[d],
-                        width: worker.width,
-                        height: worker.height
-                    },
-                    pageData['r' + d + '_workerDetail'], pageNum,
-                    'worker-detail',
-                    '工人'
+                    { left: worker.left, top: worker.tops[d], width: worker.width, height: worker.height },
+                    pageData['r' + d + '_workerDetail'], pageNum, 'worker-detail', '工人'
                 ));
 
-                // Instructions
                 overlay.appendChild(createTextArea(
                     'r' + d + '_instructions',
-                    { left: cols.instructions.left, top: rowTop + '%', width: cols.instructions.width, height: rowH + '%' },
-                    pageData['r' + d + '_instructions'], pageNum
+                    { left: cols.instructions.left, top: rowTopStr, width: cols.instructions.width, height: rowH + '%' },
+                    pageData['r' + d + '_instructions'] || FIELD_DEFAULTS.instructions, pageNum
                 ));
 
-                // Responses
                 overlay.appendChild(createTextArea(
                     'r' + d + '_responses',
-                    { left: cols.responses.left, top: rowTop + '%', width: cols.responses.width, height: rowH + '%' },
-                    pageData['r' + d + '_responses'], pageNum
+                    { left: cols.responses.left, top: rowTopStr, width: cols.responses.width, height: rowH + '%' },
+                    pageData['r' + d + '_responses'] || FIELD_DEFAULTS.responses, pageNum
                 ));
 
-                // Signed by DSD's Rep
                 overlay.appendChild(createTextInput(
                     'r' + d + '_dsdSig',
-                    { left: cols.dsdSig.left, top: rowTop + '%', width: cols.dsdSig.width, height: rowH + '%' },
+                    { left: cols.dsdSig.left, top: rowTopStr, width: cols.dsdSig.width, height: rowH + '%' },
                     pageData['r' + d + '_dsdSig'], pageNum
                 ));
 
-                // Signed by Contractor's Rep
-                overlay.appendChild(createTextInput(
+                overlay.appendChild(createSignatureCell(
                     'r' + d + '_contractorSig',
-                    { left: cols.contractorSig.left, top: rowTop + '%', width: cols.contractorSig.width, height: rowH + '%' },
+                    { left: cols.contractorSig.left, top: rowTopStr, width: cols.contractorSig.width, height: rowH + '%' },
                     pageData['r' + d + '_contractorSig'], pageNum
                 ));
 
-                // Remarks
                 overlay.appendChild(createTextArea(
                     'r' + d + '_remarks',
-                    { left: cols.remarks.left, top: rowTop + '%', width: cols.remarks.width, height: rowH + '%' },
+                    { left: cols.remarks.left, top: rowTopStr, width: cols.remarks.width, height: rowH + '%' },
                     pageData['r' + d + '_remarks'], pageNum
                 ));
             }
@@ -596,11 +1132,14 @@
         }
 
         function init() {
+            currentDocObj = getCurrentDocObject();
             currentDocId = getDocId();
             allFormData = loadAllFormData();
 
             var pageWrapper = document.getElementById('page-wrapper');
-            if (!pageWrapper) { console.warn('[DSD Form] #page-wrapper not found'); return; }
+            if (!pageWrapper) return;
+
+            initSignatureModal();
 
             var observer = new MutationObserver(function () {
                 var pdfPage = pageWrapper.querySelector('.pdf-page');
@@ -619,7 +1158,7 @@
             setTimeout(function () { clearInterval(interval); }, 60000);
 
             hookSaveButton();
-            console.log('[DSD Form] Overlay v10 (移除 Undo + 天氣預設 1). Doc:', currentDocId);
+            console.log('[DSD Form] Overlay v15 (手寫簽名板 + Period 頁數). Doc:', currentDocId);
         }
 
         if (document.readyState === 'loading') {
