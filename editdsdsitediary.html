@@ -88,7 +88,7 @@
             background: transparent;
             outline: none;
             font-family: 'Times New Roman', 'SimSun', 'Songti SC', serif;
-            color: #000;
+            color: #0a1a5c;
             font-size: 11px;
             padding: 1px 3px;
             box-sizing: border-box;
@@ -118,6 +118,7 @@
             cursor: pointer;
             text-align: center;
             padding: 0 2px;
+            color: #0a1a5c;
         }
         .pdf-form-overlay select.pdf-field::-ms-expand { display: none; }
         .pdf-form-overlay input.pdf-date-field {
@@ -127,7 +128,6 @@
             padding: 0 2px;
         }
 
-        /* ★ 工人細節子格 */
         .pdf-form-overlay .pdf-field.worker-detail {
             z-index: 5;
             font-size: 6.5px;
@@ -138,6 +138,7 @@
             border-radius: 2px;
             overflow: hidden;
             word-break: break-all;
+            color: #0a1a5c;
         }
         .pdf-form-overlay .pdf-field.worker-detail:hover {
             background: rgba(52, 152, 219, 0.12);
@@ -148,7 +149,6 @@
             box-shadow: inset 0 0 0 2px #3498db;
         }
 
-        /* ★ 簽名格 */
         .pdf-form-overlay .pdf-field.signature-cell {
             display: flex;
             align-items: center;
@@ -182,7 +182,6 @@
             pointer-events: none;
         }
 
-        /* ★ 簽名板 Modal */
         .signature-modal-overlay {
             position: fixed;
             top: 0; left: 0;
@@ -380,7 +379,6 @@
         </div>
     </div>
 
-    <!-- ★ 簽名板 Modal -->
     <div class="signature-modal-overlay" id="signature-modal-overlay">
         <div class="signature-modal">
             <div class="signature-modal-header">
@@ -426,9 +424,6 @@
     })();
     </script>
 
-    <!-- ============================================================
-         ★ 根據 Period 自動計算頁數（必須在 editdsdsitediary.js 之前）
-         ============================================================ -->
     <script>
     (function() {
         'use strict';
@@ -514,14 +509,10 @@
                 } catch (e) {}
             }
 
-            if (!doc) {
-                console.warn('[DSD Pages] No document found');
-                return;
-            }
+            if (!doc) { console.warn('[DSD Pages] No document found'); return; }
 
             var pages = calculateTotalPages(doc);
             var maxUsed = findMaxUsedPage(doc.id);
-            /* ★ 新增：尊重使用者手動 +1 已存的 totalPages */
             var savedTotalPages = parseInt(doc.totalPages, 10) || 0;
             var finalPages = Math.max(pages, maxUsed, savedTotalPages, 1);
 
@@ -553,7 +544,6 @@
     <script src="scripts/dsd-template-data.js"></script>
     <script src="scripts/editdsdsitediary.js"></script>
 
-    <!-- ★ 兜底：若 editdsdsitediary.js 硬編碼 50 頁，這裡強制修正顯示 -->
     <script>
     (function() {
         'use strict';
@@ -588,8 +578,6 @@
     })();
     </script>
 
-    <!-- ★ 頁碼輸入框邏輯 -->
-    <!-- ★ 頁碼輸入框邏輯 + Next 按鈕邊界控制 -->
     <script>
     (function () {
         'use strict';
@@ -613,7 +601,6 @@
                 return isNaN(v) ? 1 : v;
             }
 
-            /* ★ 更新按鈕 disabled 狀態 */
             function updateNavButtons() {
                 var cur = getCurrent();
                 var tot = getTotal();
@@ -636,7 +623,6 @@
             observer.observe(totalPagesEl, { characterData: true, childList: true, subtree: true });
             syncInputValue();
 
-            /* ★ 攔截 next/prev 按鈕：超出範圍就阻止 */
             function guardNext(e) {
                 if (getCurrent() >= getTotal()) {
                     e.preventDefault();
@@ -682,7 +668,6 @@
             pageInput.addEventListener('blur', syncInputValue);
             pageInput.addEventListener('focus', function () { try { pageInput.select(); } catch (e) {} });
 
-            /* 定期檢查（保險） */
             setInterval(updateNavButtons, 500);
         }
 
@@ -694,12 +679,71 @@
     })();
     </script>
 
-    <!-- ★ 表單覆蓋層 v15 — 加入手寫簽名板 -->
+    <!-- ============================================================
+         ★ 表單覆蓋層 v20 — 假期格子可編輯（預設「假期」）
+         ============================================================ -->
     <script>
     (function () {
         'use strict';
-        if (window.__dsdFormOverlayInstalledV15) return;
-        window.__dsdFormOverlayInstalledV15 = true;
+        if (window.__dsdFormOverlayInstalledV20) return;
+        window.__dsdFormOverlayInstalledV20 = true;
+
+        var HK_HOLIDAYS = {
+            '2025-01-01': '元旦',
+            '2025-01-29': '農曆年初一',
+            '2025-01-30': '農曆年初二',
+            '2025-01-31': '農曆年初三',
+            '2025-04-04': '清明節',
+            '2025-04-18': '耶穌受難節',
+            '2025-04-19': '耶穌受難節翌日',
+            '2025-04-21': '復活節星期一',
+            '2025-05-01': '勞動節',
+            '2025-05-05': '佛誕',
+            '2025-05-31': '端午節',
+            '2025-07-01': '香港特別行政區成立紀念日',
+            '2025-10-01': '國慶日',
+            '2025-10-07': '中秋節翌日',
+            '2025-10-29': '重陽節',
+            '2025-12-25': '聖誕節',
+            '2025-12-26': '聖誕節後第一個周日',
+
+            '2026-01-01': '元旦',
+            '2026-02-17': '農曆年初一',
+            '2026-02-18': '農曆年初二',
+            '2026-02-19': '農曆年初三',
+            '2026-04-03': '耶穌受難節',
+            '2026-04-04': '耶穌受難節翌日',
+            '2026-04-06': '清明節翌日',
+            '2026-04-07': '復活節星期一',
+            '2026-05-01': '勞動節',
+            '2026-05-19': '佛誕',
+            '2026-06-19': '端午節',
+            '2026-07-01': '香港特別行政區成立紀念日',
+            '2026-09-25': '中秋節',
+            '2026-09-26': '中秋節翌日',
+            '2026-10-01': '國慶日',
+            '2026-10-19': '重陽節',
+            '2026-12-25': '聖誕節',
+            '2026-12-26': '聖誕節後第一個周日',
+
+            '2027-01-01': '元旦',
+            '2027-02-06': '農曆年初一',
+            '2027-02-08': '農曆年初三',
+            '2027-02-09': '農曆年初四',
+            '2027-03-26': '耶穌受難節',
+            '2027-03-27': '耶穌受難節翌日',
+            '2027-03-29': '復活節星期一',
+            '2027-04-05': '清明節',
+            '2027-05-01': '勞動節',
+            '2027-05-13': '佛誕',
+            '2027-06-09': '端午節',
+            '2027-07-01': '香港特別行政區成立紀念日',
+            '2027-09-16': '中秋節翌日',
+            '2027-10-01': '國慶日',
+            '2027-10-08': '重陽節',
+            '2027-12-25': '聖誕節',
+            '2027-12-27': '聖誕節後第一個周日'
+        };
 
         var FORM_LAYOUT = {
             header: {
@@ -739,10 +783,14 @@
             weather: '1'
         };
 
+        var HOLIDAY_TEXT = '假期';
+
         var FORM_KEY_PREFIX = 'dsd_formdata_';
         var allFormData = {};
         var currentDocId = 'default';
         var currentDocObj = null;
+        var periodStartDate = null;
+        var periodEndDate = null;
 
         function getCurrentDocObject() {
             var sources = ['editDocument', 'currentDiaryRecord', 'currentRecord'];
@@ -770,6 +818,102 @@
         function persistFormData() {
             try { sessionStorage.setItem(storageKey(), JSON.stringify(allFormData)); }
             catch (e) { console.error('[DSD] Failed to save form data', e); }
+        }
+
+        function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+        function parseDateString(s) {
+            if (!s) return null;
+            s = String(s).trim();
+            var m;
+            m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (m) return new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
+            m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+            if (m) return new Date(parseInt(m[3],10), parseInt(m[2],10)-1, parseInt(m[1],10));
+            m = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+            if (m) return new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
+            return null;
+        }
+
+        function parsePeriodStart() {
+            if (!currentDocObj) return null;
+            if (currentDocObj.startDate) {
+                var d = parseDateString(currentDocObj.startDate);
+                if (d) return d;
+            }
+            if (currentDocObj.period) {
+                var parts = String(currentDocObj.period).split('~');
+                if (parts.length >= 1) {
+                    var d2 = parseDateString(parts[0]);
+                    if (d2) return d2;
+                }
+            }
+            if (currentDocObj.date) {
+                var parts2 = String(currentDocObj.date).split('~');
+                var d3 = parseDateString(parts2[0]);
+                if (d3) return d3;
+            }
+            return null;
+        }
+
+        function parsePeriodEnd() {
+            if (!currentDocObj) return null;
+            if (currentDocObj.endDate) {
+                var d = parseDateString(currentDocObj.endDate);
+                if (d) return d;
+            }
+            if (currentDocObj.period) {
+                var parts = String(currentDocObj.period).split('~');
+                if (parts.length >= 2) {
+                    var d2 = parseDateString(parts[1]);
+                    if (d2) return d2;
+                }
+            }
+            if (currentDocObj.date) {
+                var parts2 = String(currentDocObj.date).split('~');
+                if (parts2.length >= 2) {
+                    var d3 = parseDateString(parts2[1]);
+                    if (d3) return d3;
+                }
+            }
+            return null;
+        }
+
+        function getCellDate(pageNum, dayIndex) {
+            if (!periodStartDate) return null;
+            var startDow = periodStartDate.getDay();
+            var offsetToMonday = (startDow === 0) ? -6 : (1 - startDow);
+            var firstMonday = new Date(periodStartDate.getTime());
+            firstMonday.setDate(periodStartDate.getDate() + offsetToMonday);
+            var cellDate = new Date(firstMonday.getTime());
+            cellDate.setDate(firstMonday.getDate() + (pageNum - 1) * 7 + dayIndex);
+            return cellDate;
+        }
+
+        function isInPeriod(cellDate) {
+            if (!cellDate) return false;
+            if (periodStartDate && cellDate < periodStartDate) return false;
+            if (periodEndDate && cellDate > periodEndDate) return false;
+            return true;
+        }
+
+        function getHolidayName(cellDate) {
+            if (!cellDate) return '';
+            var key = cellDate.getFullYear() + '-' + pad2(cellDate.getMonth() + 1) + '-' + pad2(cellDate.getDate());
+            return HK_HOLIDAYS[key] || '';
+        }
+
+        function isHolidayCell(pageNum, dayIndex) {
+            var cellDate = getCellDate(pageNum, dayIndex);
+            if (!isInPeriod(cellDate)) return false;
+            return !!getHolidayName(cellDate);
+        }
+
+        function calcDateForCell(pageNum, dayIndex) {
+            var cellDate = getCellDate(pageNum, dayIndex);
+            if (!isInPeriod(cellDate)) return '';
+            var yy = cellDate.getFullYear() % 100;
+            return pad2(cellDate.getDate()) + '/' + pad2(cellDate.getMonth() + 1) + '/' + pad2(yy);
         }
 
         function applyPosition(el, pos) {
@@ -1062,55 +1206,70 @@
                 var rowTopNum = rowTops[d];
                 var rowTopStr = rowTopNum + '%';
 
+                var isHoliday = isHolidayCell(pageNum, d);
+                var dateDefault = pageData['r' + d + '_date'] || calcDateForCell(pageNum, d);
+
+                /* Date */
                 overlay.appendChild(createTextInput('r' + d + '_date', {
                     left: cols.date.left,
                     top: (rowTopNum + rowH * 0.42) + '%',
                     width: cols.date.width,
                     height: (rowH * 0.5) + '%'
-                }, pageData['r' + d + '_date'], pageNum, 'dd/mm'));
+                }, dateDefault, pageNum, 'dd/mm/yy'));
 
+                /* Weather */
                 overlay.appendChild(createWeatherSelect(
                     'r' + d + '_weather',
                     { left: cols.weather.left, top: rowTopStr, width: cols.weather.width, height: rowH + '%' },
                     pageData['r' + d + '_weather'] || FIELD_DEFAULTS.weather, pageNum
                 ));
 
+                /* ★ Brief Description — 假期預設「假期」，否則「沒人開工」，兩者皆可編輯 */
+                var descDefault = pageData['r' + d + '_description'] || (isHoliday ? HOLIDAY_TEXT : FIELD_DEFAULTS.description);
                 overlay.appendChild(createTextArea(
                     'r' + d + '_description',
                     { left: cols.description.left, top: rowTopStr, width: cols.description.width, height: rowH + '%' },
-                    pageData['r' + d + '_description'] || FIELD_DEFAULTS.description, pageNum
+                    descDefault, pageNum
                 ));
 
+                /* Worker detail — 全部顯示，可編輯 */
                 overlay.appendChild(createTextArea(
                     'r' + d + '_workerDetail',
                     { left: worker.left, top: worker.tops[d], width: worker.width, height: worker.height },
                     pageData['r' + d + '_workerDetail'], pageNum, 'worker-detail', '工人'
                 ));
 
+                /* ★ Instructions — 假期預設「假期」，否則「盡快開工」 */
+                var instrDefault = pageData['r' + d + '_instructions'] || (isHoliday ? HOLIDAY_TEXT : FIELD_DEFAULTS.instructions);
                 overlay.appendChild(createTextArea(
                     'r' + d + '_instructions',
                     { left: cols.instructions.left, top: rowTopStr, width: cols.instructions.width, height: rowH + '%' },
-                    pageData['r' + d + '_instructions'] || FIELD_DEFAULTS.instructions, pageNum
+                    instrDefault, pageNum
                 ));
 
+                /* ★ Responses — 假期預設「假期」，否則「ok」 */
+                var respDefault = pageData['r' + d + '_responses'] || (isHoliday ? HOLIDAY_TEXT : FIELD_DEFAULTS.responses);
                 overlay.appendChild(createTextArea(
                     'r' + d + '_responses',
                     { left: cols.responses.left, top: rowTopStr, width: cols.responses.width, height: rowH + '%' },
-                    pageData['r' + d + '_responses'] || FIELD_DEFAULTS.responses, pageNum
+                    respDefault, pageNum
                 ));
 
+                /* DSD 簽名 — 全部顯示 */
                 overlay.appendChild(createTextInput(
                     'r' + d + '_dsdSig',
                     { left: cols.dsdSig.left, top: rowTopStr, width: cols.dsdSig.width, height: rowH + '%' },
                     pageData['r' + d + '_dsdSig'], pageNum
                 ));
 
+                /* 承建商簽名格 — 全部顯示 */
                 overlay.appendChild(createSignatureCell(
                     'r' + d + '_contractorSig',
                     { left: cols.contractorSig.left, top: rowTopStr, width: cols.contractorSig.width, height: rowH + '%' },
                     pageData['r' + d + '_contractorSig'], pageNum
                 ));
 
+                /* Remarks — 全部顯示，可編輯 */
                 overlay.appendChild(createTextArea(
                     'r' + d + '_remarks',
                     { left: cols.remarks.left, top: rowTopStr, width: cols.remarks.width, height: rowH + '%' },
@@ -1134,7 +1293,17 @@
         function init() {
             currentDocObj = getCurrentDocObject();
             currentDocId = getDocId();
+            periodStartDate = parsePeriodStart();
+            periodEndDate = parsePeriodEnd();
             allFormData = loadAllFormData();
+
+            if (periodStartDate && periodEndDate) {
+                console.log('[DSD Form] Period:', periodStartDate.toDateString(), '~', periodEndDate.toDateString());
+            } else if (periodStartDate) {
+                console.log('[DSD Form] Period 起始日:', periodStartDate.toDateString(), '(無結束日)');
+            } else {
+                console.warn('[DSD Form] 無法解析 Period 起始日，日期不會自動填入');
+            }
 
             var pageWrapper = document.getElementById('page-wrapper');
             if (!pageWrapper) return;
@@ -1158,7 +1327,7 @@
             setTimeout(function () { clearInterval(interval); }, 60000);
 
             hookSaveButton();
-            console.log('[DSD Form] Overlay v15 (手寫簽名板 + Period 頁數). Doc:', currentDocId);
+            console.log('[DSD Form] Overlay v20 (假期格子可編輯). Doc:', currentDocId);
         }
 
         if (document.readyState === 'loading') {
