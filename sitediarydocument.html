@@ -6,128 +6,190 @@
     <title>AEL DWSS - Site Diary Document</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles/main.css">
-    <script src="scripts/theme-config.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        }
+    </script>
+
     <style>
-        .pdf-viewer-container {
-            background: #e0e0e0;
-            border-radius: 8px;
-            padding: 20px;
-            min-height: 500px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-        .pdf-canvas-wrapper {
-            position: relative;
-            display: inline-block;
-        }
-        #pdf-canvas {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            background: white;
-            display: block;
-        }
-        #annotation-canvas {
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { display: flex; min-height: 100vh; background-color: #f5f7fa; color: #333; }
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #e0e6ed; }
+        .header h1 { color: #2c3e50; font-size: 2rem; }
+        .header-controls { display: flex; align-items: center; gap: 15px; }
+        .date-display { background: #eef2f6; padding: 8px 15px; border-radius: 8px; font-size: 16px; font-weight: 500; color: #308fee; }
+        .date-display i { margin-right: 8px; }
+        .user-date-row { display: flex; align-items: center; gap: 16px; }
+        .user-btn { background: #2563eb; color: #fff; border: none; border-radius: 20px; padding: 10px 20px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+
+        .document-view-page { background: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .document-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eaeaea; flex-wrap: wrap; gap: 15px; }
+        .document-header h2 { font-size: 1.6rem; color: #2c3e50; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .doc-status { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; }
+        .status-draft { background: rgba(149,165,166,0.2); color: #848f90; }
+        .status-submitted { background: rgba(52,152,219,0.2); color: #2980b9; }
+        .status-approved { background: rgba(46,204,113,0.2); color: #27ae60; }
+        .status-rejected { background: rgba(231,76,60,0.2); color: #c0392b; }
+        .status-pending { background: rgba(243,156,18,0.2); color: #d35400; }
+        .status-cancelled { background: rgba(231,76,60,0.2); color: #c0392b; }
+
+        .document-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; transition: all 0.3s ease; white-space: nowrap; color: #fff; text-decoration: none; }
+        .btn:hover { transform: translateY(-2px); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
+        .btn-primary { background: #3498db; } .btn-primary:hover { background: #2980b9; }
+        .btn-print { background: #27ae60; } .btn-print:hover { background: #219653; }
+        .btn-download { background: #8e44ad; } .btn-download:hover { background: #732d91; }
+
+        .document-meta { background: #f8f9fa; border-radius: 12px; padding: 20px 30px; margin: 20px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+        .meta-item { display: flex; flex-direction: column; }
+        .meta-label { font-weight: 600; color: #2c3e50; margin-bottom: 5px; font-size: 0.85rem; }
+        .meta-value { color: #555; font-size: 0.95rem; font-weight: 500; padding: 8px 12px; border-radius: 6px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+        .pdf-editor-container { display: flex; flex-direction: column; gap: 12px; }
+        .pdf-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #f1f5f9; padding: 10px 12px; border-radius: 6px; }
+        .nav-btn { background: #3498db; color: #fff; border: none; border-radius: 4px; padding: 8px 14px; cursor: pointer; font-size: 14px; }
+        .nav-btn:hover { background: #2980b9; }
+        .nav-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .page-info { font-size: 14px; font-weight: 600; color: #334155; padding: 0 4px; display: flex; align-items: center; gap: 6px; }
+        .page-input { width: 60px; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 14px; font-weight: 700; color: #1e40af; text-align: center; background: #fff; transition: 0.15s; }
+        .page-input:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 2px rgba(52,152,219,0.25); background: #f0f9ff; }
+
+        .pdf-canvas-container { position: relative; background: #e0e0e0; border-radius: 8px; padding: 24px; display: flex; justify-content: center; align-items: flex-start; overflow: auto; min-height: 500px; }
+        .pdf-page { position: relative; display: block; box-shadow: 0 4px 12px rgba(0,0,0,0.2); background: #fff; border: 3px solid transparent; overflow: hidden; }
+        .pdf-bg { display: block; width: 100%; height: 100%; pointer-events: none; user-select: none; }
+
+        .loading-indicator { display: none; justify-content: center; align-items: center; gap: 10px; padding: 40px; color: #2563eb; font-weight: 600; background: #eff6ff; border-radius: 8px; }
+        .loading-indicator.visible { display: flex; }
+        .error-message { display: none; padding: 40px; color: #e74c3c; text-align: center; }
+
+        footer { text-align: center; padding: 30px 0 20px; color: #7f8c8d; border-top: 1px solid #e0e6ed; margin-top: 30px; }
+        @media (max-width: 768px) { .main-content { padding: 15px; } .document-view-page { padding: 20px; } }
+        .sidebar.collapsed .logo { display: none !important; }
+
+        .pdf-form-overlay {
             position: absolute;
-            top: 0;
-            left: 0;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 30;
             pointer-events: none;
-            display: block;
+        }
+        .pdf-form-overlay .pdf-field {
+            position: absolute;
+            border: none;
             background: transparent;
-        }
-        #text-annotation-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            pointer-events: none;
+            outline: none;
+            font-family: 'Times New Roman', 'SimSun', 'Songti SC', serif;
+            color: #0a1a5c;
+            font-size: 11px;
+            padding: 1px 3px;
+            box-sizing: border-box;
+            line-height: 1.2;
             overflow: hidden;
-            width: 100%;
-            height: 100%;
-        }
-        .text-annotation-view {
-            position: absolute;
-            cursor: default;
-            min-width: 20px;
-            min-height: 20px;
-            padding: 2px 6px;
-            background: transparent;
-            border: 1px solid transparent;
-            font-family: Arial, sans-serif;
-            line-height: 1.4;
             white-space: pre-wrap;
             word-wrap: break-word;
-            outline: none;
-            user-select: none;
-            box-sizing: border-box;
             pointer-events: none;
         }
-        .pdf-controls {
-            margin-top: 15px;
+        .pdf-form-overlay .pdf-field.worker-detail {
+            font-size: 6.5px;
+            padding: 1px 2px;
+            text-align: center;
+            line-height: 1.1;
+            word-break: break-all;
+        }
+        .pdf-form-overlay .pdf-field.signature-cell {
             display: flex;
-            gap: 12px;
             align-items: center;
-            flex-wrap: wrap;
+            justify-content: center;
+            padding: 2px;
         }
-        .pdf-controls button {
-            padding: 6px 16px;
-            background: #3498db;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: background 0.2s;
+        .pdf-form-overlay .pdf-field.signature-cell .signature-img {
+            max-width: 100%;
+            max-height: 100%;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            transform: scale(1.15);
         }
-        .pdf-controls button:hover {
-            background: #2980b9;
+        .pdf-form-overlay .pdf-field.weather-cell { text-align: center; }
+        .pdf-form-overlay .pdf-field.date-cell {
+            text-align: center;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 10.5px;
         }
-        .pdf-controls span {
-            font-weight: 500;
+
+        /* ============================================================
+           ★ 列印：只印 PDF 內容，填滿 A4 橫向，無頁邊距
+           ============================================================ */
+        @page {
+            size: A4 landscape;
+            margin: 0;
         }
-        .pdf-loading { color: #666; font-size: 1.1rem; }
-        .pdf-error { color: #e74c3c; font-size: 1.1rem; }
-        .no-pdf-message { text-align: center; color: #888; }
-        .no-pdf-message i { font-size: 48px; color: #ccc; margin-bottom: 16px; }
-        .document-actions .btn-print { background: #27ae60; color: white; }
-        .document-actions .btn-print:hover { background: #219653; }
-        .document-actions .btn-download { background: #8e44ad; color: white; }
-        .document-actions .btn-download:hover { background: #732d91; }
-        .document-actions .btn-export { background: #f39c12; color: white; }
-        .document-actions .btn-export:hover { background: #d68910; }
-        
-        /* 移除 Zoom 按钮和显示 */
-        #pdf-zoom-out, #pdf-zoom-in, .zoom-controls-label {
-            display: none !important;
-        }
-        #pdf-zoom-level {
-            display: none !important;
-        }
-        
-        /* 打印时的样式：隐藏不需要打印的部分 */
         @media print {
-            body * { visibility: hidden; }
-            #pdf-viewer-container, #pdf-viewer-container * { visibility: visible; }
-            #pdf-viewer-container { position: absolute; left: 0; top: 0; width: 100%; }
-            #pdf-canvas { box-shadow: none !important; }
-            .pdf-controls, .document-actions, .header, .sidebar { display: none !important; }
+            html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #fff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            /* 隱藏所有非列印容器 */
+            body > *:not(#print-only-container) {
+                display: none !important;
+            }
+            #print-only-container {
+                display: block !important;
+                position: static;
+                width: 100%;
+                height: auto;
+            }
+            #print-only-container .print-page {
+                page-break-after: always;
+                break-after: page;
+                width: 100vw;
+                height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+                margin: 0;
+                padding: 0;
+            }
+            #print-only-container .print-page:last-child {
+                page-break-after: auto;
+                break-after: auto;
+            }
+            #print-only-container .print-page img {
+                max-width: 100%;
+                max-height: 100%;
+                width: auto;
+                height: auto;
+                object-fit: contain;
+                display: block;
+            }
+        }
+        /* 平時隱藏列印容器 */
+        #print-only-container {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <!-- 侧边栏 -->
     <div class="sidebar">
-        <div class="logo"><div class="logo-icon"><i class="fas fa-water"></i></div><h2>AEL DWSS</h2></div>
+        <div class="logo">
+            <img src="AEL Logo.png" alt="AEL Logo" class="logo-img" style="height: 45px; width: auto; object-fit: contain; margin-right: 8px;">
+            <h2>DWSS</h2>
+        </div>
         <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
         <ul class="menu">
             <li><a href="index.html"><i class="fas fa-home"></i><span class="menu-text">Dashboard</span></a></li>
-            <li><a href="sitediary.html"><i class="fas fa-book"></i><span class="menu-text">Site Diary</span></a></li>
+            <li><a href="sitediary.html" class="active"><i class="fas fa-book"></i><span class="menu-text">Site Diary</span></a></li>
             <li><a href="safetyinspect.html"><i class="fas fa-clipboard-check"></i><span class="menu-text">Safety Inspection</span></a></li>
             <li><a href="sitelocations.html"><i class="fas fa-map-marked-alt"></i><span class="menu-text">Site Locations</span></a></li>
             <li><a href="labourwage.html"><i class="fas fa-money-bill-wave"></i><span class="menu-text">Labour Wage</span></a></li>
@@ -136,7 +198,6 @@
         </ul>
     </div>
 
-    <!-- 主内容 -->
     <div class="main-content">
         <div class="header">
             <h1>Site Diary</h1>
@@ -153,141 +214,894 @@
                 <h2>
                     <i class="fas fa-file-alt"></i>
                     <span id="docTitle">Site Diary Document</span>
-                    <span class="doc-status" id="docStatus">Draft</span>
+                    <span class="doc-status status-draft" id="docStatus">Draft</span>
                 </h2>
                 <div class="document-actions">
-                    <!-- ★ 强制显示这三个按钮（加了 !important，防止外部JS隐藏它们） ★ -->
-                    <button class="btn btn-export" id="export-pdf-btn" style="display:inline-block !important;"><i class="fas fa-file-export"></i> Export</button>
-                    <button class="btn btn-download" id="download-pdf-btn" style="display:inline-block !important;"><i class="fas fa-download"></i> Download</button>
-                    <button class="btn btn-print" id="print-pdf-btn" style="display:inline-block !important;"><i class="fas fa-print"></i> Print</button>
-                    
-                    <button class="btn" id="back-to-diary-btn"><i class="fas fa-arrow-left"></i> Back to Diary</button>
+                    <button class="btn btn-download" id="download-pdf-btn"><i class="fas fa-download"></i> Download</button>
+                    <button class="btn btn-print" id="print-pdf-btn"><i class="fas fa-print"></i> Print</button>
+                    <button class="btn btn-primary" id="back-btn"><i class="fas fa-arrow-left"></i> Back</button>
                 </div>
             </div>
-            
+
             <div class="document-meta">
                 <div class="meta-item"><span class="meta-label">Document ID:</span><span class="meta-value" id="docId">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Document Type:</span><span class="meta-value" id="docType">N/A</span></div>
                 <div class="meta-item"><span class="meta-label">Site:</span><span class="meta-value" id="docSite">N/A</span></div>
-                <div class="meta-item"><span class="meta-label">Date:</span><span class="meta-value" id="docDate">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Period:</span><span class="meta-value" id="docPeriod">N/A</span></div>
                 <div class="meta-item"><span class="meta-label">Submitted By:</span><span class="meta-value" id="docAuthor">N/A</span></div>
             </div>
-            
-            <div class="pdf-viewer-container" id="pdf-viewer-container">
-                <div class="pdf-canvas-wrapper" id="pdf-canvas-wrapper">
-                    <canvas id="pdf-canvas"></canvas>
-                    <canvas id="annotation-canvas"></canvas>
-                    <div id="text-annotation-container"></div>
+
+            <div class="pdf-editor-container">
+                <div class="pdf-controls">
+                    <button class="nav-btn" id="prev-page"><i class="fas fa-chevron-left"></i></button>
+                    <span class="page-info">
+                        Page
+                        <input type="number" id="page-input" class="page-input" min="1" value="1">
+                        of <span id="total-pages">1</span>
+                    </span>
+                    <span id="current-page" style="display:none;">1</span>
+                    <button class="nav-btn" id="next-page"><i class="fas fa-chevron-right"></i></button>
                 </div>
-                <div id="pdf-loading" class="pdf-loading"><i class="fas fa-spinner fa-spin"></i> Loading PDF...</div>
-                <div id="pdf-error" class="pdf-error" style="display:none;"><i class="fas fa-exclamation-circle"></i> Failed to load PDF document.</div>
-                <div id="no-pdf-message" class="no-pdf-message" style="display:none;">
-                    <i class="fas fa-file-pdf"></i>
-                    <p>No PDF document available for this record.</p>
-                </div>
-                <div class="pdf-controls" id="pdf-controls" style="display:none;">
-                    <button id="pdf-prev"><i class="fas fa-chevron-left"></i> Prev</button>
-                    <span id="pdf-page-info">Page <span id="pdf-current-page">1</span> of <span id="pdf-total-pages">1</span></span>
-                    <button id="pdf-next">Next <i class="fas fa-chevron-right"></i></button>
+
+                <div class="pdf-canvas-container" id="pdf-container">
+                    <div class="loading-indicator visible" id="loading-indicator">
+                        <i class="fas fa-spinner fa-spin"></i> Loading Site Diary...
+                    </div>
+                    <div class="error-message" id="error-message">
+                        <i class="fas fa-exclamation-triangle" style="font-size:32px;"></i><br><br>
+                        <strong>Failed to load document.</strong>
+                    </div>
+                    <div id="page-wrapper"></div>
                 </div>
             </div>
+
+            <footer>
+                <p>&copy; 2025 AEL DWSS System. All rights reserved.</p>
+                <p>AEL DWSS Platform</p>
+            </footer>
         </div>
     </div>
 
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
-    <script src="scripts/sitediarydocument.js"></script>
-    
-    <!-- ★ 三个按钮的功能实现 + 强制显示覆盖逻辑 ★ -->
+    <script src="scripts/dsd-template-data.js"></script>
+
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // 强制覆盖外部逻辑，确保按钮显示
-            var exportBtn = document.getElementById('export-pdf-btn');
-            var downloadBtn = document.getElementById('download-pdf-btn');
-            var printBtn = document.getElementById('print-pdf-btn');
-            
-            if(exportBtn) exportBtn.style.display = 'inline-block';
-            if(downloadBtn) downloadBtn.style.display = 'inline-block';
-            if(printBtn) printBtn.style.display = 'inline-block';
+    (function () {
+        'use strict';
 
-            var canvas = document.getElementById('pdf-canvas');
-            
-            // 1. 导出 PDF
-            exportBtn.addEventListener('click', function() {
-                if (!canvas || canvas.width === 0) { alert('没有可导出的PDF内容'); return; }
-                
-                const { jsPDF } = window.jspdf;
-                html2canvas(canvas).then(function(canvasImg) {
-                    var imgData = canvasImg.toDataURL('image/png');
-                    var imgWidth = 210; // A4 width in mm
-                    var pageHeight = 297; // A4 height in mm
-                    var imgHeight = canvasImg.height * imgWidth / canvasImg.width;
-                    
-                    var pdf = new jsPDF('p', 'mm', 'a4');
-                    var position = 0;
-                    
-                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                    pdf.save('SiteDiary_Exported.pdf');
-                }).catch(function(err) {
-                    alert('导出失败: ' + err);
-                });
+        var PDF_RENDER_SCALE = 3.0;
+        var PDF_DISPLAY_WIDTH = 900;
+        var CAPTURE_SCALE = 3.0;
+
+        var HK_HOLIDAYS = {
+            '2025-01-01': '元旦', '2025-01-29': '農曆年初一', '2025-01-30': '農曆年初二', '2025-01-31': '農曆年初三',
+            '2025-04-04': '清明節', '2025-04-18': '耶穌受難節', '2025-04-19': '耶穌受難節翌日', '2025-04-21': '復活節星期一',
+            '2025-05-01': '勞動節', '2025-05-05': '佛誕', '2025-05-31': '端午節', '2025-07-01': '香港特別行政區成立紀念日',
+            '2025-10-01': '國慶日', '2025-10-07': '中秋節翌日', '2025-10-29': '重陽節', '2025-12-25': '聖誕節', '2025-12-26': '聖誕節後第一個周日',
+            '2026-01-01': '元旦', '2026-02-17': '農曆年初一', '2026-02-18': '農曆年初二', '2026-02-19': '農曆年初三',
+            '2026-04-03': '耶穌受難節', '2026-04-04': '耶穌受難節翌日', '2026-04-06': '清明節翌日', '2026-04-07': '復活節星期一',
+            '2026-05-01': '勞動節', '2026-05-19': '佛誕', '2026-06-19': '端午節', '2026-07-01': '香港特別行政區成立紀念日',
+            '2026-09-25': '中秋節', '2026-09-26': '中秋節翌日', '2026-10-01': '國慶日', '2026-10-19': '重陽節',
+            '2026-12-25': '聖誕節', '2026-12-26': '聖誕節後第一個周日',
+            '2027-01-01': '元旦', '2027-02-06': '農曆年初一', '2027-02-08': '農曆年初三', '2027-02-09': '農曆年初四',
+            '2027-03-26': '耶穌受難節', '2027-03-27': '耶穌受難節翌日', '2027-03-29': '復活節星期一',
+            '2027-04-05': '清明節', '2027-05-01': '勞動節', '2027-05-13': '佛誕', '2027-06-09': '端午節',
+            '2027-07-01': '香港特別行政區成立紀念日', '2027-09-16': '中秋節翌日', '2027-10-01': '國慶日',
+            '2027-10-08': '重陽節', '2027-12-25': '聖誕節', '2027-12-27': '聖誕節後第一個周日'
+        };
+
+        var FORM_LAYOUT = {
+            header: {
+                nameOfPlant:  { left: '12.71%', top: '11.3%',  width: '33.37%', height: '3%'    },
+                sorItem:      { left: '56.6%',  top: '12.6%',  width: '11.0%',  height: '4.0%'  },
+                ceNo:         { left: '81.0%',  top: '12.5%',  width: '13.5%',  height: '4.3%'  },
+                taskOrderNo:  { left: '12.6%',  top: '19.0%',  width: '14.5%',  height: '5.2%'  },
+                headerExtraA: { left: '26.37%', top: '19.71%', width: '41.68%', height: '5.21%' },
+                headerExtraB: { left: '75.30%', top: '18.54%', width: '19.35%', height: '5.37%' }
+            },
+            table: {
+                rowTops: [37.35, 44.33, 51.31, 58.29, 65.27, 73.50, 80.70],
+                rowHeight: 6.98,
+                columns: {
+                    date:          { left: '4.6%',   width: '7.6%'   },
+                    weather:       { left: '12.5%',  width: '5.5%'   },
+                    description:   { left: '18.58%', width: '17.34%' },
+                    instructions:  { left: '36.0%',  width: '14.5%'  },
+                    responses:     { left: '50.8%',  width: '11.4%'  },
+                    dsdSig:        { left: '62.5%',  width: '11.4%'  },
+                    contractorSig: { left: '74.2%',  width: '8.1%'   },
+                    remarks:       { left: '82.6%',  width: '11.5%'  }
+                },
+                workerDetail: {
+                    left: '31%',
+                    width: '5.0%',
+                    height: '4.8%',
+                    tops: ['40.5%', '47.5%', '54.5%', '61.5%', '68.5%', '76.7%', '83.9%']
+                }
+            }
+        };
+
+        var FIELD_DEFAULTS = {
+            description: '沒人開工',
+            instructions: '盡快開工',
+            responses: 'ok',
+            weather: '1'
+        };
+
+        var HOLIDAY_TEXT = '假期';
+
+        var pageWrapper = document.getElementById('page-wrapper');
+        var loadingEl = document.getElementById('loading-indicator');
+        var errorEl = document.getElementById('error-message');
+        var totalPagesEl = document.getElementById('total-pages');
+        var currentPageEl = document.getElementById('current-page');
+        var pageInput = document.getElementById('page-input');
+        var prevBtn = document.getElementById('prev-page');
+        var nextBtn = document.getElementById('next-page');
+
+        var templateImageUrl = null;
+        var pdfWidthCss = 0;
+        var pdfHeightCss = 0;
+        var activePageNum = 1;
+        var totalVirtualPages = 1;
+        var currentDocObj = null;
+        var allFormData = {};
+        var currentDocId = 'default';
+        var periodStartDate = null;
+        var periodEndDate = null;
+
+        function getCurrentDocObject() {
+            var sources = ['viewDocument', 'editDocument', 'currentDiaryRecord', 'currentRecord'];
+            for (var i = 0; i < sources.length; i++) {
+                var raw = sessionStorage.getItem(sources[i]);
+                if (!raw) continue;
+                try {
+                    var d = JSON.parse(raw);
+                    if (d && d.id) return d;
+                } catch (e) {}
+            }
+            return null;
+        }
+        function loadAllFormData() {
+            try {
+                var raw = sessionStorage.getItem('dsd_formdata_' + currentDocId);
+                return raw ? JSON.parse(raw) : {};
+            } catch (e) { return {}; }
+        }
+
+        function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+        function parseDateString(s) {
+            if (!s) return null;
+            s = String(s).trim();
+            var m;
+            m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (m) return new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
+            m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+            if (m) return new Date(parseInt(m[3],10), parseInt(m[2],10)-1, parseInt(m[1],10));
+            m = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+            if (m) return new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
+            return null;
+        }
+
+        function parsePeriodStart() {
+            if (!currentDocObj) return null;
+            if (currentDocObj.startDate) {
+                var d = parseDateString(currentDocObj.startDate);
+                if (d) return d;
+            }
+            if (currentDocObj.period) {
+                var parts = String(currentDocObj.period).split('~');
+                if (parts.length >= 1) {
+                    var d2 = parseDateString(parts[0]);
+                    if (d2) return d2;
+                }
+            }
+            if (currentDocObj.date) {
+                var parts2 = String(currentDocObj.date).split('~');
+                var d3 = parseDateString(parts2[0]);
+                if (d3) return d3;
+            }
+            return null;
+        }
+
+        function parsePeriodEnd() {
+            if (!currentDocObj) return null;
+            if (currentDocObj.endDate) {
+                var d = parseDateString(currentDocObj.endDate);
+                if (d) return d;
+            }
+            if (currentDocObj.period) {
+                var parts = String(currentDocObj.period).split('~');
+                if (parts.length >= 2) {
+                    var d2 = parseDateString(parts[1]);
+                    if (d2) return d2;
+                }
+            }
+            if (currentDocObj.date) {
+                var parts2 = String(currentDocObj.date).split('~');
+                if (parts2.length >= 2) {
+                    var d3 = parseDateString(parts2[1]);
+                    if (d3) return d3;
+                }
+            }
+            return null;
+        }
+
+        function getCellDate(pageNum, dayIndex) {
+            if (!periodStartDate) return null;
+            var startDow = periodStartDate.getDay();
+            var offsetToMonday = (startDow === 0) ? -6 : (1 - startDow);
+            var firstMonday = new Date(periodStartDate.getTime());
+            firstMonday.setDate(periodStartDate.getDate() + offsetToMonday);
+            var cellDate = new Date(firstMonday.getTime());
+            cellDate.setDate(firstMonday.getDate() + (pageNum - 1) * 7 + dayIndex);
+            return cellDate;
+        }
+
+        function isInPeriod(cellDate) {
+            if (!cellDate) return false;
+            if (periodStartDate && cellDate < periodStartDate) return false;
+            if (periodEndDate && cellDate > periodEndDate) return false;
+            return true;
+        }
+
+        function getHolidayName(cellDate) {
+            if (!cellDate) return '';
+            var key = cellDate.getFullYear() + '-' + pad2(cellDate.getMonth() + 1) + '-' + pad2(cellDate.getDate());
+            return HK_HOLIDAYS[key] || '';
+        }
+
+        function isHolidayCell(pageNum, dayIndex) {
+            var cellDate = getCellDate(pageNum, dayIndex);
+            if (!isInPeriod(cellDate)) return false;
+            return !!getHolidayName(cellDate);
+        }
+
+        function calcDateForCell(pageNum, dayIndex) {
+            var cellDate = getCellDate(pageNum, dayIndex);
+            if (!isInPeriod(cellDate)) return '';
+            var yy = cellDate.getFullYear() % 100;
+            return pad2(cellDate.getDate()) + '/' + pad2(cellDate.getMonth() + 1) + '/' + pad2(yy);
+        }
+
+        function getFieldValue(pageNum, dayIndex, fieldName, pageData, isHoliday) {
+            var key = 'r' + dayIndex + '_' + fieldName;
+            var stored = pageData[key];
+            if (stored !== undefined && stored !== null && stored !== '') return stored;
+
+            switch (fieldName) {
+                case 'date':         return calcDateForCell(pageNum, dayIndex);
+                case 'weather':      return FIELD_DEFAULTS.weather;
+                case 'description':  return isHoliday ? HOLIDAY_TEXT : FIELD_DEFAULTS.description;
+                case 'instructions': return isHoliday ? HOLIDAY_TEXT : FIELD_DEFAULTS.instructions;
+                case 'responses':    return isHoliday ? HOLIDAY_TEXT : FIELD_DEFAULTS.responses;
+                default:             return '';
+            }
+        }
+
+        function updateDocumentInfo(doc) {
+            function setText(id, val) {
+                var el = document.getElementById(id);
+                if (el) el.textContent = (val === undefined || val === null || val === '') ? 'N/A' : val;
+            }
+            setText('docId', doc.id);
+            setText('docSite', doc.site);
+            setText('docPeriod', doc.period || doc.date);
+            setText('docAuthor', doc.submittedBy || doc.author);
+            setText('docType', doc.typeText || doc.type || 'Site Diary (DSD)');
+            setText('docTitle', doc.id ? ('Site Diary - ' + (doc.site || doc.id)) : 'Site Diary Document');
+
+            var statusEl = document.getElementById('docStatus');
+            if (!statusEl) return;
+            var statusMap = {
+                'draft': 'Draft', 'submitted': 'Submitted',
+                'submitted-wsg': 'Submitted to WSG', 'submitted-ig': 'Submitted to IG',
+                'endorsed': 'Endorsed', 'cancelled': 'Cancelled',
+                'approved': 'Approved', 'rejected': 'Rejected', 'pending': 'Pending Approval'
+            };
+            var clsMap = {
+                'draft': 'status-draft', 'submitted': 'status-submitted',
+                'submitted-wsg': 'status-submitted', 'submitted-ig': 'status-submitted',
+                'endorsed': 'status-approved', 'cancelled': 'status-cancelled',
+                'approved': 'status-approved', 'rejected': 'status-rejected', 'pending': 'status-pending'
+            };
+            var key = doc.approvalStatus || doc.status || 'draft';
+            statusEl.textContent = statusMap[key] || doc.statusText || 'Draft';
+            statusEl.className = 'doc-status';
+            if (clsMap[key]) statusEl.classList.add(clsMap[key]);
+        }
+
+        function base64ToUint8(base64) {
+            var binaryString = atob(base64);
+            var len = binaryString.length;
+            var bytes = new Uint8Array(len);
+            for (var i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
+            return bytes;
+        }
+
+        function loadPdfTemplate() {
+            return new Promise(function (resolve, reject) {
+                if (!window.pdfjsLib) { reject(new Error('pdf.js not loaded')); return; }
+                var data = window.SITE_DIARY_TEMPLATE_BASE64;
+                if (!data || typeof data !== 'string' || data.length < 100) {
+                    reject(new Error('No base64 template available'));
+                    return;
+                }
+                try {
+                    if (data.indexOf('base64,') !== -1) data = data.split('base64,')[1];
+                    var bytes = base64ToUint8(data);
+                    pdfjsLib.getDocument({ data: bytes }).promise.then(function (pdf) {
+                        return pdf.getPage(1).then(function (page) {
+                            var baseViewport = page.getViewport({ scale: 1.0 });
+                            var aspect = baseViewport.height / baseViewport.width;
+
+                            pdfWidthCss = PDF_DISPLAY_WIDTH;
+                            pdfHeightCss = PDF_DISPLAY_WIDTH * aspect;
+
+                            var renderWidth = PDF_DISPLAY_WIDTH * PDF_RENDER_SCALE;
+                            var scaleForRender = renderWidth / baseViewport.width;
+                            var renderViewport = page.getViewport({ scale: scaleForRender });
+
+                            var canvas = document.createElement('canvas');
+                            canvas.width = renderViewport.width;
+                            canvas.height = renderViewport.height;
+                            var ctx = canvas.getContext('2d');
+                            ctx.imageSmoothingEnabled = true;
+                            ctx.imageSmoothingQuality = 'high';
+
+                            return page.render({ canvasContext: ctx, viewport: renderViewport }).promise.then(function () {
+                                templateImageUrl = canvas.toDataURL('image/png');
+                                console.log('[Viewer] PDF 渲染:', canvas.width, '×', canvas.height,
+                                            '(顯示:', pdfWidthCss, '×', pdfHeightCss, ')');
+                                resolve();
+                            });
+                        });
+                    }).catch(reject);
+                } catch (e) { reject(e); }
             });
+        }
 
-            // 2. 下载 PDF
-            downloadBtn.addEventListener('click', function() {
-                var pdfData = window.pdfDoc;
-                if (pdfData) {
-                    pdfData.getData().then(function(data) {
-                        var blob = new Blob([data], { type: 'application/pdf' });
-                        var url = URL.createObjectURL(blob);
-                        var a = document.createElement('a');
-                        a.href = url;
-                        a.download = 'SiteDiary_Original.pdf';
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(url);
+        function applyPosition(el, pos) {
+            el.style.position = 'absolute';
+            el.style.left = pos.left;
+            if (pos.top !== undefined) el.style.top = (typeof pos.top === 'number') ? (pos.top + '%') : pos.top;
+            el.style.width = pos.width;
+            if (pos.height !== undefined) el.style.height = (typeof pos.height === 'number') ? (pos.height + '%') : pos.height;
+        }
+
+        function createTextField(fieldId, pos, value, extraClass) {
+            var div = document.createElement('div');
+            div.className = 'pdf-field' + (extraClass ? ' ' + extraClass : '');
+            div.dataset.fieldId = fieldId;
+            div.textContent = value || '';
+            applyPosition(div, pos);
+            return div;
+        }
+
+        function createSignatureView(fieldId, pos, value) {
+            var cell = document.createElement('div');
+            cell.className = 'pdf-field signature-cell';
+            cell.dataset.fieldId = fieldId;
+            applyPosition(cell, pos);
+            if (value && typeof value === 'string' && value.indexOf('data:image') === 0) {
+                var img = document.createElement('img');
+                img.src = value;
+                img.className = 'signature-img';
+                img.alt = '簽名';
+                cell.appendChild(img);
+            }
+            return cell;
+        }
+
+        function buildOverlay(pageNum) {
+            var pageData = allFormData[pageNum] || {};
+            var overlay = document.createElement('div');
+            overlay.className = 'pdf-form-overlay';
+            overlay.dataset.page = pageNum;
+
+            var defaultPlantName = pageData.nameOfPlant || (currentDocObj && currentDocObj.site) || '';
+            overlay.appendChild(createTextField('nameOfPlant', FORM_LAYOUT.header.nameOfPlant, defaultPlantName));
+            overlay.appendChild(createTextField('sorItem',     FORM_LAYOUT.header.sorItem,     pageData.sorItem));
+            overlay.appendChild(createTextField('ceNo',        FORM_LAYOUT.header.ceNo,        pageData.ceNo));
+            var defaultTaskOrderNo = pageData.taskOrderNo || (currentDocObj && currentDocObj.id) || '';
+            overlay.appendChild(createTextField('taskOrderNo', FORM_LAYOUT.header.taskOrderNo, defaultTaskOrderNo));
+            overlay.appendChild(createTextField('headerExtraA', FORM_LAYOUT.header.headerExtraA, pageData.headerExtraA));
+            overlay.appendChild(createTextField('headerExtraB', FORM_LAYOUT.header.headerExtraB, pageData.headerExtraB));
+
+            var cols = FORM_LAYOUT.table.columns;
+            var worker = FORM_LAYOUT.table.workerDetail;
+            var rowTops = FORM_LAYOUT.table.rowTops;
+            var rowH = FORM_LAYOUT.table.rowHeight;
+
+            for (var d = 0; d < 7; d++) {
+                var rowTopNum = rowTops[d];
+                var rowTopStr = rowTopNum + '%';
+                var isHoliday = isHolidayCell(pageNum, d);
+
+                overlay.appendChild(createTextField('r' + d + '_date', {
+                    left: cols.date.left,
+                    top: (rowTopNum + rowH * 0.42) + '%',
+                    width: cols.date.width,
+                    height: (rowH * 0.5) + '%'
+                }, getFieldValue(pageNum, d, 'date', pageData, isHoliday), 'date-cell'));
+
+                overlay.appendChild(createTextField('r' + d + '_weather', {
+                    left: cols.weather.left, top: rowTopStr,
+                    width: cols.weather.width, height: rowH + '%'
+                }, getFieldValue(pageNum, d, 'weather', pageData, isHoliday), 'weather-cell'));
+
+                overlay.appendChild(createTextField('r' + d + '_description', {
+                    left: cols.description.left, top: rowTopStr,
+                    width: cols.description.width, height: rowH + '%'
+                }, getFieldValue(pageNum, d, 'description', pageData, isHoliday)));
+
+                overlay.appendChild(createTextField('r' + d + '_workerDetail', {
+                    left: worker.left, top: worker.tops[d],
+                    width: worker.width, height: worker.height
+                }, pageData['r' + d + '_workerDetail'], 'worker-detail'));
+
+                overlay.appendChild(createTextField('r' + d + '_instructions', {
+                    left: cols.instructions.left, top: rowTopStr,
+                    width: cols.instructions.width, height: rowH + '%'
+                }, getFieldValue(pageNum, d, 'instructions', pageData, isHoliday)));
+
+                overlay.appendChild(createTextField('r' + d + '_responses', {
+                    left: cols.responses.left, top: rowTopStr,
+                    width: cols.responses.width, height: rowH + '%'
+                }, getFieldValue(pageNum, d, 'responses', pageData, isHoliday)));
+
+                overlay.appendChild(createTextField('r' + d + '_dsdSig', {
+                    left: cols.dsdSig.left, top: rowTopStr,
+                    width: cols.dsdSig.width, height: rowH + '%'
+                }, pageData['r' + d + '_dsdSig']));
+
+                overlay.appendChild(createSignatureView('r' + d + '_contractorSig', {
+                    left: cols.contractorSig.left, top: rowTopStr,
+                    width: cols.contractorSig.width, height: rowH + '%'
+                }, pageData['r' + d + '_contractorSig']));
+
+                overlay.appendChild(createTextField('r' + d + '_remarks', {
+                    left: cols.remarks.left, top: rowTopStr,
+                    width: cols.remarks.width, height: rowH + '%'
+                }, pageData['r' + d + '_remarks']));
+            }
+
+            return overlay;
+        }
+
+        function buildPageElement(pageNum) {
+            var pageDiv = document.createElement('div');
+            pageDiv.className = 'pdf-page';
+            pageDiv.dataset.page = pageNum;
+            pageDiv.style.width = pdfWidthCss + 'px';
+            pageDiv.style.height = pdfHeightCss + 'px';
+
+            var img = document.createElement('img');
+            img.src = templateImageUrl;
+            img.className = 'pdf-bg';
+            img.alt = 'Site Diary Template';
+            pageDiv.appendChild(img);
+
+            pageDiv.appendChild(buildOverlay(pageNum));
+            return pageDiv;
+        }
+
+        function renderPage(pageNum) {
+            if (!templateImageUrl) return;
+            pageWrapper.innerHTML = '';
+            activePageNum = pageNum;
+            pageWrapper.appendChild(buildPageElement(pageNum));
+            updatePageInfo();
+        }
+
+        function updatePageInfo() {
+            if (totalPagesEl) totalPagesEl.textContent = totalVirtualPages;
+            if (currentPageEl) currentPageEl.textContent = activePageNum;
+            if (pageInput) {
+                pageInput.value = activePageNum;
+                pageInput.max = totalVirtualPages;
+            }
+            if (prevBtn) prevBtn.disabled = (activePageNum <= 1);
+            if (nextBtn) nextBtn.disabled = (activePageNum >= totalVirtualPages);
+        }
+
+        function goToPage(n) {
+            if (n < 1 || n > totalVirtualPages) return;
+            renderPage(n);
+        }
+
+        function setupNavigation() {
+            if (prevBtn) prevBtn.addEventListener('click', function () {
+                if (activePageNum > 1) goToPage(activePageNum - 1);
+            });
+            if (nextBtn) nextBtn.addEventListener('click', function () {
+                if (activePageNum < totalVirtualPages) goToPage(activePageNum + 1);
+            });
+            if (pageInput) pageInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    var target = parseInt(pageInput.value, 10);
+                    if (!isNaN(target) && target >= 1 && target <= totalVirtualPages) {
+                        goToPage(target);
+                    } else {
+                        alert('請輸入 1 到 ' + totalVirtualPages + ' 之間的頁碼');
+                        pageInput.value = activePageNum;
+                    }
+                    pageInput.blur();
+                } else if (e.key === 'Escape') {
+                    pageInput.value = activePageNum;
+                    pageInput.blur();
+                }
+            });
+            if (pageInput) pageInput.addEventListener('blur', function () {
+                var target = parseInt(pageInput.value, 10);
+                if (isNaN(target) || target < 1 || target > totalVirtualPages) {
+                    pageInput.value = activePageNum;
+                } else if (target !== activePageNum) {
+                    goToPage(target);
+                }
+            });
+        }
+
+        function waitForImages(container) {
+            var imgs = container.querySelectorAll('img');
+            var promises = [];
+            Array.prototype.forEach.call(imgs, function (img) {
+                if (img.complete && img.naturalWidth > 0) return;
+                promises.push(new Promise(function (resolve) {
+                    img.addEventListener('load', resolve, { once: true });
+                    img.addEventListener('error', resolve, { once: true });
+                }));
+            });
+            return Promise.all(promises);
+        }
+
+        function captureElementToDataURL(element) {
+            return html2canvas(element, {
+                scale: CAPTURE_SCALE,
+                useCORS: true,
+                allowTaint: false,
+                backgroundColor: '#ffffff',
+                logging: false,
+                imageTimeout: 15000,
+                windowWidth: element.scrollWidth,
+                windowHeight: element.scrollHeight
+            }).then(function (canvas) {
+                return canvas.toDataURL('image/png');
+            });
+        }
+
+        function downloadViaAnchor(blob, filename) {
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+            console.log('[Save] Downloaded via anchor:', filename);
+        }
+
+        /* ============================================================
+           ★ Download
+           ============================================================ */
+        async function downloadAllPages() {
+            if (!templateImageUrl) { alert('尚未載入文件'); return; }
+            if (typeof html2canvas === 'undefined' || !window.jspdf) {
+                alert('PDF 引擎未載入');
+                return;
+            }
+
+            var btn = document.getElementById('download-pdf-btn');
+            var origHTML = btn.innerHTML;
+            var suggestedName = 'SiteDiary_' + (currentDocId || 'doc') + '.pdf';
+
+            var fileHandle = null;
+
+            console.log('[Save] 環境檢查：',
+                'showSaveFilePicker =', typeof window.showSaveFilePicker === 'function',
+                '| isSecureContext =', window.isSecureContext,
+                '| protocol =', window.location.protocol);
+
+            if (typeof window.showSaveFilePicker === 'function') {
+                try {
+                    fileHandle = await window.showSaveFilePicker({
+                        suggestedName: suggestedName,
+                        types: [{
+                            description: 'PDF Document',
+                            accept: { 'application/pdf': ['.pdf'] }
+                        }]
                     });
+                    console.log('[Save] 已取得 fileHandle:', fileHandle.name);
+                } catch (err) {
+                    if (err && err.name === 'AbortError') {
+                        console.log('[Save] 用戶取消儲存');
+                        return;
+                    }
+                    console.warn('[Save] showSaveFilePicker 失敗，改用 fallback:', err);
+                    fileHandle = null;
+                }
+            } else {
+                if (!window.isSecureContext) {
+                    console.warn('[Save] ⚠️ 非安全環境（' + window.location.protocol + '），無法彈出檔案總管');
+                    alert(
+                        '⚠️ 無法彈出「儲存位置」對話框\n\n' +
+                        '原因：瀏覽器安全限制，需要透過 http://localhost 或 https:// 訪問\n\n' +
+                        '解決方法：\n' +
+                        '1. 用 python -m http.server 8000 啟動本地伺服器\n' +
+                        '2. 然後打開 http://localhost:8000/sitediarydocument.html\n\n' +
+                        '（本次將自動下載到預設下載資料夾）'
+                    );
                 } else {
-                    alert('已降级为导出图片 PDF');
-                    exportBtn.click();
+                    console.warn('[Save] 瀏覽器不支援 showSaveFilePicker（建議用 Chrome / Edge）');
                 }
-            });
+            }
 
-            // 3. 打印 PDF
-            printBtn.addEventListener('click', function() {
-                window.print();
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 準備中...';
+
+            var tempContainer = document.createElement('div');
+            tempContainer.style.cssText =
+                'position:fixed;left:0;top:0;z-index:-9999;opacity:0;pointer-events:none;' +
+                'width:' + pdfWidthCss + 'px;';
+            document.body.appendChild(tempContainer);
+
+            try {
+                for (var i = 1; i <= totalVirtualPages; i++) {
+                    tempContainer.appendChild(buildPageElement(i));
+                }
+
+                await waitForImages(tempContainer);
+
+                var jsPDF = window.jspdf.jsPDF;
+                var pdf = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: 'a4',
+                    compress: true
+                });
+
+                var pageW = 297;
+                var pageH = 210;
+
+                var pageEls = tempContainer.querySelectorAll('.pdf-page');
+                for (var j = 0; j < pageEls.length; j++) {
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 產生第 ' + (j + 1) + '/' + pageEls.length + ' 頁...';
+
+                    var imgData = await captureElementToDataURL(pageEls[j]);
+
+                    if (j > 0) pdf.addPage('a4', 'landscape');
+
+                    var imgW = pageEls[j].offsetWidth;
+                    var imgH = pageEls[j].offsetHeight;
+                    var imgAspect = imgH / imgW;
+                    var targetW = pageW;
+                    var targetH = pageW * imgAspect;
+                    if (targetH > pageH) {
+                        targetH = pageH;
+                        targetW = pageH / imgAspect;
+                    }
+                    var offsetX = (pageW - targetW) / 2;
+                    var offsetY = (pageH - targetH) / 2;
+
+                    pdf.addImage(imgData, 'PNG', offsetX, offsetY, targetW, targetH, undefined, 'FAST');
+                }
+
+                var blob = pdf.output('blob');
+                console.log('[Save] PDF 生成完成，大小：', (blob.size / 1024 / 1024).toFixed(2), 'MB');
+
+                if (fileHandle) {
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 寫入檔案...';
+                    try {
+                        var writable = await fileHandle.createWritable();
+                        await writable.write(blob);
+                        await writable.close();
+                        console.log('[Save] ✅ 已寫入:', fileHandle.name);
+                        alert('✅ 已儲存：' + fileHandle.name);
+                    } catch (err) {
+                        console.error('[Save] 寫入失敗:', err);
+                        alert('❌ 寫入檔案失敗：' + (err && err.message ? err.message : 'unknown') + '\n將改用預設下載。');
+                        downloadViaAnchor(blob, suggestedName);
+                    }
+                } else {
+                    downloadViaAnchor(blob, suggestedName);
+                }
+
+            } catch (err) {
+                console.error('[Save] Failed:', err);
+                alert('下載失敗：' + (err && err.message ? err.message : 'unknown'));
+            } finally {
+                if (tempContainer.parentNode) {
+                    document.body.removeChild(tempContainer);
+                }
+                btn.disabled = false;
+                btn.innerHTML = origHTML;
+            }
+        }
+
+        function setupDownload() {
+            var btn = document.getElementById('download-pdf-btn');
+            if (!btn) return;
+            btn.addEventListener('click', downloadAllPages);
+        }
+
+        /* ============================================================
+           ★ Print：用高解析度截圖 + 填滿 A4 橫向，只印 PDF 內容
+           ============================================================ */
+        async function printAllPages() {
+            if (!templateImageUrl) { alert('尚未載入文件'); return; }
+            if (typeof html2canvas === 'undefined') {
+                alert('html2canvas 未載入');
+                return;
+            }
+
+            var btn = document.getElementById('print-pdf-btn');
+            var origHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 準備列印...';
+
+            var tempContainer = document.createElement('div');
+            tempContainer.style.cssText =
+                'position:fixed;left:0;top:0;z-index:-9999;opacity:0;pointer-events:none;' +
+                'width:' + pdfWidthCss + 'px;';
+            document.body.appendChild(tempContainer);
+
+            var printContainer = document.getElementById('print-only-container');
+            if (!printContainer) {
+                printContainer = document.createElement('div');
+                printContainer.id = 'print-only-container';
+                document.body.appendChild(printContainer);
+            }
+            printContainer.innerHTML = '';
+
+            try {
+                for (var i = 1; i <= totalVirtualPages; i++) {
+                    tempContainer.appendChild(buildPageElement(i));
+                }
+
+                await waitForImages(tempContainer);
+
+                var pageEls = tempContainer.querySelectorAll('.pdf-page');
+                for (var j = 0; j < pageEls.length; j++) {
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 準備第 ' + (j + 1) + '/' + pageEls.length + ' 頁...';
+
+                    var imgData = await captureElementToDataURL(pageEls[j]);
+
+                    var pageDiv = document.createElement('div');
+                    pageDiv.className = 'print-page';
+
+                    var img = document.createElement('img');
+                    img.src = imgData;
+                    img.alt = 'Site Diary Page ' + (j + 1);
+
+                    pageDiv.appendChild(img);
+                    printContainer.appendChild(pageDiv);
+                }
+
+                await waitForImages(printContainer);
+
+                /* 直接列印，不顯示提示 */
+                setTimeout(function () {
+                    window.print();
+
+                    setTimeout(function () {
+                        printContainer.innerHTML = '';
+                        if (tempContainer.parentNode) {
+                            document.body.removeChild(tempContainer);
+                        }
+                        btn.disabled = false;
+                        btn.innerHTML = origHTML;
+                    }, 1000);
+                }, 200);
+
+            } catch (err) {
+                console.error('[Print] Failed:', err);
+                alert('列印準備失敗：' + (err && err.message ? err.message : 'unknown'));
+                if (tempContainer.parentNode) {
+                    document.body.removeChild(tempContainer);
+                }
+                printContainer.innerHTML = '';
+                btn.disabled = false;
+                btn.innerHTML = origHTML;
+            }
+        }
+
+        function setupPrint() {
+            var btn = document.getElementById('print-pdf-btn');
+            if (!btn) return;
+            btn.addEventListener('click', printAllPages);
+        }
+
+        function setupBack() {
+            var btn = document.getElementById('back-btn');
+            if (!btn) return;
+            btn.addEventListener('click', function () { window.location.href = 'sitediary.html'; });
+        }
+
+        function setupSidebar() {
+            var sb = document.querySelector('.sidebar');
+            if (sb && localStorage.getItem('sidebarCollapsed') === 'true') sb.classList.add('collapsed');
+            var tb = document.querySelector('.toggle-btn');
+            if (tb) tb.addEventListener('click', function () {
+                setTimeout(function () {
+                    if (sb) localStorage.setItem('sidebarCollapsed', sb.classList.contains('collapsed') ? 'true' : 'false');
+                }, 50);
             });
+        }
+
+        function setupDateDisplay() {
+            var ds = document.querySelector('.date-display span');
+            var sd = sessionStorage.getItem('globalDate');
+            if (sd && ds) ds.textContent = sd;
+            else if (ds) ds.textContent = new Date().toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'});
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            try {
+                setupSidebar();
+                setupDateDisplay();
+
+                currentDocObj = getCurrentDocObject();
+                if (!currentDocObj) {
+                    loadingEl.classList.remove('visible');
+                    errorEl.style.display = 'block';
+                    errorEl.innerHTML =
+                        '<i class="fas fa-exclamation-triangle" style="font-size:32px;"></i><br><br>' +
+                        '<strong>找不到文件資料</strong><br>' +
+                        '<small>請從 Site Diary 列表重新點 View 進入</small>';
+                    return;
+                }
+
+                currentDocId = currentDocObj.id;
+                updateDocumentInfo(currentDocObj);
+
+                periodStartDate = parsePeriodStart();
+                periodEndDate = parsePeriodEnd();
+
+                allFormData = loadAllFormData();
+
+                var maxPage = 1;
+                for (var k in allFormData) {
+                    if (!allFormData.hasOwnProperty(k)) continue;
+                    var pn = parseInt(k, 10);
+                    if (!isNaN(pn) && pn > maxPage) maxPage = pn;
+                }
+                totalVirtualPages = Math.max(1, parseInt(currentDocObj.totalPages, 10) || 0, maxPage);
+
+                console.log('[Viewer] Doc:', currentDocId, '| Pages:', totalVirtualPages, '| Form keys:', Object.keys(allFormData).length);
+
+                loadingEl.classList.add('visible');
+                loadPdfTemplate().then(function () {
+                    loadingEl.classList.remove('visible');
+                    renderPage(1);
+                    setupNavigation();
+                    setupDownload();
+                    setupPrint();
+                    setupBack();
+                }).catch(function (err) {
+                    console.error('[Viewer] PDF load failed:', err);
+                    loadingEl.classList.remove('visible');
+                    errorEl.style.display = 'block';
+                    errorEl.innerHTML =
+                        '<i class="fas fa-exclamation-triangle" style="font-size:32px;"></i><br><br>' +
+                        '<strong>無法載入 PDF 模板</strong><br>' +
+                        '<small>Error: ' + (err && err.message ? err.message : 'unknown') + '</small><br>' +
+                        '<small>請確認 dsd-template-data.js 已正確載入</small>';
+                });
+            } catch (err) {
+                console.error('[Viewer] Init failed:', err);
+                if (loadingEl) loadingEl.classList.remove('visible');
+                if (errorEl) {
+                    errorEl.style.display = 'block';
+                    errorEl.textContent = '初始化失敗：' + (err && err.message ? err.message : 'unknown');
+                }
+            }
         });
-    </script>
 
-    <!-- 侧边栏状态持久化 -->
-    <script>
-        (function() {
-            function saveSidebarState() {
-                const sidebar = document.querySelector('.sidebar');
-                if (sidebar) localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed') ? 'true' : 'false');
-            }
-            function restoreSidebarState() {
-                const sidebar = document.querySelector('.sidebar');
-                if (sidebar) {
-                    const saved = localStorage.getItem('sidebarCollapsed');
-                    if (saved === 'true') sidebar.classList.add('collapsed');
-                    else if (saved === 'false') sidebar.classList.remove('collapsed');
-                }
-            }
-            function bindToggleEvent() {
-                const toggleBtn = document.querySelector('.toggle-btn');
-                if (toggleBtn) {
-                    toggleBtn.addEventListener('click', function() {
-                        setTimeout(saveSidebarState, 50);
-                    });
-                }
-            }
-            document.addEventListener('DOMContentLoaded', function() {
-                restoreSidebarState();
-                bindToggleEvent();
-            });
-        })();
+    })();
     </script>
 </body>
 </html>

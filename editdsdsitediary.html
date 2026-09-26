@@ -1278,8 +1278,28 @@
             }
 
             pdfPage.appendChild(overlay);
+
+            /* ★ 新增：渲染完成後，把 DOM 裡的預設值同步到 allFormData */
+            syncDomToFormData(pageNum, overlay);
         }
 
+        /* ★ 新增：將 DOM 顯示的所有值寫入 allFormData（僅在尚未有值時） */
+        function syncDomToFormData(pageNum, overlay) {
+            if (!allFormData[pageNum]) allFormData[pageNum] = {};
+            var fields = overlay.querySelectorAll('[data-field-id]');
+            fields.forEach(function (el) {
+                var id = el.dataset.fieldId;
+                if (!id) return;
+                /* 已有值就不覆蓋（避免蓋掉使用者輸入） */
+                if (allFormData[pageNum].hasOwnProperty(id)) return;
+
+                if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') {
+                    allFormData[pageNum][id] = el.value;
+                }
+            });
+            persistFormData();
+        }
+        
         function hookSaveButton() {
             ['save-btn', 'submit-btn'].forEach(function (id) {
                 var btn = document.getElementById(id);
