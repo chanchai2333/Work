@@ -1,9 +1,9 @@
 /**
  * editlabour.js - Labour Wage 編輯器
  * 支援多模板類型：
- *   - GF527A     → 內嵌 base64（GF527A-data.js）
- *   - GF527-2003 → Excel 轉 PDF
- *   - GF527-2017 → Excel 轉 PDF
+ *   - GF527A     → 內嵌 PDF base64（GF527A-data.js）
+ *   - GF527-2003 → 外部 xls 轉 PDF（原有）
+ *   - GF527-2017 → 內嵌 xlsx base64（GF527_2017-data.js）→ 下載/上傳 Excel 編輯
  */
 (function () {
     'use strict';
@@ -13,14 +13,12 @@
     var DEFAULT_TOTAL_PAGES = 1;
     var STORAGE_KEY = 'labourWageData';
 
-    /* 模板檔案映射（依類型） */
     var TEMPLATE_FILES = {
-        'GF527A':     null,  // 使用內嵌 base64
+        'GF527A':     null,
         'GF527-2003': 'gf527_rev_1_2003_protected_r1 (July 26).xls',
         'GF527-2017': 'GF527_Rev_1_2017_protected_font_size_26.xlsx'
     };
 
-    /* PDF.js worker */
     if (window.pdfjsLib) {
         try {
             pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -37,8 +35,8 @@
     var pdfWidthCss = 0;
     var pdfHeightCss = 0;
     var pdfDoc = null;
+    var isExcelMode = false;
 
-    /* DOM */
     var pageWrapper = document.getElementById('page-wrapper');
     var loadingIndicator = document.getElementById('loading-indicator');
 
@@ -172,17 +170,191 @@
         return btoa(binary);
     }
 
-    /* ========== XLS/XLSX → PDF base64 ========== */
-    function xlsToPdfBase64(url) {
+    /* ============================================================
+       ★ GF527-2017：下載 / 上傳 Excel 面板
+       ============================================================ */
+    function showExcelPanel() {
+        var embedded = window.GF527_REV_1_2017_PROTECTED_FONT_SIZE_26_BASE64;
+        if (!embedded || embedded.length < 100) {
+            throw new Error('未找到 GF527-2017 內嵌資料（請確認 scripts/GF527_2017-data.js 已載入）');
+        }
+
+        pageWrapper.innerHTML = '';
+
+        var panel = document.createElement('div');
+        panel.className = 'excel-panel';
+        panel.innerHTML =
+            '<div class="excel-panel-icon"><i class="fas fa-file-excel"></i></div>' +
+            '<h3>GF527 (2017) — Labour Wage</h3>' +
+            '<p class="excel-panel-desc">' +
+                '此表格需透過 Microsoft Excel 編輯。請點擊下方「Download / Open in Excel」下載檔案，' +
+                '在 Excel 中完成填寫後儲存，再點擊「Upload Edited File」上傳回系統。' +
+            '</p>' +
+            '<div class="excel-panel-actions">' +
+                '<button class="btn btn-excel-download" id="excel-download-btn">' +
+                    '<i class="fas fa-download"></i> Download / Open in Excel' +
+                '</button>' +
+                '<button class="btn btn-excel-upload" id="excel-upload-btn">' +
+                    '<i class="fas fa-upload"></i> Upload Edited File' +
+                '</button>' +
+                '<input type="file" id="excel-upload-input" accept=".xlsx,.xls" style="display:none">' +
+            '</div>' +
+            '<div class="excel-file-info" id="excel-file-info">' +
+                '<i class="fas fa-check-circle"></i>' +
+                '<span id="excel-file-info-text">已上傳修改後的檔案</span>' +
+            '</div>' +
+            '<div class="excel-panel-status" id="excel-status"></div>' +
+            '<button class="btn btn-excel-reset" id="excel-reset-btn" style="display:none;">' +
+                '<i class="fas fa-undo"></i> 重置為空白模板' +
+            '</button>';
+
+        pageWrapper.appendChild(panel);
+
+        // 隱藏 PDF 分頁控件
+        var pdfControls = document.getElementById('pdf-controls');
+        if (pdfControls) pdfControls.style.display = 'none';
+
+        bindExcelPanelEvents(embedded);
+
+        isExcelMode = true;
+        currentPageObj = { pageNum: 1, container: panel };
+
+        console.log('[Labour] ✓ GF527-2017 Excel 面板已顯示');
+    }
+
+    function bindExcelPanelEvents(baseBase64) {
+        var downloadBtn = document.getElementById('excel-download-btn');
+        var uploadBtn = document.getElementById('excel-upload-btn');
+        var uploadInput = document.getElementById('excel-upload-input');
+        var resetBtn = document.getElementById('excel-reset-btn');
+        var statusEl = document.getElementById('excel-status');
+        var fileInfoEl = document.getElementById('excel-file-info');
+        var fileInfoText = document.getElementById('excel-file-info-text');
+
+        function setStatus(msg, type) {
+            if (!statusEl) return;
+            statusEl.textContent = msg;
+            statusEl.className = 'excel-panel-status ' + (type || '');
+        }
+
+        function refreshFileInfo() {
+            if (!fileInfoEl) return;
+            if (currentDoc && currentDoc.excelData && currentDoc.excelData.length > 100) {
+                fileInfoEl.classList.add('visible');
+                var fn = currentDoc.excelFileName || '(未命名)';
+                var at = currentDoc.excelUploadedAt
+                    ? new Date(currentDoc.excelUploadedAt).toLocaleString('en-GB')
+                    : '';
+                if (fileInfoText) {
+                    fileInfoText.textContent = '已上傳：' + fn + (at ? '  (' + at + ')' : '');
+                }
+                if (resetBtn) resetBtn.style.display = 'inline-flex';
+            } else {
+                fileInfoEl.classList.remove('visible');
+                if (resetBtn) resetBtn.style.display = 'none';
+            }
+        }
+
+        // 下載（優先使用已上傳的版本，否則用原始模板）
+        downloadBtn.addEventListener('click', function () {
+            try {
+                var useB64 = (currentDoc && currentDoc.excelData && currentDoc.excelData.length > 100)
+                    ? currentDoc.excelData
+                    : baseBase64;
+
+                var bytes = base64ToUint8(useB64);
+                var blob = new Blob([bytes], {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                });
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = (currentDoc.id || 'GF527-2017') + '.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+
+                setStatus('✓ 檔案已下載。請用 Excel 開啟編輯，完成後儲存並用「Upload Edited File」上傳。', 'success');
+            } catch (e) {
+                console.error('[Labour] 下載失敗:', e);
+                setStatus('✗ 下載失敗：' + (e && e.message ? e.message : e), 'error');
+            }
+        });
+
+        // 上傳
+        uploadBtn.addEventListener('click', function () {
+            uploadInput.value = '';
+            uploadInput.click();
+        });
+
+        uploadInput.addEventListener('change', function (e) {
+            var file = e.target.files[0];
+            if (!file) return;
+
+            if (!/\.(xlsx|xls)$/i.test(file.name)) {
+                setStatus('✗ 僅接受 .xlsx / .xls 檔案', 'error');
+                return;
+            }
+
+            setStatus('⏳ 讀取檔案中...', '');
+
+            var reader = new FileReader();
+            reader.onload = function (ev) {
+                var dataUrl = ev.target.result;
+                var b64 = dataUrl.split(',')[1];
+
+                currentDoc.excelData = b64;
+                currentDoc.excelFileName = file.name;
+                currentDoc.excelUploadedAt = new Date().toISOString();
+
+                try {
+                    sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
+                    sessionStorage.setItem('currentWageRecord', JSON.stringify(currentDoc));
+                } catch (err) { /* 可能超過 sessionStorage 限額，不阻塞 */ }
+
+                setStatus('✓ 已成功載入檔案：' + file.name + '（請按「Save Changes」保存）', 'success');
+                refreshFileInfo();
+            };
+            reader.onerror = function () {
+                setStatus('✗ 讀取檔案失敗', 'error');
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // 重置
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function () {
+                if (!confirm('確定要清除已上傳的檔案，並回復為原始空白模板？')) return;
+                if (currentDoc) {
+                    delete currentDoc.excelData;
+                    delete currentDoc.excelFileName;
+                    delete currentDoc.excelUploadedAt;
+                    try {
+                        sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
+                        sessionStorage.setItem('currentWageRecord', JSON.stringify(currentDoc));
+                    } catch (err) {}
+                }
+                setStatus('已重置為原始模板。', '');
+                refreshFileInfo();
+            });
+        }
+
+        // 初始狀態
+        refreshFileInfo();
+        if (currentDoc && currentDoc.excelData && currentDoc.excelData.length > 100) {
+            setStatus('此記錄已包含之前上傳的 Excel 檔案。', 'success');
+        }
+    }
+
+    /* ========== XLS/XLSX buffer → PDF base64（GF527-2003 舊流程） ========== */
+    function xlsBufferToPdfBase64(buf) {
         return new Promise(function (resolve, reject) {
             if (!window.XLSX) { reject(new Error('XLSX 庫未載入')); return; }
             if (!window.html2canvas) { reject(new Error('html2canvas 未載入')); return; }
             if (!window.jspdf) { reject(new Error('jsPDF 未載入')); return; }
 
-            fetch(url).then(function (res) {
-                if (!res.ok) throw new Error('HTTP ' + res.status + ' - ' + url);
-                return res.arrayBuffer();
-            }).then(function (buf) {
+            try {
                 var wb = XLSX.read(buf, { type: 'array' });
                 if (!wb.SheetNames.length) throw new Error('無工作表');
                 var sheet = wb.Sheets[wb.SheetNames[0]];
@@ -207,7 +379,7 @@
                     }
                 }
 
-                return new Promise(function (r) { setTimeout(r, 100); })
+                new Promise(function (r) { setTimeout(r, 100); })
                     .then(function () {
                         return html2canvas(container, {
                             scale: 2,
@@ -248,18 +420,30 @@
 
                         var dataUri = pdf.output('datauristring');
                         resolve(dataUri.split(',')[1]);
+                    })
+                    .catch(function (err) {
+                        if (container.parentNode) container.parentNode.removeChild(container);
+                        reject(err);
                     });
-            }).catch(reject);
+            } catch (e) {
+                reject(e);
+            }
         });
     }
 
-    /* ========== 依類型取得模板 base64 ========== */
+    function xlsToPdfBase64(url) {
+        return fetch(url).then(function (res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status + ' - ' + url);
+            return res.arrayBuffer();
+        }).then(xlsBufferToPdfBase64);
+    }
+
+    /* ========== 依類型取得 PDF 模板 base64（PDF 流程用） ========== */
     function getTemplateBase64() {
         return new Promise(function (resolve, reject) {
             var docType = (currentDoc && currentDoc.type) || 'GF527A';
-            console.log('[Labour] 取得模板，類型 =', docType);
+            console.log('[Labour] 取得 PDF 模板，類型 =', docType);
 
-            // ① 優先：labourwage.html 已轉好放進 sessionStorage 的快取
             var fromSession = sessionStorage.getItem('labour_template_' + docType);
             if (fromSession && fromSession.length > 100) {
                 console.log('[Labour] ✓ 使用 sessionStorage 快取模板:', docType);
@@ -267,15 +451,6 @@
                 return;
             }
 
-            // ② 次：labourwage.html 設的通用 DEFAULT_PDF_TEMPLATE
-            var defaultTpl = sessionStorage.getItem('DEFAULT_PDF_TEMPLATE');
-            if (defaultTpl && defaultTpl.length > 100) {
-                console.log('[Labour] ✓ 使用 DEFAULT_PDF_TEMPLATE');
-                resolve(defaultTpl);
-                return;
-            }
-
-            // ③ 內嵌 GF527A base64（只有 GF527A 有）
             if (docType === 'GF527A') {
                 var embedded = window.LABOURWAGE_BASE64
                             || window.SITE_DIARY_TEMPLATE_BASE64
@@ -287,33 +462,39 @@
                 }
             }
 
-            // ④ 從檔案路徑直接讀（xlsx/xls 需先轉 PDF）
+            var defaultTpl = sessionStorage.getItem('DEFAULT_PDF_TEMPLATE');
+            if (defaultTpl && defaultTpl.length > 100) {
+                console.log('[Labour] ✓ 使用 DEFAULT_PDF_TEMPLATE');
+                resolve(defaultTpl);
+                return;
+            }
+
             var file = TEMPLATE_FILES[docType];
             if (!file) {
                 reject(new Error('沒有對應的模板檔案（' + docType + '）'));
                 return;
             }
 
-            console.log('[Labour] 從檔案載入模板:', file);
+            console.log('[Labour] 從檔案載入 PDF 模板:', file);
             if (/\.pdf$/i.test(file)) {
                 fetch(file).then(function (res) {
                     if (!res.ok) throw new Error('HTTP ' + res.status);
                     return res.arrayBuffer();
                 }).then(function (buf) {
                     var b64 = arrayBufferToBase64(buf);
-                    sessionStorage.setItem('labour_template_' + docType, b64);
+                    try { sessionStorage.setItem('labour_template_' + docType, b64); } catch (e) {}
                     resolve(b64);
                 }).catch(reject);
             } else {
                 xlsToPdfBase64(file).then(function (b64) {
-                    sessionStorage.setItem('labour_template_' + docType, b64);
+                    try { sessionStorage.setItem('labour_template_' + docType, b64); } catch (e) {}
                     resolve(b64);
                 }).catch(reject);
             }
         });
     }
 
-    /* ========== 載入 PDF ========== */
+    /* ========== 載入 PDF（GF527A / GF527-2003 用） ========== */
     function loadPdfFromBase64() {
         return new Promise(function (resolve, reject) {
             getTemplateBase64().then(function (data) {
@@ -350,8 +531,23 @@
         });
     }
 
-    /* ========== 渲染當前頁 ========== */
+    /* ========== ★ 模板載入分派器 ★ ========== */
+    function loadTemplate() {
+        var type = currentDoc && currentDoc.type;
+        if (type === 'GF527-2017') {
+            console.log('[Labour] 分派：GF527-2017 → Excel 下載/上傳面板');
+            isExcelMode = true;
+            showExcelPanel();
+            return Promise.resolve();
+        }
+        console.log('[Labour] 分派：' + type + ' → PDF 渲染');
+        isExcelMode = false;
+        return loadPdfTemplate();
+    }
+
+    /* ========== 渲染當前頁（PDF 模式） ========== */
     function renderCurrentPage() {
+        if (isExcelMode) return;
         if (!templateImageUrl) return;
 
         pageWrapper.innerHTML = '';
@@ -383,7 +579,7 @@
     function goToPage(n) {
         if (n < 1 || n > totalVirtualPages) return;
         activePageNum = n;
-        renderCurrentPage();
+        if (!isExcelMode) renderCurrentPage();
     }
 
     function setupNavigation() {
@@ -445,7 +641,9 @@
         try {
             sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
             sessionStorage.setItem('currentWageRecord', JSON.stringify(currentDoc));
-        } catch (e) { /* ignore */ }
+        } catch (e) {
+            console.warn('[Labour] sessionStorage 儲存失敗（可能超過限額），僅存 localStorage');
+        }
 
         var stored = localStorage.getItem(STORAGE_KEY);
         var data = [];
@@ -459,11 +657,30 @@
         for (var i = 0; i < data.length; i++) {
             if (String(data[i].id) === String(currentDoc.id)) { idx = i; break; }
         }
-        if (idx !== -1) data[idx] = currentDoc;
-        else data.push(currentDoc);
 
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
-        catch (e) { console.error('[Labour] Save failed', e); }
+        // 若改動後體積太大，嘗試移除大欄位避免超過 localStorage 限額
+        var toStore = currentDoc;
+        try {
+            if (idx !== -1) data[idx] = toStore;
+            else data.push(toStore);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        } catch (e) {
+            console.error('[Labour] localStorage 儲存失敗', e);
+            // 退一步：不存 excelData 到 localStorage（仍保留在 sessionStorage）
+            try {
+                var leanDoc = {};
+                for (var k in currentDoc) {
+                    if (k === 'excelData') continue;
+                    leanDoc[k] = currentDoc[k];
+                }
+                if (idx !== -1) data[idx] = leanDoc;
+                else data.push(leanDoc);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                console.warn('[Labour] 已改為不儲存 excelData 至 localStorage');
+            } catch (e2) {
+                console.error('[Labour] 仍無法儲存', e2);
+            }
+        }
 
         alert('✅ Changes saved successfully!');
     }
@@ -534,8 +751,7 @@
     }
 
     function cancelEditing() {
-
-            window.location.href = 'labourwage.html';
+        window.location.href = 'labourwage.html';
     }
 
     function bindActionButtons() {
@@ -592,20 +808,27 @@
             var loadingMsg = 'Loading ' + (currentDoc.type || 'GF527A') + ' template...';
             showLoading(loadingMsg);
 
-            loadPdfTemplate().then(function () {
+            loadTemplate().then(function () {
                 hideLoading();
-                renderCurrentPage();
-                setupNavigation();
+
+                if (!isExcelMode) {
+                    renderCurrentPage();
+                    setupNavigation();
+                }
+
                 bindActionButtons();
                 setTimeout(function () { updateApprovalButtons(); }, 500);
-                console.log('[Labour] Editor ready. Type:', currentDoc.type, 'Total pages:', totalVirtualPages);
+
+                console.log('[Labour] Editor ready. Type:', currentDoc.type,
+                            'Mode:', isExcelMode ? 'Excel' : 'PDF',
+                            'Total pages:', totalVirtualPages);
             }).catch(function (err) {
-                console.error('[Labour] PDF load failed:', err);
+                console.error('[Labour] Template load failed:', err);
                 hideLoading();
                 pageWrapper.innerHTML =
                     '<div style="padding:40px;text-align:center;color:#e74c3c;background:#fff;border-radius:8px;">' +
                     '<i class="fas fa-exclamation-triangle" style="font-size:32px;"></i><br><br>' +
-                    '<strong>Failed to load PDF template</strong><br>' +
+                    '<strong>Failed to load template</strong><br>' +
                     '<small>Type: ' + ((currentDoc && currentDoc.type) || 'GF527A') + '</small><br>' +
                     '<small>Error: ' + (err && err.message ? err.message : 'unknown') + '</small>' +
                     '</div>';

@@ -646,42 +646,33 @@
                 var wageId = e.currentTarget.getAttribute('data-id');
                 var record = wageData.find(function(r) { return r.id === wageId; });
                 if (!record) { alert('Record not found'); return; }
-
-                var btn = e.currentTarget;
-                var origHtml = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                btn.disabled = true;
-
-                try {
-                    await ensureTemplateLoaded(record.type);
-                } catch (err) {
-                    console.warn('[LabourWage] 模板載入失敗，將顯示空白：', err);
-                    sessionStorage.removeItem('DEFAULT_PDF_TEMPLATE');
-                }
-
+            
+                // ★ 查看改為跳到 labourdocument.html（不需預轉模板，讓檢視頁自己處理）
                 sessionStorage.setItem('currentWageRecord', JSON.stringify(record));
-                window.location.href = 'editlabour.html';
+                sessionStorage.setItem('viewDocument', JSON.stringify(record));
+                window.location.href = 'labourdocument.html';
             }
             
-            async function handleEdit(e) {
-                var wageId = e.currentTarget.getAttribute('data-id');
-                var record = wageData.find(function(r) { return r.id === wageId; });
-                if (!record) { alert('Record not found'); return; }
-
-                var btn = e.currentTarget;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                btn.disabled = true;
-
-                try {
-                    await ensureTemplateLoaded(record.type);
-                } catch (err) {
-                    console.warn('[LabourWage] 模板載入失敗：', err);
-                    sessionStorage.removeItem('DEFAULT_PDF_TEMPLATE');
-                }
-
-                sessionStorage.setItem('currentWageRecord', JSON.stringify(record));
-                window.location.href = 'editlabour.html';
+        async function handleEdit(e) {
+            var wageId = e.currentTarget.getAttribute('data-id');
+            var record = wageData.find(function(r) { return r.id === wageId; });
+            if (!record) { alert('Record not found'); return; }
+        
+            // Edit 維持原樣，進編輯頁
+            var btn = e.currentTarget;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+        
+            try {
+                await ensureTemplateLoaded(record.type);
+            } catch (err) {
+                console.warn('[LabourWage] 模板載入失敗：', err);
+                sessionStorage.removeItem('DEFAULT_PDF_TEMPLATE');
             }
+        
+            sessionStorage.setItem('currentWageRecord', JSON.stringify(record));
+            window.location.href = 'editlabour.html';
+        }
             
             function handleDelete(e) {
                 var wageId = e.currentTarget.getAttribute('data-id');

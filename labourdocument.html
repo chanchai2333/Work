@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEL DWSS - Labour Wage Document</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles/main.css">
+
+    <!-- ★ PDF 渲染 ★ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <!-- ★ XLSX / XLS 解析 ★ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- ★ XLSX → PDF 轉換（截圖 + jsPDF） ★ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <script>
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        }
+    </script>
+
+    <!-- ★ 內嵌模板資料 ★ -->
+    <script src="scripts/GF527A-data.js"></script>
+    <script src="scripts/GF527_2017-data.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { display: flex; min-height: 100vh; background-color: #f5f7fa; color: #333; }
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #e0e6ed; }
+        .header h1 { color: #2c3e50; font-size: 2rem; }
+        .header-controls { display: flex; align-items: center; gap: 15px; }
+        .date-display { background: #eef2f6; padding: 8px 15px; border-radius: 8px; font-size: 16px; font-weight: 500; color: #308fee; }
+        .date-display i { margin-right: 8px; }
+        .user-date-row { display: flex; align-items: center; gap: 16px; }
+        .user-btn { background: #2563eb; color: #fff; border: none; border-radius: 20px; padding: 10px 20px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+
+        .document-view-page { background: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .document-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eaeaea; flex-wrap: wrap; gap: 15px; }
+        .document-header h2 { font-size: 1.6rem; color: #2c3e50; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .doc-status { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; }
+        .status-draft { background: rgba(149,165,166,0.2); color: #848f90; }
+        .status-submitted { background: rgba(52,152,219,0.2); color: #2980b9; }
+        .status-approved { background: rgba(46,204,113,0.2); color: #27ae60; }
+        .status-rejected { background: rgba(231,76,60,0.2); color: #c0392b; }
+        .status-pending { background: rgba(243,156,18,0.2); color: #d35400; }
+        .status-cancelled { background: rgba(231,76,60,0.2); color: #c0392b; }
+
+        .document-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; transition: all 0.3s ease; white-space: nowrap; color: #fff; text-decoration: none; }
+        .btn:hover { transform: translateY(-2px); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
+        .btn-primary { background: #3498db; } .btn-primary:hover { background: #2980b9; }
+        .btn-print { background: #27ae60; } .btn-print:hover { background: #219653; }
+        .btn-download { background: #8e44ad; } .btn-download:hover { background: #732d91; }
+
+        /* ★ 下載下拉選單 ★ */
+        .download-dropdown { position: relative; display: inline-block; }
+        .download-dropdown .btn-download .fa-chevron-down { font-size: 0.7em; margin-left: 4px; }
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 6px);
+            right: 0;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            min-width: 230px;
+            z-index: 1000;
+            overflow: hidden;
+        }
+        .dropdown-menu.open { display: block; animation: ddFadeIn 0.15s ease-out; }
+        @keyframes ddFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+        .dropdown-menu button {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 12px 16px;
+            background: none;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #333;
+            transition: background 0.15s;
+            font-family: inherit;
+        }
+        .dropdown-menu button:hover { background: #f1f5f9; }
+        .dropdown-menu button + button { border-top: 1px solid #e2e8f0; }
+        .dropdown-menu button i { font-size: 1.2rem; width: 20px; text-align: center; }
+        .dropdown-menu button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .dropdown-menu button:disabled:hover { background: none; }
+
+        .document-meta { background: #f8f9fa; border-radius: 12px; padding: 20px 30px; margin: 20px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+        .meta-item { display: flex; flex-direction: column; }
+        .meta-label { font-weight: 600; color: #2c3e50; margin-bottom: 5px; font-size: 0.85rem; }
+        .meta-value { color: #555; font-size: 0.95rem; font-weight: 500; padding: 8px 12px; border-radius: 6px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+        .pdf-editor-container { display: flex; flex-direction: column; gap: 12px; }
+        .pdf-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #f1f5f9; padding: 10px 12px; border-radius: 6px; }
+        .nav-btn { background: #3498db; color: #fff; border: none; border-radius: 4px; padding: 8px 14px; cursor: pointer; font-size: 14px; }
+        .nav-btn:hover { background: #2980b9; }
+        .nav-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .page-info { font-size: 14px; font-weight: 600; color: #334155; padding: 0 4px; display: flex; align-items: center; gap: 6px; }
+        .page-input { width: 60px; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 14px; font-weight: 700; color: #1e40af; text-align: center; background: #fff; }
+        .page-input:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 2px rgba(52,152,219,0.25); background: #f0f9ff; }
+        .page-input::-webkit-inner-spin-button, .page-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .page-input { -moz-appearance: textfield; }
+
+        .pdf-canvas-container { position: relative; background: #e0e0e0; border-radius: 8px; padding: 24px; display: flex; justify-content: center; align-items: flex-start; overflow: auto; min-height: 500px; }
+        .pdf-page { position: relative; display: block; box-shadow: 0 4px 12px rgba(0,0,0,0.2); background: #fff; border: 3px solid transparent; overflow: hidden; }
+        .pdf-page.active-page { border-color: #3498db; }
+        .pdf-page img { display: block; width: 100%; height: 100%; pointer-events: none; user-select: none; }
+
+        .loading-indicator { display: none; justify-content: center; align-items: center; gap: 10px; padding: 40px; color: #2563eb; font-weight: 600; background: #eff6ff; border-radius: 8px; }
+        .loading-indicator.visible { display: flex; }
+        .error-message { display: none; padding: 40px; color: #e74c3c; text-align: center; background: #fef2f2; border-radius: 8px; margin: 10px; }
+
+        footer { text-align: center; padding: 30px 0 20px; color: #7f8c8d; border-top: 1px solid #e0e6ed; margin-top: 30px; }
+        @media (max-width: 768px) { .main-content { padding: 15px; } .document-view-page { padding: 20px; } }
+        .sidebar.collapsed .logo { display: none !important; }
+
+        /* ★ 列印 ★ */
+        @page { size: A4 landscape; margin: 0; }
+        @media print {
+            html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+            body > *:not(#print-only-container) { display: none !important; }
+            #print-only-container { display: block !important; }
+            #print-only-container .print-page {
+                page-break-after: always;
+                break-after: page;
+                width: 100vw; height: 100vh;
+                display: flex; align-items: center; justify-content: center;
+                overflow: hidden; margin: 0; padding: 0;
+            }
+            #print-only-container .print-page:last-child { page-break-after: auto; break-after: auto; }
+            #print-only-container .print-page img {
+                max-width: 100%; max-height: 100%;
+                object-fit: contain; display: block;
+            }
+        }
+        #print-only-container { display: none; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">
+            <img src="AEL Logo.png" alt="AEL Logo" class="logo-img" style="height: 45px; width: auto; object-fit: contain; margin-right: 8px;">
+            <h2>DWSS</h2>
+        </div>
+        <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
+        <ul class="menu">
+            <li><a href="index.html"><i class="fas fa-home"></i><span class="menu-text">Dashboard</span></a></li>
+            <li><a href="sitediary.html"><i class="fas fa-book"></i><span class="menu-text">Site Diary</span></a></li>
+            <li><a href="safetyinspect.html"><i class="fas fa-clipboard-check"></i><span class="menu-text">Safety Inspection</span></a></li>
+            <li><a href="sitelocations.html"><i class="fas fa-map-marked-alt"></i><span class="menu-text">Site Locations</span></a></li>
+            <li><a href="labourwage.html" class="active"><i class="fas fa-money-bill-wave"></i><span class="menu-text">Labour Wage</span></a></li>
+            <li><a href="settings.html"><i class="fas fa-cogs"></i><span class="menu-text">System Settings</span></a></li>
+            <li><a href="usermanagement.html"><i class="fas fa-user-circle"></i><span class="menu-text">User Management</span></a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>Labour Wage</h1>
+            <div class="header-controls">
+                <div class="user-date-row">
+                    <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
+                    <button class="user-btn"><i class="fas fa-user"></i> John Doe</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="document-view-page">
+            <div class="document-header">
+                <h2>
+                    <i class="fas fa-file-alt"></i>
+                    <span id="docTitle">Labour Wage Document</span>
+                    <span class="doc-status status-draft" id="docStatus">Draft</span>
+                </h2>
+                <div class="document-actions">
+                    <!-- ★ 下載下拉選單（PDF 或 XLSX） ★ -->
+                    <div class="download-dropdown">
+                        <button class="btn btn-download" id="download-btn">
+                            <i class="fas fa-download"></i> Download <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="dropdown-menu" id="download-menu">
+                            <button data-format="pdf" id="download-pdf-option">
+                                <i class="fas fa-file-pdf" style="color:#e74c3c;"></i>
+                                <span>Download as PDF</span>
+                            </button>
+                            <button data-format="xlsx" id="download-xlsx-option">
+                                <i class="fas fa-file-excel" style="color:#217346;"></i>
+                                <span>Download as Excel (.xlsx)</span>
+                            </button>
+                        </div>
+                    </div>
+                    <button class="btn btn-print" id="print-pdf-btn"><i class="fas fa-print"></i> Print</button>
+                    <button class="btn btn-primary" id="back-btn"><i class="fas fa-arrow-left"></i> Back</button>
+                </div>
+            </div>
+
+            <div class="document-meta">
+                <div class="meta-item"><span class="meta-label">Document ID:</span><span class="meta-value" id="docId">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Document Type:</span><span class="meta-value" id="docType">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Site:</span><span class="meta-value" id="docSite">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Period:</span><span class="meta-value" id="docPeriod">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Submitted By:</span><span class="meta-value" id="docAuthor">N/A</span></div>
+            </div>
+
+            <div class="pdf-editor-container">
+                <div class="pdf-controls" id="pdf-controls" style="display:none;">
+                    <button class="nav-btn" id="prev-page"><i class="fas fa-chevron-left"></i></button>
+                    <span class="page-info">
+                        Page
+                        <input type="number" id="page-input" class="page-input" min="1" value="1">
+                        of <span id="total-pages">1</span>
+                    </span>
+                    <span id="current-page" style="display:none;">1</span>
+                    <button class="nav-btn" id="next-page"><i class="fas fa-chevron-right"></i></button>
+                </div>
+
+                <div class="pdf-canvas-container" id="pdf-container">
+                    <div class="loading-indicator" id="loading-indicator">
+                        <i class="fas fa-spinner fa-spin"></i> <span id="loading-text">Loading...</span>
+                    </div>
+                    <div class="error-message" id="error-message">
+                        <i class="fas fa-exclamation-triangle" style="font-size:32px;"></i><br><br>
+                        <strong>Failed to load document.</strong>
+                    </div>
+                    <div id="page-wrapper"></div>
+                </div>
+            </div>
+
+            <footer>
+                <p>&copy; 2025 AEL DWSS System. All rights reserved.</p>
+                <p>AEL DWSS Platform</p>
+            </footer>
+        </div>
+    </div>
+
+    <!-- ★ 列印容器（僅列印時顯示） ★ -->
+    <div id="print-only-container"></div>
+
+    <script src="scripts/language.js"></script>
+    <script src="scripts/app.js"></script>
+
+    <script>
+    (function () {
+        'use strict';
+
+        /* ========== 常數 ========== */
+        var PDF_DISPLAY_WIDTH = 1100;   // 顯示寬度（px）
+        var PDF_RENDER_SCALE = 2.0;     // PDF 內部渲染倍率
+        var A3_W_MM = 420;              // A3 橫向寬度（mm）
+        var A3_H_MM = 297;              // A3 橫向高度（mm）
+
+        /* ========== DOM ========== */
+        var pageWrapper       = document.getElementById('page-wrapper');
+        var loadingEl         = document.getElementById('loading-indicator');
+        var loadingText       = document.getElementById('loading-text');
+        var errorEl           = document.getElementById('error-message');
+        var pdfControls       = document.getElementById('pdf-controls');
+        var totalPagesEl      = document.getElementById('total-pages');
+        var currentPageEl     = document.getElementById('current-page');
+        var pageInput         = document.getElementById('page-input');
+        var prevBtn           = document.getElementById('prev-page');
+        var nextBtn           = document.getElementById('next-page');
+        var downloadBtn       = document.getElementById('download-btn');
+        var downloadMenu      = document.getElementById('download-menu');
+        var downloadPdfOpt    = document.getElementById('download-pdf-option');
+        var downloadXlsxOpt   = document.getElementById('download-xlsx-option');
+
+        /* ========== 狀態 ========== */
+        var currentDoc        = null;
+        var currentPdfBlob    = null;   // 已生成/已載入的 PDF Blob
+        var currentPdfBytes   = null;   // PDF 的 Uint8Array
+        var pageImages        = [];     // 每頁渲染的圖片 dataURL
+        var pdfWidthCss       = 0;
+        var pdfHeightCss      = 0;
+        var activePageNum     = 1;
+        var totalVirtualPages = 1;
+
+        /* ========== 工具 ========== */
+        function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+        function base64ToUint8(b64) {
+            if (b64.indexOf('base64,') !== -1) b64 = b64.split('base64,')[1];
+            var bin = atob(b64);
+            var len = bin.length;
+            var bytes = new Uint8Array(len);
+            for (var i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+            return bytes;
+        }
+
+        function setLoading(msg) {
+            if (!loadingEl) return;
+            loadingEl.classList.add('visible');
+            if (loadingText) loadingText.textContent = msg || 'Loading...';
+            if (errorEl) errorEl.style.display = 'none';
+        }
+        function hideLoading() {
+            if (loadingEl) loadingEl.classList.remove('visible');
+        }
+        function showError(msg) {
+            hideLoading();
+            if (errorEl) {
+                errorEl.style.display = 'block';
+                errorEl.innerHTML =
+                    '<i class="fas fa-exclamation-triangle" style="font-size:32px;"></i><br><br>' +
+                    '<strong>' + (msg || 'Failed to load document.') + '</strong>';
+            }
+        }
+
+        function syncGlobalDate() {
+            var ds = document.querySelector('.date-display span');
+            var stored = sessionStorage.getItem('globalDate');
+            if (stored && ds) ds.textContent = stored;
+            else if (ds) ds.textContent = new Date().toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'});
+        }
+
+        function setupSidebar() {
+            var sb = document.querySelector('.sidebar');
+            if (sb && localStorage.getItem('sidebarCollapsed') === 'true') sb.classList.add('collapsed');
+            var tb = document.querySelector('.toggle-btn');
+            if (tb) tb.addEventListener('click', function () {
+                setTimeout(function () {
+                    if (sb) localStorage.setItem('sidebarCollapsed', sb.classList.contains('collapsed') ? 'true' : 'false');
+                }, 50);
+            });
+        }
+
+        /* ========== 讀取文件 ========== */
+        function getCurrentDoc() {
+            var sources = ['currentWageRecord', 'viewDocument', 'editDocument', 'currentRecord'];
+            for (var i = 0; i < sources.length; i++) {
+                var raw = sessionStorage.getItem(sources[i]);
+                if (!raw) continue;
+                try {
+                    var d = JSON.parse(raw);
+                    if (d && d.id) return d;
+                } catch (e) {}
+            }
+            return null;
+        }
+
+        function updateDocInfo(doc) {
+            function setText(id, val) {
+                var el = document.getElementById(id);
+                if (el) el.textContent = (val === undefined || val === null || val === '') ? 'N/A' : val;
+            }
+            setText('docId', doc.id);
+            var typeText = doc.typeText;
+            if (!typeText && doc.type) {
+                if (doc.type === 'GF527A') typeText = 'GF527A - Return on Construction Site Employment';
+                else if (doc.type === 'GF527-2003') typeText = 'GF527 (2003) - Labour Wage';
+                else if (doc.type === 'GF527-2017') typeText = 'GF527 (2017) - Labour Wage';
+                else typeText = doc.type;
+            }
+            setText('docType', typeText);
+            setText('docSite', doc.site || doc.siteName);
+            setText('docPeriod', doc.period);
+            setText('docAuthor', doc.submittedBy || doc.author);
+
+            var titleEl = document.getElementById('docTitle');
+            if (titleEl) titleEl.textContent = 'Labour Wage - ' + (doc.site || doc.id || 'Document');
+
+            var statusEl = document.getElementById('docStatus');
+            if (statusEl) {
+                var statusMap = {
+                    'draft': 'Draft', 'submitted': 'Submitted',
+                    'approved': 'Approved', 'rejected': 'Rejected',
+                    'pending': 'Pending Approval', 'cancelled': 'Cancelled',
+                    'endorsed': 'Endorsed'
+                };
+                var clsMap = {
+                    'draft': 'status-draft', 'submitted': 'status-submitted',
+                    'approved': 'status-approved', 'rejected': 'status-rejected',
+                    'pending': 'status-pending', 'cancelled': 'status-cancelled',
+                    'endorsed': 'status-approved'
+                };
+                var key = doc.approvalStatus || doc.status || 'draft';
+                statusEl.textContent = statusMap[key] || doc.statusText || 'Draft';
+                statusEl.className = 'doc-status';
+                if (clsMap[key]) statusEl.classList.add(clsMap[key]);
+            }
+
+            var pdfOptText = downloadPdfOpt ? downloadPdfOpt.querySelector('span') : null;
+            var xlsxOptText = downloadXlsxOpt ? downloadXlsxOpt.querySelector('span') : null;
+
+            // 顯示對應的下載選項
+            if (downloadXlsxOpt) {
+                var hasXlsx = (doc.type === 'GF527-2017') || (doc.excelData && doc.excelData.length > 100);
+                downloadXlsxOpt.disabled = !hasXlsx;
+                if (xlsxOptText) {
+                    xlsxOptText.textContent = hasXlsx
+                        ? 'Download as Excel (.xlsx)'
+                        : 'Excel 不適用於此文件類型';
+                }
+            }
+        }
+
+        /* ============================================================
+           ★ GF527-2017：XLSX → HTML 表格 → 圖片 → PDF
+           ============================================================ */
+        function buildHtmlTableFromWorkbook(ws) {
+            var range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
+            var merges = ws['!merges'] || [];
+
+            // 合併資訊
+            var mergeStarts = {};
+            var covered = {};
+            merges.forEach(function (m) {
+                var key = m.s.r + ',' + m.s.c;
+                mergeStarts[key] = {
+                    rowspan: m.e.r - m.s.r + 1,
+                    colspan: m.e.c - m.s.c + 1
+                };
+                for (var r = m.s.r; r <= m.e.r; r++) {
+                    for (var c = m.s.c; c <= m.e.c; c++) {
+                        if (r === m.s.r && c === m.s.c) continue;
+                        covered[r + ',' + c] = true;
+                    }
+                }
+            });
+
+            // 欄寬
+            var colWidths = [];
+            if (ws['!cols']) {
+                for (var ci = range.s.c; ci <= range.e.c; ci++) {
+                    var col = ws['!cols'][ci];
+                    if (col) {
+                        if (col.wch) colWidths[ci] = Math.round(col.wch * 7.2) + 'px';
+                        else if (col.wpx) colWidths[ci] = col.wpx + 'px';
+                        else if (col.width) colWidths[ci] = Math.round(col.width * 7.2) + 'px';
+                    }
+                }
+            }
+
+            var html = '<table style="border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:10.5px;background:#fff;color:#000;">';
+
+            if (colWidths.length) {
+                html += '<colgroup>';
+                for (var cc = range.s.c; cc <= range.e.c; cc++) {
+                    html += '<col style="width:' + (colWidths[cc] || 'auto') + '">';
+                }
+                html += '</colgroup>';
+            }
+
+            for (var R = range.s.r; R <= range.e.r; R++) {
+                html += '<tr>';
+                for (var C = range.s.c; C <= range.e.c; C++) {
+                    var key = R + ',' + C;
+                    if (covered[key]) continue;
+
+                    var addr = XLSX.utils.encode_cell({ r: R, c: C });
+                    var cell = ws[addr];
+                    var text = '';
+                    if (cell) {
+                        if (cell.w !== undefined && cell.w !== null) text = String(cell.w);
+                        else if (cell.v !== undefined && cell.v !== null) text = String(cell.v);
+                        else if (cell.f) text = '=' + cell.f;
+                    }
+                    text = text
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/\n/g, '<br>');
+
+                    var m = mergeStarts[key];
+                    var rowspan = m ? ' rowspan="' + m.rowspan + '"' : '';
+                    var colspan = m ? ' colspan="' + m.colspan + '"' : '';
+
+                    // 前 3 行視為表頭：加粗居中
+                    var isHeader = (R <= (range.s.r + 2));
+                    var fontWeight = isHeader ? 'font-weight:700;' : '';
+                    var alignment = isHeader ? 'text-align:center;' : '';
+
+                    html += '<td' + rowspan + colspan +
+                            ' style="border:1px solid #888;padding:2px 4px;vertical-align:middle;' +
+                            fontWeight + alignment + '">' + text + '</td>';
+                }
+                html += '</tr>';
+            }
+
+            html += '</table>';
+            return html;
+        }
+
+        function xlsxBase64ToPdfBlob(xlsxB64) {
+            return new Promise(function (resolve, reject) {
+                setLoading('正在解析 Excel 表格...');
+
+                try {
+                    var bytes = base64ToUint8(xlsxB64);
+                    var wb = XLSX.read(bytes, {
+                        type: 'array',
+                        cellStyles: true,
+                        cellFormula: true,
+                        cellNF: true,
+                        cellDates: false
+                    });
+
+                    if (!wb || !wb.SheetNames || !wb.SheetNames.length) {
+                        reject(new Error('Excel 無工作表'));
+                        return;
+                    }
+
+                    var ws = wb.Sheets[wb.SheetNames[0]];
+                    var html = buildHtmlTableFromWorkbook(ws);
+
+                    // 建臨時容器
+                    var container = document.createElement('div');
+                    container.innerHTML = html;
+                    container.style.cssText =
+                        'position:fixed;left:-99999px;top:0;background:#ffffff;padding:16px;' +
+                        'display:inline-block;';
+                    document.body.appendChild(container);
+
+                    // 等瀏覽器 layout
+                    setTimeout(function () {
+                        setLoading('正在轉換為 PDF...');
+
+                        html2canvas(container, {
+                            scale: 2,
+                            backgroundColor: '#ffffff',
+                            logging: false,
+                            windowWidth: container.scrollWidth,
+                            windowHeight: container.scrollHeight
+                        }).then(function (canvas) {
+                            if (container.parentNode) container.parentNode.removeChild(container);
+
+                            var imgData = canvas.toDataURL('image/jpeg', 0.92);
+                            var aspect = canvas.width / canvas.height;
+
+                            // 計算 PDF 尺寸：以 A3 橫向為基準，若內容更寬則擴展
+                            var pdfW = A3_W_MM;
+                            var pdfH = A3_H_MM;
+
+                            if (aspect > (A3_W_MM / A3_H_MM)) {
+                                // 內容比 A3 更寬 → 固定寬度，往下擴展
+                                pdfH = pdfW / aspect;
+                            } else {
+                                // 內容較高 → 固定高度，寬度自適應
+                                pdfW = pdfH * aspect;
+                            }
+
+                            var jsPDFCtor = window.jspdf.jsPDF;
+                            var pdf = new jsPDFCtor({
+                                orientation: 'landscape',
+                                unit: 'mm',
+                                format: [pdfW, pdfH],
+                                compress: true
+                            });
+
+                            // 留白邊距
+                            var margin = 4;
+                            var imgW = pdfW - margin * 2;
+                            var imgH = imgW / aspect;
+                            if (imgH > pdfH - margin * 2) {
+                                imgH = pdfH - margin * 2;
+                                imgW = imgH * aspect;
+                            }
+                            var offsetX = (pdfW - imgW) / 2;
+                            var offsetY = (pdfH - imgH) / 2;
+
+                            pdf.addImage(imgData, 'JPEG', offsetX, offsetY, imgW, imgH, undefined, 'FAST');
+
+                            var blob = pdf.output('blob');
+                            console.log('[LabourDoc] XLSX → PDF 完成：', (blob.size / 1024).toFixed(0), 'KB, 尺寸', pdfW.toFixed(0) + '×' + pdfH.toFixed(0), 'mm');
+
+                            resolve(blob);
+                        }).catch(function (err) {
+                            if (container.parentNode) container.parentNode.removeChild(container);
+                            reject(err);
+                        });
+                    }, 100);
+
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        }
+
+        /* ============================================================
+           ★ 準備 PDF Blob
+           ============================================================ */
+        async function preparePdfBlob(doc) {
+            if (!doc) throw new Error('缺少文件資料');
+
+            var type = doc.type;
+
+            // ① GF527-2017（xlsx → PDF）
+            if (type === 'GF527-2017') {
+                var xlsxB64 = (doc.excelData && doc.excelData.length > 100)
+                    ? doc.excelData
+                    : window.GF527_REV_1_2017_PROTECTED_FONT_SIZE_26_BASE64;
+
+                if (!xlsxB64 || xlsxB64.length < 100) {
+                    throw new Error('找不到 GF527-2017 內嵌資料');
+                }
+                setLoading('正在轉換 GF527-2017 表格...');
+                return await xlsxBase64ToPdfBlob(xlsxB64);
+            }
+
+            // ② GF527A（內嵌 PDF）
+            if (type === 'GF527A') {
+                var pdfB64 = window.LABOURWAGE_BASE64
+                          || window.SITE_DIARY_TEMPLATE_BASE64
+                          || window.GF527A_BASE64;
+                if (!pdfB64 || pdfB64.length < 100) {
+                    throw new Error('找不到 GF527A 內嵌 PDF 資料');
+                }
+                var bytes = base64ToUint8(pdfB64);
+                return new Blob([bytes], { type: 'application/pdf' });
+            }
+
+            // ③ GF527-2003（外部 xls → PDF）
+            if (type === 'GF527-2003') {
+                var url = 'gf527_rev_1_2003_protected_r1 (July 26).xls';
+                setLoading('正在轉換 GF527-2003 表格...');
+
+                var res = await fetch(url);
+                if (!res.ok) throw new Error('HTTP ' + res.status + ' - ' + url);
+                var ab = await res.arrayBuffer();
+
+                var wb = XLSX.read(ab, { type: 'array', cellStyles: true });
+                if (!wb.SheetNames.length) throw new Error('無工作表');
+                var ws2 = wb.Sheets[wb.SheetNames[0]];
+                var html2 = buildHtmlTableFromWorkbook(ws2);
+
+                var container2 = document.createElement('div');
+                container2.innerHTML = html2;
+                container2.style.cssText =
+                    'position:fixed;left:-99999px;top:0;background:#ffffff;padding:16px;display:inline-block;';
+                document.body.appendChild(container2);
+
+                await new Promise(function (r) { setTimeout(r, 100); });
+
+                var canvas2 = await html2canvas(container2, {
+                    scale: 2,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    windowWidth: container2.scrollWidth,
+                    windowHeight: container2.scrollHeight
+                });
+                if (container2.parentNode) container2.parentNode.removeChild(container2);
+
+                var imgData2 = canvas2.toDataURL('image/jpeg', 0.92);
+                var aspect2 = canvas2.width / canvas2.height;
+
+                var pdfW2 = A3_W_MM, pdfH2 = A3_H_MM;
+                if (aspect2 > (A3_W_MM / A3_H_MM)) pdfH2 = pdfW2 / aspect2;
+                else pdfW2 = pdfH2 * aspect2;
+
+                var jsPDF2 = window.jspdf.jsPDF;
+                var pdf2 = new jsPDF2({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: [pdfW2, pdfH2],
+                    compress: true
+                });
+
+                var margin2 = 4;
+                var iW = pdfW2 - margin2 * 2;
+                var iH = iW / aspect2;
+                if (iH > pdfH2 - margin2 * 2) {
+                    iH = pdfH2 - margin2 * 2;
+                    iW = iH * aspect2;
+                }
+                pdf2.addImage(imgData2, 'JPEG',
+                    (pdfW2 - iW) / 2, (pdfH2 - iH) / 2,
+                    iW, iH, undefined, 'FAST');
+
+                return pdf2.output('blob');
+            }
+
+            // ④ 其他：若有上傳的 PDF，直接使用
+            if (doc.pdfData && doc.pdfData.length > 100) {
+                var pdfBytes = base64ToUint8(doc.pdfData);
+                return new Blob([pdfBytes], { type: 'application/pdf' });
+            }
+
+            throw new Error('不支援的文件類型：' + type);
+        }
+
+        /* ============================================================
+           ★ 使用 PDF.js 將 PDF 渲染為圖片
+           ============================================================ */
+        async function renderPdfBlobToImages(blob) {
+            setLoading('正在渲染 PDF 頁面...');
+
+            var ab = await blob.arrayBuffer();
+            var pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+
+            totalVirtualPages = pdf.numPages;
+            pageImages = [];
+
+            for (var i = 1; i <= pdf.numPages; i++) {
+                setLoading('渲染第 ' + i + '/' + pdf.numPages + ' 頁...');
+
+                var page = await pdf.getPage(i);
+                var baseViewport = page.getViewport({ scale: 1.0 });
+                var aspect = baseViewport.height / baseViewport.width;
+
+                pdfWidthCss = PDF_DISPLAY_WIDTH;
+                pdfHeightCss = PDF_DISPLAY_WIDTH * aspect;
+
+                var renderWidth = PDF_DISPLAY_WIDTH * PDF_RENDER_SCALE;
+                var scaleForRender = renderWidth / baseViewport.width;
+                var renderViewport = page.getViewport({ scale: scaleForRender });
+
+                var canvas = document.createElement('canvas');
+                canvas.width = renderViewport.width;
+                canvas.height = renderViewport.height;
+                var ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                await page.render({ canvasContext: ctx, viewport: renderViewport }).promise;
+                pageImages.push(canvas.toDataURL('image/png'));
+            }
+
+            console.log('[LabourDoc] PDF 渲染完成：', pageImages.length, '頁');
+        }
+
+        /* ============================================================
+           ★ 頁面渲染 & 導航
+           ============================================================ */
+        function renderPage(pageNum) {
+            if (!pageImages.length) return;
+            if (pageNum < 1 || pageNum > totalVirtualPages) return;
+
+            activePageNum = pageNum;
+            pageWrapper.innerHTML = '';
+
+            var pageDiv = document.createElement('div');
+            pageDiv.className = 'pdf-page active-page';
+            pageDiv.dataset.page = pageNum;
+            pageDiv.style.width = pdfWidthCss + 'px';
+            pageDiv.style.height = pdfHeightCss + 'px';
+
+            var img = document.createElement('img');
+            img.src = pageImages[pageNum - 1];
+            img.alt = 'Labour Wage Page ' + pageNum;
+            img.draggable = false;
+            pageDiv.appendChild(img);
+
+            pageWrapper.appendChild(pageDiv);
+            updatePageInfo();
+        }
+
+        function updatePageInfo() {
+            if (totalPagesEl) totalPagesEl.textContent = totalVirtualPages;
+            if (currentPageEl) currentPageEl.textContent = activePageNum;
+            if (pageInput) {
+                pageInput.value = activePageNum;
+                pageInput.max = totalVirtualPages;
+            }
+            if (prevBtn) prevBtn.disabled = (activePageNum <= 1);
+            if (nextBtn) nextBtn.disabled = (activePageNum >= totalVirtualPages);
+        }
+
+        function setupNavigation() {
+            if (prevBtn) prevBtn.addEventListener('click', function () {
+                if (activePageNum > 1) renderPage(activePageNum - 1);
+            });
+            if (nextBtn) nextBtn.addEventListener('click', function () {
+                if (activePageNum < totalVirtualPages) renderPage(activePageNum + 1);
+            });
+            if (pageInput) pageInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    var t = parseInt(pageInput.value, 10);
+                    if (!isNaN(t) && t >= 1 && t <= totalVirtualPages) renderPage(t);
+                    else {
+                        alert('請輸入 1 到 ' + totalVirtualPages + ' 之間的頁碼');
+                        pageInput.value = activePageNum;
+                    }
+                    pageInput.blur();
+                } else if (e.key === 'Escape') {
+                    pageInput.value = activePageNum;
+                    pageInput.blur();
+                }
+            });
+        }
+
+        /* ============================================================
+           ★ 下載
+           ============================================================ */
+        function downloadBlob(blob, filename) {
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+        }
+
+        function downloadPdf() {
+            if (!currentPdfBlob) { alert('PDF 尚未生成'); return; }
+            var name = (currentDoc.id || 'LabourWage') + '.pdf';
+            downloadBlob(currentPdfBlob, name);
+            console.log('[LabourDoc] PDF 已下載：', name);
+        }
+
+        function downloadXlsx() {
+            if (!currentDoc) return;
+
+            // 取得 xlsx base64
+            var xlsxB64 = null;
+            if (currentDoc.type === 'GF527-2017') {
+                xlsxB64 = (currentDoc.excelData && currentDoc.excelData.length > 100)
+                    ? currentDoc.excelData
+                    : window.GF527_REV_1_2017_PROTECTED_FONT_SIZE_26_BASE64;
+            } else if (currentDoc.excelData && currentDoc.excelData.length > 100) {
+                xlsxB64 = currentDoc.excelData;
+            }
+
+            if (!xlsxB64) {
+                alert('此文件類型沒有 Excel (.xlsx) 版本可供下載');
+                return;
+            }
+
+            try {
+                var bytes = base64ToUint8(xlsxB64);
+                var blob = new Blob([bytes], {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                });
+                var name = (currentDoc.id || 'LabourWage') + '.xlsx';
+                downloadBlob(blob, name);
+                console.log('[LabourDoc] XLSX 已下載：', name);
+            } catch (e) {
+                console.error('[LabourDoc] XLSX 下載失敗：', e);
+                alert('下載失敗：' + (e && e.message ? e.message : e));
+            }
+        }
+
+        function setupDownloadMenu() {
+            if (!downloadBtn || !downloadMenu) return;
+
+            downloadBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                downloadMenu.classList.toggle('open');
+            });
+
+            downloadPdfOpt.addEventListener('click', function () {
+                downloadMenu.classList.remove('open');
+                downloadPdf();
+            });
+
+            downloadXlsxOpt.addEventListener('click', function () {
+                if (downloadXlsxOpt.disabled) return;
+                downloadMenu.classList.remove('open');
+                downloadXlsx();
+            });
+
+            document.addEventListener('click', function () {
+                downloadMenu.classList.remove('open');
+            });
+        }
+
+        /* ============================================================
+           ★ 列印
+           ============================================================ */
+        function printPdf() {
+            if (!pageImages.length) { alert('尚未載入文件'); return; }
+
+            var printContainer = document.getElementById('print-only-container');
+            printContainer.innerHTML = '';
+            pageImages.forEach(function (src, idx) {
+                var div = document.createElement('div');
+                div.className = 'print-page';
+                var img = document.createElement('img');
+                img.src = src;
+                img.alt = 'Page ' + (idx + 1);
+                div.appendChild(img);
+                printContainer.appendChild(div);
+            });
+
+            setTimeout(function () {
+                window.print();
+                setTimeout(function () { printContainer.innerHTML = ''; }, 1000);
+            }, 300);
+        }
+
+        /* ============================================================
+           ★ 初始化
+           ============================================================ */
+        document.addEventListener('DOMContentLoaded', async function () {
+            try {
+                syncGlobalDate();
+                setupSidebar();
+                setupDownloadMenu();
+
+                var doc = getCurrentDoc();
+                if (!doc) {
+                    showError('找不到文件資料。請從 Labour Wage 列表重新點 View 進入。');
+                    return;
+                }
+                currentDoc = doc;
+                updateDocInfo(doc);
+
+                setLoading('載入中...');
+
+                // 準備 PDF Blob
+                var blob = await preparePdfBlob(doc);
+                currentPdfBlob = blob;
+
+                // 渲染為圖片
+                await renderPdfBlobToImages(blob);
+
+                // 顯示
+                hideLoading();
+                pdfControls.style.display = 'flex';
+                renderPage(1);
+                setupNavigation();
+
+                // 綁定列印與返回
+                var printBtn = document.getElementById('print-pdf-btn');
+                if (printBtn) printBtn.addEventListener('click', printPdf);
+
+                var backBtn = document.getElementById('back-btn');
+                if (backBtn) backBtn.addEventListener('click', function () {
+                    window.location.href = 'labourwage.html';
+                });
+
+                console.log('[LabourDoc] 完成載入，共', totalVirtualPages, '頁');
+                console.log('[LabourDoc] PDF Blob:', (blob.size / 1024).toFixed(0), 'KB');
+
+            } catch (err) {
+                console.error('[LabourDoc] Init failed:', err);
+                showError('載入失敗：' + (err && err.message ? err.message : 'unknown'));
+            }
+        });
+
+    })();
+    </script>
+</body>
+</html>

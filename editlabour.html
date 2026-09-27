@@ -8,6 +8,9 @@
     <link rel="stylesheet" href="styles/main.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 
+    <!-- ★ 內嵌 GF527-2017 xlsx base64 ★ -->
+    <script src="scripts/GF527_2017-data.js"></script>
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { display: flex; min-height: 100vh; background-color: #f5f7fa; color: #333; }
@@ -65,6 +68,86 @@
 
         .loading-indicator { display: none; justify-content: center; align-items: center; gap: 10px; padding: 40px; color: #2563eb; font-weight: 600; background: #eff6ff; border-radius: 8px; }
         .loading-indicator.visible { display: flex; }
+
+        /* ★ Excel 面板樣式 ★ */
+        .excel-panel {
+            background: #fff;
+            border-radius: 12px;
+            padding: 60px 40px;
+            text-align: center;
+            max-width: 620px;
+            margin: 30px auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid #e2e8f0;
+        }
+        .excel-panel-icon {
+            font-size: 64px;
+            color: #217346;
+            margin-bottom: 20px;
+            line-height: 1;
+        }
+        .excel-panel h3 {
+            color: #1e293b;
+            font-size: 1.5rem;
+            margin-bottom: 14px;
+            font-weight: 700;
+        }
+        .excel-panel-desc {
+            color: #64748b;
+            font-size: 0.95rem;
+            line-height: 1.7;
+            margin: 0 auto 32px;
+            max-width: 460px;
+        }
+        .excel-panel-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn-excel-download {
+            background: #217346;
+            padding: 12px 26px;
+            font-size: 1rem;
+        }
+        .btn-excel-download:hover { background: #185c37; }
+        .btn-excel-upload {
+            background: #3498db;
+            padding: 12px 26px;
+            font-size: 1rem;
+        }
+        .btn-excel-upload:hover { background: #2980b9; }
+        .btn-excel-reset {
+            background: #94a3b8;
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            margin-top: 14px;
+        }
+        .btn-excel-reset:hover { background: #64748b; }
+        .excel-panel-status {
+            margin-top: 24px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            min-height: 22px;
+            color: #64748b;
+        }
+        .excel-panel-status.success { color: #27ae60; }
+        .excel-panel-status.error { color: #e74c3c; }
+        .excel-file-info {
+            margin-top: 20px;
+            padding: 12px 16px;
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #166534;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+        }
+        .excel-file-info.visible { display: flex; }
+        .excel-file-info i { color: #16a34a; }
 
         footer { text-align: center; padding: 30px 0 20px; color: #7f8c8d; border-top: 1px solid #e0e6ed; margin-top: 30px; }
         @media (max-width: 768px) { .main-content { padding: 15px; } .document-page { padding: 20px; } }
@@ -124,7 +207,7 @@
             </div>
 
             <div class="pdf-editor-container">
-                <div class="pdf-controls">
+                <div class="pdf-controls" id="pdf-controls">
                     <button class="nav-btn" id="prev-page" title="上一頁"><i class="fas fa-chevron-left"></i></button>
                     <span class="page-info">
                         Page
@@ -138,7 +221,7 @@
 
                 <div class="pdf-canvas-container" id="pdf-container">
                     <div class="loading-indicator visible" id="loading-indicator">
-                        <i class="fas fa-spinner fa-spin"></i> Loading GF527A PDF...
+                        <i class="fas fa-spinner fa-spin"></i> Loading template...
                     </div>
                     <div id="page-wrapper"></div>
                 </div>
@@ -189,20 +272,10 @@
     })();
     </script>
 
-    <!-- ============================================================
-         ★ 內嵌 base64 PDF 模板（不需外部 GF527A-data.js）
-         ============================================================ -->
-<script src="scripts/GF527A-data.js"></script>
+    <!-- ★ 內嵌 GF527A PDF base64（原有） ★ -->
+    <script src="scripts/GF527A-data.js"></script>
 
-    <!-- 保底：若外部載入失敗，就用內嵌 base64（此段會覆蓋） -->
-    <script>
-    /* 這個檔案只有在外部 GF527A-data.js 載入失敗時才有作用
-       內嵌版本請放這裡，或直接使用外部檔案 */
-    </script>
-
-    <!-- ============================================================
-         ★ Labour Wage 編輯器（與 editdsdsitediary.js 同風格）
-         ============================================================ -->
+    <!-- ★ Labour Wage 編輯器 ★ -->
     <script src="scripts/editlabour.js"></script>
 
     <script>
