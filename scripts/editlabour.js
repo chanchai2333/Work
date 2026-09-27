@@ -1,6 +1,9 @@
 /**
- * editlabour.js - Labour Wage (GF527A) 編輯器
- * 架構完全參照 editdsdsitediary.js
+ * editlabour.js - Labour Wage 編輯器
+ * 支援多模板類型：
+ *   - GF527A     → 內嵌 base64（GF527A-data.js）
+ *   - GF527-2003 → Excel 轉 PDF
+ *   - GF527-2017 → Excel 轉 PDF
  */
 (function () {
     'use strict';
@@ -9,6 +12,13 @@
     var PDF_RENDER_SCALE = 2.0;
     var DEFAULT_TOTAL_PAGES = 1;
     var STORAGE_KEY = 'labourWageData';
+
+    /* 模板檔案映射（依類型） */
+    var TEMPLATE_FILES = {
+        'GF527A':     null,  // 使用內嵌 base64
+        'GF527-2003': 'gf527_rev_1_2003_protected_r1 (July 26).xls',
+        'GF527-2017': 'GF527_Rev_1_2017_protected_font_size_26.xlsx'
+    };
 
     /* PDF.js worker */
     if (window.pdfjsLib) {
@@ -115,7 +125,7 @@
 
         var titleEl = document.getElementById('docTitle');
         if (titleEl) {
-            titleEl.textContent = doc.title || typeText || 'GF527A - Return on Construction Site Employment';
+            titleEl.textContent = doc.title || typeText || 'Labour Wage Document';
         }
 
         var statusEl = document.getElementById('docStatus');
@@ -137,7 +147,7 @@
         }
     }
 
-    /* ========== 載入 PDF ========== */
+    /* ========== base64 工具 ========== */
     function base64ToUint8(base64) {
         if (base64.indexOf('base64,') !== -1) {
             base64 = base64.split('base64,')[1];
@@ -151,23 +161,174 @@
         return bytes;
     }
 
-    function loadPdfFromBase64() {
-        return new Promise(function (resolve, reject) {
-            // 兼容多個可能的變數名
-            var data = window.LABOURWAGE_BASE64
-                    || window.SITE_DIARY_TEMPLATE_BASE64
-                    || window.GF527A_BASE64;
+    function arrayBufferToBase64(buf) {
+        var binary = '';
+        var bytes = new Uint8Array(buf);
+        var CHUNK = 0x8000;
+        for (var i = 0; i < bytes.length; i += CHUNK) {
+            var chunk = bytes.subarray(i, i + CHUNK);
+            binary += String.fromCharCode.apply(null, chunk);
+        }
+        return btoa(binary);
+    }
 
-            if (!data || typeof data !== 'string' || data.length < 100) {
-                reject(new Error('GF527A base64 未載入（window.LABOURWAGE_BASE64 為空）'));
+    /* ========== XLS/XLSX → PDF base64 ========== */
+    function xlsToPdfBase64(url) {
+        return new Promise(function (resolve, reject) {
+            if (!window.XLSX) { reject(new Error('XLSX 庫未載入')); return; }
+            if (!window.html2canvas) { reject(new Error('html2canvas 未載入')); return; }
+            if (!window.jspdf) { reject(new Error('jsPDF 未載入')); return; }
+
+            fetch(url).then(function (res) {
+                if (!res.ok) throw new Error('HTTP ' + res.status + ' - ' + url);
+                return res.arrayBuffer();
+            }).then(function (buf) {
+                var wb = XLSX.read(buf, { type: 'array' });
+                if (!wb.SheetNames.length) throw new Error('無工作表');
+                var sheet = wb.Sheets[wb.SheetNames[0]];
+                var html = XLSX.utils.sheet_to_html(sheet);
+
+                var container = document.createElement('div');
+                container.innerHTML = html;
+                container.style.cssText =
+                    'position:fixed;left:-99999px;top:0;background:#ffffff;padding:10px;' +
+                    'font-family:Arial,sans-serif;';
+                document.body.appendChild(container);
+
+                var table = container.querySelector('table');
+                if (table) {
+                    table.style.borderCollapse = 'collapse';
+                    table.style.fontSize = '10px';
+                    var cells = table.querySelectorAll('td, th');
+                    for (var i = 0; i < cells.length; i++) {
+                        cells[i].style.border = '1px solid #999999';
+                        cells[i].style.padding = '2px 4px';
+                        cells[i].style.whiteSpace = 'nowrap';
+                    }
+                }
+
+                return new Promise(function (r) { setTimeout(r, 100); })
+                    .then(function () {
+                        return html2canvas(container, {
+                            scale: 2,
+                            backgroundColor: '#ffffff',
+                            logging: false,
+                            windowWidth: container.scrollWidth,
+                            windowHeight: container.scrollHeight
+                        });
+                    })
+                    .then(function (canvas) {
+                        if (container.parentNode) container.parentNode.removeChild(container);
+
+                        var imgData = canvas.toDataURL('image/jpeg', 0.92);
+                        var isLandscape = canvas.width > canvas.height;
+                        var jsPDFCtor = window.jspdf.jsPDF;
+                        var pdf = new jsPDFCtor({
+                            orientation: isLandscape ? 'landscape' : 'portrait',
+                            unit: 'mm',
+                            format: 'a4',
+                            compress: true
+                        });
+
+                        var pageW = pdf.internal.pageSize.getWidth();
+                        var pageH = pdf.internal.pageSize.getHeight();
+                        var margin = 4;
+                        var imgW = pageW - margin * 2;
+                        var imgH = imgW * canvas.height / canvas.width;
+                        if (imgH > pageH - margin * 2) {
+                            imgH = pageH - margin * 2;
+                            imgW = imgH * canvas.width / canvas.height;
+                        }
+
+                        pdf.addImage(
+                            imgData, 'JPEG',
+                            (pageW - imgW) / 2, (pageH - imgH) / 2,
+                            imgW, imgH
+                        );
+
+                        var dataUri = pdf.output('datauristring');
+                        resolve(dataUri.split(',')[1]);
+                    });
+            }).catch(reject);
+        });
+    }
+
+    /* ========== 依類型取得模板 base64 ========== */
+    function getTemplateBase64() {
+        return new Promise(function (resolve, reject) {
+            var docType = (currentDoc && currentDoc.type) || 'GF527A';
+            console.log('[Labour] 取得模板，類型 =', docType);
+
+            // ① 優先：labourwage.html 已轉好放進 sessionStorage 的快取
+            var fromSession = sessionStorage.getItem('labour_template_' + docType);
+            if (fromSession && fromSession.length > 100) {
+                console.log('[Labour] ✓ 使用 sessionStorage 快取模板:', docType);
+                resolve(fromSession);
                 return;
             }
-            try {
-                var bytes = base64ToUint8(data);
-                pdfjsLib.getDocument({ data: bytes }).promise.then(resolve).catch(reject);
-            } catch (e) {
-                reject(e);
+
+            // ② 次：labourwage.html 設的通用 DEFAULT_PDF_TEMPLATE
+            var defaultTpl = sessionStorage.getItem('DEFAULT_PDF_TEMPLATE');
+            if (defaultTpl && defaultTpl.length > 100) {
+                console.log('[Labour] ✓ 使用 DEFAULT_PDF_TEMPLATE');
+                resolve(defaultTpl);
+                return;
             }
+
+            // ③ 內嵌 GF527A base64（只有 GF527A 有）
+            if (docType === 'GF527A') {
+                var embedded = window.LABOURWAGE_BASE64
+                            || window.SITE_DIARY_TEMPLATE_BASE64
+                            || window.GF527A_BASE64;
+                if (embedded && embedded.length > 100) {
+                    console.log('[Labour] ✓ 使用內嵌 GF527A base64');
+                    resolve(embedded);
+                    return;
+                }
+            }
+
+            // ④ 從檔案路徑直接讀（xlsx/xls 需先轉 PDF）
+            var file = TEMPLATE_FILES[docType];
+            if (!file) {
+                reject(new Error('沒有對應的模板檔案（' + docType + '）'));
+                return;
+            }
+
+            console.log('[Labour] 從檔案載入模板:', file);
+            if (/\.pdf$/i.test(file)) {
+                fetch(file).then(function (res) {
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    return res.arrayBuffer();
+                }).then(function (buf) {
+                    var b64 = arrayBufferToBase64(buf);
+                    sessionStorage.setItem('labour_template_' + docType, b64);
+                    resolve(b64);
+                }).catch(reject);
+            } else {
+                xlsToPdfBase64(file).then(function (b64) {
+                    sessionStorage.setItem('labour_template_' + docType, b64);
+                    resolve(b64);
+                }).catch(reject);
+            }
+        });
+    }
+
+    /* ========== 載入 PDF ========== */
+    function loadPdfFromBase64() {
+        return new Promise(function (resolve, reject) {
+            getTemplateBase64().then(function (data) {
+                if (!data || typeof data !== 'string' || data.length < 100) {
+                    reject(new Error('無法取得模板 base64'));
+                    return;
+                }
+                try {
+                    var bytes = base64ToUint8(data);
+                    pdfjsLib.getDocument({ data: bytes }).promise
+                        .then(resolve).catch(reject);
+                } catch (e) {
+                    reject(e);
+                }
+            }).catch(reject);
         });
     }
 
@@ -205,7 +366,7 @@
         img.src = templateImageUrl;
         img.className = 'pdf-bg';
         img.draggable = false;
-        img.alt = 'GF527A Template';
+        img.alt = 'Labour Wage Template';
         pageDiv.appendChild(img);
 
         pageWrapper.appendChild(pageDiv);
@@ -373,9 +534,8 @@
     }
 
     function cancelEditing() {
-        if (confirm('Cancel editing? All unsaved changes will be lost.')) {
+
             window.location.href = 'labourwage.html';
-        }
     }
 
     function bindActionButtons() {
@@ -412,7 +572,7 @@
 
             var doc = loadDocumentData();
             if (!doc) {
-                console.warn('[Labour] 沒有找到 document metadata');
+                console.warn('[Labour] 沒有找到 document metadata，使用預設 GF527A');
                 doc = {
                     id: 'GF527A-TEMP-' + Date.now(),
                     status: 'draft',
@@ -429,14 +589,16 @@
             updateDocumentInfo(currentDoc);
             updatePageInfo();
 
-            showLoading('Loading GF527A PDF...');
+            var loadingMsg = 'Loading ' + (currentDoc.type || 'GF527A') + ' template...';
+            showLoading(loadingMsg);
+
             loadPdfTemplate().then(function () {
                 hideLoading();
                 renderCurrentPage();
                 setupNavigation();
                 bindActionButtons();
                 setTimeout(function () { updateApprovalButtons(); }, 500);
-                console.log('[Labour] Editor ready. Total pages:', totalVirtualPages);
+                console.log('[Labour] Editor ready. Type:', currentDoc.type, 'Total pages:', totalVirtualPages);
             }).catch(function (err) {
                 console.error('[Labour] PDF load failed:', err);
                 hideLoading();
@@ -444,8 +606,8 @@
                     '<div style="padding:40px;text-align:center;color:#e74c3c;background:#fff;border-radius:8px;">' +
                     '<i class="fas fa-exclamation-triangle" style="font-size:32px;"></i><br><br>' +
                     '<strong>Failed to load PDF template</strong><br>' +
-                    '<small>Error: ' + (err && err.message ? err.message : 'unknown') + '</small><br><br>' +
-                    '<small>請確認 GF527A-data.js 已載入（window.LABOURWAGE_BASE64）</small>' +
+                    '<small>Type: ' + ((currentDoc && currentDoc.type) || 'GF527A') + '</small><br>' +
+                    '<small>Error: ' + (err && err.message ? err.message : 'unknown') + '</small>' +
                     '</div>';
             });
 
