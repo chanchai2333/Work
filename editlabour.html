@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles/main.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <script src="scripts/theme-config.js"></script>
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -28,12 +27,10 @@
         .doc-status { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; }
         .status-draft { background: rgba(149,165,166,0.2); color: #848f90; }
         .status-submitted { background: rgba(52,152,219,0.2); color: #2980b9; }
-        .status-endorsed { background: rgba(46,204,113,0.2); color: #27ae60; }
-        .status-cancelled { background: rgba(231,76,60,0.2); color: #c0392b; }
-        .status-confirm { background: rgba(155,89,182,0.2); color: #8e44ad; }
-        .status-double-check { background: rgba(243,156,18,0.2); color: #d35400; }
         .status-approved { background: rgba(46,204,113,0.2); color: #27ae60; }
         .status-rejected { background: rgba(231,76,60,0.2); color: #c0392b; }
+        .status-pending { background: rgba(243,156,18,0.2); color: #d35400; }
+        .status-cancelled { background: rgba(231,76,60,0.2); color: #c0392b; }
 
         .document-actions { display: flex; gap: 10px; flex-wrap: wrap; }
         .btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; transition: all 0.3s ease; white-space: nowrap; color: #fff; text-decoration: none; }
@@ -62,17 +59,16 @@
         .page-input-hint { font-size: 11px; color: #94a3b8; font-style: italic; margin-left: 4px; }
 
         .pdf-canvas-container { position: relative; background: #e0e0e0; border-radius: 8px; padding: 24px; display: flex; justify-content: center; align-items: flex-start; overflow: auto; min-height: 500px; }
-        .pdf-page { position: relative; display: block; box-shadow: 0 4px 12px rgba(0,0,0,0.2); background: #fff; overflow: hidden; }
-        .pdf-page.active-page { outline: 3px solid #3498db; }
+        .pdf-page { position: relative; display: block; box-shadow: 0 4px 12px rgba(0,0,0,0.2); background: #fff; border: 3px solid transparent; overflow: hidden; }
+        .pdf-page.active-page { border-color: #3498db; }
         .pdf-bg { display: block; width: 100%; height: 100%; pointer-events: none; user-select: none; }
 
-        .loading-indicator { display: none; justify-content: center; align-items: center; gap: 10px; padding: 40px; color: #2563eb; font-weight: 600; background: #eff6ff; border-radius: 8px; width: 100%; }
+        .loading-indicator { display: none; justify-content: center; align-items: center; gap: 10px; padding: 40px; color: #2563eb; font-weight: 600; background: #eff6ff; border-radius: 8px; }
         .loading-indicator.visible { display: flex; }
-        .loading-indicator.error { color: #c0392b; background: #fdecea; }
 
         footer { text-align: center; padding: 30px 0 20px; color: #7f8c8d; border-top: 1px solid #e0e6ed; margin-top: 30px; }
         @media (max-width: 768px) { .main-content { padding: 15px; } .document-page { padding: 20px; } }
-        .sidebar.collapsed .logo-img { display: none; }
+        .sidebar.collapsed .logo { display: none !important; }
     </style>
 </head>
 <body>
@@ -164,7 +160,6 @@
     <script>
     (function() {
         'use strict';
-
         function syncWageRecordToEditDocument() {
             var wageRecord = sessionStorage.getItem('currentWageRecord');
             if (!wageRecord) {
@@ -173,11 +168,7 @@
             }
             try {
                 var rec = JSON.parse(wageRecord);
-                if (!rec || !rec.id) {
-                    console.warn('[editlabour] currentWageRecord 無 id');
-                    return null;
-                }
-
+                if (!rec || !rec.id) return null;
                 if (!rec.site && rec.siteName) rec.site = rec.siteName;
                 if (!rec.submittedBy && rec.author) rec.submittedBy = rec.author;
                 if (!rec.typeText && rec.type) {
@@ -185,7 +176,6 @@
                     else if (rec.type === 'GF527-2003') rec.typeText = 'GF527 (2003) - Labour Wage';
                     else if (rec.type === 'GF527-2017') rec.typeText = 'GF527 (2017) - Labour Wage';
                 }
-
                 sessionStorage.setItem('editDocument', JSON.stringify(rec));
                 sessionStorage.setItem('currentRecord', JSON.stringify(rec));
                 console.log('[editlabour] ✓ 已同步 currentWageRecord → editDocument:', rec.id);
@@ -195,291 +185,33 @@
                 return null;
             }
         }
-
         syncWageRecordToEditDocument();
     })();
     </script>
 
     <!-- ============================================================
-         ★ 載入 base64 PDF 模板資料（GF527A-data.js）
-         - 檔案內含 window.SITE_DIARY_TEMPLATE_BASE64
+         ★ 內嵌 base64 PDF 模板（不需外部 GF527A-data.js）
          ============================================================ -->
     <script src="GF527A-data.js"></script>
 
-    <!-- ============================================================
-         ★ PDF 渲染引擎（參考 editdsdsitediary.html 的邏輯）
-         - 直接以 base64 → Uint8Array → pdf.js 渲染
-         - 支援頁碼跳轉、上下頁
-         ============================================================ -->
+    <!-- 保底：若外部載入失敗，就用內嵌 base64（此段會覆蓋） -->
     <script>
-    (function () {
-        'use strict';
-        if (window.__editLabourPdfInstalled) return;
-        window.__editLabourPdfInstalled = true;
+    /* 這個檔案只有在外部 GF527A-data.js 載入失敗時才有作用
+       內嵌版本請放這裡，或直接使用外部檔案 */
+    </script>
 
-        var pdfDoc = null;
-        var currentPage = 1;
-        var totalPages = 1;
-        var scale = 1.5;
-        var rendering = false;
-        var pendingPage = null;
+    <!-- ============================================================
+         ★ Labour Wage 編輯器（與 editdsdsitediary.js 同風格）
+         ============================================================ -->
+    <script src="scripts/editlabour.js"></script>
 
-        var pageWrapper = document.getElementById('page-wrapper');
-        var loadingIndicator = document.getElementById('loading-indicator');
-        var currentPageEl = document.getElementById('current-page');
-        var totalPagesEl = document.getElementById('total-pages');
-        var pageInputEl = document.getElementById('page-input');
-        var prevBtn = document.getElementById('prev-page');
-        var nextBtn = document.getElementById('next-page');
-
-        function base64ToUint8Array(base64) {
-            var binary = atob(base64);
-            var len = binary.length;
-            var bytes = new Uint8Array(len);
-            for (var i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
-            return bytes;
-        }
-
-        function renderPage(pageNum) {
-            if (!pdfDoc) return;
-            if (rendering) { pendingPage = pageNum; return; }
-            rendering = true;
-            pendingPage = null;
-
-            pdfDoc.getPage(pageNum).then(function (page) {
-                var viewport = page.getViewport({ scale: scale });
-
-                /* 清空舊頁 */
-                pageWrapper.innerHTML = '';
-
-                var pageDiv = document.createElement('div');
-                pageDiv.className = 'pdf-page active-page';
-                pageDiv.dataset.page = pageNum;
-                pageDiv.style.width = viewport.width + 'px';
-                pageDiv.style.height = viewport.height + 'px';
-
-                var canvas = document.createElement('canvas');
-                canvas.className = 'pdf-bg';
-                canvas.width = viewport.width;
-                canvas.height = viewport.height;
-                canvas.style.width = viewport.width + 'px';
-                canvas.style.height = viewport.height + 'px';
-                pageDiv.appendChild(canvas);
-                pageWrapper.appendChild(pageDiv);
-
-                var ctx = canvas.getContext('2d');
-                return page.render({ canvasContext: ctx, viewport: viewport }).promise;
-            }).then(function () {
-                rendering = false;
-                if (pendingPage !== null) {
-                    var p = pendingPage;
-                    pendingPage = null;
-                    renderPage(p);
-                }
-            }).catch(function (err) {
-                console.error('[editlabour] Render error:', err);
-                rendering = false;
-            });
-        }
-
-        function updateNavButtons() {
-            if (prevBtn) {
-                prevBtn.disabled = (currentPage <= 1);
-                prevBtn.style.opacity = prevBtn.disabled ? '0.5' : '1';
-                prevBtn.style.cursor = prevBtn.disabled ? 'not-allowed' : 'pointer';
-            }
-            if (nextBtn) {
-                nextBtn.disabled = (currentPage >= totalPages);
-                nextBtn.style.opacity = nextBtn.disabled ? '0.5' : '1';
-                nextBtn.style.cursor = nextBtn.disabled ? 'not-allowed' : 'pointer';
-            }
-            if (pageInputEl) {
-                pageInputEl.value = currentPage;
-                pageInputEl.max = totalPages;
-            }
-        }
-
-        function goToPage(n) {
-            if (!pdfDoc) return;
-            if (isNaN(n)) n = 1;
-            if (n < 1) n = 1;
-            if (n > totalPages) n = totalPages;
-            currentPage = n;
-            if (currentPageEl) currentPageEl.textContent = n;
-            renderPage(n);
-            updateNavButtons();
-        }
-
-        /* 綁定上下頁按鈕 */
-        if (prevBtn) prevBtn.addEventListener('click', function () { goToPage(currentPage - 1); });
-        if (nextBtn) nextBtn.addEventListener('click', function () { goToPage(currentPage + 1); });
-
-        /* 綁定頁碼輸入框（Enter 跳頁 / Esc 還原） */
-        if (pageInputEl) {
-            pageInputEl.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter' || e.keyCode === 13) {
-                    e.preventDefault();
-                    var t = parseInt(pageInputEl.value, 10);
-                    if (isNaN(t) || t < 1 || t > totalPages) {
-                        alert('請輸入 1 到 ' + totalPages + ' 之間的頁碼');
-                        pageInputEl.value = currentPage;
-                        return;
-                    }
-                    goToPage(t);
-                    pageInputEl.blur();
-                } else if (e.key === 'Escape' || e.keyCode === 27) {
-                    e.preventDefault();
-                    pageInputEl.value = currentPage;
-                    pageInputEl.blur();
-                }
-            });
-            pageInputEl.addEventListener('focus', function () { try { pageInputEl.select(); } catch (e) {} });
-        }
-
-        /* 讀取 metadata 顯示在 header / meta */
-        function updateDocumentInfo() {
-            var sources = ['editDocument', 'currentWageRecord', 'currentRecord'];
-            var doc = null;
-
-            for (var i = 0; i < sources.length; i++) {
-                var raw = sessionStorage.getItem(sources[i]);
-                if (!raw) continue;
-                try {
-                    var d = JSON.parse(raw);
-                    if (d && d.id) { doc = d; break; }
-                } catch (e) {}
-            }
-
-            if (!doc) {
-                console.warn('[editlabour] 找不到任何 document metadata');
-                return;
-            }
-
-            function setText(id, val) {
-                var el = document.getElementById(id);
-                if (el) el.textContent = (val === undefined || val === null || val === '') ? 'N/A' : val;
-            }
-
-            setText('docId', doc.id);
-
-            var typeText = doc.typeText;
-            if (!typeText && doc.type) {
-                if (doc.type === 'GF527A') typeText = 'GF527A - Return on Construction Site Employment';
-                else if (doc.type === 'GF527-2003') typeText = 'GF527 (2003) - Labour Wage';
-                else if (doc.type === 'GF527-2017') typeText = 'GF527 (2017) - Labour Wage';
-                else typeText = doc.type;
-            }
-            setText('docType', typeText);
-
-            setText('docSite', doc.site || doc.siteName);
-
-            var periodText = doc.period;
-            if (!periodText && doc.startDate && doc.endDate) {
-                periodText = doc.startDate + ' to ' + doc.endDate;
-            }
-            setText('docPeriod', periodText);
-
-            setText('docAuthor', doc.submittedBy || doc.author);
-
-            var titleEl = document.getElementById('docTitle');
-            if (titleEl) {
-                titleEl.textContent = doc.title
-                    || typeText
-                    || 'GF527A - Return on Construction Site Employment - Treatment Plant';
-            }
-
-            var statusEl = document.getElementById('docStatus');
-            if (statusEl) {
-                var st = doc.status || 'Draft';
-                statusEl.textContent = st;
-                statusEl.className = 'doc-status status-' + String(st).toLowerCase();
-            }
-        }
-
-        /* 載入 base64 PDF */
-        function loadPdf() {
-            var base64 = window.SITE_DIARY_TEMPLATE_BASE64;
-
-            if (!base64 || typeof base64 !== 'string') {
-                console.error('[editlabour] ✗ 找不到 window.SITE_DIARY_TEMPLATE_BASE64（請確認 GF527A-data.js 已載入）');
-                if (loadingIndicator) {
-                    loadingIndicator.classList.add('error');
-                    loadingIndicator.innerHTML =
-                        '<i class="fas fa-exclamation-triangle"></i> 找不到 PDF 模板資料（GF527A-data.js）';
-                }
-                return;
-            }
-
-            try {
-                var bytes = base64ToUint8Array(base64);
-                var loadingTask = pdfjsLib.getDocument({ data: bytes });
-
-                loadingTask.promise.then(function (pdf) {
-                    pdfDoc = pdf;
-                    totalPages = pdf.numPages;
-                    if (totalPagesEl) totalPagesEl.textContent = totalPages;
-
-                    if (loadingIndicator) loadingIndicator.classList.remove('visible');
-
-                    goToPage(1);
-                    console.log('[editlabour] ✓ PDF 載入成功，共 ' + totalPages + ' 頁');
-                }).catch(function (err) {
-                    console.error('[editlabour] PDF 解析失敗:', err);
-                    if (loadingIndicator) {
-                        loadingIndicator.classList.add('error');
-                        loadingIndicator.innerHTML =
-                            '<i class="fas fa-exclamation-triangle"></i> PDF 解析失敗：' + (err && err.message ? err.message : err);
-                    }
-                });
-            } catch (e) {
-                console.error('[editlabour] base64 解碼失敗:', e);
-                if (loadingIndicator) {
-                    loadingIndicator.classList.add('error');
-                    loadingIndicator.innerHTML =
-                        '<i class="fas fa-exclamation-triangle"></i> base64 解碼失敗：' + e.message;
-                }
-            }
-        }
-
-        /* 側邊欄 / 日期 */
-        (function initSidebar() {
-            function saveSidebarState() {
-                var sb = document.querySelector('.sidebar');
-                if (sb) localStorage.setItem('sidebarCollapsed', sb.classList.contains('collapsed') ? 'true' : 'false');
-            }
-            var sb = document.querySelector('.sidebar');
-            if (sb && localStorage.getItem('sidebarCollapsed') === 'true') sb.classList.add('collapsed');
-            var tb = document.querySelector('.toggle-btn');
-            if (tb) tb.addEventListener('click', function () { setTimeout(saveSidebarState, 50); });
-
-            var ds = document.querySelector('.date-display span');
-            var sd = sessionStorage.getItem('globalDate');
-            if (sd && ds) ds.textContent = sd;
-            else if (ds) ds.textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-        })();
-
-        /* Back 按鈕 */
-        (function initBackBtn() {
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
             var backBtn = document.getElementById('back-btn');
-            if (backBtn) {
-                backBtn.addEventListener('click', function () {
-                    window.location.href = 'labourwage.html';
-                });
-            }
-        })();
-
-        /* 初始化 */
-        function init() {
-            updateDocumentInfo();
-            loadPdf();
-        }
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function () { setTimeout(init, 200); });
-        } else {
-            setTimeout(init, 200);
-        }
-    })();
+            if (backBtn) backBtn.addEventListener('click', function() { window.location.href = 'labourwage.html'; });
+        }, 500);
+    });
     </script>
 </body>
 </html>
