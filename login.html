@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* 登录页面专用样式，保持与系统风格一致 */
+        /* ============ Login Page Styles ============ */
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
@@ -36,7 +36,6 @@
             text-align: center;
             margin-bottom: 32px;
         }
-        /* 更新后的 Logo 样式 */
         .login-logo {
             width: 80px;
             height: 80px;
@@ -82,7 +81,7 @@
         }
         .form-control {
             width: 100%;
-            padding: 12px 42px 12px 16px;  /* 右侧留出空间给眼睛图标 */
+            padding: 12px 42px 12px 16px;
             border: 1px solid #ddd;
             border-radius: 8px;
             font-size: 1rem;
@@ -165,7 +164,6 @@
     <div class="login-container">
         <div class="login-card">
             <div class="login-header">
-                <!-- 将图标替换为 AEL Logo 图片 -->
                 <div class="login-logo">
                     <img src="AEL Logo.png" alt="AEL Logo">
                 </div>
@@ -196,12 +194,13 @@
                     <i class="fas fa-exclamation-circle"></i> Invalid username or password
                 </div>
             </form>
-            <div class="login-footer">
-                <p>Demo credentials: admin / 12345678</p>
-            </div>
+            <div class="login-footer"></div>
         </div>
     </div>
 
+    <script src="scripts/ac-lock.js"></script>
+    <script src="scripts/locked-ac.js"></script>
+    <script src="scripts/password.js"></script>
     <script src="scripts/login.js"></script>
 </body>
 </html>

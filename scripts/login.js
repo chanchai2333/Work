@@ -1,4 +1,4 @@
-// login.js - DWSS 多用戶登錄系統
+// login.js - DWSS 多用戶登錄系統 (with Account Lockout)
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('login-form');
     const errorDiv = document.getElementById('login-error');
@@ -19,6 +19,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     role: "admin",
                     department: "System Administration",
                     status: "online",
+                    passwordChanged: false,
+                    passwordChangedAt: null,
+                    passwordExpiresAt: null,
                     permissions: {
                         level: 5,
                         canChangeStatus: true,
@@ -35,6 +38,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     role: "officer",
                     department: "Administration",
                     status: "online",
+                    passwordChanged: false,
+                    passwordChangedAt: null,
+                    passwordExpiresAt: null,
                     permissions: {
                         level: 4,
                         canChangeStatus: true,
@@ -51,6 +57,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     role: "aei",
                     department: "AEI/NWNT",
                     status: "online",
+                    passwordChanged: false,
+                    passwordChangedAt: null,
+                    passwordExpiresAt: null,
                     permissions: {
                         level: 3,
                         canChangeStatus: true,
@@ -67,6 +76,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     role: "inspector",
                     department: "Safety Inspection",
                     status: "online",
+                    passwordChanged: false,
+                    passwordChangedAt: null,
+                    passwordExpiresAt: null,
                     permissions: {
                         level: 2,
                         canChangeStatus: false,
@@ -83,6 +95,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     role: "contractor",
                     department: "Contractor Team A",
                     status: "online",
+                    passwordChanged: false,
+                    passwordChangedAt: null,
+                    passwordExpiresAt: null,
                     permissions: {
                         level: 1,
                         canChangeStatus: false,
@@ -95,9 +110,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // ==================== 登錄功能 ====================
-    
-    // 密碼顯示/隱藏切換
+    // ==================== 密碼顯示/隱藏切換 ====================
     if (togglePasswordBtn && passwordInput) {
         togglePasswordBtn.addEventListener('click', function() {
             const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
@@ -107,41 +120,123 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 顯示錯誤信息
-    function showError(message) {
-        if (errorDiv) {
-            errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
-            errorDiv.classList.add('show');
-            setTimeout(() => {
-                errorDiv.classList.remove('show');
-            }, 3000);
-        }
+    // ==================== 顯示錯誤信息 ====================
+    function showError(message, duration) {
+        if (!errorDiv) return;
+        errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+        errorDiv.classList.add('show');
+        setTimeout(() => {
+            errorDiv.classList.remove('show');
+        }, duration || 4000);
     }
 
-    // 登錄驗證
+    // ==================== 顯示鎖定信息 ====================
+    function showLockedMessage(lockInfo) {
+        const mins = lockInfo.remainingMinutes || 0;
+        showError(
+            `🔒 Account locked due to too many failed attempts. ` +
+            `Please try again in ${mins} minute${mins === 1 ? '' : 's'}, ` +
+            `or contact an administrator to unlock.`,
+            8000
+        );
+    }
+
+    // ==================== 工具：找出匹配的用戶 ====================
+    function findMatchingUser(username) {
+        const users = JSON.parse(localStorage.getItem('dwss_users_db') || '[]');
+        const needle = String(username || '').trim().toLowerCase();
+        return users.find(u =>
+            (u.username && u.username.toLowerCase() === needle) ||
+            (u.email && u.email.toLowerCase() === needle) ||
+            (u.name && u.name.toLowerCase() === needle)
+        ) || null;
+    }
+
+    // ==================== 工具：取得規範化的鎖定鍵 ====================
+    // Canonical lock key = user's email (lowercased).
+    // Falls back to whatever the user typed if no user matches.
+    // This makes login.js and usermanagement-lockout.js agree on the key,
+    // because both UserManagement.users[] and dwss_users_db[] share 'email'.
+    function getLockKey(username) {
+        const matched = findMatchingUser(username);
+        return matched ? matched.email.toLowerCase() : String(username || '').trim().toLowerCase();
+    }
+
+    // ==================== 登錄驗證 ====================
     function loginUser(username, password) {
         initializeUserDatabase();
-        
+
+        // ✅ Step 1: Check if account is locked
+        if (typeof DWSS_Lockout !== 'undefined') {
+            const matched = findMatchingUser(username);
+
+            // Check both the canonical email key AND whatever they typed
+            const keysToCheck = [String(username).trim().toLowerCase()];
+            if (matched) {
+                keysToCheck.push(matched.email.toLowerCase());
+                keysToCheck.push(matched.username.toLowerCase());
+            }
+
+            for (let i = 0; i < keysToCheck.length; i++) {
+                const lockStatus = DWSS_Lockout.isLocked(keysToCheck[i]);
+                if (lockStatus.locked) {
+                    showLockedMessage(lockStatus);
+                    return false;
+                }
+            }
+        }
+
         const users = JSON.parse(localStorage.getItem('dwss_users_db') || '[]');
-        
-        // 查找用戶（可以用 username 或 email 登錄）
-        const user = users.find(u => 
-            (u.username.toLowerCase() === username.toLowerCase() || 
-             u.email.toLowerCase() === username.toLowerCase()) && 
+
+        // Find user by username OR email OR name, with matching password
+        const user = users.find(u =>
+            ((u.username && u.username.toLowerCase() === username.toLowerCase()) ||
+             (u.email && u.email.toLowerCase() === username.toLowerCase()) ||
+             (u.name && u.name.toLowerCase() === username.toLowerCase())) &&
             u.password === password
         );
-        
+
+        // ✅ Step 2: Handle failed login
         if (!user) {
-            showError('Invalid username or password');
+            if (typeof DWSS_Lockout !== 'undefined') {
+                const lockKey = getLockKey(username);
+
+                DWSS_Lockout.recordFailedAttempt(lockKey);
+
+                const remaining = DWSS_Lockout.getRemainingAttempts(lockKey);
+
+                if (remaining <= 0) {
+                    const mins = Math.ceil(DWSS_Lockout.CONFIG.lockDurationMs / 60000);
+                    showError(
+                        `🔒 Account locked for ${mins} minutes due to too many failed attempts.`,
+                        8000
+                    );
+                } else {
+                    showError(
+                        `Invalid username or password. ` +
+                        `${remaining} attempt${remaining === 1 ? '' : 's'} remaining before lockout.`,
+                        5000
+                    );
+                }
+            } else {
+                showError('Invalid username or password');
+            }
             return false;
         }
-        
+
+        // ✅ Step 3: Handle disabled account
         if (user.status === 'offline') {
             showError('Account is disabled. Please contact administrator.');
             return false;
         }
-        
-        // 創建會話數據
+
+        // ✅ Step 4: Successful login — reset counter on all possible keys
+        if (typeof DWSS_Lockout !== 'undefined') {
+            DWSS_Lockout.recordSuccessfulAttempt(user.email.toLowerCase());
+            DWSS_Lockout.recordSuccessfulAttempt(user.username.toLowerCase());
+        }
+
+        // Build session
         const sessionData = {
             isLoggedIn: true,
             userId: user.id,
@@ -152,37 +247,34 @@ document.addEventListener('DOMContentLoaded', function() {
             permissions: user.permissions,
             loginTime: new Date().toISOString()
         };
-        
-        // 存儲會話
+
         sessionStorage.setItem('dwss_session', JSON.stringify(sessionData));
         sessionStorage.setItem('isLoggedIn', 'true');
         sessionStorage.setItem('loggedUser', user.name);
-        
-        // 同步當前用戶到 localStorage（用於其他頁面）
+
         localStorage.setItem('current_user', JSON.stringify({
             userId: user.id,
             userName: user.name,
             userRole: user.role,
             permissions: user.permissions
         }));
-        
+
         return true;
     }
 
-    // 表單提交
+    // ==================== 表單提交 ====================
     form.addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
         const username = usernameInput.value.trim();
         const password = passwordInput.value.trim();
-        
+
         if (!username || !password) {
             showError('Please enter username and password');
             return;
         }
-        
+
         if (loginUser(username, password)) {
-            // 登錄成功，跳轉到首頁
             window.location.href = 'index.html';
         }
     });
@@ -206,6 +298,6 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         }
     }
-    
+
     updateLoginFooter();
 });

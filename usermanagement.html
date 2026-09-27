@@ -89,6 +89,148 @@
             color: #999;
             font-style: italic;
         }
+        /* ========== LOCKED ACCOUNTS PANEL ========== */
+.locked-accounts-panel {
+    background: #fff5f5;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(231, 76, 60, 0.15);
+    margin-bottom: 20px;
+    overflow: hidden;
+    border-left: 4px solid #e74c3c;
+}
+
+.locked-panel-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #fee2e2, #fff5f5);
+    border-bottom: 1px solid #fadbd8;
+}
+
+.locked-panel-header h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #922b21;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.locked-panel-header h3 i {
+    color: #e74c3c;
+}
+
+.locked-panel-hint {
+    font-size: 0.8rem;
+    color: #c0392b;
+}
+
+.locked-panel-body {
+    padding: 0;
+}
+
+.locked-account-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid #f5f5f5;
+    transition: background 0.15s;
+}
+
+.locked-account-row:last-child {
+    border-bottom: none;
+}
+
+.locked-account-row:hover {
+    background: #fef5f5;
+}
+
+.locked-account-info {
+    flex: 1;
+}
+
+.locked-account-username {
+    font-weight: 700;
+    color: #922b21;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.locked-account-username i {
+    color: #e74c3c;
+    font-size: 0.8rem;
+}
+
+.locked-account-meta {
+    font-size: 0.78rem;
+    color: #7f8c8d;
+}
+
+.locked-account-meta strong {
+    color: #e74c3c;
+}
+
+.btn-unlock {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.btn-unlock:hover {
+    background: linear-gradient(135deg, #27ae60, #1e8449);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(46, 204, 113, 0.3);
+}
+
+.btn-unlock:active {
+    transform: translateY(0);
+}
+
+/* Dark theme */
+body.dark-theme .locked-accounts-panel {
+    background: #3a2020;
+    box-shadow: 0 2px 12px rgba(231, 76, 60, 0.3);
+}
+
+body.dark-theme .locked-panel-header {
+    background: linear-gradient(135deg, #4a2020, #3a2020);
+    border-bottom-color: #5a3030;
+}
+
+body.dark-theme .locked-panel-header h3 {
+    color: #ff8a80;
+}
+
+body.dark-theme .locked-account-row {
+    border-bottom-color: #4a3030;
+}
+
+body.dark-theme .locked-account-row:hover {
+    background: #442525;
+}
+
+body.dark-theme .locked-account-username {
+    color: #ff8a80;
+}
+
+body.dark-theme .locked-account-meta {
+    color: #aaa;
+}
     </style>
 </head>
 <body>
@@ -195,6 +337,15 @@
                     </div>
                 </div>
             </div>
+            <!-- ========== LOCKED ACCOUNTS PANEL ========== -->
+            <div class="locked-accounts-panel" id="locked-accounts-panel" style="display:none;">
+                <div class="locked-panel-header">
+                    <h3><i class="fas fa-lock"></i> Locked Accounts</h3>
+                <span class="locked-panel-hint">Accounts suspended after 5 failed login attempts</span>
+                </div>
+                <div class="locked-panel-body" id="locked-accounts-list"></div>
+            </div>
+            <!-- ========== END LOCKED ACCOUNTS PANEL ========== -->
 
             <!-- 用戶列表 -->
             <div class="content-section">
@@ -870,5 +1021,17 @@
             }
         });
     </script>
+    <script src="scripts/ac-lock.js"></script>
+    <script src="scripts/locked-ac.js"></script>
+    <script>
+  // Final safety net: force one more render after everything has loaded.
+  window.addEventListener('load', function () {
+    if (window.DWSS_UserLockoutUI) {
+      setTimeout(function () {
+        DWSS_UserLockoutUI.refresh();
+      }, 0);
+    }
+  });
+</script>
 </body>
 </html>
