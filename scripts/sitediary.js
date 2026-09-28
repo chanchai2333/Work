@@ -95,6 +95,47 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // ==================== ★ 自動生成 Diary ID ====================
+    /**
+     * 生成下一個 Diary ID
+     *   格式：SD/XX/000001A
+     *   規則：掃描所有現有 ID，找出最大數字 +1
+     *   若格式改成動態前綴（例如年份），只改 ID_PREFIX 即可
+     */
+    function generateNextDiaryId() {
+        const ID_PREFIX = 'SD/XX/';   // ← 若要改成 "SD/26/" 動態年份，改這裡
+        const ID_SUFFIX = 'A';
+        const ID_PAD    = 6;
+
+        // 轉義正則特殊字元
+        const escaped = ID_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const re = new RegExp('^' + escaped + '(\\d+)[A-Za-z]?$');
+
+        // 從 localStorage 讀取（避免 diaryData 快取過舊）
+        let records = [];
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            const parsed = raw ? JSON.parse(raw) : [];
+            records = Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            records = diaryData || [];
+        }
+
+        // 找最大數字
+        let maxNum = 0;
+        records.forEach(function (item) {
+            if (!item || item.id == null) return;
+            const m = String(item.id).match(re);
+            if (m) {
+                const n = parseInt(m[1], 10);
+                if (!isNaN(n) && n > maxNum) maxNum = n;
+            }
+        });
+
+        const next = maxNum + 1;
+        return ID_PREFIX + String(next).padStart(ID_PAD, '0') + ID_SUFFIX;
+    }
+
     // ==================== 狀態更改下拉選單生成 ====================
     function generateDiaryStatusSelect(recordId) {
         if (DWSS_Auth.canChangeStatus()) {
@@ -358,6 +399,12 @@ document.addEventListener('DOMContentLoaded', function () {
             addBtn.addEventListener('click', () => {
                 modal.style.display = 'flex';
                 form.reset();
+
+                // ★ 自動生成 Diary ID
+                const idInput = document.getElementById('input-diary-id');
+                if (idInput) {
+                    idInput.value = generateNextDiaryId();
+                }
 
                 // 根據權限調整狀態選項
                 const statusSelect = document.getElementById('input-status');

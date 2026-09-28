@@ -107,6 +107,11 @@
         <div class="modal-content">
             <h3>Add New Wage Record</h3>
             <form id="add-wage-form" enctype="multipart/form-data">
+                <!-- ★ 新增：Document ID（唯讀） -->
+                <label>Document ID</label>
+                <input type="text" id="input-doc-id" readonly
+                       style="background:#f1f5f9; color:#1e40af; font-weight:700; cursor:not-allowed;">
+
                 <label>Document Type</label>
                 <select id="input-type" required>
                     <option value="GF527A">GF527A - Return on Construction Site Employment</option>
@@ -207,6 +212,35 @@
                 'GF527-2003': 'gf527_rev_1_2003_protected_r1 (July 26).xls',
                 'GF527-2017': 'GF527_Rev_1_2017_protected_font_size_26.xlsx'
             };
+
+            /* ============================================
+               ★ 自動生成 Document ID
+               ------------------------------------------------------------
+               格式：LRR/XX/000001A
+               規則：掃描所有現有記錄的 ID，找最大數字 +1
+               ============================================ */
+            function generateNextLabourWageId() {
+                var ID_PREFIX = 'LRR/XX/';   // ← 若日後要改動態年份，改這裡
+                var ID_SUFFIX = 'A';
+                var ID_PAD    = 6;
+
+                // 轉義正則特殊字元
+                var escaped = ID_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                var re = new RegExp('^' + escaped + '(\\d+)[A-Za-z]?$');
+
+                var maxNum = 0;
+                wageData.forEach(function(item) {
+                    if (!item || item.id == null) return;
+                    var m = String(item.id).match(re);
+                    if (m) {
+                        var n = parseInt(m[1], 10);
+                        if (!isNaN(n) && n > maxNum) maxNum = n;
+                    }
+                });
+
+                var next = maxNum + 1;
+                return ID_PREFIX + String(next).padStart(ID_PAD, '0') + ID_SUFFIX;
+            }
 
             /* ============================================
                ★ 工具：ArrayBuffer → base64
@@ -505,6 +539,13 @@
                     addWageBtn.addEventListener('click', function() {
                         modal.style.display = 'flex';
                         addForm.reset();
+
+                        // ★ 自動生成 Document ID（顯示在唯讀欄位）
+                        var docIdInput = document.getElementById('input-doc-id');
+                        if (docIdInput) {
+                            docIdInput.value = generateNextLabourWageId();
+                        }
+
                         if (window.DWSS_Auth) {
                             DWSS_Auth.adjustFormStatusOptions('input-status');
                             DWSS_Auth.autoFillSubmittedBy('input-submitted-by');
@@ -536,33 +577,23 @@
                             catch (err) { alert('Failed to read PDF file.'); return; }
                         }
 
-                        var newId = "", typeText = "";
+                        /* ★ 從表單讀取自動生成的 ID（保險起見，若空則重新生成） */
+                        var docIdInput = document.getElementById('input-doc-id');
+                        var newId = (docIdInput && docIdInput.value.trim())
+                            ? docIdInput.value.trim()
+                            : generateNextLabourWageId();
+
+                        /* 防止 ID 重複 */
+                        if (wageData.some(function(r) { return String(r.id) === String(newId); })) {
+                            newId = generateNextLabourWageId();
+                        }
+
+                        var typeText = "";
                         if (type === "GF527A") {
-                            var maxId = 0;
-                            wageData.filter(function(i) { return i.type === "GF527A"; }).forEach(function(i) {
-                                var parts = i.id.split('-');
-                                var num = parts.length > 2 ? parseInt(parts[2]) || 0 : 0;
-                                if (num > maxId) maxId = num;
-                            });
-                            newId = "GF-527A-" + (maxId + 1);
                             typeText = "GF527A - Return on Construction Site Employment";
                         } else if (type === "GF527-2003") {
-                            var maxId = 0;
-                            wageData.filter(function(i) { return i.type === "GF527-2003"; }).forEach(function(i) {
-                                var parts = i.id.split('-');
-                                var num = parts.length > 3 ? parseInt(parts[3]) || 0 : 0;
-                                if (num > maxId) maxId = num;
-                            });
-                            newId = "GF527-2003-LW-" + (maxId + 1);
                             typeText = "GF527 (2003) - Labour Wage";
                         } else {
-                            var maxId = 0;
-                            wageData.filter(function(i) { return i.type === "GF527-2017"; }).forEach(function(i) {
-                                var parts = i.id.split('-');
-                                var num = parts.length > 3 ? parseInt(parts[3]) || 0 : 0;
-                                if (num > maxId) maxId = num;
-                            });
-                            newId = "GF527-2017-LW-" + (maxId + 1);
                             typeText = "GF527 (2017) - Labour Wage";
                         }
                         
@@ -587,7 +618,7 @@
                         
                         modal.style.display = 'none';
                         addForm.reset();
-                        alert('Wage record added successfully!');
+                        alert('Wage record added successfully!\n\nNew ID: ' + newId);
                     });
                 }
                 
