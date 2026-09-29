@@ -9,6 +9,589 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="scripts/auth-check.js"></script> 
 </head>
+<style>
+/* ============================================================
+   ★ Smart Site Alerts Panel
+   ============================================================ */
+.smart-site-alerts-section {
+    background: white;
+    border-radius: 12px;
+    padding: 24px 28px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    margin-bottom: 30px;
+    max-width: 1500px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.smart-site-alerts-section .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #eee;
+}
+
+.smart-site-alerts-section .section-header h2 {
+    margin: 0;
+    font-size: 1.4rem;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.smart-site-alerts-section .section-header h2 i {
+    color: #e74c3c;
+}
+
+.alert-summary {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.alert-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.alert-badge i {
+    font-size: 0.6rem;
+}
+
+.alert-badge.critical { background: rgba(231, 76, 60, 0.12); color: #c0392b; }
+.alert-badge.warning  { background: rgba(243, 156, 18, 0.12); color: #d35400; }
+.alert-badge.info     { background: rgba(52, 152, 219, 0.12); color: #2980b9; }
+.alert-badge.total    { background: rgba(149, 165, 166, 0.15); color: #7f8c8d; }
+
+.smart-alert-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.alert-filter-btn {
+    padding: 7px 14px;
+    border: 1px solid #e0e6ed;
+    background: #f8fafc;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    color: #555;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.alert-filter-btn:hover {
+    background: #eef2f6;
+    border-color: #cbd5e1;
+}
+
+.alert-filter-btn.active {
+    background: #3498db;
+    color: white;
+    border-color: #3498db;
+    box-shadow: 0 2px 6px rgba(52, 152, 219, 0.3);
+}
+
+.smart-alert-list {
+    max-height: 480px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.smart-alert-list::-webkit-scrollbar { width: 6px; }
+.smart-alert-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+.smart-alert-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: #fafbfc;
+    margin-bottom: 8px;
+    border-left: 4px solid #ccc;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.smart-alert-item:hover {
+    background: #f0f7ff;
+    transform: translateX(2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.smart-alert-item.severity-critical { border-left-color: #e74c3c; }
+.smart-alert-item.severity-warning  { border-left-color: #f39c12; }
+.smart-alert-item.severity-info     { border-left-color: #3498db; }
+
+.smart-alert-item.resolved { opacity: 0.75; }
+
+.alert-icon-wrap {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.alert-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.alert-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 3px;
+}
+
+.alert-title {
+    font-weight: 700;
+    color: #2c3e50;
+    font-size: 0.95rem;
+}
+
+.alert-severity-tag {
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.alert-tag.false-alarm {
+    background: #f3f4f6;
+    color: #6b7280;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.68rem;
+    font-weight: 600;
+}
+
+.alert-description {
+    color: #555;
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+}
+
+.alert-meta {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    font-size: 0.75rem;
+    color: #888;
+}
+
+.alert-meta i {
+    color: #aaa;
+    margin-right: 3px;
+}
+
+.alert-status {
+    flex-shrink: 0;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-badge.resolved   { background: #d1fae5; color: #065f46; }
+.status-badge.unresolved { background: #fee2e2; color: #991b1b; }
+
+.smart-alert-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+}
+
+.smart-alert-empty i {
+    font-size: 40px;
+    color: #2ecc71;
+    margin-bottom: 12px;
+    display: block;
+}
+
+.smart-alert-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #eee;
+    font-size: 0.8rem;
+    color: #888;
+}
+
+.refresh-alerts-btn {
+    background: #f1f5f9;
+    border: 1px solid #e0e6ed;
+    border-radius: 8px;
+    padding: 7px 14px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    color: #555;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.refresh-alerts-btn:hover { background: #e2e8f0; }
+
+/* ============================================================
+   ★ Smart Site Statistics
+   ============================================================ */
+.smart-site-stats-section {
+    background: white;
+    border-radius: 12px;
+    padding: 24px 28px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    margin-bottom: 30px;
+    max-width: 1500px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.smart-site-stats-section .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #eee;
+}
+
+.smart-site-stats-section .section-header h2 {
+    margin: 0;
+    font-size: 1.4rem;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.smart-site-stats-section .section-header h2 i {
+    color: #3498db;
+}
+
+.stats-filter-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.stats-filter-row label {
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.stats-filter-row select {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    background: white;
+    cursor: pointer;
+}
+
+.smart-stats-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+.smart-kpi-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 18px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border-left: 4px solid #ccc;
+    transition: all 0.2s;
+}
+
+.smart-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.smart-kpi-card.critical { border-left-color: #e74c3c; background: linear-gradient(135deg, #fff5f5, #fef2f2); }
+.smart-kpi-card.warning  { border-left-color: #f39c12; background: linear-gradient(135deg, #fffbf0, #fef7e6); }
+.smart-kpi-card.success  { border-left-color: #2ecc71; background: linear-gradient(135deg, #f0fdf4, #ecfdf5); }
+.smart-kpi-card.info     { border-left-color: #3498db; background: linear-gradient(135deg, #f0f9ff, #eff6ff); }
+.smart-kpi-card.purple   { border-left-color: #9b59b6; background: linear-gradient(135deg, #faf5ff, #f5f3ff); }
+.smart-kpi-card.orange   { border-left-color: #f59e0b; background: linear-gradient(135deg, #fff7ed, #ffedd5); }
+
+.smart-kpi-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.smart-kpi-card.critical .smart-kpi-icon { background: #e74c3c; }
+.smart-kpi-card.warning  .smart-kpi-icon { background: #f39c12; }
+.smart-kpi-card.success  .smart-kpi-icon { background: #2ecc71; }
+.smart-kpi-card.info     .smart-kpi-icon { background: #3498db; }
+.smart-kpi-card.purple   .smart-kpi-icon { background: #9b59b6; }
+.smart-kpi-card.orange   .smart-kpi-icon { background: #f59e0b; }
+
+.smart-kpi-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2c3e50;
+    line-height: 1.2;
+}
+
+.smart-kpi-label {
+    font-size: 0.78rem;
+    color: #7f8c8d;
+    margin-top: 2px;
+}
+
+.smart-stats-charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.smart-chart-card {
+    background: #fafbfc;
+    border-radius: 10px;
+    padding: 16px;
+    border: 1px solid #eef2f6;
+}
+
+.smart-chart-header h3 {
+    margin: 0 0 12px 0;
+    font-size: 1rem;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.smart-chart-header h3 i {
+    color: #3498db;
+}
+
+.smart-chart-body {
+    position: relative;
+    height: 260px;
+}
+
+/* Statistics Table */
+.smart-stats-table-card {
+    background: #fafbfc;
+    border-radius: 10px;
+    padding: 16px;
+    border: 1px solid #eef2f6;
+}
+
+.smart-table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.smart-table-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.export-btn {
+    background: #2ecc71;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 14px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.export-btn:hover { background: #27ae60; }
+
+.smart-table-container {
+    overflow-x: auto;
+    border-radius: 8px;
+}
+
+.smart-stats-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.85rem;
+}
+
+.smart-stats-table th {
+    background: #f1f5f9;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #475569;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    border-bottom: 2px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+.smart-stats-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #eef2f6;
+    color: #555;
+}
+
+.smart-stats-table tr:hover td {
+    background: #f8fafc;
+}
+
+.stat-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.stat-pill.critical { background: #fee2e2; color: #991b1b; }
+.stat-pill.warning  { background: #fef3c7; color: #92400e; }
+.stat-pill.info     { background: #dbeafe; color: #1e40af; }
+
+/* Responsive */
+@media (max-width: 900px) {
+    .smart-stats-charts-grid {
+        grid-template-columns: 1fr;
+    }
+    .smart-stats-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .smart-site-alerts-section .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 600px) {
+    .smart-stats-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+    .alert-meta {
+        flex-direction: column;
+        gap: 4px;
+    }
+}
+
+/* Dark Theme */
+body.dark-theme .smart-site-alerts-section,
+body.dark-theme .smart-site-stats-section {
+    background: #1e1e1e !important;
+    color: #e8e8e8 !important;
+}
+
+body.dark-theme .smart-site-alerts-section .section-header,
+body.dark-theme .smart-site-stats-section .section-header {
+    border-bottom-color: #333 !important;
+}
+
+body.dark-theme .smart-alert-item {
+    background: #2d2d2d !important;
+    border-left-color: inherit;
+}
+
+body.dark-theme .smart-alert-item:hover {
+    background: #3a3a3a !important;
+}
+
+body.dark-theme .alert-title { color: #fff !important; }
+body.dark-theme .alert-description { color: #bbb !important; }
+body.dark-theme .alert-meta { color: #999 !important; }
+
+body.dark-theme .alert-filter-btn {
+    background: #2d2d2d;
+    border-color: #444;
+    color: #ddd;
+}
+
+body.dark-theme .smart-kpi-card {
+    background: #2d2d2d !important;
+}
+
+body.dark-theme .smart-kpi-value { color: #fff !important; }
+
+body.dark-theme .smart-chart-card,
+body.dark-theme .smart-stats-table-card {
+    background: #2d2d2d !important;
+    border-color: #444 !important;
+}
+
+body.dark-theme .smart-stats-table th {
+    background: #1e1e1e !important;
+    color: #ccc !important;
+    border-bottom-color: #444 !important;
+}
+
+body.dark-theme .smart-stats-table td {
+    color: #ddd !important;
+    border-bottom-color: #444 !important;
+}
+
+body.dark-theme .refresh-alerts-btn {
+    background: #2d2d2d !important;
+    border-color: #444 !important;
+    color: #ddd !important;
+}
+</style>
 <body>
     <!-- 侧边栏将由 sidebar.js 动态插入 -->
     
@@ -30,7 +613,60 @@
         </div>
         
         <div class="dashboard">
-            
+            <!-- ============================================================
+     ★ 智能工地警報面板 (Smart Site Alerts)
+     ============================================================ -->
+<div class="smart-site-alerts-section">
+    <div class="section-header">
+        <h2><i class="fas fa-exclamation-triangle"></i> SSSS Alerts</h2>
+        <div class="alert-summary">
+            <span class="alert-badge critical">
+                <i class="fas fa-circle"></i> Critical: <span id="smart-alert-critical-count">0</span>
+            </span>
+            <span class="alert-badge warning">
+                <i class="fas fa-circle"></i> Warning: <span id="smart-alert-warning-count">0</span>
+            </span>
+            <span class="alert-badge info">
+                <i class="fas fa-circle"></i> Info: <span id="smart-alert-info-count">0</span>
+            </span>
+            <span class="alert-badge total">
+                總計: <span id="smart-alert-total-count">0</span>
+            </span>
+        </div>
+    </div>
+
+    <div class="smart-alert-filters">
+        <button class="alert-filter-btn active" data-filter="all">
+            <i class="fas fa-list"></i> All
+        </button>
+        <button class="alert-filter-btn" data-filter="PPE">
+            <i class="fas fa-hard-hat"></i> Not Wearing PPE
+        </button>
+        <button class="alert-filter-btn" data-filter="Fall">
+            <i class="fas fa-person-falling"></i> Fall Detected
+        </button>
+        <button class="alert-filter-btn" data-filter="RestrictedZone">
+            <i class="fas fa-ban"></i> Enter Restricted Zone
+        </button>
+        <button class="alert-filter-btn" data-filter="Deformation">
+            <i class="fas fa-ruler-combined"></i> Deformation Detected
+        </button>
+        <button class="alert-filter-btn" data-filter="ConfinedSpace">
+            <i class="fas fa-wind"></i> Confined Space
+        </button>
+    </div>
+
+    <div class="smart-alert-list" id="smart-alert-list">
+        <!-- JS 動態填充 -->
+    </div>
+
+    <div class="smart-alert-footer">
+        <span id="smart-alert-last-updated">Last Update: --</span>
+        <button class="refresh-alerts-btn" id="refresh-smart-alerts">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+    </div>
+</div>
             
             <!-- 并排卡片布局 -->
             <div class="feature-cards">
@@ -252,6 +888,150 @@
                     <canvas id="labourWageChart"></canvas>
                 </div>
             </div>
+            <!-- ============================================================
+     ★ 智能工地統計圖表 (Smart Site Statistics)
+     ============================================================ -->
+<div class="smart-site-stats-section">
+    <div class="section-header">
+        <h2><i class="fas fa-chart-bar"></i> SSSS Statistics</h2>
+        <div class="stats-filter-row">
+            <label>Period</label>
+            <select id="smart-stats-period">
+                <option value="7">Last 7 Days </option>
+                <option value="30" selected>Last 30 Days</option>
+                <option value="90"></option> Last 90 Days</option>
+            </select>
+            <label>工地:</label>
+            <select id="smart-stats-site">
+                <option value="all">All Sites</option>
+                <option value="Treatment Plant">Treatment Plant</option>
+                <option value="Pipeline">Pipeline</option>
+                <option value="Reservoir">Reservoir</option>
+                <option value="Distribution">Distribution</option>
+                <option value="Pump Station">Pump Station</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- KPI 卡片 -->
+    <div class="smart-stats-kpi-grid">
+        <div class="smart-kpi-card critical">
+            <div class="smart-kpi-icon"><i class="fas fa-exclamation-circle"></i></div>
+            <div class="smart-kpi-content">
+                <div class="smart-kpi-value" id="smart-kpi-total-alerts">0</div>
+                <div class="smart-kpi-label">Total Alerts</div>
+            </div>
+        </div>
+        <div class="smart-kpi-card warning">
+            <div class="smart-kpi-icon"><i class="fas fa-clock"></i></div>
+            <div class="smart-kpi-content">
+                <div class="smart-kpi-value" id="smart-kpi-avg-response">0s</div>
+                <div class="smart-kpi-label">Average Response Time</div>
+            </div>
+        </div>
+        <div class="smart-kpi-card success">
+            <div class="smart-kpi-icon"><i class="fas fa-check-circle"></i></div>
+            <div class="smart-kpi-content">
+                <div class="smart-kpi-value" id="smart-kpi-resolved-rate">0%</div>
+                <div class="smart-kpi-label">Resolved Rate</div>
+            </div>
+        </div>
+        <div class="smart-kpi-card info">
+            <div class="smart-kpi-icon"><i class="fas fa-video"></i></div>
+            <div class="smart-kpi-content">
+                <div class="smart-kpi-value" id="smart-kpi-cameras">0</div>
+                <div class="smart-kpi-label">Online Cameras</div>
+            </div>
+        </div>
+        <div class="smart-kpi-card purple">
+            <div class="smart-kpi-icon"><i class="fas fa-bell-slash"></i></div>
+            <div class="smart-kpi-content">
+                <div class="smart-kpi-value" id="smart-kpi-false-alarm">0%</div>
+                <div class="smart-kpi-label">False Alarm Rate</div>
+            </div>
+        </div>
+        <div class="smart-kpi-card orange">
+            <div class="smart-kpi-icon"><i class="fas fa-brain"></i></div>
+            <div class="smart-kpi-content">
+                <div class="smart-kpi-value" id="smart-kpi-accuracy">0%</div>
+                <div class="smart-kpi-label">AI Accuracy</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 圖表區 -->
+    <div class="smart-stats-charts-grid">
+        <!-- 警報類型分佈 (Doughnut) -->
+        <div class="smart-chart-card">
+            <div class="smart-chart-header">
+                <h3><i class="fas fa-chart-pie"></i> Alert Type Distribution</h3>
+            </div>
+            <div class="smart-chart-body">
+                <canvas id="smartAlertTypeChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 每日警報趨勢 (Line) -->
+        <div class="smart-chart-card">
+            <div class="smart-chart-header">
+                <h3><i class="fas fa-chart-line"></i> Daily Alert Trend</h3>
+            </div>
+            <div class="smart-chart-body">
+                <canvas id="smartAlertTrendChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 各工地警報數 (Bar) -->
+        <div class="smart-chart-card">
+            <div class="smart-chart-header">
+                <h3><i class="fas fa-chart-bar"></i> Alerts by Site</h3>
+            </div>
+            <div class="smart-chart-body">
+                <canvas id="smartSiteAlertChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 警報嚴重程度 (Stacked Bar) -->
+        <div class="smart-chart-card">
+            <div class="smart-chart-header">
+                <h3><i class="fas fa-layer-group"></i> Daily Severity Distribution</h3>
+            </div>
+            <div class="smart-chart-body">
+                <canvas id="smartSeverityChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- 詳細統計表格 -->
+    <div class="smart-stats-table-card">
+        <div class="smart-table-header">
+            <h3><i class="fas fa-table"></i> Smart Site Application Statistics Detail</h3>
+            <button class="export-btn" id="export-smart-stats">
+                <i class="fas fa-download"></i> Export CSV
+            </button>
+        </div>
+        <div class="smart-table-container">
+            <table class="smart-stats-table">
+                <thead>
+                    <tr>
+                        <th>Application Type</th>
+                        <th>Site</th>
+                        <th>Total Alerts</th>
+                        <th>Critical</th>
+                        <th>Warning</th>
+                        <th>Info</th>
+                        <th>Resolved</th>
+                        <th>Avg Response</th>
+                        <th>Accuracy</th>
+                    </tr>
+                </thead>
+                <tbody id="smart-stats-table-body">
+                    <!-- JS 動態填充 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
         </div> <!-- 关闭dashboard div -->
         
         <footer>
@@ -793,5 +1573,803 @@
 
         })();
     </script>
+    <script>
+/* ============================================================
+   ★ Smart Site Alerts + Statistics
+   - Uses Dummy Data for simulation
+   - To connect to a real API later, just replace getSmartSiteAlerts() and getSmartSiteStats()
+   ============================================================ */
+(function () {
+    'use strict';
+
+    // ============================================================
+    // 1. DUMMY DATA GENERATOR
+    // ============================================================
+
+    /**
+     * Alert type definitions
+     */
+    var ALERT_TYPES = {
+        'PPE': {
+            label: 'No PPE',
+            icon: 'fa-hard-hat',
+            color: '#e74c3c'
+        },
+        'Fall': {
+            label: 'Fall Detection',
+            icon: 'fa-person-falling',
+            color: '#c0392b'
+        },
+        'RestrictedZone': {
+            label: 'Unauthorized Entry',
+            icon: 'fa-ban',
+            color: '#f39c12'
+        },
+        'Deformation': {
+            label: 'Deformation Monitoring',
+            icon: 'fa-ruler-combined',
+            color: '#9b59b6'
+        },
+        'ConfinedSpace': {
+            label: 'Confined Space',
+            icon: 'fa-wind',
+            color: '#3498db'
+        }
+    };
+
+    /**
+     * Severity definitions
+     */
+    var SEVERITY = {
+        'critical': { label: 'Critical', color: '#e74c3c', weight: 3 },
+        'warning':  { label: 'Warning',  color: '#f39c12', weight: 2 },
+        'info':     { label: 'Info',     color: '#3498db', weight: 1 }
+    };
+
+    /**
+     * Site list
+     */
+    var SITES = [
+        'Treatment Plant',
+        'Pipeline',
+        'Reservoir',
+        'Distribution',
+        'Pump Station'
+    ];
+
+    /**
+     * Generate dummy alert data
+     * @param {number} count - Number of alerts
+     * @returns {Array} Array of alerts
+     */
+    function generateDummyAlerts(count) {
+        var alerts = [];
+        var now = Date.now();
+        var typeKeys = Object.keys(ALERT_TYPES);
+        var severityKeys = Object.keys(SEVERITY);
+
+        for (var i = 0; i < count; i++) {
+            var typeKey = typeKeys[Math.floor(Math.random() * typeKeys.length)];
+            var severityKey = severityKeys[Math.floor(Math.random() * severityKeys.length)];
+            var site = SITES[Math.floor(Math.random() * SITES.length)];
+            var minutesAgo = Math.floor(Math.random() * 1440); // Last 24 hours
+            var timestamp = new Date(now - minutesAgo * 60 * 1000);
+
+            // Random response time (5 - 300 seconds)
+            var responseTime = Math.floor(Math.random() * 295) + 5;
+
+            // Random resolved status (70% resolved)
+            var resolved = Math.random() < 0.7;
+
+            // Random false alarm (10%)
+            var falseAlarm = Math.random() < 0.1;
+
+            alerts.push({
+                id: 'SA-' + String(i + 1).padStart(5, '0'),
+                type: typeKey,
+                typeLabel: ALERT_TYPES[typeKey].label,
+                typeIcon: ALERT_TYPES[typeKey].icon,
+                severity: severityKey,
+                severityLabel: SEVERITY[severityKey].label,
+                severityColor: SEVERITY[severityKey].color,
+                site: site,
+                timestamp: timestamp,
+                timeAgo: formatTimeAgo(timestamp),
+                cameraId: 'CAM-' + String(Math.floor(Math.random() * 20) + 1).padStart(2, '0'),
+                location: site + ' - Zone ' + String.fromCharCode(65 + Math.floor(Math.random() * 5)),
+                description: getAlertDescription(typeKey, severityKey),
+                responseTime: responseTime,
+                resolved: resolved,
+                falseAlarm: falseAlarm
+            });
+        }
+
+        // Sort by newest first
+        alerts.sort(function (a, b) { return b.timestamp - a.timestamp; });
+        return alerts;
+    }
+
+    /**
+     * Generate alert description
+     */
+    function getAlertDescription(typeKey, severityKey) {
+        var descriptions = {
+            'PPE': [
+                'Detected 1 worker without safety helmet',
+                'Detected 2 workers without reflective vest',
+                'Detected worker without safety harness',
+                'Detected worker without safety goggles'
+            ],
+            'Fall': [
+                'Detected person falling from height',
+                'Detected object falling from height',
+                'Detected worker slipping and falling'
+            ],
+            'RestrictedZone': [
+                'Detected unauthorized personnel entering restricted zone',
+                'Detected unauthorized vehicle entering work area',
+                'Detected personnel entering lifting hazard zone'
+            ],
+            'Deformation': [
+                'Monitoring point exceeded Alert level',
+                'Monitoring point exceeded Alarm level',
+                'Monitoring point exceeded Action level'
+            ],
+            'ConfinedSpace': [
+                'Confined space oxygen level too low',
+                'Confined space hydrogen sulfide level exceeded',
+                'Confined space methane level exceeded',
+                'Confined space temperature too high'
+            ]
+        };
+        var arr = descriptions[typeKey] || ['Detected abnormal event'];
+        return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    /**
+     * Format time as "X minutes ago"
+     */
+    function formatTimeAgo(date) {
+        var seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+        if (seconds < 60) return seconds + ' seconds ago';
+        var minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return minutes + ' minutes ago';
+        var hours = Math.floor(minutes / 60);
+        if (hours < 24) return hours + ' hours ago';
+        var days = Math.floor(hours / 24);
+        return days + ' days ago';
+    }
+
+    /**
+     * Format time as HH:MM:SS
+     */
+    function formatTime(date) {
+        var h = String(date.getHours()).padStart(2, '0');
+        var m = String(date.getMinutes()).padStart(2, '0');
+        var s = String(date.getSeconds()).padStart(2, '0');
+        return h + ':' + m + ':' + s;
+    }
+
+    /**
+     * Format date as DD-MMM-YY
+     */
+    function formatDate(date) {
+        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        var d = String(date.getDate()).padStart(2, '0');
+        var m = months[date.getMonth()];
+        var y = String(date.getFullYear()).slice(-2);
+        return d + '-' + m + '-' + y;
+    }
+
+    // ============================================================
+    // 2. GLOBAL STATE
+    // ============================================================
+    var allAlerts = [];
+    var filteredAlerts = [];
+    var currentFilter = 'all';
+    var currentPeriod = 30;
+    var currentSite = 'all';
+
+    var charts = {
+        type: null,
+        trend: null,
+        site: null,
+        severity: null
+    };
+
+    // ============================================================
+    // 3. DATA RETRIEVAL (Replace with real API later)
+    // ============================================================
+    function getSmartSiteAlerts() {
+        // TODO: Later change to fetch('/api/smart-site/alerts')
+        return generateDummyAlerts(50);
+    }
+
+    function getSmartSiteStats() {
+        // TODO: Later change to fetch('/api/smart-site/stats')
+        // Currently computed directly from alerts
+        return null;
+    }
+
+    // ============================================================
+    // 4. RENDER ALERT LIST
+    // ============================================================
+    function renderAlertList() {
+        var listEl = document.getElementById('smart-alert-list');
+        if (!listEl) return;
+
+        if (filteredAlerts.length === 0) {
+            listEl.innerHTML =
+                '<div class="smart-alert-empty">' +
+                    '<i class="fas fa-check-circle"></i>' +
+                    '<p>No alerts at the moment</p>' +
+                '</div>';
+            return;
+        }
+
+        var html = '';
+        filteredAlerts.slice(0, 20).forEach(function (alert) {
+            var severityClass = 'severity-' + alert.severity;
+            var resolvedClass = alert.resolved ? 'resolved' : 'unresolved';
+            var falseAlarmTag = alert.falseAlarm
+                ? '<span class="alert-tag false-alarm"><i class="fas fa-bell-slash"></i> False Alarm</span>'
+                : '';
+
+            html +=
+                '<div class="smart-alert-item ' + severityClass + ' ' + resolvedClass + '" data-alert-id="' + alert.id + '">' +
+                    '<div class="alert-severity-bar" style="background:' + alert.severityColor + '"></div>' +
+                    '<div class="alert-icon-wrap" style="background:' + alert.severityColor + '20; color:' + alert.severityColor + '">' +
+                        '<i class="fas ' + alert.typeIcon + '"></i>' +
+                    '</div>' +
+                    '<div class="alert-content">' +
+                        '<div class="alert-title-row">' +
+                            '<span class="alert-title">' + alert.typeLabel + '</span>' +
+                            '<span class="alert-severity-tag" style="background:' + alert.severityColor + '">' + alert.severityLabel + '</span>' +
+                            falseAlarmTag +
+                        '</div>' +
+                        '<div class="alert-description">' + alert.description + '</div>' +
+                        '<div class="alert-meta">' +
+                            '<span><i class="fas fa-map-marker-alt"></i> ' + alert.site + '</span>' +
+                            '<span><i class="fas fa-video"></i> ' + alert.cameraId + '</span>' +
+                            '<span><i class="fas fa-clock"></i> ' + alert.timeAgo + '</span>' +
+                            '<span><i class="fas fa-stopwatch"></i> Response ' + alert.responseTime + 's</span>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="alert-status">' +
+                        (alert.resolved
+                            ? '<span class="status-badge resolved"><i class="fas fa-check"></i> Resolved</span>'
+                            : '<span class="status-badge unresolved"><i class="fas fa-clock"></i> Pending</span>') +
+                    '</div>' +
+                '</div>';
+        });
+
+        listEl.innerHTML = html;
+    }
+
+    /**
+     * Update alert summary badges
+     */
+    function updateAlertSummary() {
+        var critical = 0, warning = 0, info = 0;
+        allAlerts.forEach(function (a) {
+            if (a.severity === 'critical') critical++;
+            else if (a.severity === 'warning') warning++;
+            else info++;
+        });
+
+        setText('smart-alert-critical-count', critical);
+        setText('smart-alert-warning-count', warning);
+        setText('smart-alert-info-count', info);
+        setText('smart-alert-total-count', allAlerts.length);
+        setText('smart-alert-last-updated', 'Last updated: ' + formatTime(new Date()));
+    }
+
+    function setText(id, val) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = val;
+    }
+
+    // ============================================================
+    // 5. FILTER LOGIC
+    // ============================================================
+    function applyFilter() {
+        if (currentFilter === 'all') {
+            filteredAlerts = allAlerts.slice();
+        } else {
+            filteredAlerts = allAlerts.filter(function (a) {
+                return a.type === currentFilter;
+            });
+        }
+        renderAlertList();
+    }
+
+    function setupAlertFilters() {
+        document.querySelectorAll('.alert-filter-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.alert-filter-btn').forEach(function (b) {
+                    b.classList.remove('active');
+                });
+                btn.classList.add('active');
+                currentFilter = btn.getAttribute('data-filter');
+                applyFilter();
+            });
+        });
+    }
+
+    // ============================================================
+    // 6. KPI CALCULATION
+    // ============================================================
+    function updateSmartKPI() {
+        var total = allAlerts.length;
+        if (total === 0) {
+            setText('smart-kpi-total-alerts', 0);
+            setText('smart-kpi-avg-response', '0s');
+            setText('smart-kpi-resolved-rate', '0%');
+            setText('smart-kpi-cameras', 0);
+            setText('smart-kpi-false-alarm', '0%');
+            setText('smart-kpi-accuracy', '0%');
+            return;
+        }
+
+        var totalResponse = 0;
+        var resolvedCount = 0;
+        var falseAlarmCount = 0;
+
+        allAlerts.forEach(function (a) {
+            totalResponse += a.responseTime;
+            if (a.resolved) resolvedCount++;
+            if (a.falseAlarm) falseAlarmCount++;
+        });
+
+        var avgResponse = Math.round(totalResponse / total);
+        var resolvedRate = Math.round((resolvedCount / total) * 100);
+        var falseAlarmRate = Math.round((falseAlarmCount / total) * 100);
+        var accuracy = 100 - falseAlarmRate;
+
+        // Camera count = 3 cameras per site × number of sites
+        var cameras = SITES.length * 3;
+
+        setText('smart-kpi-total-alerts', total);
+        setText('smart-kpi-avg-response', avgResponse + 's');
+        setText('smart-kpi-resolved-rate', resolvedRate + '%');
+        setText('smart-kpi-cameras', cameras);
+        setText('smart-kpi-false-alarm', falseAlarmRate + '%');
+        setText('smart-kpi-accuracy', accuracy + '%');
+    }
+
+    // ============================================================
+    // 7. CHART RENDERING
+    // ============================================================
+    function renderSmartCharts() {
+        if (typeof Chart === 'undefined') {
+            console.warn('[SmartSite] Chart.js not loaded');
+            return;
+        }
+
+        // --- 7.1 Alert Type Distribution (Doughnut) ---
+        (function renderTypeChart() {
+            var canvas = document.getElementById('smartAlertTypeChart');
+            if (!canvas) return;
+
+            var typeCounts = {};
+            Object.keys(ALERT_TYPES).forEach(function (k) {
+                typeCounts[k] = 0;
+            });
+            allAlerts.forEach(function (a) {
+                if (typeCounts[a.type] !== undefined) typeCounts[a.type]++;
+            });
+
+            var labels = [];
+            var data = [];
+            var colors = [];
+            Object.keys(typeCounts).forEach(function (k) {
+                labels.push(ALERT_TYPES[k].label);
+                data.push(typeCounts[k]);
+                colors.push(ALERT_TYPES[k].color);
+            });
+
+            if (charts.type) charts.type.destroy();
+            charts.type = new Chart(canvas.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 10,
+                                font: { size: 11 }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (ctx) {
+                                    var total = ctx.dataset.data.reduce(function (a, b) { return a + b; }, 0);
+                                    var pct = total > 0 ? Math.round((ctx.parsed / total) * 100) : 0;
+                                    return ctx.label + ': ' + ctx.parsed + ' (' + pct + '%)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        })();
+
+        // --- 7.2 Daily Alert Trend (Line) ---
+        (function renderTrendChart() {
+            var canvas = document.getElementById('smartAlertTrendChart');
+            if (!canvas) return;
+
+            // Last 14 days
+            var days = 14;
+            var labels = [];
+            var criticalData = [];
+            var warningData = [];
+            var infoData = [];
+            var now = new Date();
+
+            for (var i = days - 1; i >= 0; i--) {
+                var d = new Date(now.getTime() - i * 86400000);
+                var dayKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                labels.push(String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0'));
+
+                var cCount = 0, wCount = 0, iCount = 0;
+                allAlerts.forEach(function (a) {
+                    var aKey = a.timestamp.getFullYear() + '-' + String(a.timestamp.getMonth() + 1).padStart(2, '0') + '-' + String(a.timestamp.getDate()).padStart(2, '0');
+                    if (aKey === dayKey) {
+                        if (a.severity === 'critical') cCount++;
+                        else if (a.severity === 'warning') wCount++;
+                        else iCount++;
+                    }
+                });
+                criticalData.push(cCount);
+                warningData.push(wCount);
+                infoData.push(iCount);
+            }
+
+            if (charts.trend) charts.trend.destroy();
+            charts.trend = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Critical',
+                            data: criticalData,
+                            borderColor: '#e74c3c',
+                            backgroundColor: 'rgba(231,76,60,0.1)',
+                            tension: 0.3,
+                            fill: true,
+                            pointRadius: 2
+                        },
+                        {
+                            label: 'Warning',
+                            data: warningData,
+                            borderColor: '#f39c12',
+                            backgroundColor: 'rgba(243,156,18,0.1)',
+                            tension: 0.3,
+                            fill: true,
+                            pointRadius: 2
+                        },
+                        {
+                            label: 'Info',
+                            data: infoData,
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52,152,219,0.1)',
+                            tension: 0.3,
+                            fill: true,
+                            pointRadius: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+        })();
+
+        // --- 7.3 Alerts by Site (Bar) ---
+        (function renderSiteChart() {
+            var canvas = document.getElementById('smartSiteAlertChart');
+            if (!canvas) return;
+
+            var siteCounts = {};
+            SITES.forEach(function (s) { siteCounts[s] = 0; });
+            allAlerts.forEach(function (a) {
+                if (siteCounts[a.site] !== undefined) siteCounts[a.site]++;
+            });
+
+            var labels = Object.keys(siteCounts);
+            var data = labels.map(function (k) { return siteCounts[k]; });
+            var colors = ['#3498db', '#e74c3c', '#f39c12', '#2ecc71', '#9b59b6'];
+
+            if (charts.site) charts.site.destroy();
+            charts.site = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Alerts',
+                        data: data,
+                        backgroundColor: colors,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+        })();
+
+        // --- 7.4 Daily Severity Distribution (Stacked Bar) ---
+        (function renderSeverityChart() {
+            var canvas = document.getElementById('smartSeverityChart');
+            if (!canvas) return;
+
+            var days = 7;
+            var labels = [];
+            var criticalData = [];
+            var warningData = [];
+            var infoData = [];
+            var now = new Date();
+
+            for (var i = days - 1; i >= 0; i--) {
+                var d = new Date(now.getTime() - i * 86400000);
+                var dayKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                labels.push(String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0'));
+
+                var cCount = 0, wCount = 0, iCount = 0;
+                allAlerts.forEach(function (a) {
+                    var aKey = a.timestamp.getFullYear() + '-' + String(a.timestamp.getMonth() + 1).padStart(2, '0') + '-' + String(a.timestamp.getDate()).padStart(2, '0');
+                    if (aKey === dayKey) {
+                        if (a.severity === 'critical') cCount++;
+                        else if (a.severity === 'warning') wCount++;
+                        else iCount++;
+                    }
+                });
+                criticalData.push(cCount);
+                warningData.push(wCount);
+                infoData.push(iCount);
+            }
+
+            if (charts.severity) charts.severity.destroy();
+            charts.severity = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Critical',
+                            data: criticalData,
+                            backgroundColor: '#e74c3c'
+                        },
+                        {
+                            label: 'Warning',
+                            data: warningData,
+                            backgroundColor: '#f39c12'
+                        },
+                        {
+                            label: 'Info',
+                            data: infoData,
+                            backgroundColor: '#3498db'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } }
+                    },
+                    scales: {
+                        x: { stacked: true },
+                        y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+        })();
+    }
+
+    // ============================================================
+    // 8. STATISTICS TABLE
+    // ============================================================
+    function renderSmartStatsTable() {
+        var tbody = document.getElementById('smart-stats-table-body');
+        if (!tbody) return;
+
+        // Group by "Application Type × Site"
+        var groups = {};
+        allAlerts.forEach(function (a) {
+            var key = a.type + '|' + a.site;
+            if (!groups[key]) {
+                groups[key] = {
+                    type: a.type,
+                    typeLabel: a.typeLabel,
+                    typeIcon: a.typeIcon,
+                    site: a.site,
+                    total: 0,
+                    critical: 0,
+                    warning: 0,
+                    info: 0,
+                    resolved: 0,
+                    totalResponse: 0,
+                    falseAlarm: 0
+                };
+            }
+            var g = groups[key];
+            g.total++;
+            g[a.severity]++;
+            if (a.resolved) g.resolved++;
+            g.totalResponse += a.responseTime;
+            if (a.falseAlarm) g.falseAlarm++;
+        });
+
+        var rows = Object.keys(groups).map(function (k) { return groups[k]; });
+        rows.sort(function (a, b) { return b.total - a.total; });
+
+        if (rows.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:#999;">No data available</td></tr>';
+            return;
+        }
+
+        var html = '';
+        rows.forEach(function (r) {
+            var avgResp = Math.round(r.totalResponse / r.total);
+            var accuracy = Math.round((1 - r.falseAlarm / r.total) * 100);
+            var resolvedPct = Math.round((r.resolved / r.total) * 100);
+
+            html +=
+                '<tr>' +
+                    '<td><i class="fas ' + r.typeIcon + '" style="margin-right:6px;color:#3498db;"></i>' + r.typeLabel + '</td>' +
+                    '<td>' + r.site + '</td>' +
+                    '<td><strong>' + r.total + '</strong></td>' +
+                    '<td><span class="stat-pill critical">' + r.critical + '</span></td>' +
+                    '<td><span class="stat-pill warning">' + r.warning + '</span></td>' +
+                    '<td><span class="stat-pill info">' + r.info + '</span></td>' +
+                    '<td>' + r.resolved + ' (' + resolvedPct + '%)</td>' +
+                    '<td>' + avgResp + 's</td>' +
+                    '<td>' + accuracy + '%</td>' +
+                '</tr>';
+        });
+        tbody.innerHTML = html;
+    }
+
+    // ============================================================
+    // 9. CSV EXPORT
+    // ============================================================
+    function exportSmartStatsCSV() {
+        var rows = [
+            ['Application Type', 'Site', 'Total Alerts', 'Critical', 'Warning', 'Info', 'Resolved', 'Avg Response (s)', 'Accuracy (%)']
+        ];
+
+        var tbody = document.getElementById('smart-stats-table-body');
+        if (tbody) {
+            tbody.querySelectorAll('tr').forEach(function (tr) {
+                var cells = tr.querySelectorAll('td');
+                if (cells.length === 9) {
+                    var row = [];
+                    cells.forEach(function (td) {
+                        row.push('"' + td.textContent.trim().replace(/"/g, '""') + '"');
+                    });
+                    rows.push(row);
+                }
+            });
+        }
+
+        var csv = rows.map(function (r) { return r.join(','); }).join('\n');
+        var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'smart_site_stats_' + formatDate(new Date()) + '.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    }
+
+    // ============================================================
+    // 10. INITIALIZATION
+    // ============================================================
+    function initSmartSite() {
+        // Load dummy data
+        allAlerts = getSmartSiteAlerts();
+        filteredAlerts = allAlerts.slice();
+
+        // Render
+        updateAlertSummary();
+        renderAlertList();
+        updateSmartKPI();
+        renderSmartCharts();
+        renderSmartStatsTable();
+
+        // Event bindings
+        setupAlertFilters();
+
+        var refreshBtn = document.getElementById('refresh-smart-alerts');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function () {
+                refreshBtn.querySelector('i').classList.add('fa-spin');
+                setTimeout(function () {
+                    allAlerts = getSmartSiteAlerts();
+                    applyFilter();
+                    updateAlertSummary();
+                    updateSmartKPI();
+                    renderSmartCharts();
+                    renderSmartStatsTable();
+                    refreshBtn.querySelector('i').classList.remove('fa-spin');
+                }, 600);
+            });
+        }
+
+        var exportBtn = document.getElementById('export-smart-stats');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', exportSmartStatsCSV);
+        }
+
+        var periodSelect = document.getElementById('smart-stats-period');
+        if (periodSelect) {
+            periodSelect.addEventListener('change', function () {
+                currentPeriod = parseInt(this.value, 10);
+                updateSmartKPI();
+                renderSmartCharts();
+                renderSmartStatsTable();
+            });
+        }
+
+        var siteSelect = document.getElementById('smart-stats-site');
+        if (siteSelect) {
+            siteSelect.addEventListener('change', function () {
+                currentSite = this.value;
+                updateSmartKPI();
+                renderSmartCharts();
+                renderSmartStatsTable();
+            });
+        }
+
+        console.log('[SmartSite] Dashboard initialized. Alerts:', allAlerts.length);
+    }
+
+    // Wait for Chart.js to load
+    function waitForChart(cb) {
+        if (typeof Chart !== 'undefined') { cb(); return; }
+        setTimeout(function () { waitForChart(cb); }, 200);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+            waitForChart(initSmartSite);
+        });
+    } else {
+        waitForChart(initSmartSite);
+    }
+
+})();
+</script>
 </body>
 </html>
