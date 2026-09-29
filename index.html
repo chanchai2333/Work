@@ -265,6 +265,87 @@
     transition: all 0.2s;
 }
 
+/* ============================================================
+   ★ Smart Site Alerts Section Header — 3-column layout
+   ============================================================ */
+.smart-site-alerts-section .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #eee;
+}
+
+/* Push the alert summary to the right, next to the 4S button */
+.smart-site-alerts-section .section-header .alert-summary {
+    margin-left: auto;
+    margin-right: 12px;
+}
+
+/* Responsive: stack on small screens */
+@media (max-width: 900px) {
+    .smart-site-alerts-section .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .smart-site-alerts-section .section-header .alert-summary {
+        margin-left: 0;
+        margin-right: 0;
+    }
+    .smart-site-alerts-section .section-header .btn-4s {
+        align-self: flex-end;
+    }
+}
+/* ============================================================
+   ★ 4S System Button
+   ============================================================ */
+.btn-4s {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 3px 10px rgba(231, 76, 60, 0.3);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.btn-4s i {
+    font-size: 1.1rem;
+}
+
+.btn-4s:hover {
+    background: linear-gradient(135deg, #c0392b, #a93226);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(231, 76, 60, 0.45);
+}
+
+.btn-4s:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(231, 76, 60, 0.3);
+}
+
+/* Dark theme */
+body.dark-theme .btn-4s {
+    background: linear-gradient(135deg, #ff6b6b, #e74c3c);
+    box-shadow: 0 3px 10px rgba(255, 107, 107, 0.4);
+}
+
+body.dark-theme .btn-4s:hover {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    box-shadow: 0 5px 15px rgba(255, 107, 107, 0.5);
+}
+
 .refresh-alerts-btn:hover { background: #e2e8f0; }
 
 /* ============================================================
@@ -612,62 +693,7 @@ body.dark-theme .refresh-alerts-btn {
             </div>
         </div>
         
-        <div class="dashboard">
-            <!-- ============================================================
-     ★ 智能工地警報面板 (Smart Site Alerts)
-     ============================================================ -->
-<div class="smart-site-alerts-section">
-    <div class="section-header">
-        <h2><i class="fas fa-exclamation-triangle"></i> SSSS Alerts</h2>
-        <div class="alert-summary">
-            <span class="alert-badge critical">
-                <i class="fas fa-circle"></i> Critical: <span id="smart-alert-critical-count">0</span>
-            </span>
-            <span class="alert-badge warning">
-                <i class="fas fa-circle"></i> Warning: <span id="smart-alert-warning-count">0</span>
-            </span>
-            <span class="alert-badge info">
-                <i class="fas fa-circle"></i> Info: <span id="smart-alert-info-count">0</span>
-            </span>
-            <span class="alert-badge total">
-                總計: <span id="smart-alert-total-count">0</span>
-            </span>
-        </div>
-    </div>
-
-    <div class="smart-alert-filters">
-        <button class="alert-filter-btn active" data-filter="all">
-            <i class="fas fa-list"></i> All
-        </button>
-        <button class="alert-filter-btn" data-filter="PPE">
-            <i class="fas fa-hard-hat"></i> Not Wearing PPE
-        </button>
-        <button class="alert-filter-btn" data-filter="Fall">
-            <i class="fas fa-person-falling"></i> Fall Detected
-        </button>
-        <button class="alert-filter-btn" data-filter="RestrictedZone">
-            <i class="fas fa-ban"></i> Enter Restricted Zone
-        </button>
-        <button class="alert-filter-btn" data-filter="Deformation">
-            <i class="fas fa-ruler-combined"></i> Deformation Detected
-        </button>
-        <button class="alert-filter-btn" data-filter="ConfinedSpace">
-            <i class="fas fa-wind"></i> Confined Space
-        </button>
-    </div>
-
-    <div class="smart-alert-list" id="smart-alert-list">
-        <!-- JS 動態填充 -->
-    </div>
-
-    <div class="smart-alert-footer">
-        <span id="smart-alert-last-updated">Last Update: --</span>
-        <button class="refresh-alerts-btn" id="refresh-smart-alerts">
-            <i class="fas fa-sync-alt"></i> Refresh
-        </button>
-    </div>
-</div>
-            
+        <div class="dashboard">            
             <!-- 并排卡片布局 -->
             <div class="feature-cards">
                 <!-- Site Diaries 卡片 -->
@@ -888,6 +914,64 @@ body.dark-theme .refresh-alerts-btn {
                     <canvas id="labourWageChart"></canvas>
                 </div>
             </div>
+                        <!-- ============================================================
+     ★ 智能工地警報面板 (Smart Site Alerts)
+     ============================================================ -->
+<div class="smart-site-alerts-section">
+    <div class="section-header">
+        <h2><i class="fas fa-exclamation-triangle"></i> SSSS Alerts</h2>
+        <div class="alert-summary">
+            <span class="alert-badge critical">
+                <i class="fas fa-circle"></i> Critical: <span id="smart-alert-critical-count">0</span>
+            </span>
+            <span class="alert-badge warning">
+                <i class="fas fa-circle"></i> Warning: <span id="smart-alert-warning-count">0</span>
+            </span>
+            <span class="alert-badge info">
+                <i class="fas fa-circle"></i> Info: <span id="smart-alert-info-count">0</span>
+            </span>
+            <span class="alert-badge total">
+                總計: <span id="smart-alert-total-count">0</span>
+            </span>
+        </div>
+        <button id="open-4s-btn" class="btn-4s" title="Open 4S System">
+            <i class="fas fa-shield-alt"></i>
+            <span>4S System</span>
+        </button>
+    </div>
+
+    <div class="smart-alert-filters">
+        <button class="alert-filter-btn active" data-filter="all">
+            <i class="fas fa-list"></i> All
+        </button>
+        <button class="alert-filter-btn" data-filter="PPE">
+            <i class="fas fa-hard-hat"></i> Not Wearing PPE
+        </button>
+        <button class="alert-filter-btn" data-filter="Fall">
+            <i class="fas fa-person-falling"></i> Fall Detected
+        </button>
+        <button class="alert-filter-btn" data-filter="RestrictedZone">
+            <i class="fas fa-ban"></i> Enter Restricted Zone
+        </button>
+        <button class="alert-filter-btn" data-filter="Deformation">
+            <i class="fas fa-ruler-combined"></i> Deformation Detected
+        </button>
+        <button class="alert-filter-btn" data-filter="ConfinedSpace">
+            <i class="fas fa-wind"></i> Confined Space
+        </button>
+    </div>
+
+    <div class="smart-alert-list" id="smart-alert-list">
+        <!-- JS 動態填充 -->
+    </div>
+
+    <div class="smart-alert-footer">
+        <span id="smart-alert-last-updated">Last Update: --</span>
+        <button class="refresh-alerts-btn" id="refresh-smart-alerts">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+    </div>
+</div>
             <!-- ============================================================
      ★ 智能工地統計圖表 (Smart Site Statistics)
      ============================================================ -->
@@ -2369,6 +2453,50 @@ body.dark-theme .refresh-alerts-btn {
         waitForChart(initSmartSite);
     }
 
+})();
+</script>
+<script>
+/* ============================================================
+   ★ 4S System Button Handler
+   ============================================================ */
+(function () {
+    'use strict';
+
+    function bind4SButton() {
+        var btn = document.getElementById('open-4s-btn');
+        if (!btn) {
+            console.warn('[4S] Button not found');
+            return;
+        }
+
+        btn.addEventListener('click', function () {
+            // Confirm before leaving (optional, remove if not wanted)
+            if (!confirm('Open 4S System? You will be redirected to the 4S platform.')) {
+                return;
+            }
+
+            // ============================================================
+            // Choose ONE of the following options:
+            // ============================================================
+
+            // Option A: Open in the same tab
+            // window.location.href = '4s.html';
+
+            // Option B: Open in a new tab (recommended)
+            window.open('4s.html', '_blank');
+
+            // Option C: Open an external URL
+            // window.open('https://4s.example.com', '_blank');
+        });
+
+        console.log('[4S] Button bound successfully');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bind4SButton);
+    } else {
+        bind4SButton();
+    }
 })();
 </script>
 </body>
