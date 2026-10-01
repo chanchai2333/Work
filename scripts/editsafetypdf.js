@@ -41,6 +41,41 @@
     const approveBtn = document.getElementById('approve-btn');
     const rejectBtn = document.getElementById('reject-btn');
     
+        // ========================================
+    // ★ Safety Inspection 固定表單 Layout
+    // ========================================
+    var SAFETY_LAYOUT = {
+        typeCheckboxes: [
+            { key: 'weekly', left: '27.72%', top: '15.27%', width: '1.08%', height: '0.89%' },
+            { key: 'daily',  left: '37.14%', top: '15.27%', width: '1.16%', height: '0.89%' },
+            { key: 'adhoc',  left: '44.72%', top: '15.27%', width: '1.17%', height: '0.83%' }
+        ],
+        header: {
+            location:  { left: '18.72%', top: '16.57%', width: '31.92%', height: '1.59%' },
+            taskOrder: { left: '63.64%', top: '16.51%', width: '29.58%', height: '1.71%' },
+            date:      { left: '15.89%', top: '18.22%', width: '34.75%', height: '1.59%' },
+            time:      { left: '56.30%', top: '18.22%', width: '37.00%', height: '1.65%' }
+        },
+        ratingColumns: {
+            A:     { left: '67.47%', width: '6.48%' },
+            B:     { left: '73.95%', width: '6.48%' },
+            C:     { left: '80.43%', width: '6.48%' },
+            'N/A': { left: '86.91%', width: '6.48%' }
+        },
+        sections: [
+            { letter: 'A',   page: 1, startY: '25.11%', rowHeight: '2.12%', cellHeight: '2.12%', itemCount: 13 },
+            { letter: 'B',   page: 1, startY: '56.87%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 9 },
+            { letter: 'C.i', page: 1, startY: '79.92%', rowHeight: '2.12%', cellHeight: '2.12%', itemCount: 6 }
+        ]
+    };
+
+    // 儲存表單資料
+    var safetyFormData = {
+        type: '',
+        header: {},
+        ratings: {}
+    };
+
     let currentColor = '#3498db';
     let currentSize = 3;
     let currentOpacity = 100;
@@ -106,6 +141,10 @@
             
             annotations = doc.annotations || [];
             annotations.forEach((a, idx) => a._id = a._id || Date.now() + idx);
+             // ★ 還原已儲存嘅表單資料
+            if (doc.safetyFormData) {
+                safetyFormData = doc.safetyFormData;
+            }
             return doc;
         } catch(e) { console.error(e); return null; }
     }
@@ -151,6 +190,213 @@
         });
     }
 
+        // ========================================
+    // ★ 注入固定表單（PDF 渲染後呼叫）
+    // ========================================
+    function injectSafetyFormFields(pageNum) {
+        if (!container) return;
+
+        // 先移除舊嘅 overlay
+        var oldOverlay = container.querySelector('.safety-form-overlay');
+        if (oldOverlay) oldOverlay.remove();
+
+        // 確保 container 係 relative 定位
+        container.style.position = 'relative';
+
+        var overlay = document.createElement('div');
+        overlay.className = 'safety-form-overlay';
+        overlay.style.cssText =
+            'position:absolute;left:0;top:0;width:100%;height:100%;' +
+            'z-index:50;pointer-events:none;';
+
+        // 對齊 canvas 位置
+        var canvasOffsetX = canvas.offsetLeft;
+        var canvasOffsetY = canvas.offsetTop;
+        overlay.style.left = canvasOffsetX + 'px';
+        overlay.style.top = canvasOffsetY + 'px';
+        overlay.style.width = canvas.style.width;
+        overlay.style.height = canvas.style.height;
+
+        // 1. Type checkbox（只喺 Page 1）
+        if (pageNum === 1) {
+            SAFETY_LAYOUT.typeCheckboxes.forEach(function(cb) {
+                var el = document.createElement('div');
+                el.className = 'safety-checkbox';
+                el.dataset.type = cb.key;
+                el.style.cssText =
+                    'position:absolute;left:' + cb.left + ';top:' + cb.top + ';' +
+                    'width:' + cb.width + ';height:' + cb.height + ';' +
+                    'pointer-events:auto;cursor:pointer;display:flex;' +
+                    'align-items:center;justify-content:center;' +
+                    'border-radius:2px;transition:background 0.15s;';
+                el.innerHTML = '<span style="font-size:14px;font-weight:900;color:#27ae60;display:none;">✓</span>';
+
+                // 還原已選
+                if (safetyFormData.type === cb.key) {
+                    el.classList.add('checked');
+                    el.querySelector('span').style.display = 'block';
+                }
+
+                el.addEventListener('click', function() {
+                    var isChecked = el.classList.contains('checked');
+                    overlay.querySelectorAll('.safety-checkbox').forEach(function(other) {
+                        other.classList.remove('checked');
+                        other.querySelector('span').style.display = 'none';
+                    });
+                    if (!isChecked) {
+                        el.classList.add('checked');
+                        el.querySelector('span').style.display = 'block';
+                        safetyFormData.type = cb.key;
+                    } else {
+                        safetyFormData.type = '';
+                    }
+                    autoSaveSafetyData();
+                });
+
+                el.addEventListener('mouseenter', function() {
+                    if (!el.classList.contains('checked')) {
+                        el.style.background = 'rgba(52,152,219,0.2)';
+                    }
+                });
+                el.addEventListener('mouseleave', function() {
+                    if (!el.classList.contains('checked')) {
+                        el.style.background = 'transparent';
+                    }
+                });
+
+                overlay.appendChild(el);
+            });
+        }
+
+        // 2. Header 輸入框（只喺 Page 1）
+        if (pageNum === 1) {
+            var headerLabels = {
+                location: 'Location',
+                taskOrder: 'Task Order No.',
+                date: 'Date',
+                time: 'Time'
+            };
+            Object.keys(SAFETY_LAYOUT.header).forEach(function(key) {
+                var field = SAFETY_LAYOUT.header[key];
+                var input = document.createElement('input');
+                input.type = (key === 'date') ? 'date' : (key === 'time') ? 'time' : 'text';
+                input.className = 'safety-input';
+                input.placeholder = headerLabels[key];
+                input.dataset.fieldId = 'header_' + key;
+                input.style.cssText =
+                    'position:absolute;left:' + field.left + ';top:' + field.top + ';' +
+                    'width:' + field.width + ';height:' + field.height + ';' +
+                    'border:1px solid rgba(52,152,219,0.4);' +
+                    'background:rgba(255,255,255,0.6);' +
+                    'outline:none;font-family:Arial;color:#0a1a5c;' +
+                    'font-size:11px;padding:1px 4px;box-sizing:border-box;' +
+                    'pointer-events:auto;border-radius:2px;';
+                input.value = safetyFormData.header[key] || '';
+                input.addEventListener('input', function() {
+                    safetyFormData.header[key] = input.value;
+                    autoSaveSafetyData();
+                });
+                input.addEventListener('focus', function() {
+                    input.style.background = 'rgba(255,251,234,0.98)';
+                    input.style.boxShadow = 'inset 0 0 0 2px #3498db';
+                });
+                input.addEventListener('blur', function() {
+                    input.style.background = 'rgba(255,255,255,0.6)';
+                    input.style.boxShadow = 'none';
+                });
+                overlay.appendChild(input);
+            });
+        }
+
+        // 3. 評分格
+        var ratingKeys = ['A', 'B', 'C', 'N/A'];
+        SAFETY_LAYOUT.sections.forEach(function(section) {
+            if (section.page !== pageNum) return;
+
+            var startY = parseFloat(section.startY);
+            var rowH = parseFloat(section.rowHeight);
+            var cellH = parseFloat(section.cellHeight);
+
+            for (var i = 0; i < section.itemCount; i++) {
+                var top = startY + i * rowH;
+
+                ratingKeys.forEach(function(rating) {
+                    var col = SAFETY_LAYOUT.ratingColumns[rating];
+                    var cell = document.createElement('div');
+                    cell.className = 'safety-rating';
+                    cell.dataset.key = section.letter + '_' + i;
+                    cell.dataset.rating = rating;
+                    cell.style.cssText =
+                        'position:absolute;left:' + col.left + ';top:' + top + '%;' +
+                        'width:' + col.width + ';height:' + cellH + '%;' +
+                        'pointer-events:auto;cursor:pointer;display:flex;' +
+                        'align-items:center;justify-content:center;' +
+                        'border-radius:2px;transition:background 0.12s;';
+                    cell.innerHTML = '<span style="font-size:18px;font-weight:900;color:#27ae60;display:none;">✓</span>';
+
+                    // 還原已選
+                    if (safetyFormData.ratings[section.letter + '_' + i] === rating) {
+                        cell.classList.add('active');
+                        cell.querySelector('span').style.display = 'block';
+                        cell.style.background = 'rgba(39,174,96,0.18)';
+                        cell.style.boxShadow = '0 0 0 1.5px #27ae60';
+                    }
+
+                    cell.addEventListener('click', function() {
+                        var k = cell.dataset.key;
+                        var r = cell.dataset.rating;
+                        var wasActive = cell.classList.contains('active');
+
+                        overlay.querySelectorAll('.safety-rating[data-key="' + k + '"]').forEach(function(c) {
+                            c.classList.remove('active');
+                            c.querySelector('span').style.display = 'none';
+                            c.style.background = 'transparent';
+                            c.style.boxShadow = 'none';
+                        });
+
+                        if (wasActive) {
+                            delete safetyFormData.ratings[k];
+                        } else {
+                            cell.classList.add('active');
+                            cell.querySelector('span').style.display = 'block';
+                            cell.style.background = 'rgba(39,174,96,0.18)';
+                            cell.style.boxShadow = '0 0 0 1.5px #27ae60';
+                            safetyFormData.ratings[k] = r;
+                        }
+                        autoSaveSafetyData();
+                    });
+
+                    cell.addEventListener('mouseenter', function() {
+                        if (!cell.classList.contains('active')) {
+                            cell.style.background = 'rgba(52,152,219,0.18)';
+                        }
+                    });
+                    cell.addEventListener('mouseleave', function() {
+                        if (!cell.classList.contains('active')) {
+                            cell.style.background = 'transparent';
+                        }
+                    });
+
+                    overlay.appendChild(cell);
+                });
+            }
+        });
+
+        container.appendChild(overlay);
+        console.log('[SafetyEdit] ✓ 注入表單 (Page ' + pageNum + ')');
+    }
+
+    // ========================================
+    // ★ 自動儲存表單資料
+    // ========================================
+    function autoSaveSafetyData() {
+        if (!currentDoc) return;
+        currentDoc.safetyFormData = safetyFormData;
+        try {
+            sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
+        } catch (e) {}
+    }
+
     // ---------- 核心渲染函數 ----------
     function renderPage(pageNum) {
         if (!pdfDoc) {
@@ -179,7 +425,7 @@
             drawCanvas.style.height = cssViewport.height + 'px';
             
             const renderContext = { canvasContext: ctx, viewport: viewport };
-            page.render(renderContext).promise.then(() => {
+                page.render(renderContext).promise.then(() => {
                 alignDrawCanvas();
                 currentPageSpan.textContent = pageNum;
                 currentPage = pageNum;
@@ -196,6 +442,9 @@
                 });
                 
                 updateZoomLevel();
+
+                // ★ 加入呢行：注入固定表單
+                injectSafetyFormFields(pageNum);
             });
         });
     }
@@ -961,6 +1210,7 @@
         });
         
         currentDoc.annotations = annotations;
+        currentDoc.safetyFormData = safetyFormData;
         
         const STORAGE_KEY = 'inspectionData';
         let inspectionData = [];
@@ -1018,6 +1268,7 @@
         
         // 更新状态
         currentDoc.annotations = annotations;
+        currentDoc.safetyFormData = safetyFormData; 
         currentDoc.status = 'submitted-wsg';
         
         // 更新界面
@@ -1113,7 +1364,13 @@
         // if (approveBtn) approveBtn.style.display = 'none';
         // if (rejectBtn) rejectBtn.style.display = 'none';
 
-        let pdfSrc = doc.pdfData ? 'data:application/pdf;base64,' + doc.pdfData : (doc.pdfUrl || null);
+       let pdfSrc = doc.pdfData ? 'data:application/pdf;base64,' + doc.pdfData : (doc.pdfUrl || null);
+
+        // ★ 如果冇 pdfData，用 Safety Inspection 固定模板
+        if (!pdfSrc && window.SAFETY_TEMPLATE_BASE64) {
+            console.log('[SafetyEdit] 使用 Safety Inspection 固定模板');
+            pdfSrc = 'data:application/pdf;base64,' + window.SAFETY_TEMPLATE_BASE64;
+        }
         if (pdfSrc) loadPDF(pdfSrc);
         else {
             canvas.style.display = 'none';

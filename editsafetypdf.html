@@ -124,95 +124,7 @@
             opacity: 0.6;
             cursor: not-allowed;
         }
-        /* Ribbon 工具栏 */
-        .pdf-toolbar-ribbon {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px 20px;
-            background: #f8fafc;
-            padding: 8px 16px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            border: 1px solid #e2e8f0;
-            align-items: center;
-        }
-        .ribbon-group {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 8px;
-            border-right: 1px solid #e2e8f0;
-        }
-        .ribbon-group:last-child {
-            border-right: none;
-        }
-        .ribbon-group-label {
-            font-size: 11px;
-            font-weight: 600;
-            color: #64748b;
-            margin-right: 4px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        .tool-btn {
-            padding: 4px 10px;
-            border: 1px solid transparent;
-            background: transparent;
-            border-radius: 4px;
-            font-size: 12px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            color: #1e293b;
-            transition: 0.15s;
-            white-space: nowrap;
-        }
-        .tool-btn:hover {
-            background: #eef2f6;
-            border-color: #d1d9e6;
-        }
-        .tool-btn.active {
-            background: #2d7ee7;
-            color: #fff;
-            border-color: #2d7ee7;
-        }
-        .tool-btn i {
-            font-size: 13px;
-        }
-        .property-controls {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-            padding: 4px 0;
-        }
-        .property-group {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 12px;
-            color: #475569;
-        }
-        .property-group label {
-            font-weight: 500;
-        }
-        .property-group input[type="color"] {
-            width: 24px;
-            height: 24px;
-            border: 1px solid #d1d9e6;
-            border-radius: 4px;
-            padding: 2px;
-            cursor: pointer;
-        }
-        .property-group input[type="range"] {
-            width: 60px;
-            cursor: pointer;
-        }
-        .property-group span {
-            min-width: 28px;
-            font-size: 11px;
-        }
+        
         /* 隐藏 Zoom 按钮 */
         .pdf-controls .zoom-controls {
             display: none !important;
@@ -284,33 +196,6 @@
                 <div class="meta-item"><span class="meta-label">Inspector:</span><span class="meta-value" id="docInspector">N/A</span></div>
             </div>
 
-            <!-- Ribbon 工具栏 -->
-            <div class="pdf-toolbar-ribbon">
-                <div class="ribbon-group">
-                    <span class="ribbon-group-label">Select</span>
-                    <button class="tool-btn active" data-tool="select"><i class="fas fa-mouse-pointer"></i> Select</button>
-                </div>
-                <div class="ribbon-group">
-                    <span class="ribbon-group-label">Annotate</span>
-                    <button class="tool-btn" data-tool="text"><i class="fas fa-font"></i> Text</button>
-                    <button class="tool-btn" data-tool="highlight"><i class="fas fa-highlighter"></i> Highlight</button>
-                </div>
-                <div class="ribbon-group">
-                    <span class="ribbon-group-label">Shapes</span>
-                    <button class="tool-btn" data-tool="rectangle"><i class="fas fa-square"></i> Rect</button>
-                    <button class="tool-btn" data-tool="ellipse"><i class="fas fa-circle"></i> Oval</button>
-                    <button class="tool-btn" data-tool="arrow"><i class="fas fa-arrow-right"></i> Arrow</button>
-                    <button class="tool-btn" data-tool="line"><i class="fas fa-minus"></i> Line</button>
-                </div>
-                <div class="ribbon-group" style="flex:1; justify-content:flex-end;">
-                    <div class="property-controls">
-                        <div class="property-group"><label>Color:</label><input type="color" id="color-picker" value="#3498db"></div>
-                        <div class="property-group"><label>Size:</label><input type="range" id="size-slider" min="1" max="10" value="3"><span id="size-value">3px</span></div>
-                        <div class="property-group"><label>Opacity:</label><input type="range" id="opacity-slider" min="10" max="100" value="100"><span id="opacity-value">100%</span></div>
-                    </div>
-                </div>
-            </div>
-
             <div class="pdf-editor-container">
                 <div class="pdf-controls">
                     <button class="nav-btn" id="prev-page"><i class="fas fa-chevron-left"></i></button>
@@ -332,6 +217,7 @@
 
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
+    <script src="scripts/safety-template-data.js"></script>
     <script src="scripts/editsafetypdf.js"></script>
 
     <script>

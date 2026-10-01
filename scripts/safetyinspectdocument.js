@@ -263,6 +263,13 @@
         annotations = loadAnnotationsFromStorage(currentDocId);
 
         let pdfSrc = documentData.pdfData || documentData.pdfUrl || null;
+
+        // ★ 如果冇 pdfData，用 Safety Inspection 固定模板
+        if (!pdfSrc && window.SAFETY_TEMPLATE_BASE64) {
+            console.log('[SafetyDoc] 使用 Safety Inspection 固定模板');
+            pdfSrc = window.SAFETY_TEMPLATE_BASE64;
+        }
+
         if (!pdfSrc) {
             loadingEl.style.display = 'none';
             noPdfEl.style.display = 'block';
