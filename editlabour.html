@@ -43,10 +43,6 @@
         .btn-save { background: #2ecc71; } .btn-save:hover { background: #27ae60; }
         .btn-cancel { background: #e74c3c; } .btn-cancel:hover { background: #c0392b; }
         .btn-submit { background: #28a745; } .btn-submit:hover { background: #218838; }
-        .btn-excel-dl { background: #217346; } .btn-excel-dl:hover { background: #185c37; }
-        .btn-excel-ul { background: #6b7280; } .btn-excel-ul:hover { background: #4b5563; }
-        .btn-excel-dl, .btn-excel-ul { display: none; }  /* 只有 GF527-2017 才顯示 */
-        .btn-excel-dl.visible, .btn-excel-ul.visible { display: inline-flex; }
 
         .document-meta { background: #f8f9fa; border-radius: 12px; padding: 20px 30px; margin: 20px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
         .meta-item { display: flex; flex-direction: column; }
@@ -65,78 +61,82 @@
         .page-input { -moz-appearance: textfield; }
         .page-input-hint { font-size: 11px; color: #94a3b8; font-style: italic; margin-left: 4px; }
 
-        .pdf-canvas-container { position: relative; background: #e0e0e0; border-radius: 8px; padding: 24px; display: flex; justify-content: center; align-items: flex-start; overflow: auto; min-height: 500px; }
-        .pdf-page { position: relative; display: block; box-shadow: 0 4px 12px rgba(0,0,0,0.2); background: #fff; border: 3px solid transparent; overflow: hidden; }
+        /* ★ 縮放控制樣式 */
+        .zoom-separator { display: inline-block; width: 1px; height: 26px; background: #cbd5e1; margin: 0 6px; vertical-align: middle; }
+        .zoom-level {
+            font-size: 13px; font-weight: 700; color: #1e40af;
+            min-width: 52px; text-align: center; display: inline-block;
+            padding: 4px 6px; background: #fff; border-radius: 4px;
+            border: 1px solid #cbd5e1;
+        }
+        .zoom-btn { padding: 8px 12px; min-width: 40px; }
+
+        /* ★ 容器：改 text-align:center + overflow:auto（縮放後左側不會被裁） */
+        .pdf-canvas-container {
+            position: relative;
+            background: #e0e0e0;
+            border-radius: 8px;
+            padding: 24px;
+            overflow: auto;
+            min-height: 500px;
+            text-align: center;
+        }
+        #page-wrapper { display: inline-block; text-align: left; }
+
+        .pdf-page { position: relative; display: block; box-shadow: 0 4px 12px rgba(0,0,0,0.2); background: #fff; border: 3px solid transparent; overflow: hidden; margin: 0 auto; }
         .pdf-page.active-page { border-color: #3498db; }
         .pdf-bg { display: block; width: 100%; height: 100%; pointer-events: none; user-select: none; }
 
         .loading-indicator { display: none; justify-content: center; align-items: center; gap: 10px; padding: 40px; color: #2563eb; font-weight: 600; background: #eff6ff; border-radius: 8px; }
         .loading-indicator.visible { display: flex; }
 
-        /* ★ GF527-2017 疊加格子 ★ */
-        .gf527-overlay {
+                /* 先全部套用 6px */
+        .pdf-form-overlay .pdf-field[data-field-id^="g17_"] { font-size: 6px !important; }
+
+        /* 再針對 01~116 覆蓋回你原本的字體大小 */
+        .pdf-form-overlay .pdf-field[data-field-id="g17_01"] { font-size: 11px !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_02"] { font-size: 11px !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_05"] { font-size: 11px !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_06"] { font-size: 11px !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_07"] { font-size: 11px !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_08"] { font-size: 11px !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_03"] { font-size: 8px !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_04"] { font-size: 8px !important; }
+
+
+        /* ★ 表單覆蓋層 */
+        .pdf-form-overlay {
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
             z-index: 30;
             pointer-events: none;
         }
-        .gf527-overlay .gf527-field {
+        .pdf-form-overlay .pdf-field {
             position: absolute;
-            border: 1px solid rgba(52,152,219,0.35);
-            background: rgba(255, 251, 234, 0.85);
+            border: 1px solid rgba(52, 152, 219, 0.3);
+            background: rgba(255, 255, 255, 0.15);
             outline: none;
-            font-family: Arial, 'Segoe UI', sans-serif;
+            font-family: Arial, sans-serif;
             color: #0a1a5c;
-            font-size: 9px;
-            padding: 0 2px;
+            font-size: 11px;
+            padding: 1px 3px;
             box-sizing: border-box;
             pointer-events: auto;
-            text-align: center;
-            border-radius: 2px;
-            transition: background 0.12s, box-shadow 0.12s;
+            line-height: 1.2;
+            resize: none;
+            overflow: hidden;
+            transition: background 0.12s ease, box-shadow 0.12s ease;
         }
-        .gf527-overlay .gf527-field:hover {
+        .pdf-form-overlay .pdf-field:hover {
             background: rgba(52, 152, 219, 0.15);
             box-shadow: inset 0 0 0 1px #3498db;
         }
-        .gf527-overlay .gf527-field:focus {
-            background: #fffbe6;
+        .pdf-form-overlay .pdf-field:focus {
+            background: rgba(255, 251, 234, 0.95);
             box-shadow: inset 0 0 0 2px #3498db;
-            z-index: 3;
-            font-size: 11px;
-        }
-        .gf527-overlay .gf527-field.header-field {
-            font-size: 10px;
-            text-align: left;
-        }
-        .gf527-overlay .gf527-cell-grid {
-            position: absolute;
-            display: grid;
-            pointer-events: none;
-        }
-        .gf527-overlay .gf527-cell-grid input {
-            border: 1px solid rgba(52,152,219,0.25);
-            background: rgba(255, 251, 234, 0.7);
-            outline: none;
-            font-size: 8px;
-            text-align: center;
-            color: #0a1a5c;
-            padding: 0;
-            font-family: Arial, sans-serif;
-            width: 100%; height: 100%;
-            box-sizing: border-box;
-            pointer-events: auto;
-            border-radius: 1px;
-        }
-        .gf527-overlay .gf527-cell-grid input:hover {
-            background: rgba(52,152,219,0.2);
-        }
-        .gf527-overlay .gf527-cell-grid input:focus {
-            background: #fffbe6;
-            box-shadow: inset 0 0 0 2px #3498db;
-            z-index: 5;
-            position: relative;
+            z-index: 2;
+            overflow: auto;
         }
 
         footer { text-align: center; padding: 30px 0 20px; color: #7f8c8d; border-top: 1px solid #e0e6ed; margin-top: 30px; }
@@ -183,15 +183,6 @@
                     <button class="btn" id="approve-btn" style="display:none; background:#27ae60;"><i class="fas fa-check-circle"></i> Approve</button>
                     <button class="btn btn-cancel" id="reject-btn" style="display:none; background:#c0392b;"><i class="fas fa-times-circle"></i> Reject</button>
 
-                    <!-- ★ GF527-2017 專用：Excel 下載 / 上傳（在 Save Changes 附近） ★ -->
-                    <button class="btn btn-excel-dl" id="download-excel-btn" title="下載 Excel 檔案">
-                        <i class="fas fa-file-excel"></i> Download Excel
-                    </button>
-                    <button class="btn btn-excel-ul" id="upload-excel-btn" title="上傳編輯後的 Excel 檔案">
-                        <i class="fas fa-upload"></i> Upload Excel
-                    </button>
-                    <input type="file" id="upload-excel-input" accept=".xlsx,.xls" style="display:none">
-
                     <button class="btn btn-save" id="save-btn"><i class="fas fa-save"></i> Save Changes</button>
                     <button class="btn btn-cancel" id="cancel-btn"><i class="fas fa-times"></i> Cancel</button>
                     <button class="btn btn-primary" id="back-btn"><i class="fas fa-arrow-left"></i> Back</button>
@@ -217,6 +208,13 @@
                     </span>
                     <span id="current-page" style="display:none;">1</span>
                     <button class="nav-btn" id="next-page" title="下一頁"><i class="fas fa-chevron-right"></i></button>
+
+                    <!-- ★ 縮放控制 -->
+                    <span class="zoom-separator"></span>
+                    <button class="nav-btn zoom-btn" id="zoom-out-btn" title="縮小"><i class="fas fa-search-minus"></i></button>
+                    <span class="zoom-level" id="zoom-level">100%</span>
+                    <button class="nav-btn zoom-btn" id="zoom-in-btn" title="放大"><i class="fas fa-search-plus"></i></button>
+                    <button class="nav-btn zoom-btn" id="zoom-reset-btn" title="重設 100%"><i class="fas fa-compress"></i></button>
                 </div>
 
                 <div class="pdf-canvas-container" id="pdf-container">
@@ -270,6 +268,8 @@
     </script>
 
     <script src="scripts/GF527A-data.js"></script>
+    <!-- ★ 內嵌 GF527-2003 PDF base64 ★ -->
+    <script src="scripts/GF527_2003-data.js"></script>
     <script src="scripts/editlabour.js"></script>
 
     <script>

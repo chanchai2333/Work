@@ -12,6 +12,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- ★ 內嵌 GF527-2003 PDF base64 ★ -->
+    <script src="scripts/GF527_2003-data.js"></script>
 </head>
 <body>
     <div class="main-content">
@@ -107,10 +110,10 @@
         <div class="modal-content">
             <h3>Add New Wage Record</h3>
             <form id="add-wage-form" enctype="multipart/form-data">
-                <!-- ★ 新增：Document ID（唯讀） -->
+                <!-- ★ Document ID（可編輯） -->
                 <label>Document ID</label>
-                <input type="text" id="input-doc-id" readonly
-                       style="background:#f1f5f9; color:#1e40af; font-weight:700; cursor:not-allowed;">
+                <input type="text" id="input-doc-id"
+                       style="color:#1e40af; font-weight:700;">
 
                 <label>Document Type</label>
                 <select id="input-type" required>
@@ -220,11 +223,10 @@
                規則：掃描所有現有記錄的 ID，找最大數字 +1
                ============================================ */
             function generateNextLabourWageId() {
-                var ID_PREFIX = 'LRR/XX/';   // ← 若日後要改動態年份，改這裡
+                var ID_PREFIX = 'LRR/XX/';
                 var ID_SUFFIX = 'A';
                 var ID_PAD    = 6;
 
-                // 轉義正則特殊字元
                 var escaped = ID_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 var re = new RegExp('^' + escaped + '(\\d+)[A-Za-z]?$');
 
@@ -350,6 +352,8 @@
 
             /* ============================================
                ★ 確保模板已載入並存入 sessionStorage
+               ------------------------------------------------------------
+               ★ GF527-2003 優先使用內嵌 base64（GF527_2003-data.js）
                ============================================ */
             async function ensureTemplateLoaded(type) {
                 if (!type) type = 'GF527A';
@@ -360,6 +364,19 @@
                     sessionStorage.setItem('DEFAULT_PDF_TEMPLATE', cached);
                     console.log('[LabourWage] ✓ 使用快取模板：' + type);
                     return cached;
+                }
+
+                // ★ GF527-2003：優先使用內嵌 base64
+                if (type === 'GF527-2003') {
+                    var embedded2003 = window.GF527_2003_BASE64;
+                    if (embedded2003 && embedded2003.length > 100) {
+                        sessionStorage.setItem('labour_template_' + type, embedded2003);
+                        sessionStorage.setItem('DEFAULT_PDF_TEMPLATE', embedded2003);
+                        console.log('[LabourWage] ✓ 使用內嵌 GF527-2003 base64 (' +
+                                    (embedded2003.length / 1024).toFixed(0) + ' KB)');
+                        return embedded2003;
+                    }
+                    console.warn('[LabourWage] ✗ 找不到 GF527_2003_BASE64，將 fallback 回 XLS 轉換');
                 }
 
                 var file = TEMPLATE_FILES[type];
@@ -540,7 +557,7 @@
                         modal.style.display = 'flex';
                         addForm.reset();
 
-                        // ★ 自動生成 Document ID（顯示在唯讀欄位）
+                        // ★ 自動生成 Document ID（可編輯，使用者可修改）
                         var docIdInput = document.getElementById('input-doc-id');
                         if (docIdInput) {
                             docIdInput.value = generateNextLabourWageId();
@@ -577,7 +594,7 @@
                             catch (err) { alert('Failed to read PDF file.'); return; }
                         }
 
-                        /* ★ 從表單讀取自動生成的 ID（保險起見，若空則重新生成） */
+                        /* ★ 從表單讀取 ID（使用者可手動修改） */
                         var docIdInput = document.getElementById('input-doc-id');
                         var newId = (docIdInput && docIdInput.value.trim())
                             ? docIdInput.value.trim()
@@ -585,7 +602,8 @@
 
                         /* 防止 ID 重複 */
                         if (wageData.some(function(r) { return String(r.id) === String(newId); })) {
-                            newId = generateNextLabourWageId();
+                            alert('Document ID 已存在，請使用其他 ID。');
+                            return;
                         }
 
                         var typeText = "";
@@ -678,32 +696,30 @@
                 var record = wageData.find(function(r) { return r.id === wageId; });
                 if (!record) { alert('Record not found'); return; }
             
-                // ★ 查看改為跳到 labourdocument.html（不需預轉模板，讓檢視頁自己處理）
                 sessionStorage.setItem('currentWageRecord', JSON.stringify(record));
                 sessionStorage.setItem('viewDocument', JSON.stringify(record));
                 window.location.href = 'labourdocument.html';
             }
             
-        async function handleEdit(e) {
-            var wageId = e.currentTarget.getAttribute('data-id');
-            var record = wageData.find(function(r) { return r.id === wageId; });
-            if (!record) { alert('Record not found'); return; }
-        
-            // Edit 維持原樣，進編輯頁
-            var btn = e.currentTarget;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            btn.disabled = true;
-        
-            try {
-                await ensureTemplateLoaded(record.type);
-            } catch (err) {
-                console.warn('[LabourWage] 模板載入失敗：', err);
-                sessionStorage.removeItem('DEFAULT_PDF_TEMPLATE');
+            async function handleEdit(e) {
+                var wageId = e.currentTarget.getAttribute('data-id');
+                var record = wageData.find(function(r) { return r.id === wageId; });
+                if (!record) { alert('Record not found'); return; }
+            
+                var btn = e.currentTarget;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                btn.disabled = true;
+            
+                try {
+                    await ensureTemplateLoaded(record.type);
+                } catch (err) {
+                    console.warn('[LabourWage] 模板載入失敗：', err);
+                    sessionStorage.removeItem('DEFAULT_PDF_TEMPLATE');
+                }
+            
+                sessionStorage.setItem('currentWageRecord', JSON.stringify(record));
+                window.location.href = 'editlabour.html';
             }
-        
-            sessionStorage.setItem('currentWageRecord', JSON.stringify(record));
-            window.location.href = 'editlabour.html';
-        }
             
             function handleDelete(e) {
                 var wageId = e.currentTarget.getAttribute('data-id');
