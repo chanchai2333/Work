@@ -1464,7 +1464,7 @@
             }
 
              if (docType === 'GF527-2017') {
-                var e2 = window.GF527_2017_BASE64 || window.GF527_REV_1_2017_PROTECTED_FONT_SIZE_26_BASE64;
+                var e2 = window.GF527_2017_BASE64;
                 if (e2 && e2.length > 100) {
                     console.log('[Labour] ✓ 使用內嵌 GF527-2017 base64 (' + (e2.length/1024).toFixed(0) + ' KB)');
                     resolve(e2); return;
