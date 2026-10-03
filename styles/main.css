@@ -2631,78 +2631,34 @@ body.dark-theme .content-section {
   position: relative;
 }
 
-/* === FORCE NO CONTENT SHIFT WHEN SIDEBAR TOGGLES === */
-.main-content {
-    margin-left: 0 !important;
-    width: 100% !important;
-}
-
-.sidebar.collapsed + .main-content,
-.sidebar + .main-content {
-    margin-left: 0 !important;
-    width: 100% !important;
-}
-
-/* ===== FIX: Sidebar overlay content issue ===== */
-
-/* Sidebar sizes */
+/* ===== 側邊欄固定、主內容永遠不位移的乾淨版本 ===== */
 .sidebar {
-    width: 260px;
     position: fixed;
-    left: 0;
-    top: 0;
-    bottom: 0;
+    left: 0; top: 0; bottom: 0;
+    width: 260px;
     z-index: 1000;
+    transition: width 0.3s ease;
 }
+.sidebar.collapsed { width: 70px; }
 
-.sidebar.collapsed {
-    width: 70px;
-}
-
-/* Main content always full width, but padded */
 .main-content {
-    margin-left: 0 !important;
-    padding-left: 260px;   /* 預留 sidebar 空間 */
-    width: 100% !important;
-    transition: padding-left 0.3s ease;
-    box-sizing: border-box;
+    margin-left: 260px;              /* 推開 260px */
+    width: calc(100% - 260px);
+    transition: margin-left 0.3s ease, width 0.3s ease;
 }
 
-/* Sidebar collapsed → reduce padding */
-.sidebar.collapsed ~ .main-content {
-    padding-left: 70px;
+.sidebar.collapsed ~ .main-content,
+.sidebar.collapsed + .main-content {
+    margin-left: 70px;
+    width: calc(100% - 70px);
 }
 
-/* Mobile */
 @media (max-width: 768px) {
-    .main-content {
-        padding-left: 0;
+    .main-content,
+    .sidebar.collapsed ~ .main-content {
+        margin-left: 0;
+        width: 100%;
     }
-
-    .sidebar {
-        transform: translateX(-100%);
-    }
-
-    .sidebar.collapsed {
-        transform: translateX(0);
-    }
-}
-
-/* === BUGFIX #1: Prevent sitediary page shift === */
-
-/* main-content 永遠不被 sidebar 推移 */
-.main-content {
-    margin-left: 0 !important;
-    transform: none !important;
-}
-
-/* 明確禁止 sidebar 影響 main-content 位移 */
-.sidebar + .main-content,
-.sidebar ~ .main-content,
-.sidebar.collapsed + .main-content,
-.sidebar.collapsed ~ .main-content {
-    margin-left: 0 !important;
-    transform: none !important;
 }
 
 /* 侧边栏底部退出按钮样式 */
