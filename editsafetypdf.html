@@ -137,9 +137,7 @@
     </style>
 </head>
 <body>
-    <!-- 侧边栏 -->
     <div class="sidebar">
-        <!-- 替换为 AEL Logo.png -->
         <div class="logo">
             <img src="AEL Logo.png" alt="AEL Logo" class="logo-img" style="height: 45px; width: auto; object-fit: contain; margin-right: 8px;">
             <h2>DWSS</h2>
@@ -156,7 +154,6 @@
         </ul>
     </div>
 
-    <!-- 主内容 -->
     <div class="main-content">
         <div class="header">
             <h1 data-i18n="safety.inspection">Safety Inspection</h1>
@@ -174,7 +171,6 @@
                 <div class="document-actions">
                     <button class="btn btn-submit" id="submit-btn"><i class="fas fa-paper-plane"></i> Submit</button>
                     
-                    <!-- 【已去除隐藏属性，默认完全显示】 -->
                     <button class="btn" id="approve-btn" style="background: #27ae60; color: white;">
                         <i class="fas fa-check-circle"></i> Approve
                     </button>
@@ -217,7 +213,8 @@
 
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
-    <script src="scripts/safety-template-data.js"></script>
+    <!-- ★ 改用 SafetyInspection-data.js（變數名：SAFETY_INSPECTION_BASE64） -->
+    <script src="scripts/SafetyInspection-data.js"></script>
     <script src="scripts/editsafetypdf.js"></script>
 
     <script>
