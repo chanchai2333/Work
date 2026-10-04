@@ -78,8 +78,19 @@
             { letter: 'C.i5', page: 1, startY: '93.00%', rowHeight: '2.18%', cellHeight: '2.12%', itemCount: 1 },
             { letter: 'C.i6', page: 2, startY: '14.50%', rowHeight: '2.18%', cellHeight: '2.12%', itemCount: 1 },
             { letter: 'C.ii1to4', page: 2, startY: '18.40%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
-            { letter: 'C.ii5to6', page: 2, startY: '26.40%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 10 },
-            
+            { letter: 'C.ii5to6', page: 2, startY: '28.40%', rowHeight: '4.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'C.ii7to8', page: 2, startY: '36.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'C.ii9', page: 2, startY: '41.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'C.iii1to2', page: 2, startY: '48.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'C.iii3', page: 2, startY: '54.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'C.iii4to7', page: 2, startY: '57.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'C.iii8', page: 2, startY: '67.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'C.iii9to10', page: 2, startY: '71.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'D.1to4', page: 2, startY: '79.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'D.5', page: 2, startY: '89.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'D.6to7', page: 2, startY: '92.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
+
+
         ]
     };
 
