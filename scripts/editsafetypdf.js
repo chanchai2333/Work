@@ -78,7 +78,7 @@
             { letter: 'C.i5', page: 1, startY: '93.00%', rowHeight: '2.18%', cellHeight: '2.12%', itemCount: 1 },
             { letter: 'C.i6', page: 2, startY: '14.50%', rowHeight: '2.18%', cellHeight: '2.12%', itemCount: 1 },
             { letter: 'C.ii1to4', page: 2, startY: '18.40%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
-            { letter: 'C.ii5to6', page: 2, startY: '21.40%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'C.ii5to6', page: 2, startY: '26.40%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 10 },
             
         ]
     };
