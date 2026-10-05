@@ -89,6 +89,10 @@
             { letter: 'D.1to4', page: 2, startY: '79.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
             { letter: 'D.5', page: 2, startY: '89.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
             { letter: 'D.6to7', page: 2, startY: '92.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'D.8to12', page: 3, startY: '14.10%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 5 },
+            { letter: 'D.13to14', page: 3, startY: '26.20%', rowHeight: '5.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'D.13to14', page: 3, startY: '26.20%', rowHeight: '5.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'E.1to4', page: 3, startY: '40.80%', rowHeight: '4.18%', cellHeight: '2.18%', itemCount: 4 },
 
 
         ]
