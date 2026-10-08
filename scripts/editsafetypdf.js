@@ -1,14 +1,17 @@
 /**
  * editsafetypdf.js - PDF 編輯頁面 (Safety Inspection)
  * 新增 Submit 功能：將 draft 狀態改為 submitted-wsg
- * ★ 格子建立方式參考 editlabour.js：
- *   - 集中式 CSS (ensureSafetyFormStyle)
- *   - buildSafetyField / buildSafetyCheckbox / buildSafetyTextField 分派
- *   - group 屬性做單選控制 (radio-like)
- *   - 使用 .pdf-checkbox / .pdf-field 統一樣式
+ * ★ 格子建立方式參考 editlabour.js
  * ★ 修正：側邊欄展開/收起時表單格子會錯位
- *   - 新增 alignSafetyOverlay()，用 getBoundingClientRect 精確對齊 canvas
- *   - window.resize 與 ResizeObserver 都會重新對齊
+ * ★ Type checkbox 與 Header 都改為「按頁碼 (page)」配置
+ * ★ Header 支援 '*' 通用欄位 + 單頁覆蓋
+ * ★ Header 欄位支援多行輸入 (multiline: true → textarea)
+ * ★ Header 欄位支援手寫簽名 (sign: true → 點擊彈出 modal 手寫)
+ * ★ Header 欄位支援圖片上傳 (image: true → 點擊選檔，自動壓縮)
+ * ★ 修正 Save：參考 editdsdsitediary.js
+ *   - saveChanges 同步多個 sessionStorage key + 更新 localStorage 陣列
+ *   - loadDocumentData 從 localStorage 補全 sessionStorage 缺失的欄位
+ *     （避免列表頁覆蓋 editDocument 導致編輯內容讀不回來）
  */
 (function() {
     'use strict';
@@ -53,16 +56,56 @@
     // ★ Safety Inspection 固定表單 Layout
     // ========================================
     var SAFETY_LAYOUT = {
-        typeCheckboxes: [
-            { key: 'weekly', left: '27.72%', top: '17.00%', width: '1.08%', height: '0.89%' },
-            { key: 'daily',  left: '37.14%', top: '17.00%', width: '1.16%', height: '0.89%' },
-            { key: 'adhoc',  left: '44.72%', top: '17.00%', width: '1.17%', height: '0.83%' }
-        ],
+        typeCheckboxes: {
+            1: [
+                { key: 'weekly', left: '27.72%', top: '17.00%', width: '1.08%', height: '0.89%' },
+                { key: 'daily',  left: '37.14%', top: '17.00%', width: '1.16%', height: '0.89%' },
+                { key: 'adhoc',  left: '44.72%', top: '17.00%', width: '1.17%', height: '0.83%' }
+            ],
+        },
         header: {
-            location:  { left: '18.72%', top: '18.15%', width: '31.92%', height: '1.59%' },
-            taskOrder: { left: '63.64%', top: '18.15%', width: '29.58%', height: '1.71%' },
-            date:      { left: '15.89%', top: '20.00%', width: '34.75%', height: '1.59%' },
-            time:      { left: '56.30%', top: '20.00%', width: '37.00%', height: '1.65%' }
+            '*': {
+                Project:    { left: '55.00%', top: '4.50%',  width: '33.00%', height: '6.30%', multiline: true },
+                ContractNo: { left: '61.64%', top: '11.00%', width: '29.58%', height: '1.71%' },
+            },
+            1: {
+                location:  { left: '18.72%', top: '18.15%', width: '31.92%', height: '1.59%' },
+                taskOrder: { left: '63.64%', top: '18.15%', width: '29.58%', height: '1.71%' },
+                date:      { left: '15.89%', top: '20.00%', width: '34.75%', height: '1.59%' },
+                time:      { left: '56.30%', top: '20.00%', width: '37.00%', height: '1.65%' },
+            },
+            7: {
+                Detail:  { left: '10.72%', top: '52.15%', width: '80.92%', height: '25.59%', multiline: true},
+                Inspectedbyname1:  { left: '17.72%', top: '86.15%', width: '10.92%', height: '2.59%'},
+                Inspectedbypos1:   { left: '18.72%', top: '90.0%',  width: '10.92%', height: '2.59%'},
+                Inspectedbysign1:  { left: '19.72%', top: '92.5%', width: '10.92%', height: '4.5%', sign: true },
+                Inspectedbyname2:  { left: '47.72%', top: '86.15%', width: '10.92%', height: '2.59%'},
+                Inspectedbypos2:   { left: '48.72%', top: '90.0%',  width: '10.92%', height: '2.59%'},
+                Inspectedbysign2:  { left: '49.72%', top: '92.5%', width: '10.92%', height: '4.5%', sign: true },
+                Witnessbyname1:    { left: '77.72%', top: '86.15%', width: '10.92%', height: '2.59%'},
+                Witnessbypos1:     { left: '78.72%', top: '90.0%',  width: '10.92%', height: '2.59%'},
+                Witnessbysign1:    { left: '79.72%', top: '92.5%', width: '10.92%', height: '4.5%', sign: true },
+            },
+            8: {
+                PhotoNo1a: { left: '74.64%', top: '19.00%', width: '18.58%', height: '1.71%' },
+                location1: { left: '64.00%', top: '21.00%', width: '24.58%', height: '1.71%' },
+                Description1: { left: '64.00%', top: '23.00%',  width: '30.00%', height: '13.30%', multiline: true },
+                PhotoNo1b: { left: '74.64%', top: '37.00%', width: '18.58%', height: '1.71%' },
+                Action1: { left: '64.00%', top: '39.00%',  width: '30.00%', height: '5.30%', multiline: true },
+                Reportedby1: { left: '64.00%', top: '45.50%', width: '24.58%', height: '1.71%' },
+                Completiondate1: { left: '64.00%', top: '48.00%',  width: '30.00%', height: '5.30%', multiline: true },
+                PhotoNo2a: { left: '74.64%', top: '56.00%', width: '18.58%', height: '1.71%' },
+                location2: { left: '64.00%', top: '58.00%', width: '24.58%', height: '1.71%' },
+                Description2: { left: '64.00%', top: '60.00%',  width: '30.00%', height: '13.30%', multiline: true },
+                PhotoNo2b: { left: '74.64%', top: '74.00%', width: '18.58%', height: '1.71%' },
+                Action2: { left: '64.00%', top: '76.00%',  width: '30.00%', height: '5.30%', multiline: true },
+                Reportedby2: { left: '64.00%', top: '82.50%', width: '24.58%', height: '1.71%' },
+                Completiondate2: { left: '64.00%', top: '85.00%',  width: '30.00%', height: '5.30%', multiline: true },
+                Photo1: { left: '11.00%', top: '18.50%', width: '38.00%', height: '18.00%', image: true },
+                Photo2: { left: '11.00%', top: '36.50%', width: '38.00%', height: '16.00%', image: true },
+                Photo3: { left: '11.00%', top: '55.70%', width: '38.00%', height: '18.00%', image: true },
+                Photo4: { left: '11.00%', top: '74.00%', width: '38.00%', height: '16.00%', image: true },
+            }
         },
         ratingColumns: {
             A:     { left: '67.67%', width: '5.00%' },
@@ -91,14 +134,43 @@
             { letter: 'D.6to7', page: 2, startY: '92.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
             { letter: 'D.8to12', page: 3, startY: '14.10%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 5 },
             { letter: 'D.13to14', page: 3, startY: '26.20%', rowHeight: '5.18%', cellHeight: '2.18%', itemCount: 2 },
-            { letter: 'D.13to14', page: 3, startY: '26.20%', rowHeight: '5.18%', cellHeight: '2.18%', itemCount: 2 },
             { letter: 'E.1to4', page: 3, startY: '40.80%', rowHeight: '4.18%', cellHeight: '2.18%', itemCount: 4 },
-
-
+            { letter: 'E.5to6', page: 3, startY: '56.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'E.7', page: 3, startY: '62.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'E.8to10', page: 3, startY: '66.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 3 },
+            { letter: 'E.11', page: 3, startY: '74.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'E.12', page: 3, startY: '76.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'E.13to16', page: 3, startY: '80.80%', rowHeight: '4.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'F.1to2', page: 4, startY: '18.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'F.3', page: 4, startY: '24.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'F.4to8', page: 4, startY: '27.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 5 },
+            { letter: 'F.9', page: 4, startY: '39.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'G.1', page: 4, startY: '49.00%', rowHeight: '2.18%', cellHeight: '15.18%', itemCount: 1 },
+            { letter: 'G.2to3', page: 4, startY: '69.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'G.4', page: 4, startY: '75.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'G.5', page: 4, startY: '80.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'G.6', page: 4, startY: '84.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'H.1to4', page: 5, startY: '17.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'H.5', page: 5, startY: '27.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'H.6', page: 5, startY: '30.50%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'I.1to10', page: 5, startY: '36.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 10 },
+            { letter: 'J.1to5', page: 5, startY: '61.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 6 },
+            { letter: 'J.7', page: 5, startY: '75.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'J.8', page: 5, startY: '78.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'J.9', page: 5, startY: '81.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'J.10', page: 5, startY: '85.50%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'K.1to3', page: 6, startY: '18.50%', rowHeight: '4.18%', cellHeight: '2.18%', itemCount: 3 },
+            { letter: 'K.4', page: 6, startY: '30.50%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'L.1to2', page: 6, startY: '36.50%', rowHeight: '4.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'L.3to6', page: 6, startY: '44.50%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'M.1', page: 6, startY: '57.50%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'M.2to5', page: 6, startY: '60.70%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'N.1to6', page: 6, startY: '73.70%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 6 },
+            { letter: 'O.1to5', page: 7, startY: '17.70%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 5 },
+            { letter: 'P.1to7', page: 7, startY: '31.70%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 7 },
         ]
     };
 
-    // 儲存表單資料
     var safetyFormData = {
         type: '',
         header: {},
@@ -138,44 +210,89 @@
         return map[status] || status || 'Draft';
     }
 
+    // ========================================
+    // ★ 讀取文件（參考 editdsdsitediary.js）
+    //   - 從多個 sessionStorage key 讀
+    //   - 用 localStorage 裡的完整記錄補全缺失字段
+    //     （避免列表頁只寫摘要到 editDocument 導致編輯內容讀不回來）
+    // ========================================
     function loadDocumentData() {
-        const editDocStr = sessionStorage.getItem('editDocument');
-        if (!editDocStr) return null;
+        var sources = ['editDocument', 'currentInspectionRecord', 'currentRecord'];
+        var doc = null;
+        for (var i = 0; i < sources.length; i++) {
+            var raw = sessionStorage.getItem(sources[i]);
+            if (!raw) continue;
+            try {
+                var d = JSON.parse(raw);
+                if (d && typeof d === 'object' && d.id) { doc = d; break; }
+            } catch (e) {}
+        }
+        if (!doc) return null;
+
+        // ★ 從 localStorage 找同一份記錄，補全 sessionStorage 缺少的字段
         try {
-            const doc = JSON.parse(editDocStr);
-            currentDoc = doc;
-            doc.submittedBy = doc.inspector || doc.submittedBy || 'N/A';
-            document.getElementById('docId').textContent = doc.id || 'N/A';
-            document.getElementById('docSite').textContent = doc.site || 'N/A';
-            document.getElementById('docDate').textContent = doc.date || 'N/A';
-            document.getElementById('docInspector').textContent = doc.inspector || 'N/A';
-            document.getElementById('docTitle').textContent = doc.site ? `${doc.site} - Safety Inspection` : 'Edit Safety Inspection';
-
-            // 显示状态
-            const statusDisplay = document.getElementById('docStatusDisplay');
-            if (statusDisplay) {
-                statusDisplay.textContent = getStatusText(doc.status);
-            }
-
-            // 设置 Submit 按钮状态
-            if (submitBtn) {
-                if (doc.status && doc.status !== 'draft') {
-                    submitBtn.disabled = true;
-                    submitBtn.title = 'Document already submitted';
-                } else {
-                    submitBtn.disabled = false;
-                    submitBtn.title = 'Submit this document to WSG';
+            var stored = localStorage.getItem('inspectionData');
+            if (stored) {
+                var list = JSON.parse(stored);
+                if (Array.isArray(list)) {
+                    var full = null;
+                    for (var k = 0; k < list.length; k++) {
+                        if (String(list[k].id) === String(doc.id)) { full = list[k]; break; }
+                    }
+                    if (full) {
+                        // ★ 合併策略：doc（sessionStorage 當前編輯態）優先；
+                        //   如果 doc 某個字段是 undefined / null，才用 full（localStorage）的值補上
+                        var merged = Object.assign({}, full);
+                        Object.keys(doc).forEach(function (key) {
+                            if (doc[key] !== undefined && doc[key] !== null) {
+                                merged[key] = doc[key];
+                            }
+                        });
+                        // ★ 針對關鍵字段，若 doc 沒有具體值則用 full
+                        if (!merged.safetyFormData && full.safetyFormData) {
+                            merged.safetyFormData = full.safetyFormData;
+                        }
+                        doc = merged;
+                    }
                 }
             }
+        } catch (e) { console.warn('[SafetyEdit] merge from localStorage failed', e); }
 
-            annotations = doc.annotations || [];
-            annotations.forEach((a, idx) => a._id = a._id || Date.now() + idx);
-            // ★ 還原已儲存嘅表單資料
-            if (doc.safetyFormData) {
-                safetyFormData = doc.safetyFormData;
+        currentDoc = doc;
+        doc.submittedBy = doc.inspector || doc.submittedBy || 'N/A';
+
+        var idEl = document.getElementById('docId');
+        if (idEl) idEl.textContent = doc.id || 'N/A';
+        var siteEl = document.getElementById('docSite');
+        if (siteEl) siteEl.textContent = doc.site || 'N/A';
+        var dateEl = document.getElementById('docDate');
+        if (dateEl) dateEl.textContent = doc.date || 'N/A';
+        var insEl = document.getElementById('docInspector');
+        if (insEl) insEl.textContent = doc.inspector || 'N/A';
+        var titleEl = document.getElementById('docTitle');
+        if (titleEl) titleEl.textContent = doc.site ? `${doc.site} - Safety Inspection` : 'Edit Safety Inspection';
+
+        const statusDisplay = document.getElementById('docStatusDisplay');
+        if (statusDisplay) {
+            statusDisplay.textContent = getStatusText(doc.status);
+        }
+
+        if (submitBtn) {
+            if (doc.status && doc.status !== 'draft') {
+                submitBtn.disabled = true;
+                submitBtn.title = 'Document already submitted';
+            } else {
+                submitBtn.disabled = false;
+                submitBtn.title = 'Submit this document to WSG';
             }
-            return doc;
-        } catch(e) { console.error(e); return null; }
+        }
+
+        annotations = doc.annotations || [];
+        annotations.forEach((a, idx) => a._id = a._id || Date.now() + idx);
+        if (doc.safetyFormData) {
+            safetyFormData = doc.safetyFormData;
+        }
+        return doc;
     }
 
     function showError(msg) {
@@ -199,7 +316,7 @@
         pdfjsLib.getDocument(pdfSource).promise.then(pdf => {
             pdfDoc = pdf;
             totalPages = pdf.numPages;
-            totalPagesSpan.textContent = pdf.numPages;
+            if (totalPagesSpan) totalPagesSpan.textContent = pdf.numPages;
             currentPage = 1;
             renderPage(currentPage);
         }).catch(err => {
@@ -220,7 +337,7 @@
     }
 
     // ========================================
-    // ★ 表單欄位 CSS（參考 editlabour.js 的 ensureCheckboxStyle）
+    // ★ 表單欄位 CSS
     // ========================================
     function ensureSafetyFormStyle() {
         if (document.getElementById('safety-pdf-form-style')) return;
@@ -246,12 +363,72 @@
             '}' +
             '.safety-form-overlay .pdf-field:focus {' +
                 'background: rgba(255,251,234,0.98);box-shadow: inset 0 0 0 2px #3498db;' +
+            '}' +
+            '.safety-form-overlay textarea.pdf-field {' +
+                'resize: none;white-space: pre-wrap;word-wrap: break-word;' +
+                'overflow: auto;line-height: 1.3;padding: 2px 4px;' +
+            '}' +
+            '.safety-form-overlay .pdf-sign {' +
+                'position: absolute;border:1px dashed rgba(52,152,219,0.6);' +
+                'background: rgba(255,255,255,0.4);box-sizing:border-box;' +
+                'pointer-events: auto;border-radius: 2px;overflow: hidden;' +
+                'cursor: pointer;display: flex;align-items: center;justify-content: center;' +
+                'transition: background 0.12s ease, box-shadow 0.12s ease;' +
+            '}' +
+            '.safety-form-overlay .pdf-sign:hover {' +
+                'background: rgba(52,152,219,0.12);box-shadow: inset 0 0 0 1px #3498db;' +
+            '}' +
+            '.safety-form-overlay .pdf-sign .signature-img {' +
+                'max-width: 100%;max-height: 100%;width: 100%;height: 100%;' +
+                'object-fit: contain;pointer-events: none;display: block;transform: scale(1.15);' +
+            '}' +
+            '.safety-form-overlay .pdf-sign .signature-placeholder {' +
+                'font-size: 9px;color: #cbd5e1;font-style: italic;user-select: none;pointer-events: none;' +
+            '}' +
+            '.safety-form-overlay .pdf-sign .pdf-sign-clear {' +
+                'position: absolute;top: 1px;right: 1px;width: 14px;height: 14px;' +
+                'border: none;border-radius: 50%;background: #e74c3c;color: #fff;' +
+                'font-size: 11px;line-height: 12px;text-align: center;padding: 0;' +
+                'cursor: pointer;display: none;z-index: 2;' +
+            '}' +
+            '.safety-form-overlay .pdf-sign:hover .pdf-sign-clear {display: block;}' +
+            '.safety-form-overlay .pdf-image {' +
+                'position: absolute;border:1px dashed rgba(52,152,219,0.6);' +
+                'background: rgba(255,255,255,0.4);box-sizing:border-box;' +
+                'pointer-events: auto;border-radius: 2px;overflow: hidden;' +
+                'cursor: pointer;display: flex;align-items: center;justify-content: center;' +
+                'transition: background 0.12s ease, box-shadow 0.12s ease;' +
+            '}' +
+            '.safety-form-overlay .pdf-image:hover {' +
+                'background: rgba(52,152,219,0.12);box-shadow: inset 0 0 0 1px #3498db;' +
+            '}' +
+            '.safety-form-overlay .pdf-image .image-preview {' +
+                'max-width: 100%;max-height: 100%;width: 100%;height: 100%;' +
+                'object-fit: contain;pointer-events: none;display: block;' +
+            '}' +
+            '.safety-form-overlay .pdf-image .image-placeholder {' +
+                'font-size: 9px;color: #94a3b8;font-style: italic;user-select: none;' +
+                'pointer-events: none;display: flex;flex-direction: column;align-items: center;' +
+                'gap: 2px;line-height: 1.1;' +
+            '}' +
+            '.safety-form-overlay .pdf-image .image-placeholder i {font-size: 14px;color: #60a5fa;}' +
+            '.safety-form-overlay .pdf-image .pdf-image-clear {' +
+                'position: absolute;top: 1px;right: 1px;width: 16px;height: 16px;' +
+                'border: none;border-radius: 50%;background: #e74c3c;color: #fff;' +
+                'font-size: 12px;line-height: 14px;text-align: center;padding: 0;' +
+                'cursor: pointer;display: none;z-index: 2;' +
+            '}' +
+            '.safety-form-overlay .pdf-image:hover .pdf-image-clear {display: block;}' +
+            '.safety-form-overlay .pdf-image .pdf-image-loading {' +
+                'position: absolute;inset: 0;display: flex;align-items: center;' +
+                'justify-content: center;background: rgba(255,255,255,0.8);' +
+                'font-size: 10px;color: #3498db;z-index: 3;' +
             '}';
         document.head.appendChild(style);
     }
 
     // ========================================
-    // ★ 建立格子（參考 editlabour.js 的 buildField 模式）
+    // ★ 建立格子
     // ========================================
     function buildSafetyCheckbox(field) {
         var box = document.createElement('div');
@@ -269,7 +446,6 @@
         tick.textContent = '✓';
         box.appendChild(tick);
 
-        // 還原已選
         if (typeof field.isChecked === 'function' && field.isChecked()) {
             box.classList.add('checked');
         }
@@ -280,7 +456,6 @@
 
             var willCheck = !box.classList.contains('checked');
 
-            // group 單選：先清掉同組
             if (field.group) {
                 var overlay = box.closest('.safety-form-overlay');
                 if (overlay) {
@@ -291,11 +466,8 @@
                 }
             }
 
-            if (willCheck) {
-                box.classList.add('checked');
-            } else {
-                box.classList.remove('checked');
-            }
+            if (willCheck) box.classList.add('checked');
+            else box.classList.remove('checked');
 
             if (typeof field.onChange === 'function') field.onChange(willCheck);
             autoSaveSafetyData();
@@ -305,53 +477,456 @@
     }
 
     function buildSafetyTextField(field) {
-        var input = document.createElement('input');
-        input.type = field.type || 'text';
-        input.className = 'pdf-field';
-        input.dataset.fieldId = field.id;
-        if (field.label) {
-            input.placeholder = field.label;
-            input.title = field.label;
+        var el;
+        if (field.type === 'textarea') {
+            el = document.createElement('textarea');
+            el.rows = field.rows || 3;
+        } else {
+            el = document.createElement('input');
+            el.type = field.type || 'text';
         }
-        input.style.left = field.left;
-        input.style.top = field.top;
-        input.style.width = field.width || '8%';
-        input.style.height = field.height || '1.8%';
-        input.value = field.value || '';
-        input.autocomplete = 'off';
 
-        input.addEventListener('input', function () {
-            if (typeof field.onInput === 'function') field.onInput(input.value);
+        el.className = 'pdf-field';
+        el.dataset.fieldId = field.id;
+
+        if (field.label) {
+            el.placeholder = field.label;
+            el.title = field.label;
+        }
+        el.style.left = field.left;
+        el.style.top = field.top;
+        el.style.width = field.width || '8%';
+        el.style.height = field.height || '1.8%';
+        el.value = field.value || '';
+        el.autocomplete = 'off';
+
+        el.addEventListener('input', function () {
+            if (typeof field.onInput === 'function') field.onInput(el.value);
             autoSaveSafetyData();
         });
-        input.addEventListener('change', function () {
-            if (typeof field.onInput === 'function') field.onInput(input.value);
+        el.addEventListener('change', function () {
+            if (typeof field.onInput === 'function') field.onInput(el.value);
             autoSaveSafetyData();
         });
 
-        return input;
+        return el;
+    }
+
+    // ========================================
+    // ★ 簽名欄位
+    // ========================================
+    function buildSafetySignature(field) {
+        var wrap = document.createElement('div');
+        wrap.className = 'pdf-sign';
+        wrap.dataset.fieldId = field.id;
+        wrap.title = '點擊以簽名';
+        wrap.style.left = field.left;
+        wrap.style.top = field.top;
+        wrap.style.width = field.width || '10%';
+        wrap.style.height = field.height || '3%';
+
+        wrap._safetyField = field;
+
+        renderSignatureCellContent(wrap, field.value, field);
+
+        wrap.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+        wrap.addEventListener('touchstart', function (e) { e.stopPropagation(); }, { passive: true });
+
+        wrap.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            openSafetySignModal(field, wrap);
+        });
+
+        return wrap;
+    }
+
+    function renderSignatureCellContent(cell, value, field) {
+        cell.innerHTML = '';
+
+        if (value && typeof value === 'string' && value.indexOf('data:image') === 0) {
+            var img = document.createElement('img');
+            img.src = value;
+            img.className = 'signature-img';
+            img.alt = '簽名';
+            cell.appendChild(img);
+        } else {
+            var span = document.createElement('span');
+            span.className = 'signature-placeholder';
+            span.textContent = '點擊簽名';
+            cell.appendChild(span);
+        }
+
+        var clearBtn = document.createElement('button');
+        clearBtn.type = 'button';
+        clearBtn.className = 'pdf-sign-clear';
+        clearBtn.innerHTML = '×';
+        clearBtn.title = '清除簽名';
+        clearBtn.addEventListener('mousedown', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        clearBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (field) {
+                field.value = '';
+                if (typeof field.onInput === 'function') field.onInput('');
+                autoSaveSafetyData();
+            }
+            renderSignatureCellContent(cell, '', field);
+        });
+        cell.appendChild(clearBtn);
+    }
+
+    // ========================================
+    // ★ 圖片欄位
+    // ========================================
+    function buildSafetyImageField(field) {
+        var wrap = document.createElement('div');
+        wrap.className = 'pdf-image';
+        wrap.dataset.fieldId = field.id;
+        wrap.title = '點擊上傳圖片（自動壓縮至 < 1MB）';
+        wrap.style.left = field.left;
+        wrap.style.top = field.top;
+        wrap.style.width = field.width || '10%';
+        wrap.style.height = field.height || '5%';
+
+        wrap._safetyField = field;
+
+        renderImageCellContent(wrap, field.value, field);
+
+        wrap.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+        wrap.addEventListener('touchstart', function (e) { e.stopPropagation(); }, { passive: true });
+
+        wrap.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            var input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.style.display = 'none';
+
+            input.addEventListener('change', function () {
+                if (!input.files || !input.files[0]) return;
+                var file = input.files[0];
+
+                var loading = document.createElement('div');
+                loading.className = 'pdf-image-loading';
+                loading.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 壓縮中...';
+                wrap.appendChild(loading);
+
+                compressImage(file, 1600, 0.85, function (dataUrl) {
+                    if (loading.parentNode) loading.parentNode.removeChild(loading);
+                    if (!dataUrl) {
+                        alert('❌ 圖片處理失敗，請重新選擇。');
+                        return;
+                    }
+                    field.value = dataUrl;
+                    if (typeof field.onInput === 'function') field.onInput(dataUrl);
+                    renderImageCellContent(wrap, dataUrl, field);
+                    autoSaveSafetyData();
+                });
+            });
+
+            document.body.appendChild(input);
+            input.click();
+            setTimeout(function () {
+                if (input.parentNode) input.parentNode.removeChild(input);
+            }, 60000);
+        });
+
+        return wrap;
+    }
+
+    function renderImageCellContent(cell, value, field) {
+        cell.innerHTML = '';
+
+        if (value && typeof value === 'string' && value.indexOf('data:image') === 0) {
+            var img = document.createElement('img');
+            img.src = value;
+            img.className = 'image-preview';
+            img.alt = '照片';
+            cell.appendChild(img);
+        } else {
+            var span = document.createElement('span');
+            span.className = 'image-placeholder';
+            span.innerHTML = '<i class="fas fa-image"></i><span>點擊上傳</span>';
+            cell.appendChild(span);
+        }
+
+        var clearBtn = document.createElement('button');
+        clearBtn.type = 'button';
+        clearBtn.className = 'pdf-image-clear';
+        clearBtn.innerHTML = '×';
+        clearBtn.title = '清除圖片';
+        clearBtn.addEventListener('mousedown', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        clearBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (field) {
+                field.value = '';
+                if (typeof field.onInput === 'function') field.onInput('');
+                autoSaveSafetyData();
+            }
+            renderImageCellContent(cell, '', field);
+        });
+        cell.appendChild(clearBtn);
+    }
+
+    // ========================================
+    // ★ 圖片壓縮：目標 < 1MB
+    // ========================================
+    function compressImage(file, maxDim, startQuality, callback) {
+        if (file.size <= 1024 * 1024) {
+            var readerSmall = new FileReader();
+            readerSmall.onload = function (e) { callback(e.target.result); };
+            readerSmall.onerror = function () { callback(''); };
+            readerSmall.readAsDataURL(file);
+            return;
+        }
+
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            var img = new Image();
+            img.onload = function () {
+                var w = img.width, h = img.height;
+
+                if (w > maxDim || h > maxDim) {
+                    var ratio = Math.min(maxDim / w, maxDim / h);
+                    w = Math.round(w * ratio);
+                    h = Math.round(h * ratio);
+                }
+
+                var cv = document.createElement('canvas');
+                cv.width = w;
+                cv.height = h;
+                var c2d = cv.getContext('2d');
+
+                c2d.fillStyle = '#ffffff';
+                c2d.fillRect(0, 0, w, h);
+                c2d.drawImage(img, 0, 0, w, h);
+
+                var maxLen = Math.round(1024 * 1024 * 1.37);
+                var q = startQuality;
+                var output = cv.toDataURL('image/jpeg', q);
+
+                var iter = 0;
+                while (output.length > maxLen && iter < 6 && q > 0.25) {
+                    q -= 0.15;
+                    output = cv.toDataURL('image/jpeg', q);
+                    iter++;
+                }
+
+                callback(output);
+            };
+            img.onerror = function () {
+                console.error('[SafetyEdit] Failed to load image');
+                callback('');
+            };
+            img.src = e.target.result;
+        };
+        reader.onerror = function () {
+            console.error('[SafetyEdit] Failed to read file');
+            callback('');
+        };
+        reader.readAsDataURL(file);
     }
 
     function buildSafetyField(field) {
         if (field.type === 'check') return buildSafetyCheckbox(field);
+        if (field.type === 'sign')  return buildSafetySignature(field);
+        if (field.type === 'image') return buildSafetyImageField(field);
         return buildSafetyTextField(field);
     }
 
     // ========================================
-    // ★ 讓 overlay 精確對齊 canvas（不受側邊欄展開/收起影響）
+    // ★ 手寫簽名 Modal
+    // ========================================
+    var _safetySigModal = null;
+    var _safetySigCanvas = null;
+    var _safetySigCtx = null;
+    var _safetySigDrawing = false;
+    var _safetySigLastX = 0, _safetySigLastY = 0;
+    var _safetySigTargetField = null;
+    var _safetySigTargetCell = null;
+
+    function initSafetySignModal() {
+        _safetySigModal = document.getElementById('safety-signature-modal-overlay');
+        _safetySigCanvas = document.getElementById('safety-signature-canvas');
+        if (!_safetySigModal || !_safetySigCanvas) {
+            console.warn('[SafetyEdit] Signature modal not found');
+            return;
+        }
+
+        _safetySigCtx = _safetySigCanvas.getContext('2d');
+        _safetySigCtx.lineWidth = 7;
+        _safetySigCtx.lineCap = 'round';
+        _safetySigCtx.lineJoin = 'round';
+        _safetySigCtx.strokeStyle = '#0a1a5c';
+
+        _safetySigCanvas.addEventListener('mousedown', safetySigStart);
+        _safetySigCanvas.addEventListener('mousemove', safetySigMove);
+        _safetySigCanvas.addEventListener('mouseup', safetySigEnd);
+        _safetySigCanvas.addEventListener('mouseleave', safetySigEnd);
+        _safetySigCanvas.addEventListener('touchstart', safetySigStart, { passive: false });
+        _safetySigCanvas.addEventListener('touchmove', safetySigMove, { passive: false });
+        _safetySigCanvas.addEventListener('touchend', safetySigEnd, { passive: false });
+
+        var closeBtn = document.getElementById('safety-signature-close-btn');
+        var cancelBtn = document.getElementById('safety-signature-cancel-btn');
+        var clearBtn = document.getElementById('safety-signature-clear-btn');
+        var saveBtn = document.getElementById('safety-signature-save-btn');
+
+        if (closeBtn) closeBtn.addEventListener('click', closeSafetySignModal);
+        if (cancelBtn) cancelBtn.addEventListener('click', closeSafetySignModal);
+        if (clearBtn) clearBtn.addEventListener('click', clearSafetySignCanvas);
+        if (saveBtn) saveBtn.addEventListener('click', saveSafetySign);
+
+        _safetySigModal.addEventListener('click', function (e) {
+            if (e.target === _safetySigModal) closeSafetySignModal();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && _safetySigModal.classList.contains('visible')) {
+                closeSafetySignModal();
+            }
+        });
+    }
+
+    function safetySigGetCoords(e) {
+        var rect = _safetySigCanvas.getBoundingClientRect();
+        var cx, cy;
+        if (e.touches && e.touches.length > 0) {
+            cx = e.touches[0].clientX; cy = e.touches[0].clientY;
+        } else {
+            cx = e.clientX; cy = e.clientY;
+        }
+        return {
+            x: (cx - rect.left) * (_safetySigCanvas.width / rect.width),
+            y: (cy - rect.top) * (_safetySigCanvas.height / rect.height)
+        };
+    }
+
+    function safetySigStart(e) {
+        e.preventDefault();
+        _safetySigDrawing = true;
+        var p = safetySigGetCoords(e);
+        _safetySigLastX = p.x; _safetySigLastY = p.y;
+        _safetySigCtx.beginPath();
+        _safetySigCtx.moveTo(p.x, p.y);
+        _safetySigCtx.lineTo(p.x + 0.1, p.y + 0.1);
+        _safetySigCtx.stroke();
+    }
+
+    function safetySigMove(e) {
+        if (!_safetySigDrawing) return;
+        e.preventDefault();
+        var p = safetySigGetCoords(e);
+        _safetySigCtx.beginPath();
+        _safetySigCtx.moveTo(_safetySigLastX, _safetySigLastY);
+        _safetySigCtx.lineTo(p.x, p.y);
+        _safetySigCtx.stroke();
+        _safetySigLastX = p.x; _safetySigLastY = p.y;
+    }
+
+    function safetySigEnd(e) {
+        if (!_safetySigDrawing) return;
+        if (e && e.preventDefault) e.preventDefault();
+        _safetySigDrawing = false;
+    }
+
+    function clearSafetySignCanvas() {
+        if (!_safetySigCtx) return;
+        _safetySigCtx.clearRect(0, 0, _safetySigCanvas.width, _safetySigCanvas.height);
+    }
+
+    function loadExistingSafetySign(base64) {
+        if (!base64 || typeof base64 !== 'string' || base64.indexOf('data:image') !== 0) {
+            clearSafetySignCanvas();
+            return;
+        }
+        var img = new Image();
+        img.onload = function () {
+            _safetySigCtx.clearRect(0, 0, _safetySigCanvas.width, _safetySigCanvas.height);
+            var ratio = Math.min(_safetySigCanvas.width / img.width, _safetySigCanvas.height / img.height);
+            var w = img.width * ratio, h = img.height * ratio;
+            var x = (_safetySigCanvas.width - w) / 2;
+            var y = (_safetySigCanvas.height - h) / 2;
+            _safetySigCtx.drawImage(img, x, y, w, h);
+        };
+        img.onerror = function () { clearSafetySignCanvas(); };
+        img.src = base64;
+    }
+
+    function openSafetySignModal(field, cell) {
+        if (!_safetySigModal) return;
+        _safetySigTargetField = field;
+        _safetySigTargetCell = cell;
+        clearSafetySignCanvas();
+        if (field.value) loadExistingSafetySign(field.value);
+        _safetySigModal.classList.add('visible');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeSafetySignModal() {
+        if (!_safetySigModal) return;
+        _safetySigModal.classList.remove('visible');
+        document.body.style.overflow = '';
+        clearSafetySignCanvas();
+        _safetySigTargetField = null;
+        _safetySigTargetCell = null;
+    }
+
+    function isSafetySigCanvasBlank() {
+        if (!_safetySigCanvas || !_safetySigCtx) return true;
+        try {
+            var data = _safetySigCtx.getImageData(0, 0, _safetySigCanvas.width, _safetySigCanvas.height).data;
+            for (var i = 0; i < data.length; i += 4) {
+                if (data[i + 3] !== 0) return false;
+            }
+        } catch (e) { return false; }
+        return true;
+    }
+
+    function saveSafetySign() {
+        if (!_safetySigTargetField || !_safetySigTargetCell) {
+            closeSafetySignModal();
+            return;
+        }
+
+        var base64 = '';
+        if (!isSafetySigCanvasBlank()) {
+            base64 = _safetySigCanvas.toDataURL('image/png');
+        }
+
+        var field = _safetySigTargetField;
+        var cell = _safetySigTargetCell;
+
+        field.value = base64;
+        if (typeof field.onInput === 'function') field.onInput(base64);
+
+        renderSignatureCellContent(cell, base64, field);
+        autoSaveSafetyData();
+        closeSafetySignModal();
+    }
+
+    // ========================================
+    // ★ 讓 overlay 精確對齊 canvas
     // ========================================
     function alignSafetyOverlay() {
         if (!container || !canvas) return;
         var overlay = container.querySelector('.safety-form-overlay');
         if (!overlay) return;
 
-        // 若 canvas 被隱藏（無 PDF 時），不用對齊
         if (canvas.offsetWidth === 0 && canvas.offsetHeight === 0) return;
 
         var canvasRect = canvas.getBoundingClientRect();
         var containerRect = container.getBoundingClientRect();
 
-        // 相對 container 的可滾動內容座標
         var left = canvasRect.left - containerRect.left + container.scrollLeft;
         var top  = canvasRect.top  - containerRect.top  + container.scrollTop;
 
@@ -362,19 +937,16 @@
     }
 
     // ========================================
-    // ★ 注入固定表單（PDF 渲染後呼叫）
+    // ★ 注入固定表單
     // ========================================
     function injectSafetyFormFields(pageNum) {
         if (!container) return;
 
-        // 先移除舊嘅 overlay
         var oldOverlay = container.querySelector('.safety-form-overlay');
         if (oldOverlay) oldOverlay.remove();
 
-        // 注入 CSS（一次性）
         ensureSafetyFormStyle();
 
-        // 確保 container 係 relative 定位
         if (getComputedStyle(container).position === 'static') {
             container.style.position = 'relative';
         }
@@ -385,52 +957,67 @@
             'position:absolute;left:0;top:0;width:0;height:0;' +
             'z-index:50;pointer-events:none;';
 
-        // ---------- 1. 組出 fields 陣列 ----------
         var fields = [];
 
-        // 1-1. Type checkbox（只喺 Page 1）
-        if (pageNum === 1) {
-            SAFETY_LAYOUT.typeCheckboxes.forEach(function (cb) {
-                fields.push({
-                    type: 'check',
-                    id: 'type_' + cb.key,
-                    label: cb.key,
-                    group: 'safety-type',
-                    left: cb.left,
-                    top: cb.top,
-                    width: cb.width,
-                    height: cb.height,
-                    isChecked: function () { return safetyFormData.type === cb.key; },
-                    onChange: function (checked) {
-                        safetyFormData.type = checked ? cb.key : '';
-                    }
-                });
+        // 1-1. Type checkbox
+        var pageTypeCbs = SAFETY_LAYOUT.typeCheckboxes[pageNum] || [];
+        pageTypeCbs.forEach(function (cb) {
+            fields.push({
+                type: 'check',
+                id: 'type_' + cb.key,
+                label: cb.key,
+                group: 'safety-type',
+                left: cb.left,
+                top: cb.top,
+                width: cb.width,
+                height: cb.height,
+                isChecked: function () { return safetyFormData.type === cb.key; },
+                onChange: function (checked) {
+                    safetyFormData.type = checked ? cb.key : '';
+                }
             });
+        });
 
-            // 1-2. Header 輸入框
-            var headerLabels = {
-                location: 'Location',
-                taskOrder: 'Task Order No.',
-                date: 'Date',
-                time: 'Time'
-            };
-            Object.keys(SAFETY_LAYOUT.header).forEach(function (key) {
-                var f = SAFETY_LAYOUT.header[key];
-                fields.push({
-                    type: (key === 'date') ? 'date' : (key === 'time') ? 'time' : 'text',
-                    id: 'header_' + key,
-                    label: headerLabels[key],
-                    left: f.left,
-                    top: f.top,
-                    width: f.width,
-                    height: f.height,
-                    value: safetyFormData.header[key] || '',
-                    onInput: function (val) {
-                        safetyFormData.header[key] = val;
-                    }
-                });
+        // 1-2. Header
+        var pageHeaderDefaults = SAFETY_LAYOUT.header['*'] || {};
+        var pageHeaderOverride = SAFETY_LAYOUT.header[pageNum] || {};
+        var pageHeader = Object.assign({}, pageHeaderDefaults, pageHeaderOverride);
+        var headerLabels = {
+            location: 'Location',
+            taskOrder: 'Task Order No.',
+            date: 'Date',
+            time: 'Time'
+        };
+        Object.keys(pageHeader).forEach(function (key) {
+            var f = pageHeader[key];
+            var fieldType;
+            if (f.sign === true || f.type === 'sign') {
+                fieldType = 'sign';
+            } else if (f.image === true || f.type === 'image') {
+                fieldType = 'image';
+            } else if (f.multiline) {
+                fieldType = 'textarea';
+            } else if (key === 'date') {
+                fieldType = 'date';
+            } else if (key === 'time') {
+                fieldType = 'time';
+            } else {
+                fieldType = 'text';
+            }
+            fields.push({
+                type: fieldType,
+                id: 'header_' + key,
+                label: headerLabels[key] || key,
+                left: f.left,
+                top: f.top,
+                width: f.width,
+                height: f.height,
+                value: safetyFormData.header[key] || '',
+                onInput: function (val) {
+                    safetyFormData.header[key] = val;
+                }
             });
-        }
+        });
 
         // 1-3. 評分格
         var ratingKeys = ['A', 'B', 'C', 'N/A'];
@@ -471,14 +1058,12 @@
             }
         });
 
-        // ---------- 2. 逐一 buildField 並加入 overlay ----------
         fields.forEach(function (f) {
             overlay.appendChild(buildSafetyField(f));
         });
 
         container.appendChild(overlay);
 
-        // ★ 立即對齊 canvas（等 layout 完成後再對齊一次，保險）
         alignSafetyOverlay();
         requestAnimationFrame(alignSafetyOverlay);
 
@@ -486,13 +1071,15 @@
     }
 
     // ========================================
-    // ★ 自動儲存表單資料
+    // ★ 自動儲存表單資料（僅 sessionStorage）
     // ========================================
     function autoSaveSafetyData() {
         if (!currentDoc) return;
         currentDoc.safetyFormData = safetyFormData;
         try {
             sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
+            sessionStorage.setItem('currentInspectionRecord', JSON.stringify(currentDoc));
+            sessionStorage.setItem('currentRecord', JSON.stringify(currentDoc));
         } catch (e) {}
     }
 
@@ -542,7 +1129,9 @@
 
                 updateZoomLevel();
 
-                // ★ 注入固定表單
+                var pageInput = document.getElementById('page-input');
+                if (pageInput) pageInput.value = pageNum;
+
                 injectSafetyFormFields(pageNum);
             });
         });
@@ -559,7 +1148,6 @@
         if (zoomLevelSpan) zoomLevelSpan.textContent = Math.round(scale * 100) + '%';
     }
 
-    // ---------- 獲取 pdfCanvas 相對於 container 的偏移 ----------
     function getCanvasOffset() {
         const targetCanvas = (canvas && canvas.offsetWidth > 0) ? canvas : drawCanvas;
         if (!targetCanvas || !container) return { offsetX: 0, offsetY: 0 };
@@ -571,7 +1159,6 @@
         };
     }
 
-    // ---------- 文本框位置更新 ----------
     function updateTextPositions() {
         const { offsetX, offsetY } = getCanvasOffset();
 
@@ -703,7 +1290,6 @@
         });
     }
 
-    // ---------- 鎖定/解鎖 ----------
     function toggleLock() {
         if (selectedAnnotationId === null) return;
         const anno = annotations.find(a => a._id === selectedAnnotationId);
@@ -733,7 +1319,6 @@
         }
     }
 
-    // ---------- 標註繪製 ----------
     function redrawAnnotations() {
         if (!drawCtx) return;
         drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
@@ -825,7 +1410,6 @@
         ctx.restore();
     }
 
-    // ---------- 標註操作 ----------
     function deleteAnnotation(id) {
         const idx = annotations.findIndex(a => a._id === id);
         if (idx === -1) return;
@@ -865,7 +1449,6 @@
         deleteAnnotation(selectedAnnotationId);
     }
 
-    // ---------- 坐標轉換 ----------
     function getCanvasCoords(e) {
         let clientX, clientY;
         if (e.touches && e.touches.length > 0) {
@@ -890,7 +1473,6 @@
         return { x, y };
     }
 
-    // ---------- 檢測點是否在繪製註釋內 ----------
     function hitTestAnnotation(anno, px, py) {
         const s = scale * renderScale;
         const tolerance = 10 / scale;
@@ -925,7 +1507,6 @@
         }
     }
 
-    // ---------- 拖拽繪製註釋 ----------
     function startDragAnnotation(e) {
         if (currentTool !== 'select') return;
         const pos = getCanvasCoords(e);
@@ -984,7 +1565,6 @@
         }
     }
 
-    // ---------- 滑鼠拖拽文本框 ----------
     document.addEventListener('mousemove', (e) => {
         if (!isDraggingText || draggedAnnotationId === null) return;
         const anno = annotations.find(a => a._id === draggedAnnotationId);
@@ -1033,9 +1613,19 @@
         container.addEventListener('scroll', updateTextPositions);
     }
 
-    // ---------- 繪製事件 ----------
     function startDrawing(e) {
         alignDrawCanvas();
+
+        var tgt = e.target;
+        if (tgt && tgt.closest) {
+            if (tgt.closest('.pdf-sign') ||
+                tgt.closest('.pdf-image') ||
+                tgt.closest('.pdf-field') ||
+                tgt.closest('.pdf-checkbox')) {
+                return;
+            }
+        }
+
         if (currentTool === 'select') {
             startDragAnnotation(e);
             return;
@@ -1246,7 +1836,6 @@
         redrawAnnotations();
     }
 
-    // ---------- 工具切換 ----------
     function setupTools() {
         const toolBtns = document.querySelectorAll('.tool-btn');
         toolBtns.forEach(btn => {
@@ -1287,12 +1876,45 @@
         document.getElementById('next-page')?.addEventListener('click', () => {
             if (pdfDoc && currentPage < pdfDoc.numPages) renderPage(currentPage + 1);
         });
+
+        var pageInput = document.getElementById('page-input');
+        if (pageInput) {
+            pageInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.keyCode === 13) {
+                    e.preventDefault();
+                    var target = parseInt(pageInput.value, 10);
+                    if (isNaN(target) || target < 1 || target > totalPages) {
+                        alert('請輸入 1 到 ' + totalPages + ' 之間的頁碼');
+                        pageInput.value = currentPage;
+                        return;
+                    }
+                    renderPage(target);
+                    pageInput.blur();
+                } else if (e.key === 'Escape' || e.keyCode === 27) {
+                    e.preventDefault();
+                    pageInput.value = currentPage;
+                    pageInput.blur();
+                }
+            });
+            pageInput.addEventListener('blur', function () {
+                pageInput.value = currentPage;
+            });
+            pageInput.addEventListener('focus', function () {
+                try { pageInput.select(); } catch (e) {}
+            });
+        }
     }
 
-    // ---------- 保存/取消/返回 ----------
+    // ========================================
+    // ★ 保存（參考 editdsdsitediary.js）
+    //   - 同步所有編輯到 currentDoc
+    //   - 寫入多個 sessionStorage key
+    //   - 更新 localStorage 陣列
+    // ========================================
     function saveChanges() {
         if (!currentDoc) { alert('No document to save.'); return; }
 
+        // 保存正在編輯的文本框
         document.querySelectorAll('.text-annotation.editing').forEach(el => {
             const id = el.dataset.id;
             const anno = annotations.find(a => a._id == id);
@@ -1308,34 +1930,40 @@
             }
         });
 
+        // ★ 同步所有編輯到 currentDoc
         currentDoc.annotations = annotations;
         currentDoc.safetyFormData = safetyFormData;
 
-        const STORAGE_KEY = 'inspectionData';
-        let inspectionData = [];
-        const stored = localStorage.getItem(STORAGE_KEY);
+        // ★ 同步到多個 sessionStorage key（跟 editdsdsitediary.js 一樣）
+        try {
+            sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
+            sessionStorage.setItem('currentInspectionRecord', JSON.stringify(currentDoc));
+            sessionStorage.setItem('currentRecord', JSON.stringify(currentDoc));
+        } catch (e) { /* ignore */ }
+
+        // ★ localStorage 更新（用陣列方式，參考 editdsdsitediary.js）
+        var STORAGE_KEY = 'inspectionData';
+        var data = [];
+        var stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
-            try { inspectionData = JSON.parse(stored); } catch(e) { console.error('解析數據失敗', e); }
+            try {
+                var parsed = JSON.parse(stored);
+                if (Array.isArray(parsed)) data = parsed;
+            } catch (e) { data = []; }
         }
-
-        const index = inspectionData.findIndex(d => String(d.id) === String(currentDoc.id));
-
-        if (index !== -1) {
-            inspectionData[index].annotations = annotations;
-            if (currentDoc.pdfData) {
-                inspectionData[index].pdfData = currentDoc.pdfData;
-            }
-        } else {
-            inspectionData.push(currentDoc);
+        var idx = -1;
+        for (var i = 0; i < data.length; i++) {
+            if (String(data[i].id) === String(currentDoc.id)) { idx = i; break; }
         }
+        if (idx !== -1) data[idx] = currentDoc;
+        else data.push(currentDoc);
 
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(inspectionData));
-        sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+        catch (e) { console.error('[SafetyEdit] Save failed', e); }
 
         alert('✅ Document saved successfully!');
     }
 
-    // ---------- Submit 功能 ----------
     function submitDocument() {
         if (!currentDoc) {
             alert('No document to submit.');
@@ -1349,7 +1977,6 @@
             return;
         }
 
-        // 先保存所有编辑
         document.querySelectorAll('.text-annotation.editing').forEach(el => {
             const id = el.dataset.id;
             const anno = annotations.find(a => a._id == id);
@@ -1365,34 +1992,39 @@
             }
         });
 
-        // 更新状态
         currentDoc.annotations = annotations;
         currentDoc.safetyFormData = safetyFormData;
         currentDoc.status = 'submitted-wsg';
 
-        // 更新界面
         const statusDisplay = document.getElementById('docStatusDisplay');
         if (statusDisplay) statusDisplay.textContent = 'Submitted to WSG';
         if (submitBtn) submitBtn.disabled = true;
 
-        // 保存到 localStorage
-        const STORAGE_KEY = 'inspectionData';
-        let inspectionData = [];
-        const stored = localStorage.getItem(STORAGE_KEY);
+        var STORAGE_KEY = 'inspectionData';
+        var data = [];
+        var stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
-            try { inspectionData = JSON.parse(stored); } catch(e) { console.error('解析數據失敗', e); }
+            try {
+                var parsed = JSON.parse(stored);
+                if (Array.isArray(parsed)) data = parsed;
+            } catch (e) { data = []; }
         }
-
-        const index = inspectionData.findIndex(d => String(d.id) === String(currentDoc.id));
-        if (index !== -1) {
-            inspectionData[index] = currentDoc;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(inspectionData));
-        } else {
-            alert('Document not found in storage.');
-            return;
+        var idx = -1;
+        for (var i = 0; i < data.length; i++) {
+            if (String(data[i].id) === String(currentDoc.id)) { idx = i; break; }
         }
+        if (idx !== -1) data[idx] = currentDoc;
+        else data.push(currentDoc);
 
-        sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+        catch (e) { console.error('[SafetyEdit] Save failed', e); }
+
+        try {
+            sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
+            sessionStorage.setItem('currentInspectionRecord', JSON.stringify(currentDoc));
+            sessionStorage.setItem('currentRecord', JSON.stringify(currentDoc));
+        } catch (e) {}
+
         alert('✅ Document submitted to WSG successfully!');
         window.location.href = 'safetyinspect.html';
     }
@@ -1407,7 +2039,6 @@
         window.location.href = 'safetyinspect.html';
     }
 
-    // ---------- 綁定事件 ----------
     function bindDrawingEvents() {
         if (!container) return;
         container.removeEventListener('mousedown', startDrawing);
@@ -1430,12 +2061,9 @@
         document.getElementById('save-btn')?.addEventListener('click', saveChanges);
         document.getElementById('cancel-btn')?.addEventListener('click', cancelEditing);
         document.getElementById('back-btn')?.addEventListener('click', goBack);
-        document.getElementById('undo-btn')?.addEventListener('click', undo);
-        document.getElementById('delete-selected-btn')?.addEventListener('click', deleteSelected);
-        if (lockBtn) lockBtn.addEventListener('click', toggleLock);
+
         if (submitBtn) submitBtn.addEventListener('click', submitDocument);
 
-        // 【新增】綁定審批按鈕
         if (approveBtn) {
             approveBtn.addEventListener('click', function() {
                 alert('Approve functionality not yet implemented.');
@@ -1448,17 +2076,14 @@
         }
     }
 
-    // ---------- 監聽尺寸變化（側邊欄展開/收起）----------
-    // ★ 修正：側邊欄 toggle 不會重新注入 overlay，需要用 ResizeObserver 重新對齊
     window.addEventListener('resize', () => {
         alignDrawCanvas();
         updateTextPositions();
-        alignSafetyOverlay();   // ★ 新增：重新對齊表單 overlay
+        alignSafetyOverlay();
     });
 
     if (window.ResizeObserver && container) {
         var _safetyResizeObserver = new ResizeObserver(function() {
-            // 用 rAF 合併多次觸發，減少 layout 抖動
             if (window.requestAnimationFrame) {
                 requestAnimationFrame(alignSafetyOverlay);
             } else {
@@ -1472,17 +2097,12 @@
     // ---------- 初始化 ----------
     document.addEventListener('DOMContentLoaded', () => {
         syncGlobalDate();
+        initSafetySignModal();
         const doc = loadDocumentData();
         if (!doc) { showError('No document data available.'); return; }
 
-        // 【新增】如果需要默认隐藏审批按钮，取消下面两行的注释
-        // if (approveBtn) approveBtn.style.display = 'none';
-        // if (rejectBtn) rejectBtn.style.display = 'none';
-
         let pdfSrc = doc.pdfData ? 'data:application/pdf;base64,' + doc.pdfData : (doc.pdfUrl || null);
 
-        // ★ 如果冇 pdfData，用 SafetyInspection-data.js 內嵌 PDF
-        // ★ 支援新舊變數名稱（SAFETY_INSPECTION_BASE64 / SAFETY_TEMPLATE_BASE64）
         var safetyB64 = window.SAFETY_INSPECTION_BASE64 || window.SAFETY_TEMPLATE_BASE64;
         if (!pdfSrc && safetyB64) {
             console.log('[SafetyEdit] 使用 SafetyInspection-data.js 內嵌 PDF 模板');

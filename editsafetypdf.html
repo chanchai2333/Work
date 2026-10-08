@@ -124,8 +124,8 @@
             opacity: 0.6;
             cursor: not-allowed;
         }
-        
-        /* 隐藏 Zoom 按钮 */
+
+        /* 隱藏 Zoom 按鈕 */
         .pdf-controls .zoom-controls {
             display: none !important;
         }
@@ -134,6 +134,170 @@
         .sidebar.collapsed .logo {
             display: none !important;
         }
+
+        /* ============================================================
+           ★ 頁碼輸入框（參考 sitediary）
+           ============================================================ */
+        .page-info {
+            font-size: 14px;
+            font-weight: 600;
+            color: #334155;
+            padding: 0 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .page-input {
+            width: 60px;
+            padding: 6px 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #1e40af;
+            text-align: center;
+            background: #fff;
+            transition: 0.15s;
+        }
+        .page-input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52,152,219,0.25);
+            background: #f0f9ff;
+        }
+        .page-input::-webkit-inner-spin-button,
+        .page-input::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .page-input { -moz-appearance: textfield; }
+        .page-input-hint {
+            font-size: 11px;
+            color: #94a3b8;
+            font-style: italic;
+            margin-left: 4px;
+        }
+
+        /* ============================================================
+           ★ Safety Inspection 手寫簽名 Modal
+           ============================================================ */
+        .safety-signature-modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(2px);
+            z-index: 99999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .safety-signature-modal-overlay.visible { display: flex; }
+
+        .safety-signature-modal {
+            background: #fff;
+            border-radius: 12px;
+            width: 960px;
+            max-width: 95vw;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: safetySigSlideIn 0.2s ease-out;
+        }
+        @keyframes safetySigSlideIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to   { transform: scale(1);    opacity: 1; }
+        }
+
+        .safety-signature-modal-header {
+            padding: 14px 20px;
+            background: #f1f5f9;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .safety-signature-modal-header h3 {
+            color: #1e293b;
+            font-size: 1.05rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .safety-signature-modal-close {
+            background: transparent;
+            border: none;
+            font-size: 1.6rem;
+            cursor: pointer;
+            color: #64748b;
+            line-height: 1;
+            padding: 0 6px;
+            transition: color 0.15s;
+        }
+        .safety-signature-modal-close:hover { color: #e74c3c; }
+
+        .safety-signature-modal-body {
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .safety-signature-canvas-wrapper {
+            position: relative;
+            background: #fff;
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #safety-signature-canvas {
+            display: block;
+            width: 100%;
+            height: 300px;
+            cursor: crosshair;
+            touch-action: none;
+            background: #fff;
+        }
+        .safety-signature-canvas-hint {
+            position: absolute;
+            bottom: 8px;
+            right: 12px;
+            font-size: 11px;
+            color: #cbd5e1;
+            pointer-events: none;
+            font-style: italic;
+        }
+
+        .safety-signature-modal-footer {
+            padding: 12px 20px;
+            background: #fff;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .safety-sig-footer-right { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        .safety-sig-btn {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .safety-sig-btn:hover { transform: translateY(-1px); }
+        .safety-sig-btn-clear  { background: #f1f5f9; color: #475569; }
+        .safety-sig-btn-clear:hover  { background: #e2e8f0; }
+        .safety-sig-btn-cancel { background: #94a3b8; color: #fff; }
+        .safety-sig-btn-cancel:hover { background: #64748b; }
+        .safety-sig-btn-save   { background: #10b981; color: #fff; }
+        .safety-sig-btn-save:hover   { background: #059669; }
     </style>
 </head>
 <body>
@@ -170,7 +334,7 @@
                 <h2><i class="fas fa-file-pdf"></i><span id="docTitle">Edit Safety Inspection</span></h2>
                 <div class="document-actions">
                     <button class="btn btn-submit" id="submit-btn"><i class="fas fa-paper-plane"></i> Submit</button>
-                    
+
                     <button class="btn" id="approve-btn" style="background: #27ae60; color: white;">
                         <i class="fas fa-check-circle"></i> Approve
                     </button>
@@ -193,16 +357,19 @@
             </div>
 
             <div class="pdf-editor-container">
+                <!-- ★ 頁碼導航（參考 sitediary）：輸入框 + 跳頁，移除 Undo / Lock / Delete Selected -->
                 <div class="pdf-controls">
-                    <button class="nav-btn" id="prev-page"><i class="fas fa-chevron-left"></i></button>
-                    <span class="page-info">Pages <span id="current-page">1</span> of <span id="total-pages">1</span></span>
-                    <button class="nav-btn" id="next-page"><i class="fas fa-chevron-right"></i></button>
-                    <div style="margin-left:20px;display:flex;gap:10px;">
-                        <button class="btn" id="undo-btn" style="background:#f39c12;color:white;padding:4px 12px;border-radius:4px;"><i class="fas fa-undo"></i> Undo</button>
-                        <button class="btn lock-btn" id="lock-btn" style="padding:4px 12px;border-radius:4px;"><i class="fas fa-lock"></i> Lock</button>
-                        <button class="btn" id="delete-selected-btn" style="background:#e74c3c;color:white;padding:4px 12px;border-radius:4px;"><i class="fas fa-trash"></i> Delete Selected</button>
-                    </div>
+                    <button class="nav-btn" id="prev-page" title="上一頁"><i class="fas fa-chevron-left"></i></button>
+                    <span class="page-info">
+                        Page
+                        <input type="number" id="page-input" class="page-input" min="1" value="1" title="輸入頁碼後按 Enter 跳頁">
+                        of <span id="total-pages">1</span>
+                        <span class="page-input-hint"></span>
+                    </span>
+                    <span id="current-page" style="display:none;">1</span>
+                    <button class="nav-btn" id="next-page" title="下一頁"><i class="fas fa-chevron-right"></i></button>
                 </div>
+
                 <div class="pdf-canvas-container" id="pdf-container">
                     <canvas id="pdf-canvas"></canvas>
                     <canvas id="draw-canvas" class="draw-layer"></canvas>
@@ -211,9 +378,39 @@
         </div>
     </div>
 
+    <!-- ============================================================
+         ★ Safety Inspection 手寫簽名 Modal
+         ============================================================ -->
+    <div class="safety-signature-modal-overlay" id="safety-signature-modal-overlay">
+        <div class="safety-signature-modal">
+            <div class="safety-signature-modal-header">
+                <h3><i class="fas fa-signature"></i> 手寫簽名</h3>
+                <button class="safety-signature-modal-close" id="safety-signature-close-btn" title="關閉">&times;</button>
+            </div>
+            <div class="safety-signature-modal-body">
+                <div class="safety-signature-canvas-wrapper">
+                    <canvas id="safety-signature-canvas" width="900" height="300"></canvas>
+                    <div class="safety-signature-canvas-hint">在此簽名（滑鼠或觸控筆）</div>
+                </div>
+            </div>
+            <div class="safety-signature-modal-footer">
+                <button class="safety-sig-btn safety-sig-btn-clear" id="safety-signature-clear-btn">
+                    <i class="fas fa-eraser"></i> 清除
+                </button>
+                <div class="safety-sig-footer-right">
+                    <button class="safety-sig-btn safety-sig-btn-cancel" id="safety-signature-cancel-btn">
+                        <i class="fas fa-times"></i> 取消
+                    </button>
+                    <button class="safety-sig-btn safety-sig-btn-save" id="safety-signature-save-btn">
+                        <i class="fas fa-check"></i> 儲存
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
-    <!-- ★ 改用 SafetyInspection-data.js（變數名：SAFETY_INSPECTION_BASE64） -->
     <script src="scripts/SafetyInspection-data.js"></script>
     <script src="scripts/editsafetypdf.js"></script>
 
