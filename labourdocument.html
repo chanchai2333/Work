@@ -123,6 +123,7 @@
             user-select: none;
         }
 
+        /* ★ overlay 基礎樣式（不指定 font-size，改由 JS 內聯設定） */
         .pdf-view-overlay {
             position: absolute;
             top: 0; left: 0;
@@ -134,7 +135,6 @@
             position: absolute;
             color: #0a1a5c;
             font-family: Arial, sans-serif;
-            font-size: 11px;
             font-weight: 600;
             padding: 1px 3px;
             line-height: 1.2;
@@ -147,18 +147,8 @@
         .pdf-view-overlay .pdf-view-field.check {
             justify-content: center;
             color: #0a1a5c;
-            font-size: 14px;
             font-weight: 900;
         }
-        .pdf-view-overlay .pdf-view-field[data-field-id^="g17_"] { font-size: 6px; }
-        .pdf-view-overlay .pdf-view-field[data-field-id="g17_01"],
-        .pdf-view-overlay .pdf-view-field[data-field-id="g17_02"],
-        .pdf-view-overlay .pdf-view-field[data-field-id="g17_05"],
-        .pdf-view-overlay .pdf-view-field[data-field-id="g17_06"],
-        .pdf-view-overlay .pdf-view-field[data-field-id="g17_07"],
-        .pdf-view-overlay .pdf-view-field[data-field-id="g17_08"] { font-size: 11px; }
-        .pdf-view-overlay .pdf-view-field[data-field-id="g17_03"],
-        .pdf-view-overlay .pdf-view-field[data-field-id="g17_04"] { font-size: 8px; }
 
         .loading-indicator { display: none; justify-content: center; align-items: center; gap: 10px; padding: 40px; color: #2563eb; font-weight: 600; background: #eff6ff; border-radius: 8px; }
         .loading-indicator.visible { display: flex; }
@@ -472,7 +462,10 @@
             }
         }
 
-        function getLayoutForPage(docType, pageNum) {
+        /* ============================================================
+           從 localStorage / labour-form-layouts.js 讀取原始 layout
+           ============================================================ */
+        function getLayoutForPageRaw(docType, pageNum) {
             try {
                 var saved = localStorage.getItem('editlabour_layout_' + docType);
                 if (saved) {
@@ -523,6 +516,156 @@
             return null;
         }
 
+        /* ============================================================
+           ★ GF527-2017 強制補丁（g17_08 打勾 / g17_1458~1459 簽名）
+           ============================================================ */
+        var LAYOUT_PATCHES = {
+            'GF527-2017': {
+                1: {
+                    'g17_08': { left: '76.15%', top: '4.31%', width: '0.83%', height: '1.00%', type: 'check' }
+                },
+                3: {
+                    'g17_1458': { left: '26.50%', top: '84.80%', width: '4.00%', height: '1.60%', type: 'signature' },
+                    'g17_1459': { left: '26.50%', top: '86.50%', width: '4.00%', height: '1.60%', type: 'signature' }
+                }
+            }
+        };
+
+        function applyLayoutPatches(docType, pageNum, layout) {
+            var docPatches = LAYOUT_PATCHES[docType];
+            if (!docPatches) return layout;
+
+            var patches = docPatches[pageNum];
+            if (!patches) return layout;
+
+            var arr = Array.isArray(layout) ? layout.slice() : [];
+            var seen = {};
+            arr.forEach(function (f) { if (f && f.id) seen[f.id] = true; });
+
+            arr.forEach(function (f) {
+                if (!f || !f.id) return;
+                if (patches[f.id]) {
+                    f.type = patches[f.id].type;
+                    if (patches[f.id].left   !== undefined) f.left   = patches[f.id].left;
+                    if (patches[f.id].top    !== undefined) f.top    = patches[f.id].top;
+                    if (patches[f.id].width  !== undefined) f.width  = patches[f.id].width;
+                    if (patches[f.id].height !== undefined) f.height = patches[f.id].height;
+                }
+            });
+
+            for (var id in patches) {
+                if (!patches.hasOwnProperty(id)) continue;
+                if (seen[id]) continue;
+                var p = patches[id];
+                arr.push({
+                    id: id,
+                    left: p.left,
+                    top: p.top,
+                    width: p.width,
+                    height: p.height,
+                    type: p.type
+                });
+            }
+
+            console.log('[LabourDoc] ✓ layout 補丁已套用 (' + docType + ' page ' + pageNum + ')');
+            return arr;
+        }
+
+        /* ============================================================
+           ★★★ GF527-2003 精確 layout（完全複製自 editlabour.js）★★★
+           ============================================================ */
+        var _cachedGF527_2003_Layout = null;
+
+        function getGF527_2003_ExactLayout() {
+            if (_cachedGF527_2003_Layout) return _cachedGF527_2003_Layout;
+
+            var fields = [];
+
+            /* 頂部欄位（固定座標，複製自 editlabour.js GF527_2003_FORM_LAYOUT） */
+            var topFields = [
+                { id: 'gf_01', left: '5.20%',  top: '5.90%',  width: '2.57%',  height: '1.08%' },
+                { id: 'gf_02', left: '8.16%',  top: '5.90%',  width: '2.57%',  height: '1.27%' },
+                { id: 'gf_03', left: '14.50%', top: '5.90%',  width: '1.54%',  height: '1.44%' },
+                { id: 'gf_04', left: '16.53%', top: '5.90%',  width: '1.54%',  height: '1.44%' },
+                { id: 'gf_05', left: '28.30%', top: '5.90%',  width: '6.34%',  height: '1.44%' },
+                { id: 'gf_06', left: '40.22%', top: '5.70%',  width: '15.61%', height: '1.81%' },
+                { id: 'gf_07', left: '60.88%', top: '5.30%',  width: '8.73%',  height: '2.09%' },
+                { id: 'gf_08', left: '72.15%', top: '6.10%',  width: '0.90%',  height: '1.00%', type: 'check' },
+                { id: 'gf_45', left: '88.00%', top: '5.90%',  width: '6.00%',  height: '1.50%' }
+            ];
+            for (var i = 0; i < topFields.length; i++) fields.push(topFields[i]);
+
+            /* 表格：52 行 × 36 欄（最後一行只有 32 欄） */
+            var cols = [
+                ['30.00%','1.47%'], ['31.70%','1.47%'], ['33.50%','1.47%'], ['35.00%','1.47%'],
+                ['36.70%','1.47%'], ['38.50%','1.47%'], ['40.30%','1.47%'], ['41.90%','1.47%'],
+                ['43.60%','1.47%'], ['45.60%','1.47%'], ['47.20%','1.47%'], ['49.00%','1.47%'],
+                ['50.60%','1.47%'], ['52.30%','1.47%'], ['54.20%','1.47%'], ['56.00%','1.47%'],
+                ['57.70%','1.47%'], ['59.30%','1.47%'], ['61.10%','1.47%'], ['62.80%','1.47%'],
+                ['64.50%','1.47%'], ['66.30%','1.47%'], ['68.00%','1.47%'], ['69.70%','1.47%'],
+                ['71.50%','1.47%'], ['73.20%','1.47%'], ['74.90%','1.47%'], ['76.70%','1.47%'],
+                ['78.50%','1.47%'], ['80.20%','1.47%'], ['82.00%','1.47%'], ['84.30%','1.97%'],
+                ['87.20%','2.47%'], ['90.20%','1.77%'], ['92.70%','1.77%'], ['94.80%','1.77%']
+            ];
+
+            var rowTops = [
+                '11.10%', '12.80%', '14.30%', '15.80%', '17.30%', '18.80%',
+                '21.80%', '23.30%', '24.80%', '26.70%', '28.40%', '31.30%',
+                '32.80%', '34.30%', '35.80%', '37.30%', '38.80%', '40.30%',
+                '41.80%', '43.30%', '44.80%', '46.30%', '47.70%', '49.20%',
+                '50.70%', '52.20%', '53.70%', '55.20%', '56.70%', '58.20%',
+                '59.70%', '61.20%', '62.70%', '64.20%', '65.50%', '67.00%',
+                '68.50%', '70.00%', '71.50%', '73.00%', '74.50%', '76.00%',
+                '77.50%', '79.00%', '80.50%', '81.70%', '83.20%', '84.70%',
+                '86.20%', '87.70%', '89.20%', '90.70%'
+            ];
+
+            var idx = 46;
+            for (var r = 0; r < rowTops.length; r++) {
+                var top = rowTops[r];
+                var isLastRow = (r === rowTops.length - 1);
+                var maxCols = isLastRow ? 32 : cols.length;
+                for (var c = 0; c < maxCols; c++) {
+                    fields.push({
+                        id: 'gf_' + idx++,
+                        left: cols[c][0],
+                        top: top,
+                        width: cols[c][1],
+                        height: '1.56%',
+                        type: 'text'
+                    });
+                }
+            }
+
+            /* code / tradename 特殊欄位 */
+            var specials = [
+                { id: 'gf_1913', left: '23.00%', top: '81.70%', width: '6.47%', height: '1.56%' },
+                { id: 'gf_1914', left: '23.00%', top: '83.20%', width: '6.47%', height: '1.56%' },
+                { id: 'gf_1915', left: '23.00%', top: '84.70%', width: '6.47%', height: '1.56%' },
+                { id: 'gf_1916', left: '23.00%', top: '86.20%', width: '6.47%', height: '1.56%' },
+                { id: 'gf_1917', left: '23.00%', top: '87.70%', width: '6.47%', height: '1.56%' },
+                { id: 'gf_1918', left: '10.00%', top: '81.70%', width: '9.47%', height: '1.56%' },
+                { id: 'gf_1919', left: '10.00%', top: '83.20%', width: '9.47%', height: '1.56%' },
+                { id: 'gf_1920', left: '10.00%', top: '84.70%', width: '9.47%', height: '1.56%' },
+                { id: 'gf_1921', left: '10.00%', top: '86.20%', width: '9.47%', height: '1.56%' },
+                { id: 'gf_1922', left: '10.00%', top: '87.70%', width: '9.47%', height: '1.56%' }
+            ];
+            for (var k = 0; k < specials.length; k++) fields.push(specials[k]);
+
+            console.log('[LabourDoc] ✓✓ GF527-2003 精確 layout 生效，欄位數 =', fields.length);
+            _cachedGF527_2003_Layout = fields;
+            return fields;
+        }
+
+        function getLayoutForPage(docType, pageNum) {
+            /* ★ GF527-2003 用精確 layout，其餘走原流程 */
+            if (docType === 'GF527-2003' && pageNum === 1) {
+                return getGF527_2003_ExactLayout();
+            }
+            var raw = getLayoutForPageRaw(docType, pageNum);
+            return applyLayoutPatches(docType, pageNum, raw);
+        }
+
         function fieldHasValue(field, value) {
             if (field.type === 'check') {
                 return (value === '1' || value === '✓' || value === true || value === 'true');
@@ -530,6 +673,55 @@
             return (value !== undefined && value !== null && String(value).trim() !== '');
         }
 
+        /* ============================================================
+           ★ 字體大小：依 overlay 頁寬動態計算
+           ------------------------------------------------------------
+           基準（取自 editlabour.html 實際顯示）：
+             GF527A       頁寬 714px  →  文字 11px  (factor 0.0154)
+                                         勾選 14px  (factor 0.0196)
+             GF527-2017   頁寬 1400px →  文字 7px   (factor 0.0050)
+                                         g17_01~08   11px (factor 0.00786)
+                                         g17_03,04    8px (factor 0.00571)
+                                         勾選 9px   (factor 0.00635)
+             GF527-2003   頁寬 1400px →  文字 7px   (factor 0.0050)
+                                         勾選 9px   (factor 0.00635)
+           ============================================================ */
+        var _overlayPageWidth = 1400;
+
+        function setOverlayPageWidth(pw) {
+            if (pw && pw > 50) _overlayPageWidth = pw;
+        }
+
+        function computeOverlayFontSize(docType, fieldId, fieldType) {
+            var pw = _overlayPageWidth;
+            var isCheck = (fieldType === 'check');
+
+            if (docType === 'GF527A') {
+                return isCheck ? (pw * 0.0196) : (pw * 0.0154);
+            }
+
+            if (docType === 'GF527-2017') {
+                if (fieldId === 'g17_01' || fieldId === 'g17_02' ||
+                    fieldId === 'g17_05' || fieldId === 'g17_06' ||
+                    fieldId === 'g17_07' || fieldId === 'g17_08') {
+                    return pw * 0.00786;
+                }
+                if (fieldId === 'g17_03' || fieldId === 'g17_04') {
+                    return pw * 0.00571;
+                }
+                return isCheck ? (pw * 0.00635) : (pw * 0.0050);
+            }
+
+            if (docType === 'GF527-2003') {
+                return isCheck ? (pw * 0.00635) : (pw * 0.0050);
+            }
+
+            return pw * 0.0154;
+        }
+
+        /* ============================================================
+           建立 overlay（含文字 / ✓ / 簽名圖），字體大小內聯寫入
+           ============================================================ */
         function buildOverlayElement(docType, pageNum, formData, forPrint) {
             var fields = getLayoutForPage(docType, pageNum);
             if (!fields || !fields.length) return null;
@@ -538,11 +730,70 @@
             overlay.className = 'pdf-view-overlay';
             if (forPrint) overlay.style.background = 'transparent';
 
-            var count = 0, skipped = 0;
+            var count = 0;
+
             fields.forEach(function (f) {
                 var val = formData[f.id];
-                if (!fieldHasValue(f, val)) { skipped++; return; }
+                if (val === undefined || val === null) return;
 
+                var strVal = String(val).trim();
+                if (strVal === '') return;
+
+                /* 依 pageWidth 動態計算字體大小 */
+                var fontSizePx = computeOverlayFontSize(docType, f.id, f.type);
+
+                /* ─── 1. 簽名欄位 ─── */
+                if (f.type === 'signature' || strVal.indexOf('data:image') === 0) {
+                    var sigEl = document.createElement('div');
+                    sigEl.className = 'pdf-view-field signature';
+                    sigEl.dataset.fieldId = f.id;
+                    sigEl.style.left   = f.left;
+                    sigEl.style.top    = f.top;
+                    sigEl.style.width  = f.width;
+                    sigEl.style.height = f.height;
+                    sigEl.style.padding = '0';
+                    sigEl.style.justifyContent = 'center';
+                    sigEl.style.overflow = 'hidden';
+
+                    var sigImg = document.createElement('img');
+                    sigImg.src = strVal;
+                    sigImg.alt = '簽名';
+                    sigImg.style.cssText =
+                        'max-width:100%;max-height:100%;width:100%;height:100%;' +
+                        'object-fit:contain;display:block;pointer-events:none;';
+                    sigEl.appendChild(sigImg);
+                    overlay.appendChild(sigEl);
+                    count++;
+                    return;
+                }
+
+                /* ─── 2. 勾選欄位 ─── */
+                var widthNum = parseFloat(f.width) || 100;
+                var isCheck =
+                    (f.type === 'check') ||
+                    (widthNum < 3 && (
+                        strVal === '1' ||
+                        strVal === '✓' ||
+                        strVal === 'true' ||
+                        strVal === 'TRUE'
+                    ));
+
+                if (isCheck) {
+                    var chkEl = document.createElement('div');
+                    chkEl.className = 'pdf-view-field check';
+                    chkEl.dataset.fieldId = f.id;
+                    chkEl.style.left   = f.left;
+                    chkEl.style.top    = f.top;
+                    chkEl.style.width  = f.width;
+                    chkEl.style.height = f.height;
+                    chkEl.style.fontSize = fontSizePx.toFixed(2) + 'px';  /* ★ 內聯字體 */
+                    chkEl.textContent = '✓';
+                    overlay.appendChild(chkEl);
+                    count++;
+                    return;
+                }
+
+                /* ─── 3. 一般文字欄位 ─── */
                 var el = document.createElement('div');
                 el.className = 'pdf-view-field';
                 el.dataset.fieldId = f.id;
@@ -550,17 +801,13 @@
                 el.style.top    = f.top;
                 el.style.width  = f.width;
                 el.style.height = f.height;
-
-                if (f.type === 'check') {
-                    el.classList.add('check');
-                    el.textContent = '✓';
-                } else {
-                    el.textContent = val;
-                    el.title = val;
-                }
+                el.style.fontSize = fontSizePx.toFixed(2) + 'px';  /* ★ 內聯字體 */
+                el.textContent = strVal;
+                el.title = strVal;
                 overlay.appendChild(el);
                 count++;
             });
+
             return count > 0 ? overlay : null;
         }
 
@@ -758,6 +1005,9 @@
                 pageWidth = cw2 - 48;
             }
 
+            /* ★ 設定 overlay 頁寬（供字體縮放用） */
+            setOverlayPageWidth(pageWidth);
+
             var pageHeight = Math.round(pageWidth * aspect);
 
             var pageDiv = document.createElement('div');
@@ -814,10 +1064,9 @@
         }
 
         /* ============================================================
-           ★★★ 核心修正：Download 也要帶上 overlay（已填欄位）★★★
+           離螢幕捕獲頁面（含 overlay）
            ============================================================ */
         async function buildPageWithOverlay(pageIndex) {
-            /* 建立一個離螢幕的容器，寬度沿用「當前頁寬」（與畫面一致） */
             var aspect = pageAspects[pageIndex - 1] || 1.4142;
 
             var pageWidth = storedPageWidth && storedPageWidth > 100 ? storedPageWidth : FALLBACK_PAGE_WIDTH;
@@ -828,44 +1077,47 @@
             var pageHeight = Math.round(pageWidth * aspect);
 
             var wrapper = document.createElement('div');
+            wrapper.className = 'labour-capture-wrapper';
             wrapper.style.cssText =
-                'position:fixed;left:-99999px;top:0;' +
+                'position:absolute;top:0;left:-200vw;' +
                 'width:' + pageWidth + 'px;height:' + pageHeight + 'px;' +
                 'background:#ffffff;overflow:hidden;';
 
-            /* PDF 底圖 */
             var img = document.createElement('img');
             img.src = pageImages[pageIndex - 1];
+            img.alt = 'Page ' + pageIndex;
+            img.draggable = false;
             img.style.cssText =
-                'position:absolute;top:0;left:0;width:100%;height:100%;' +
-                'display:block;pointer-events:none;user-select:none;';
+                'position:absolute;top:0;left:0;' +
+                'width:100%;height:100%;display:block;' +
+                'pointer-events:none;user-select:none;';
             wrapper.appendChild(img);
 
-            /* Overlay（把已填欄位加上去） */
+            /* ★ 設定 overlay 頁寬（與此捕獲的頁寬一致） */
+            setOverlayPageWidth(pageWidth);
+
             var docType = currentDoc.type || 'GF527A';
             var formData = getFormData();
             var overlay = buildOverlayElement(docType, pageIndex, formData, true);
-            if (overlay) {
-                wrapper.appendChild(overlay);
-            }
+            if (overlay) wrapper.appendChild(overlay);
 
             document.body.appendChild(wrapper);
 
-            /* 等圖片載入 */
-            await new Promise(function (resolve) {
-                if (img.complete && img.naturalWidth > 0) { resolve(); return; }
-                img.addEventListener('load', resolve, { once: true });
-                img.addEventListener('error', resolve, { once: true });
-            });
+            try {
+                if (typeof img.decode === 'function') {
+                    await img.decode();
+                } else if (!(img.complete && img.naturalWidth > 0)) {
+                    await new Promise(function (resolve) {
+                        img.addEventListener('load',  resolve, { once: true });
+                        img.addEventListener('error', resolve, { once: true });
+                    });
+                }
+            } catch (e) {}
 
-            /* 小延遲確保 overlay 定位完成 */
-            await new Promise(function (resolve) { setTimeout(resolve, 60); });
+            await new Promise(function (r) { requestAnimationFrame(r); });
+            await new Promise(function (r) { setTimeout(r, 80); });
 
-            return {
-                element: wrapper,
-                width: pageWidth,
-                height: pageHeight
-            };
+            return { element: wrapper, width: pageWidth, height: pageHeight };
         }
 
         async function downloadPdfWithOverlay() {
@@ -886,17 +1138,19 @@
             try {
                 var jsPDFCtor = window.jspdf.jsPDF;
 
-                /* 用 A4 橫向（與畫面 PDF 比例接近） */
+                var firstAspect = pageAspects[0] || 1.4142;
+                var firstPortrait = firstAspect > 1.0;
+
+                var A4_W = 210, A4_H = 297;
+
                 var pdf = new jsPDFCtor({
-                    orientation: 'landscape',
+                    orientation: firstPortrait ? 'portrait' : 'landscape',
                     unit: 'mm',
                     format: 'a4',
                     compress: true
                 });
 
-                var pageW = 297;
-                var pageH = 210;
-                var firstPage = true;
+                var isFirstPage = true;
 
                 for (var p = 1; p <= totalVirtualPages; p++) {
                     if (btn) {
@@ -911,41 +1165,43 @@
                         useCORS: true,
                         backgroundColor: '#ffffff',
                         logging: false,
+                        width: built.width,
+                        height: built.height,
                         windowWidth: built.width,
                         windowHeight: built.height
                     });
 
+                    if (built.element && built.element.parentNode) {
+                        built.element.parentNode.removeChild(built.element);
+                        var idx = tempEls.indexOf(built.element);
+                        if (idx !== -1) tempEls.splice(idx, 1);
+                    }
+
                     var imgData = canvas.toDataURL('image/jpeg', 0.92);
 
-                    /* 依原比例放進 A4，置中 */
                     var imgAspect = built.height / built.width;
-                    var targetW = pageW;
-                    var targetH = pageW * imgAspect;
-                    if (targetH > pageH) {
-                        targetH = pageH;
-                        targetW = pageH / imgAspect;
-                    }
-                    var offsetX = (pageW - targetW) / 2;
-                    var offsetY = (pageH - targetH) / 2;
+                    var thisPortrait = imgAspect > 1.0;
+                    var thisPageW = thisPortrait ? A4_W : A4_H;
+                    var thisPageH = thisPortrait ? A4_H : A4_W;
 
-                    if (firstPage) {
-                        pdf.addImage(imgData, 'JPEG', offsetX, offsetY, targetW, targetH, undefined, 'FAST');
-                        firstPage = false;
+                    if (isFirstPage) {
+                        pdf.addImage(imgData, 'JPEG', 0, 0, thisPageW, thisPageH, undefined, 'FAST');
+                        isFirstPage = false;
                     } else {
-                        pdf.addPage('a4', 'landscape');
-                        pdf.addImage(imgData, 'JPEG', offsetX, offsetY, targetW, targetH, undefined, 'FAST');
+                        pdf.addPage([thisPageW, thisPageH], thisPortrait ? 'portrait' : 'landscape');
+                        pdf.addImage(imgData, 'JPEG', 0, 0, thisPageW, thisPageH, undefined, 'FAST');
                     }
                 }
 
                 var blob = pdf.output('blob');
-                console.log('[LabourDoc] ✓ 帶 overlay 的 PDF 產生完成:', (blob.size / 1024).toFixed(0), 'KB');
+                console.log('[LabourDoc] ✓ PDF 產生完成 (' + (firstPortrait ? 'portrait' : 'landscape') + '): ' +
+                            (blob.size / 1024).toFixed(0), 'KB');
                 downloadBlob(blob, (currentDoc.id || 'LabourWage') + '.pdf');
 
             } catch (err) {
                 console.error('[LabourDoc] downloadPdfWithOverlay failed:', err);
                 alert('下載失敗：' + (err && err.message ? err.message : 'unknown'));
             } finally {
-                /* 清理離螢幕容器 */
                 tempEls.forEach(function (el) {
                     if (el && el.parentNode) el.parentNode.removeChild(el);
                 });
@@ -956,7 +1212,6 @@
             }
         }
 
-        /* 保留舊的「下載原始 PDF」作為 fallback（若 html2canvas 沒有載入，仍可下載原檔） */
         function downloadPdfRaw() {
             if (!currentPdfBlob) { alert('PDF 尚未生成'); return; }
             downloadBlob(currentPdfBlob, (currentDoc.id || 'LabourWage') + '.pdf');
@@ -1004,32 +1259,145 @@
 
         function printPdf() {
             if (!pageImages.length) { alert('尚未載入'); return; }
-            var printContainer = document.getElementById('print-only-container');
-            printContainer.innerHTML = '';
+
             var formData = getFormData();
             var docType = currentDoc.type || 'GF527A';
+            var firstAspect = pageAspects[0] || 1.4142;
+            var isPortrait = firstAspect > 1.0;
+
+            var pageW_mm = isPortrait ? 210 : 297;
+            var pageH_mm = isPortrait ? 297 : 210;
+
+            var oldStyle = document.getElementById('dynamic-print-style');
+            if (oldStyle) oldStyle.remove();
+
+            var printContainer = document.getElementById('print-only-container');
+            printContainer.innerHTML = '';
+
+            var imgPromises = [];
+
             for (var p = 1; p <= totalVirtualPages; p++) {
                 var wrap = document.createElement('div');
                 wrap.className = 'print-page';
-                wrap.style.position = 'relative';
-                var stage = document.createElement('div');
-                stage.style.cssText = 'position:relative;display:inline-block;max-width:100%;max-height:100%;';
+                wrap.setAttribute('data-print-page', p);
+
                 var img = document.createElement('img');
                 img.src = pageImages[p - 1];
                 img.alt = 'Page ' + p;
-                img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;display:block;';
-                stage.appendChild(img);
+                img.style.cssText =
+                    'display:block;width:100%;height:100%;' +
+                    'object-fit:contain;pointer-events:none;user-select:none;';
+                wrap.appendChild(img);
+
+                if (typeof img.decode === 'function') {
+                    imgPromises.push(img.decode().catch(function () {}));
+                } else {
+                    imgPromises.push(new Promise(function (resolve) {
+                        if (img.complete && img.naturalWidth > 0) { resolve(); return; }
+                        img.addEventListener('load',  resolve, { once: true });
+                        img.addEventListener('error', resolve, { once: true });
+                    }));
+                }
+
                 try {
+                    /* ★ 設定 overlay 頁寬（mm → px，1mm ≈ 3.7795px） */
+                    setOverlayPageWidth(pageW_mm * 3.7795);
+
                     var overlay = buildOverlayElement(docType, p, formData, true);
-                    if (overlay) stage.appendChild(overlay);
+                    if (overlay) {
+                        overlay.style.cssText =
+                            'position:absolute;top:0;left:0;' +
+                            'width:100%;height:100%;';
+                        wrap.appendChild(overlay);
+                    }
                 } catch (e) {}
-                wrap.appendChild(stage);
+
                 printContainer.appendChild(wrap);
             }
-            setTimeout(function () {
-                window.print();
-                setTimeout(function () { printContainer.innerHTML = ''; }, 1000);
-            }, 300);
+
+            Promise.all(imgPromises).then(function () {
+
+                var style = document.createElement('style');
+                style.id = 'dynamic-print-style';
+                style.textContent = [
+                    '@media print {',
+                    '  @page { size: A4 ' + (isPortrait ? 'portrait' : 'landscape') + '; margin: 0; }',
+
+                    '  html, body {',
+                    '    margin: 0 !important;',
+                    '    padding: 0 !important;',
+                    '    display: block !important;',
+                    '    width: auto !important;',
+                    '    height: auto !important;',
+                    '    min-height: 0 !important;',
+                    '    max-height: none !important;',
+                    '    overflow: visible !important;',
+                    '    background: #fff !important;',
+                    '    color: #000 !important;',
+                    '  }',
+
+                    '  body > *:not(#print-only-container) { display: none !important; }',
+
+                    '  #print-only-container {',
+                    '    display: block !important;',
+                    '    position: static !important;',
+                    '    width: auto !important;',
+                    '    height: auto !important;',
+                    '    margin: 0 !important;',
+                    '    padding: 0 !important;',
+                    '    background: #fff !important;',
+                    '  }',
+
+                    '  #print-only-container .print-page {',
+                    '    page-break-after: always;',
+                    '    break-after: page;',
+                    '    width: ' + pageW_mm + 'mm !important;',
+                    '    height: ' + pageH_mm + 'mm !important;',
+                    '    margin: 0 !important;',
+                    '    padding: 0 !important;',
+                    '    position: relative !important;',
+                    '    overflow: hidden !important;',
+                    '    background: #fff !important;',
+                    '    display: block !important;',
+                    '  }',
+                    '  #print-only-container .print-page:last-child {',
+                    '    page-break-after: auto !important;',
+                    '    break-after: auto !important;',
+                    '  }',
+
+                    '  #print-only-container .print-page img {',
+                    '    display: block !important;',
+                    '    width: 100% !important;',
+                    '    height: 100% !important;',
+                    '    max-width: none !important;',
+                    '    max-height: none !important;',
+                    '    object-fit: contain !important;',
+                    '    margin: 0 !important;',
+                    '    padding: 0 !important;',
+                    '  }',
+
+                    '  #print-only-container .print-page .pdf-view-overlay {',
+                    '    position: absolute !important;',
+                    '    top: 0 !important; left: 0 !important;',
+                    '    width: 100% !important; height: 100% !important;',
+                    '    display: block !important;',
+                    '  }',
+                    '}'
+                ].join('\n');
+                document.head.appendChild(style);
+
+                void document.body.offsetHeight;
+
+                setTimeout(function () {
+                    window.print();
+
+                    setTimeout(function () {
+                        printContainer.innerHTML = '';
+                        var s = document.getElementById('dynamic-print-style');
+                        if (s) s.remove();
+                    }, 2000);
+                }, 300);
+            });
         }
 
         document.addEventListener('DOMContentLoaded', async function () {

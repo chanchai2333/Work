@@ -1,4 +1,4 @@
-// safetyinspect.js - 安全檢查頁面邏輯（整合 DWSS 權限控制）
+// safetyinspect.js - 安全檢查頁面邏輯（整合 DWSS 權限控制 & 自動生成 ID）
 document.addEventListener("DOMContentLoaded", function() {
     // ---------- 權限檢查 ----------
     DWSS_Auth.updateHeaderUser();
@@ -17,10 +17,11 @@ document.addEventListener("DOMContentLoaded", function() {
         'cancelled': 'Cancelled'
     };
 
+    // 預設資料（為展示新格式，這裡也更新了 ID 格式）
     const defaultInspections = [
-        { id: "INSP-2025-1", status: "draft", site: "Treatment Plant", date: "2025-08-15", inspector: "John Doe", pdfData: null, annotations: [] },
-        { id: "INSP-2025-2", status: "reopen", site: "Pipeline", date: "2025-08-14", inspector: "Jane Smith", pdfData: null, annotations: [] },
-        { id: "INSP-2025-3", status: "closed", site: "Reservoir", date: "2025-08-13", inspector: "Robert Johnson", pdfData: null, annotations: [] }
+        { id: "SSR/WSI/000001A", status: "draft", site: "Treatment Plant", date: "2025-08-15", inspector: "John Doe", pdfData: null, annotations: [] },
+        { id: "SSR/WSI/000002A", status: "reopen", site: "Pipeline", date: "2025-08-14", inspector: "Jane Smith", pdfData: null, annotations: [] },
+        { id: "SSR/WSI/000003A", status: "closed", site: "Reservoir", date: "2025-08-13", inspector: "Robert Johnson", pdfData: null, annotations: [] }
     ];
 
     function loadData() {
@@ -97,6 +98,41 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
+    // ==================== ★ 自動生成 Inspection ID ====================
+    function generateNextSafetyId() {
+        const ID_PREFIX = 'SSR/WSI/'; // 前綴
+        const ID_SUFFIX = 'A';        // 後綴
+        const ID_PAD    = 6;          // 數字補零位數
+
+        // 轉義正則特殊字元
+        const escaped = ID_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const re = new RegExp('^' + escaped + '(\\d+)[A-Za-z]?$');
+
+        // 從 localStorage 讀取最新數據，避免 inspectionData 快取過舊
+        let records = [];
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            const parsed = raw ? JSON.parse(raw) : [];
+            records = Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            records = inspectionData || [];
+        }
+
+        // 找最大數字
+        let maxNum = 0;
+        records.forEach(function (item) {
+            if (!item || item.id == null) return;
+            const m = String(item.id).match(re);
+            if (m) {
+                const n = parseInt(m[1], 10);
+                if (!isNaN(n) && n > maxNum) maxNum = n;
+            }
+        });
+
+        const next = maxNum + 1;
+        return ID_PREFIX + String(next).padStart(ID_PAD, '0') + ID_SUFFIX;
+    }
+
     // ---------- 生成狀態更改下拉選單（安全檢查專用） ----------
     function generateSafetyStatusSelect(recordId) {
         if (DWSS_Auth.canChangeStatus()) {
@@ -157,7 +193,6 @@ document.addEventListener("DOMContentLoaded", function() {
         filtered.forEach(item => {
             const row = document.createElement('tr');
             
-            // 根據權限生成操作按鈕
             let actionButtons = `
                 <td>
                     <button class="action-btn view-btn" data-id="${item.id}" title="View"><i class="fas fa-eye"></i></button>
@@ -186,7 +221,6 @@ document.addEventListener("DOMContentLoaded", function() {
         attachActionEvents();
         updateStats();
         
-        // 綁定狀態更改事件
         if (userCanChangeStatus) {
             bindSafetyStatusChangeEvents();
         }
@@ -352,7 +386,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    // ---------- 新增檢查模態框（整合權限） ----------
+    // ---------- 新增檢查模態框（整合權限 & 自動生成 ID） ----------
     function setupAddInspectionModal() {
         const addBtn = document.getElementById('add-inspection-btn');
         const modal = document.getElementById('add-inspect-modal');
@@ -365,11 +399,16 @@ document.addEventListener("DOMContentLoaded", function() {
                 modal.style.display = 'flex';
                 form.reset();
                 
-                // ★★★ 根據權限調整狀態選項 ★★★
+                // ★ 自動生成 Inspection ID
+                const idInput = document.getElementById('input-inspect-id');
+                if (idInput) {
+                    idInput.value = generateNextSafetyId();
+                }
+                
+                // ★ 根據權限調整狀態選項
                 const statusSelect = document.getElementById('input-inspect-status');
                 if (statusSelect) {
                     if (!DWSS_Auth.canChangeStatus()) {
-                        // 低級用戶：只能提交
                         statusSelect.innerHTML = '<option value="submitted-wsg">Submitted to WSG</option>';
                         statusSelect.value = 'submitted-wsg';
                         statusSelect.disabled = true;
@@ -383,7 +422,6 @@ document.addEventListener("DOMContentLoaded", function() {
                             statusSelect.parentNode.appendChild(hint);
                         }
                     } else {
-                        // 高級用戶：可以選擇任何狀態
                         statusSelect.innerHTML = `
                             <option value="draft">Draft</option>
                             <option value="submitted-wsg">Submitted to WSG</option>
