@@ -230,7 +230,25 @@ const DWSS_Auth = {
                 e.target.value = '';
             }
         }
+    },
+
+    getProjectId: function() {
+        const user = this.getCurrentUser();
+        return user ? user.projectId : null;
+    },
+
+    getProjectName: function() {
+        const user = this.getCurrentUser();
+        return user ? user.projectName : null;
+    },
+
+    // ★ 新增：檢查一筆記錄是否屬於當前項目
+    belongsToCurrentProject: function(record) {
+        const pid = this.getProjectId();
+        if (!pid) return true;           // 沒設定就不過濾（相容舊資料）
+        return record.project === pid;
     }
+
 };
 
 // 頁面加載時自動檢查登錄狀態（除了登錄頁面）

@@ -1,6 +1,6 @@
 /**
  * =====================================================
- * Site Diary Page Script (整合 DWSS 權限控制)
+ * Site Diary Page Script (整合 DWSS 權限控制 + 項目隔離)
  * 依賴: auth-check.js
  * =====================================================
  */
@@ -22,36 +22,77 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ==================== 數據管理 ====================
     const STORAGE_KEY = 'siteDiaryData';
-    
-    let diaryData = [];
-    
-    const defaultDiaries = [
-        { id: "SD-2025-001", status: "draft", site: "Treatment Plant", date: "2025-08-15", submittedBy: "John Doe", type: "Contractor Documents", pdfData: null, annotations: [] },
-        { id: "SD-2025-002", status: "submitted-wsg", site: "Pipeline", date: "2025-08-14", submittedBy: "Jane Smith", type: "Contractor Documents", pdfData: null, annotations: [] },
-        { id: "SD-2025-003", status: "submitted-ig", site: "Reservoir", date: "2025-08-13", submittedBy: "Robert Johnson", type: "Sub Contractor Documents", pdfData: null, annotations: [] },
-        { id: "SD-2025-004", status: "closed", site: "Distribution", date: "2025-08-12", submittedBy: "Sarah Williams", type: "Sub Contractor Documents", pdfData: null, annotations: [] },
-        { id: "SD-2025-005", status: "reopen", site: "Pump Station", date: "2025-08-11", submittedBy: "Michael Brown", type: "Contractor Documents", pdfData: null, annotations: [] },
-        { id: "SD-2025-006", status: "cancelled", site: "Treatment Plant", date: "2025-08-10", submittedBy: "David Wilson", type: "Contractor Documents", pdfData: null, annotations: [] },
-        { id: "SD-2025-007", status: "draft", site: "Pipeline", date: "2025-08-09", submittedBy: "Emma Davis", type: "Sub Contractor Documents", pdfData: null, annotations: [] },
-        { id: "SD-2025-008", status: "submitted-wsg", site: "Reservoir", date: "2025-08-08", submittedBy: "James Miller", type: "Contractor Documents", pdfData: null, annotations: [] },
-        { id: "SD-2025-009", status: "closed", site: "Distribution", date: "2025-08-07", submittedBy: "Olivia Garcia", type: "Sub Contractor Documents", pdfData: null, annotations: [] },
-        { id: "SD-2025-010", status: "reopen", site: "Pump Station", date: "2025-08-06", submittedBy: "William Rodriguez", type: "Contractor Documents", pdfData: null, annotations: [] }
-    ];
 
+    let diaryData = [];
+
+    // ★ 每個項目的預設記錄（分組，方便維護）
+    const DEFAULT_PROJECT_DATA = {
+        'DE/2026/05': [
+            { id: "SD/26/000001A", status: "draft",         site: "Treatment Plant", date: "2025-08-15", submittedBy: "John Doe",          type: "Contractor Documents",     project: "DE/2026/05", pdfData: null, annotations: [] },
+            { id: "SD/26/000002A", status: "submitted-wsg", site: "Pipeline",        date: "2025-08-14", submittedBy: "Jane Smith",        type: "Contractor Documents",     project: "DE/2026/05", pdfData: null, annotations: [] },
+            { id: "SD/26/000003A", status: "closed",        site: "Reservoir",       date: "2025-08-13", submittedBy: "Robert Johnson",    type: "Sub Contractor Documents", project: "DE/2026/05", pdfData: null, annotations: [] },
+            { id: "SD/26/000004A", status: "reopen",        site: "Distribution",    date: "2025-08-12", submittedBy: "Sarah Williams",    type: "Sub Contractor Documents", project: "DE/2026/05", pdfData: null, annotations: [] }
+        ],
+        'DE/2025/02': [
+            { id: "SD/25/02/000001A", status: "submitted-ig",  site: "Pump Station",    date: "2025-05-10", submittedBy: "Michael Brown",     type: "Contractor Documents",     project: "DE/2025/02", pdfData: null, annotations: [] },
+            { id: "SD/25/02/000002A", status: "closed",        site: "Pipeline",        date: "2025-05-09", submittedBy: "Emma Davis",        type: "Sub Contractor Documents", project: "DE/2025/02", pdfData: null, annotations: [] },
+            { id: "SD/25/02/000003A", status: "cancelled",     site: "Reservoir",       date: "2025-05-08", submittedBy: "James Miller",      type: "Contractor Documents",     project: "DE/2025/02", pdfData: null, annotations: [] }
+        ],
+        'DE/2025/09': [
+            { id: "SD/25/09/000001A", status: "submitted-wsg", site: "Distribution",    date: "2025-09-07", submittedBy: "Olivia Garcia",     type: "Sub Contractor Documents", project: "DE/2025/09", pdfData: null, annotations: [] },
+            { id: "SD/25/09/000002A", status: "reopen",        site: "Treatment Plant", date: "2025-09-06", submittedBy: "William Rodriguez", type: "Contractor Documents",     project: "DE/2025/09", pdfData: null, annotations: [] },
+            { id: "SD/25/09/000003A", status: "draft",         site: "Pump Station",    date: "2025-09-05", submittedBy: "David Wilson",      type: "Contractor Documents",     project: "DE/2025/09", pdfData: null, annotations: [] },
+            { id: "SD/25/09/000004A", status: "closed",        site: "Pipeline",        date: "2025-09-04", submittedBy: "Jane Smith",        type: "Sub Contractor Documents", project: "DE/2025/09", pdfData: null, annotations: [] },
+            { id: "SD/25/09/000005A", status: "submitted-ig",  site: "Reservoir",       date: "2025-09-03", submittedBy: "John Doe",          type: "Contractor Documents",     project: "DE/2025/09", pdfData: null, annotations: [] }
+        ]
+    };
+
+    // ★ 把所有項目的預設記錄攤平
+    function getAllDefaultRecords() {
+        const all = [];
+        Object.keys(DEFAULT_PROJECT_DATA).forEach(function (projectId) {
+            DEFAULT_PROJECT_DATA[projectId].forEach(function (rec) {
+                all.push(Object.assign({}, rec));
+            });
+        });
+        return all;
+    }
+
+    // ==================== 載入 / 儲存 ====================
     function loadData() {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
             try {
                 diaryData = JSON.parse(stored);
+                let migrated = 0;
                 diaryData.forEach(item => {
                     if (!item.hasOwnProperty('pdfData')) item.pdfData = null;
                     if (!item.hasOwnProperty('annotations')) item.annotations = [];
+
+                    // ★ 舊資料沒有 project → 依 ID 前綴推斷項目
+                    if (!item.project) {
+                        if (item.id && item.id.indexOf('SD/25/02') === 0) {
+                            item.project = 'DE/2025/02';
+                        } else if (item.id && item.id.indexOf('SD/25/09') === 0) {
+                            item.project = 'DE/2025/09';
+                        } else {
+                            item.project = 'DE/2026/05';
+                        }
+                        migrated++;
+                    }
                 });
-            } catch(e) {
-                diaryData = [...defaultDiaries];
+                if (migrated > 0) {
+                    console.log('[SiteDiary] ✓ 已為 ' + migrated + ' 筆舊記錄補上 project');
+                }
+                saveData();
+            } catch (e) {
+                console.error('[SiteDiary] 資料解析失敗，使用預設資料', e);
+                diaryData = getAllDefaultRecords();
+                saveData();
             }
         } else {
-            diaryData = [...defaultDiaries];
+            console.log('[SiteDiary] ✓ 首次載入，建立 3 個項目的預設資料');
+            diaryData = getAllDefaultRecords();
             saveData();
         }
     }
@@ -59,6 +100,29 @@ document.addEventListener('DOMContentLoaded', function () {
     function saveData() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(diaryData));
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(diaryData));
+    }
+
+    // ==================== ★ 項目過濾輔助函數 ====================
+    /**
+     * 從全量 diaryData 中過濾出「當前項目」的記錄
+     * 回傳一個新陣列（不改動 diaryData）
+     */
+    function getProjectData() {
+        const projectId = (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.getProjectId)
+            ? DWSS_Auth.getProjectId()
+            : null;
+
+        // 沒有 projectId（未登入）→ 只顯示沒有指定 project 的記錄
+        if (!projectId) {
+            return diaryData.filter(function (item) {
+                return !item.project;
+            });
+        }
+
+        // 有 projectId → 只顯示屬於該項目的記錄
+        return diaryData.filter(function (item) {
+            return item.project === projectId;
+        });
     }
 
     // ==================== 輔助函數 ====================
@@ -98,12 +162,29 @@ document.addEventListener('DOMContentLoaded', function () {
     // ==================== ★ 自動生成 Diary ID ====================
     /**
      * 生成下一個 Diary ID
-     *   格式：SD/XX/000001A
-     *   規則：掃描所有現有 ID，找出最大數字 +1
-     *   若格式改成動態前綴（例如年份），只改 ID_PREFIX 即可
+     *   DE/2026/05 → SD/26/000001A
+     *   DE/2025/02 → SD/25/02/000001A
+     *   DE/2025/09 → SD/25/09/000001A
+     *   其他       → SD/XX/000001A
+     * 規則：掃描「當前項目」的所有記錄，找出最大數字 +1
      */
     function generateNextDiaryId() {
-        const ID_PREFIX = 'SD/XX/';   // ← 若要改成 "SD/26/" 動態年份，改這裡
+        const projectId = (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.getProjectId)
+            ? DWSS_Auth.getProjectId()
+            : null;
+
+        // 依項目決定前綴
+        let ID_PREFIX;
+        if (projectId === 'DE/2026/05') {
+            ID_PREFIX = 'SD/26/';
+        } else if (projectId === 'DE/2025/02') {
+            ID_PREFIX = 'SD/25/02/';
+        } else if (projectId === 'DE/2025/09') {
+            ID_PREFIX = 'SD/25/09/';
+        } else {
+            ID_PREFIX = 'SD/XX/';
+        }
+
         const ID_SUFFIX = 'A';
         const ID_PAD    = 6;
 
@@ -111,19 +192,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const escaped = ID_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const re = new RegExp('^' + escaped + '(\\d+)[A-Za-z]?$');
 
-        // 從 localStorage 讀取（避免 diaryData 快取過舊）
-        let records = [];
-        try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            const parsed = raw ? JSON.parse(raw) : [];
-            records = Array.isArray(parsed) ? parsed : [];
-        } catch (e) {
-            records = diaryData || [];
-        }
+        // ★ 從「當前項目」的記錄中找最大數字
+        const projectData = getProjectData();
 
-        // 找最大數字
         let maxNum = 0;
-        records.forEach(function (item) {
+        projectData.forEach(function (item) {
             if (!item || item.id == null) return;
             const m = String(item.id).match(re);
             if (m) {
@@ -161,14 +234,18 @@ document.addEventListener('DOMContentLoaded', function () {
         type: "all"
     };
 
-    // ==================== 渲染 ====================
+    // ==================== 統計 ====================
     function updateStats() {
         const totalEl = document.getElementById('total-documents-count');
         const monthEl = document.getElementById('month-count');
-        if (totalEl) totalEl.textContent = diaryData.length;
+
+        // ★ 只統計「當前項目」的記錄
+        const projectData = getProjectData();
+
+        if (totalEl) totalEl.textContent = projectData.length;
         if (monthEl) {
             const currentMonth = new Date().getMonth() + 1;
-            const monthCount = diaryData.filter(item => {
+            const monthCount = projectData.filter(item => {
                 const itemDate = new Date(item.date);
                 return itemDate.getMonth() + 1 === currentMonth;
             }).length;
@@ -176,15 +253,19 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    // ==================== 渲染表格 ====================
     function renderTable() {
         const tbody = document.getElementById('diary-table-body');
         const noResults = document.getElementById('no-results-message');
         if (!tbody) return;
-        
 
         tbody.innerHTML = '';
 
-        const filtered = diaryData.filter(item => {
+        // ★ 先按項目過濾
+        const projectData = getProjectData();
+
+        // 再套用使用者選擇的篩選器
+        const filtered = projectData.filter(item => {
             if (currentFilters.site !== "all") {
                 const siteType = getSiteType(item.site);
                 if (siteType !== currentFilters.site) return false;
@@ -202,7 +283,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         filtered.forEach(item => {
             const row = document.createElement('tr');
-            
+
             let actionButtons = `
                 <td>
                     <button class="action-btn view-btn" data-id="${item.id}" title="View"><i class="fas fa-eye"></i></button>
@@ -210,27 +291,27 @@ document.addEventListener('DOMContentLoaded', function () {
                     ${generateDiaryStatusSelect(item.id)}
                     <button class="action-btn delete-btn" data-id="${item.id}" title="Delete"><i class="fas fa-trash"></i></button>
             `;
-            
+
             if (!userCanChangeStatus) {
                 actionButtons += `<span class="permission-lock-hint"><i class="fas fa-lock"></i> Status change requires higher permission</span>`;
             }
-            
+
             actionButtons += `</td>`;
-            
-            // 喺 renderTable 入面
-        var approvalDisplay = '';
-        if (item.approvalStatus === 'approved') {
-            approvalDisplay = '<span class="status-badge status-approved">✅ Approved</span>';
-        } else if (item.approvalStatus === 'rejected') {
-            approvalDisplay = '<span class="status-badge status-rejected">❌ Rejected</span>';
-        } else {
-            approvalDisplay = '<span class="status-badge status-pending">⏳ Pending</span>';
-        }
+
+            // 審批狀態顯示
+            var approvalDisplay = '';
+            if (item.approvalStatus === 'approved') {
+                approvalDisplay = '<span class="status-badge status-approved">✅ Approved</span>';
+            } else if (item.approvalStatus === 'rejected') {
+                approvalDisplay = '<span class="status-badge status-rejected">❌ Rejected</span>';
+            } else {
+                approvalDisplay = '<span class="status-badge status-pending">⏳ Pending</span>';
+            }
 
             row.innerHTML = `
                 <td>${item.id}</td>
                 <td><span class="status-badge status-${item.status}">${getStatusText(item.status)}</span></td>
-                <td>${approvalDisplay}</td>   <!-- ★ 新增 -->
+                <td>${approvalDisplay}</td>
                 <td>${item.site}</td>
                 <td>${formatDate(item.date)}</td>
                 <td>${item.submittedBy}</td>
@@ -242,7 +323,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         updateStats();
 
-        // 綁定狀態更改事件
         if (userCanChangeStatus) {
             bindStatusChangeEvents();
         }
@@ -259,16 +339,26 @@ document.addEventListener('DOMContentLoaded', function () {
     function handleStatusChange(e) {
         const recordId = e.target.getAttribute('data-id');
         const newStatus = e.target.value;
-        
+
         if (!newStatus) return;
-        
-        const record = diaryData.find(r => r.id === recordId);
+
+        // 從全量 diaryData 中找（ID 是唯一的）
+        const record = diaryData.find(r => String(r.id) === String(recordId));
         if (!record) return;
-        
+
+        // 安全檢查：確保這筆記錄屬於當前項目
+        const projectData = getProjectData();
+        const belongs = projectData.some(r => String(r.id) === String(recordId));
+        if (!belongs) {
+            alert('❌ This record does not belong to your current project.');
+            e.target.value = '';
+            return;
+        }
+
         const oldStatus = getStatusText(record.status);
         const newStatusText = getStatusText(newStatus);
         const user = DWSS_Auth.getCurrentUser();
-        
+
         if (confirm(
             '⚠️ Change Status Confirmation\n\n' +
             'Diary ID: ' + recordId + '\n' +
@@ -281,10 +371,10 @@ document.addEventListener('DOMContentLoaded', function () {
             record.statusChangedBy = user ? user.userName : 'Unknown';
             record.statusChangedAt = new Date().toISOString();
             record.statusChangedRole = DWSS_Auth.getRoleName();
-            
+
             saveData();
             renderTable();
-            
+
             alert('✅ Status changed successfully!\n\n' + oldStatus + ' → ' + newStatusText);
         } else {
             e.target.value = '';
@@ -299,8 +389,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (viewBtn) {
             const id = viewBtn.dataset.id;
-            const record = diaryData.find(d => d.id === id);
+            const record = diaryData.find(d => String(d.id) === String(id));
             if (record) {
+                const projectData = getProjectData();
+                if (!projectData.some(d => String(d.id) === String(id))) {
+                    alert('❌ This record does not belong to your current project.');
+                    return;
+                }
                 sessionStorage.setItem('currentDocument', JSON.stringify({
                     id: record.id,
                     status: record.status,
@@ -309,6 +404,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     date: formatDate(record.date),
                     submittedBy: record.submittedBy,
                     type: record.type,
+                    project: record.project || null,
                     pdfData: record.pdfData || null,
                     annotations: record.annotations || []
                 }));
@@ -320,8 +416,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (editBtn) {
             const id = editBtn.dataset.id;
-            const record = diaryData.find(d => d.id === id);
+            const record = diaryData.find(d => String(d.id) === String(id));
             if (record) {
+                const projectData = getProjectData();
+                if (!projectData.some(d => String(d.id) === String(id))) {
+                    alert('❌ This record does not belong to your current project.');
+                    return;
+                }
                 sessionStorage.setItem('editDocument', JSON.stringify({
                     id: record.id,
                     status: record.status,
@@ -330,10 +431,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     date: formatDate(record.date),
                     submittedBy: record.submittedBy,
                     type: record.type,
+                    project: record.project || null,
                     pdfUrl: record.pdfUrl || '',
                     pdfData: record.pdfData || '',
                     annotations: record.annotations || [],
-                    approvalStatus: record.approvalStatus || 'draft'  
+                    approvalStatus: record.approvalStatus || 'draft'
                 }));
                 window.location.href = 'editdiary.html';
             } else {
@@ -343,8 +445,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (deleteBtn) {
             const id = deleteBtn.dataset.id;
+            const projectData = getProjectData();
+            if (!projectData.some(d => String(d.id) === String(id))) {
+                alert('❌ This record does not belong to your current project.');
+                return;
+            }
             if (confirm(`Are you sure you want to delete diary ${id}?`)) {
-                diaryData = diaryData.filter(d => d.id !== id);
+                // 從全量 diaryData 移除
+                diaryData = diaryData.filter(d => String(d.id) !== String(id));
                 saveData();
                 renderTable();
             }
@@ -400,7 +508,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 modal.style.display = 'flex';
                 form.reset();
 
-                // ★ 自動生成 Diary ID
+                // ★ 自動生成 Diary ID（依當前項目）
                 const idInput = document.getElementById('input-diary-id');
                 if (idInput) {
                     idInput.value = generateNextDiaryId();
@@ -488,6 +596,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
 
+                // ★ 取得當前項目 ID
+                const projectId = (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.getProjectId)
+                    ? DWSS_Auth.getProjectId()
+                    : null;
+
                 const newDiary = {
                     id,
                     status,
@@ -495,10 +608,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     date,
                     submittedBy,
                     type,
+                    project: projectId,   // ★ 綁定項目
                     pdfData: pdfData,
                     annotations: []
                 };
 
+                // ★ 寫入全量 diaryData
                 diaryData.unshift(newDiary);
                 saveData();
                 renderTable();
