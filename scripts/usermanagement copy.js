@@ -1,0 +1,562 @@
+// ===== 用户管理功能 =====
+const UserManagement = {
+    users: [
+        { 
+            id: 1,
+            name: "Admin",
+            email: "admin@rdrive.io",
+            role: "admin",
+            department: "System Administration",
+            status: "online",
+            addedDate: "2024-01-15"
+        },
+        { 
+            id: 2,
+            name: "Kenneth Daluz",
+            email: "kenneth.daluz@aster-dsd.com",
+            role: "officer",
+            department: "Administration",
+            status: "online",
+            addedDate: "2024-02-10"
+        },
+        { 
+            id: 3,
+            name: "TANG Chi Long, Gary",
+            email: "gcifang@dsd.gov.hk",
+            role: "aei",
+            department: "AEI/NWNT",
+            status: "online",
+            addedDate: "2024-02-15"
+        },
+        { 
+            id: 4,
+            name: "FUNG Wai Ching",
+            email: "wcfung04@dsd.gov.hk",
+            role: "aei",
+            department: "AEI/SWH",
+            status: "online",
+            addedDate: "2024-03-01"
+        },
+        { 
+            id: 5,
+            name: "WONG Lap Pan",
+            email: "ipwong02@dsd.gov.hk",
+            role: "aei",
+            department: "AEI/SWH/1",
+            status: "online",
+            addedDate: "2024-03-05"
+        },
+        { 
+            id: 6,
+            name: "CHA Chi Ming",
+            email: "cmcha02@dsd.gov.hk",
+            role: "aei",
+            department: "AMI/TM",
+            status: "online",
+            addedDate: "2024-03-10"
+        },
+        { 
+            id: 7,
+            name: "John Smith",
+            email: "john.smith@ael-dwss.com",
+            role: "inspector",
+            department: "Safety Inspection",
+            status: "online",
+            addedDate: "2024-03-15"
+        },
+        { 
+            id: 8,
+            name: "Sarah Johnson",
+            email: "sarah.j@ael-dwss.com",
+            role: "contractor",
+            department: "Contractor Team A",
+            status: "offline",
+            addedDate: "2024-04-01"
+        },
+        { 
+            id: 9,
+            name: "Robert Chen",
+            email: "robert.chen@dsd.gov.hk",
+            role: "officer",
+            department: "Documentation",
+            status: "online",
+            addedDate: "2024-04-05"
+        },
+        { 
+            id: 10,
+            name: "Emma Wilson",
+            email: "emma.w@ael-dwss.com",
+            role: "inspector",
+            department: "Quality Control",
+            status: "offline",
+            addedDate: "2024-04-10"
+        }
+    ],
+    
+    currentFilters: {
+        role: "all",
+        status: "all",
+        sort: "name-asc"
+    },
+    
+    currentPage: 1,
+    itemsPerPage: 10,
+    
+    init: function() {
+        this.renderUserTable();
+        this.setupFilterEvents();
+        this.setupActionButtons();
+        this.updateUserStats();
+    },
+    
+    renderUserTable: function() {
+        const tbody = document.getElementById('users-table-body');
+        const noResults = document.getElementById('no-results-message');
+        
+        if (!tbody) return;
+        
+        // 清空表格
+        tbody.innerHTML = '';
+        
+        // 筛选数据
+        let filteredUsers = this.users.filter(user => {
+            // 角色筛选
+            if (this.currentFilters.role !== "all" && user.role !== this.currentFilters.role) {
+                return false;
+            }
+            // 状态筛选
+            if (this.currentFilters.status !== "all" && user.status !== this.currentFilters.status) {
+                return false;
+            }
+            return true;
+        });
+        
+        // 排序数据
+        filteredUsers = this.sortUsers(filteredUsers, this.currentFilters.sort);
+        
+        // 分页
+        const totalUsers = filteredUsers.length;
+        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+        const endIndex = Math.min(startIndex + this.itemsPerPage, totalUsers);
+        const pagedUsers = filteredUsers.slice(startIndex, endIndex);
+        
+        // 更新分页信息
+        this.updatePaginationInfo(startIndex + 1, endIndex, totalUsers);
+        
+        // 显示无结果消息
+        if (noResults) {
+            noResults.style.display = pagedUsers.length === 0 ? 'block' : 'none';
+        }
+        
+        // 填充表格
+        pagedUsers.forEach(user => {
+            const row = document.createElement('tr');
+            
+            // 获取角色显示文本
+            let roleText = "";
+            switch(user.role) {
+                case "admin": roleText = "Administrator"; break;
+                case "officer": roleText = "Officer"; break;
+                case "aei": roleText = "AEI"; break;
+                case "inspector": roleText = "Inspector"; break;
+                case "contractor": roleText = "Contractor"; break;
+            }
+            
+            // 获取状态显示文本和样式
+            let statusText = "";
+            let statusClass = "";
+            switch(user.status) {
+                case "online":
+                    statusText = "Online";
+                    statusClass = "status-online";
+                    break;
+                case "offline":
+                    statusText = "Offline";
+                    statusClass = "status-offline";
+                    break;
+            }
+            
+            row.innerHTML = `
+                <td>
+                    <div class="user-info">
+                        <div class="user-name">${user.name}</div>
+                        ${user.department ? `<div class="user-department">${user.department}</div>` : ''}
+                    </div>
+                </span>
+                <td>${user.email}</span>
+                <td><span class="role-badge role-${user.role}">${roleText}</span></span>
+                <td><span class="status-badge ${statusClass}">${statusText}</span></span>
+                <td>
+                    <button class="action-btn edit-user-btn" data-id="${user.id}"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn delete-user-btn" data-id="${user.id}" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;"><i class="fas fa-trash"></i></button>
+                </span>
+            `;
+            
+            tbody.appendChild(row);
+        });
+        
+        // 添加事件监听器
+        this.attachEventListeners();
+    },
+    
+    sortUsers: function(users, sortBy) {
+        return [...users].sort((a, b) => {
+            switch(sortBy) {
+                case "name-asc":
+                    return a.name.localeCompare(b.name);
+                case "name-desc":
+                    return b.name.localeCompare(a.name);
+                case "date-asc":
+                    return new Date(a.addedDate) - new Date(b.addedDate);
+                case "date-desc":
+                    return new Date(b.addedDate) - new Date(a.addedDate);
+                default:
+                    return 0;
+            }
+        });
+    },
+    
+    updatePaginationInfo: function(start, end, total) {
+        const pageStart = document.getElementById('page-start');
+        const pageEnd = document.getElementById('page-end');
+        const totalItems = document.getElementById('total-items');
+        const prevBtn = document.getElementById('prev-page');
+        const nextBtn = document.getElementById('next-page');
+        
+        if (pageStart) pageStart.textContent = start;
+        if (pageEnd) pageEnd.textContent = end;
+        if (totalItems) totalItems.textContent = total;
+        if (prevBtn) prevBtn.disabled = this.currentPage === 1;
+        if (nextBtn) nextBtn.disabled = this.currentPage * this.itemsPerPage >= total;
+    },
+    
+    updateUserStats: function() {
+        const total = this.users.length;
+        const online = this.users.filter(u => u.status === 'online').length;
+        const offline = this.users.filter(u => u.status === 'offline').length;
+        const admin = this.users.filter(u => u.role === 'admin').length;
+
+        const totalEl = document.getElementById('total-users-count');
+        const onlineEl = document.getElementById('online-users-count');
+        const offlineEl = document.getElementById('offline-users-count');
+        const adminEl = document.getElementById('admin-users-count');
+
+        if (totalEl) totalEl.textContent = total;
+        if (onlineEl) onlineEl.textContent = online;
+        if (offlineEl) offlineEl.textContent = offline;
+        if (adminEl) adminEl.textContent = admin;
+    },
+    
+    setupFilterEvents: function() {
+        document.querySelectorAll('.filter-group').forEach(group => {
+            const toggle = group.querySelector('.filter-toggle');
+            const options = group.querySelector('.filter-options');
+            
+            if (!toggle || !options) return;
+            
+            toggle.addEventListener('click', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                
+                document.querySelectorAll('.filter-options').forEach(opt => {
+                    if (opt !== options) {
+                        opt.classList.remove('open');
+                        opt.classList.remove('show');
+                    }
+                });
+                options.classList.toggle('open');
+                options.classList.toggle('show');
+            });
+            
+            group.querySelectorAll('.filter-option').forEach(option => {
+                option.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    
+                    group.querySelectorAll('.filter-option').forEach(opt => opt.classList.remove('active'));
+                    option.classList.add('active');
+                    toggle.querySelector('span').textContent = option.textContent;
+                    
+                    const filterType = option.dataset.filter;
+                    const filterValue = option.dataset.value;
+                    
+                    UserManagement.currentFilters[filterType] = filterValue;
+                    
+                    if (filterType === 'sort') {
+                        UserManagement.currentPage = 1;
+                    }
+                    
+                    UserManagement.renderUserTable();
+                    options.classList.remove('open');
+                    options.classList.remove('show');
+                });
+            });
+        });
+        
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.filter-group')) {
+                document.querySelectorAll('.filter-options').forEach(opt => {
+                    opt.classList.remove('open');
+                    opt.classList.remove('show');
+                });
+            }
+        });
+        
+        // 搜索表单
+        const searchForm = document.getElementById('search-form');
+        if (searchForm) {
+            searchForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const searchTerm = this.querySelector('input').value.toLowerCase();
+                if (searchTerm) {
+                    alert(`Searching for: ${searchTerm}`);
+                }
+            });
+        }
+        
+        // 分页按钮
+        const prevBtn = document.getElementById('prev-page');
+        const nextBtn = document.getElementById('next-page');
+        if (prevBtn) {
+            prevBtn.addEventListener('click', function() {
+                if (UserManagement.currentPage > 1) {
+                    UserManagement.currentPage--;
+                    UserManagement.renderUserTable();
+                }
+            });
+        }
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function() {
+                const totalUsers = UserManagement.users.length;
+                const maxPage = Math.ceil(totalUsers / UserManagement.itemsPerPage);
+                if (UserManagement.currentPage < maxPage) {
+                    UserManagement.currentPage++;
+                    UserManagement.renderUserTable();
+                }
+            });
+        }
+    },
+    
+    setupActionButtons: function() {
+        const addUserBtn = document.getElementById('add-user-btn');
+        if (addUserBtn) {
+            addUserBtn.addEventListener('click', function() {
+                const modalTitle = document.querySelector('#add-user-modal h3 span');
+                const submitBtn = document.querySelector('#add-user-form button[type="submit"]');
+                if (modalTitle) modalTitle.textContent = 'Add New User';
+                if (submitBtn) submitBtn.textContent = 'Add User';
+                if (submitBtn) delete submitBtn.dataset.editingUserId;
+                
+                const modal = document.getElementById('add-user-modal');
+                const form = document.getElementById('add-user-form');
+                if (modal) modal.style.display = 'flex';
+                if (form) form.reset();
+            });
+        }
+        
+        const cancelBtn = document.getElementById('cancel-add-user');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', function() {
+                const modal = document.getElementById('add-user-modal');
+                const form = document.getElementById('add-user-form');
+                if (modal) modal.style.display = 'none';
+                if (form) form.reset();
+                
+                const modalTitle = document.querySelector('#add-user-modal h3 span');
+                const submitBtn = document.querySelector('#add-user-form button[type="submit"]');
+                if (modalTitle) modalTitle.textContent = 'Add New User';
+                if (submitBtn) submitBtn.textContent = 'Add User';
+                if (submitBtn) delete submitBtn.dataset.editingUserId;
+            });
+        }
+        
+        const refreshBtn = document.querySelector('.refresh-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function() {
+                UserManagement.renderUserTable();
+            });
+        }
+        
+        const addForm = document.getElementById('add-user-form');
+        if (addForm) {
+            addForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const submitBtn = document.querySelector('#add-user-form button[type="submit"]');
+                const editingUserId = submitBtn ? submitBtn.dataset.editingUserId : null;
+                
+                const name = document.getElementById('input-user-name').value;
+                const email = document.getElementById('input-user-email').value;
+                const role = document.getElementById('input-user-role').value;
+                const department = document.getElementById('input-user-department').value;
+                const status = document.getElementById('input-user-status').value;
+                
+                if (editingUserId) {
+                    // 编辑现有用户
+                    const userId = parseInt(editingUserId);
+                    const user = UserManagement.users.find(u => u.id === userId);
+                    if (user) {
+                        user.name = name;
+                        user.email = email;
+                        user.role = role;
+                        user.department = department;
+                        user.status = status;
+                        alert('User updated successfully!');
+                    }
+                } else {
+                    // 添加新用户
+                    const newUser = {
+                        id: UserManagement.users.length + 1,
+                        name: name,
+                        email: email,
+                        role: role,
+                        department: department,
+                        status: status,
+                        addedDate: new Date().toISOString().split('T')[0]
+                    };
+                    UserManagement.users.push(newUser);
+                    alert('User added successfully!');
+                }
+                
+                UserManagement.renderUserTable();
+                UserManagement.updateUserStats();
+                
+                const modal = document.getElementById('add-user-modal');
+                if (modal) modal.style.display = 'none';
+                this.reset();
+            });
+        }
+    },
+    
+    attachEventListeners: function() {
+        // 编辑用户按钮
+        document.querySelectorAll('.edit-user-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const userId = parseInt(this.getAttribute('data-id'));
+                const user = UserManagement.users.find(u => u.id === userId);
+                
+                if (user) {
+                    document.getElementById('input-user-name').value = user.name;
+                    document.getElementById('input-user-email').value = user.email;
+                    document.getElementById('input-user-role').value = user.role;
+                    document.getElementById('input-user-department').value = user.department || '';
+                    document.getElementById('input-user-status').value = user.status;
+                    
+                    const modalTitle = document.querySelector('#add-user-modal h3 span');
+                    const submitBtn = document.querySelector('#add-user-form button[type="submit"]');
+                    if (modalTitle) modalTitle.textContent = 'Edit User';
+                    if (submitBtn) submitBtn.textContent = 'Update User';
+                    if (submitBtn) submitBtn.dataset.editingUserId = userId;
+                    
+                    const modal = document.getElementById('add-user-modal');
+                    if (modal) modal.style.display = 'flex';
+                    
+                    // 临时覆盖表单提交行为（为了编辑时能正确更新）
+                    const form = document.getElementById('add-user-form');
+                    const originalSubmit = form.onsubmit;
+                    form.onsubmit = function(e) {
+                        e.preventDefault();
+                        
+                        user.name = document.getElementById('input-user-name').value;
+                        user.email = document.getElementById('input-user-email').value;
+                        user.role = document.getElementById('input-user-role').value;
+                        user.department = document.getElementById('input-user-department').value;
+                        user.status = document.getElementById('input-user-status').value;
+                        
+                        UserManagement.renderUserTable();
+                        UserManagement.updateUserStats();
+                        if (modal) modal.style.display = 'none';
+                        form.reset();
+                        
+                        if (modalTitle) modalTitle.textContent = 'Add New User';
+                        if (submitBtn) submitBtn.textContent = 'Add User';
+                        if (submitBtn) delete submitBtn.dataset.editingUserId;
+                        form.onsubmit = originalSubmit;
+                        
+                        alert('User updated successfully!');
+                    };
+                }
+            });
+        });
+        
+        // 删除用户按钮
+        document.querySelectorAll('.delete-user-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const userId = parseInt(this.getAttribute('data-id'));
+                const userName = UserManagement.users.find(u => u.id === userId)?.name;
+                
+                if (confirm(`Are you sure you want to delete user "${userName}"?`)) {
+                    UserManagement.users = UserManagement.users.filter(u => u.id !== userId);
+                    UserManagement.renderUserTable();
+                    UserManagement.updateUserStats();
+                    alert('User deleted successfully!');
+                }
+            });
+        });
+    }
+};
+
+// 处理侧边栏子菜单的展开/收起（如果存在子菜单结构，否则忽略）
+document.addEventListener('DOMContentLoaded', function() {
+    const submenuItems = document.querySelectorAll('.menu-item-with-submenu > .submenu-toggle');
+    submenuItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const parentItem = this.parentElement;
+            const submenu = parentItem.querySelector('.submenu');
+            if (!submenu) return;
+            parentItem.classList.toggle('active');
+            if (parentItem.classList.contains('active')) {
+                submenu.style.maxHeight = submenu.scrollHeight + 'px';
+                const arrow = this.querySelector('.submenu-arrow');
+                if (arrow) arrow.style.transform = 'rotate(180deg)';
+            } else {
+                submenu.style.maxHeight = '0';
+                const arrow = this.querySelector('.submenu-arrow');
+                if (arrow) arrow.style.transform = 'rotate(0deg)';
+            }
+            document.querySelectorAll('.menu-item-with-submenu').forEach(otherItem => {
+                if (otherItem !== parentItem && otherItem.classList.contains('active')) {
+                    otherItem.classList.remove('active');
+                    const otherSubmenu = otherItem.querySelector('.submenu');
+                    const otherArrow = otherItem.querySelector('.submenu-arrow');
+                    if (otherSubmenu) otherSubmenu.style.maxHeight = '0';
+                    if (otherArrow) otherArrow.style.transform = 'rotate(0deg)';
+                }
+            });
+        });
+    });
+    
+    document.querySelectorAll('.submenu a').forEach(link => {
+        link.addEventListener('click', function() {
+            document.querySelectorAll('.submenu a').forEach(a => a.classList.remove('active'));
+            this.classList.add('active');
+            const parentItem = this.closest('.menu-item-with-submenu');
+            if (parentItem) {
+                parentItem.classList.add('active');
+                const submenu = parentItem.querySelector('.submenu');
+                const arrow = parentItem.querySelector('.submenu-arrow');
+                if (submenu) submenu.style.maxHeight = submenu.scrollHeight + 'px';
+                if (arrow) arrow.style.transform = 'rotate(180deg)';
+            }
+        });
+    });
+    
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.menu-item-with-submenu')) {
+            document.querySelectorAll('.menu-item-with-submenu').forEach(item => {
+                item.classList.remove('active');
+                const submenu = item.querySelector('.submenu');
+                const arrow = item.querySelector('.submenu-arrow');
+                if (submenu) submenu.style.maxHeight = '0';
+                if (arrow) arrow.style.transform = 'rotate(0deg)';
+            });
+        }
+    });
+});
+
+// 初始化用户管理
+function initUserManagement() {
+    UserManagement.init();
+}

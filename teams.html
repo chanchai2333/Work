@@ -88,20 +88,16 @@
         </div>
     </div>
     
+    <script src="scripts/permissions.js"></script>
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
     <script src="scripts/sidebar.js"></script>
     <script src="scripts/teams.js"></script>
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        DWSS_Auth.updateHeaderUser();
-    });
-    
-    // 立即執行一次（確保覆蓋）
-    setTimeout(function() {
-        DWSS_Auth.updateHeaderUser();
-    }, 100);
-</script>
+        document.addEventListener('DOMContentLoaded', function() {
+            DWSS_Permissions.updateHeaderUser();
+        });
+    </script>
     <script>
     // 更新用戶名
     DWSS_Auth.updateHeaderUser();

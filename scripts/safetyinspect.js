@@ -216,17 +216,16 @@ document.addEventListener("DOMContentLoaded", function() {
     // ---------- 渲染和統計 ----------
     let currentFilters = { site: "all", status: "all" };
 
-    function updateStats() {
+    function updateStats(dataToUse) {
         const totalEl = document.getElementById('total-inspections-count');
         const monthEl = document.getElementById('month-count');
 
-        // ★ 只統計「當前項目」
-        const projectData = getProjectData();
+        const data = dataToUse || inspectionData;
 
-        if (totalEl) totalEl.textContent = projectData.length;
+        if (totalEl) totalEl.textContent = data.length;
         if (monthEl) {
             const currentMonth = new Date().getMonth() + 1;
-            const monthCount = projectData.filter(item => {
+            const monthCount = data.filter(item => {
                 const isoDate = formatDate(item.date);
                 const dateObj = new Date(isoDate);
                 return dateObj.getMonth() + 1 === currentMonth;
@@ -240,10 +239,16 @@ document.addEventListener("DOMContentLoaded", function() {
     const noResults = document.getElementById('no-results-message');
     if (!tbody) return;
 
-    // ★ 先按項目過濾
-    const projectData = getProjectData();
+    tbody.innerHTML = '';
 
-    const filtered = projectData.filter(item => {
+    // ★ 步骤 1：先按项目过滤
+    let projectFilteredData = inspectionData;
+    if (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.filterByCurrentProject) {
+        projectFilteredData = DWSS_Auth.filterByCurrentProject(inspectionData);
+    }
+
+    // ★ 步骤 2：再套用用户筛选器
+    const filtered = projectFilteredData.filter(item => {
         if (currentFilters.site !== "all") {
             const siteType = getSiteType(item.site);
             if (siteType !== currentFilters.site) return false;
@@ -252,7 +257,6 @@ document.addEventListener("DOMContentLoaded", function() {
         return true;
     });
 
-    tbody.innerHTML = '';
     if (noResults) {
         noResults.style.display = filtered.length === 0 ? 'block' : 'none';
     }
@@ -299,7 +303,7 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     attachActionEvents();
-    updateStats();
+    updateStats(projectFilteredData);
 
     if (userCanChangeStatus) {
         bindSafetyStatusChangeEvents();
@@ -598,7 +602,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     date,
                     inspector,
                     approvalStatus: 'pending',
-                    project: projectId,   // ★ 綁定項目
+                    project: sessionStorage.getItem('currentProjectId'),   // ← 关键
                     pdfData: pdfData,
                     annotations: []
                 };

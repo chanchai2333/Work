@@ -235,17 +235,16 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     // ==================== 統計 ====================
-    function updateStats() {
+    function updateStats(dataToUse) {
         const totalEl = document.getElementById('total-documents-count');
         const monthEl = document.getElementById('month-count');
 
-        // ★ 只統計「當前項目」的記錄
-        const projectData = getProjectData();
-
-        if (totalEl) totalEl.textContent = projectData.length;
+        const data = dataToUse || diaryData;
+        
+        if (totalEl) totalEl.textContent = data.length;
         if (monthEl) {
             const currentMonth = new Date().getMonth() + 1;
-            const monthCount = projectData.filter(item => {
+            const monthCount = data.filter(item => {
                 const itemDate = new Date(item.date);
                 return itemDate.getMonth() + 1 === currentMonth;
             }).length;
@@ -261,11 +260,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
         tbody.innerHTML = '';
 
-        // ★ 先按項目過濾
-        const projectData = getProjectData();
+        // ★ 步骤 1：先按当前项目过滤
+        let projectFilteredData = diaryData;
+        if (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.filterByCurrentProject) {
+            projectFilteredData = DWSS_Auth.filterByCurrentProject(diaryData);
+        }
 
-        // 再套用使用者選擇的篩選器
-        const filtered = projectData.filter(item => {
+        // ★ 步骤 2：再套用用户选择的筛选器（site / status / type）
+        const filtered = projectFilteredData.filter(item => {
             if (currentFilters.site !== "all") {
                 const siteType = getSiteType(item.site);
                 if (siteType !== currentFilters.site) return false;
@@ -280,6 +282,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const userCanChangeStatus = DWSS_Auth.canChangeStatus();
+
 
         filtered.forEach(item => {
             const row = document.createElement('tr');
@@ -321,7 +324,7 @@ document.addEventListener('DOMContentLoaded', function () {
             tbody.appendChild(row);
         });
 
-        updateStats();
+        updateStats(projectFilteredData);
 
         if (userCanChangeStatus) {
             bindStatusChangeEvents();
@@ -596,10 +599,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
 
-                // ★ 取得當前項目 ID
-                const projectId = (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.getProjectId)
-                    ? DWSS_Auth.getProjectId()
-                    : null;
+                // ★ 绑定到当前项目
+                const projectId = sessionStorage.getItem('currentProjectId');
 
                 const newDiary = {
                     id,
@@ -608,7 +609,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     date,
                     submittedBy,
                     type,
-                    project: projectId,   // ★ 綁定項目
+                    project: projectId,  // ← 关键
                     pdfData: pdfData,
                     annotations: []
                 };

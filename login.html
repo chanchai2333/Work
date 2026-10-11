@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* ============ Login Page Styles ============ */
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
@@ -93,6 +92,9 @@
             outline: none;
             border-color: #3498db;
             box-shadow: 0 0 0 3px rgba(52,152,219,0.1);
+        }
+        select.form-control {
+            padding-right: 16px;
         }
         .password-toggle {
             position: absolute;
@@ -189,7 +191,7 @@
                 </div>
                 <div class="form-group">
                     <label for="project">Select Project:</label>
-                    <select id="project" required>
+                    <select id="project" class="form-control" required>
                         <option value="">-- Choose a project --</option>
                         <option value="DE/2026/05">DE/2026/05</option>
                         <option value="DE/2025/02">DE/2025/02</option>
@@ -207,6 +209,8 @@
         </div>
     </div>
 
+    <script src="scripts/password-lifecycle.js"></script>
+    <script src="scripts/email-service.js"></script>
     <script src="scripts/ac-lock.js"></script>
     <script src="scripts/locked-ac.js"></script>
     <script src="scripts/password.js"></script>

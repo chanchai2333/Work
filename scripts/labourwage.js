@@ -200,10 +200,14 @@ document.addEventListener("DOMContentLoaded", function () {
         if (!tbody) return;
         tbody.innerHTML = '';
 
-        // ★ 先按項目過濾
-        const projectData = getProjectData();
+        // ★ 步骤 1：先按项目过滤
+        var projectFilteredData = wageData;
+        if (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.filterByCurrentProject) {
+            projectFilteredData = DWSS_Auth.filterByCurrentProject(wageData);
+        }
 
-        var filtered = projectData.filter(function(item) {
+        // ★ 步骤 2：再套用筛选器
+        var filtered = projectFilteredData.filter(function(item) {
             if (currentFilters.type !== "all" && item.type !== currentFilters.type) return false;
             if (currentFilters.status !== "all") {
                 if (currentFilters.status === 'submitted') {
@@ -256,7 +260,7 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         }
 
-        updateStats();
+        updateStats(projectFilteredData);
         bindActionButtons();
 
         if (window.DWSS_Auth) {
@@ -268,9 +272,8 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    function updateStats() {
-        // ★ 只統計「當前項目」
-        const projectData = getProjectData();
+    function updateStats(dataToUse) {
+        var projectData = dataToUse || wageData;
 
         var totalEl = document.getElementById('total-records-count');
         if (totalEl) totalEl.textContent = projectData.length;
@@ -508,10 +511,10 @@ document.addEventListener("DOMContentLoaded", function () {
                     submittedBy: submittedBy,
                     periodStart: periodStart,
                     periodEnd: periodEnd,
-                    project: projectId,   // ★ 綁定項目
+                    project: sessionStorage.getItem('currentProjectId'),   // ← 关键
                     pdfData: pdfData,
                     annotations: []
-                };
+};
 
                 wageData.push(newWage);
                 saveData();
