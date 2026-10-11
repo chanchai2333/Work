@@ -21,17 +21,17 @@ document.addEventListener("DOMContentLoaded", function() {
     // ★ 每個項目的預設記錄（平均分配）
     const DEFAULT_PROJECT_DATA = {
         'DE/2026/05': [
-            { id: "SSR/WSI/26/000001A", status: "draft",         site: "Treatment Plant", date: "2025-08-15", inspector: "John Doe",        project: "DE/2026/05", pdfData: null, annotations: [] },
-            { id: "SSR/WSI/26/000002A", status: "submitted-wsg", site: "Pipeline",        date: "2025-08-14", inspector: "Jane Smith",      project: "DE/2026/05", pdfData: null, annotations: [] },
-            { id: "SSR/WSI/26/000003A", status: "closed",        site: "Reservoir",       date: "2025-08-13", inspector: "Robert Johnson",  project: "DE/2026/05", pdfData: null, annotations: [] }
+            { id: "SSR/WSI/DE-2026-05/000001A", status: "draft",         site: "Treatment Plant", date: "2025-08-15", inspector: "John Doe",        project: "DE/2026/05", pdfData: null, annotations: [] },
+            { id: "SSR/WSI/DE-2026-05/000002A", status: "submitted-wsg", site: "Pipeline",        date: "2025-08-14", inspector: "Jane Smith",      project: "DE/2026/05", pdfData: null, annotations: [] },
+            { id: "SSR/WSI/DE-2026-05/000003A", status: "closed",        site: "Reservoir",       date: "2025-08-13", inspector: "Robert Johnson",  project: "DE/2026/05", pdfData: null, annotations: [] }
         ],
         'DE/2025/02': [
-            { id: "SSR/WSI/25/02/000001A", status: "reopen",     site: "Pump Station",    date: "2025-05-10", inspector: "Michael Brown",   project: "DE/2025/02", pdfData: null, annotations: [] },
-            { id: "SSR/WSI/25/02/000002A", status: "closed",     site: "Pipeline",        date: "2025-05-09", inspector: "Emma Davis",      project: "DE/2025/02", pdfData: null, annotations: [] }
+            { id: "SSR/WSI/DE-2025-02/000001A", status: "reopen",     site: "Pump Station",    date: "2025-05-10", inspector: "Michael Brown",   project: "DE/2025/02", pdfData: null, annotations: [] },
+            { id: "SSR/WSI/DE-2025-02/000002A", status: "closed",     site: "Pipeline",        date: "2025-05-09", inspector: "Emma Davis",      project: "DE/2025/02", pdfData: null, annotations: [] }
         ],
         'DE/2025/09': [
-            { id: "SSR/WSI/25/09/000001A", status: "submitted-wsg", site: "Distribution", date: "2025-09-07", inspector: "Olivia Garcia",  project: "DE/2025/09", pdfData: null, annotations: [] },
-            { id: "SSR/WSI/25/09/000002A", status: "closed",        site: "Reservoir",    date: "2025-09-06", inspector: "David Wilson",   project: "DE/2025/09", pdfData: null, annotations: [] }
+            { id: "SSR/WSI/DE-2025-09/000001A", status: "submitted-wsg", site: "Distribution", date: "2025-09-07", inspector: "Olivia Garcia",  project: "DE/2025/09", pdfData: null, annotations: [] },
+            { id: "SSR/WSI/DE-2025-09/000002A", status: "closed",        site: "Reservoir",    date: "2025-09-06", inspector: "David Wilson",   project: "DE/2025/09", pdfData: null, annotations: [] }
         ]
     };
 
@@ -159,40 +159,27 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // ★ 自動生成 Safety Inspection ID（依項目）
     function generateNextSafetyId() {
-        const projectId = (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.getProjectId)
-            ? DWSS_Auth.getProjectId()
-            : null;
+        var contractCode = getContractCode();
+        var prefix = 'SSR/WSI/' + contractCode + '/';
+        var ID_SUFFIX = 'A';
+        var ID_PAD    = 6;
 
-        let ID_PREFIX;
-        if (projectId === 'DE/2026/05') {
-            ID_PREFIX = 'SSR/WSI/26/';
-        } else if (projectId === 'DE/2025/02') {
-            ID_PREFIX = 'SSR/WSI/25/02/';
-        } else if (projectId === 'DE/2025/09') {
-            ID_PREFIX = 'SSR/WSI/25/09/';
-        } else {
-            ID_PREFIX = 'SSR/WSI/XX/';
-        }
+        var escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        var re = new RegExp('^' + escaped + '(\\d+)[A-Za-z]?$');
 
-        const ID_SUFFIX = 'A';
-        const ID_PAD    = 6;
+        var projectData = getProjectData();
 
-        const escaped = ID_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const re = new RegExp('^' + escaped + '(\\d+)[A-Za-z]?$');
-
-        const projectData = getProjectData();
-        let maxNum = 0;
+        var maxNum = 0;
         projectData.forEach(function (item) {
             if (!item || item.id == null) return;
-            const m = String(item.id).match(re);
+            var m = String(item.id).match(re);
             if (m) {
-                const n = parseInt(m[1], 10);
+                var n = parseInt(m[1], 10);
                 if (!isNaN(n) && n > maxNum) maxNum = n;
             }
         });
 
-        const next = maxNum + 1;
-        return ID_PREFIX + String(next).padStart(ID_PAD, '0') + ID_SUFFIX;
+        return prefix + String(maxNum + 1).padStart(ID_PAD, '0') + ID_SUFFIX;
     }
 
     // ---------- 生成狀態更改下拉選單 ----------

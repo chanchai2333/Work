@@ -282,6 +282,27 @@
         return record;
     }
 
+    /**
+     * 把项目 ID (DE/2026/05) 转换成 URL-safe 的项目码 (DE-2026-05)
+     * 用于嵌入 ID 中
+     */
+    function getContractCode() {
+        var pid = sessionStorage.getItem('currentProjectId');
+        if (!pid) return 'UNKNOWN';
+        // 把 / 换成 -
+        return String(pid).replace(/\//g, '-');
+    }
+
+    /**
+     * 反向：从 ID 中提取项目 ID
+     * 例如 SSR/WSI/DE-2026-05/000001A → DE/2026/05
+     */
+    function extractProjectFromId(id) {
+        var m = String(id).match(/\/(DE-\d{4}-\d{2})\//);
+        if (!m) return null;
+        return m[1].replace(/-/g, '/');
+    }
+
     // ============================================================
     // 10. 群組 CRUD
     // ============================================================

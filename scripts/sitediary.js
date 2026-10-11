@@ -28,22 +28,22 @@ document.addEventListener('DOMContentLoaded', function () {
     // ★ 每個項目的預設記錄（分組，方便維護）
     const DEFAULT_PROJECT_DATA = {
         'DE/2026/05': [
-            { id: "SD/26/000001A", status: "draft",         site: "Treatment Plant", date: "2025-08-15", submittedBy: "John Doe",          type: "Contractor Documents",     project: "DE/2026/05", pdfData: null, annotations: [] },
-            { id: "SD/26/000002A", status: "submitted-wsg", site: "Pipeline",        date: "2025-08-14", submittedBy: "Jane Smith",        type: "Contractor Documents",     project: "DE/2026/05", pdfData: null, annotations: [] },
-            { id: "SD/26/000003A", status: "closed",        site: "Reservoir",       date: "2025-08-13", submittedBy: "Robert Johnson",    type: "Sub Contractor Documents", project: "DE/2026/05", pdfData: null, annotations: [] },
-            { id: "SD/26/000004A", status: "reopen",        site: "Distribution",    date: "2025-08-12", submittedBy: "Sarah Williams",    type: "Sub Contractor Documents", project: "DE/2026/05", pdfData: null, annotations: [] }
+            { id: "SD/DE-2026-05/000001A", status: "draft",         site: "Treatment Plant", date: "2025-08-15", submittedBy: "John Doe",          type: "Contractor Documents",     project: "DE/2026/05", pdfData: null, annotations: [] },
+            { id: "SD/DE-2026-05/000002A", status: "submitted-wsg", site: "Pipeline",        date: "2025-08-14", submittedBy: "Jane Smith",        type: "Contractor Documents",     project: "DE/2026/05", pdfData: null, annotations: [] },
+            { id: "SD/DE-2026-05/000003A", status: "closed",        site: "Reservoir",       date: "2025-08-13", submittedBy: "Robert Johnson",    type: "Sub Contractor Documents", project: "DE/2026/05", pdfData: null, annotations: [] },
+            { id: "SD/DE-2026-05/000004A", status: "reopen",        site: "Distribution",    date: "2025-08-12", submittedBy: "Sarah Williams",    type: "Sub Contractor Documents", project: "DE/2026/05", pdfData: null, annotations: [] }
         ],
         'DE/2025/02': [
-            { id: "SD/25/02/000001A", status: "submitted-ig",  site: "Pump Station",    date: "2025-05-10", submittedBy: "Michael Brown",     type: "Contractor Documents",     project: "DE/2025/02", pdfData: null, annotations: [] },
-            { id: "SD/25/02/000002A", status: "closed",        site: "Pipeline",        date: "2025-05-09", submittedBy: "Emma Davis",        type: "Sub Contractor Documents", project: "DE/2025/02", pdfData: null, annotations: [] },
-            { id: "SD/25/02/000003A", status: "cancelled",     site: "Reservoir",       date: "2025-05-08", submittedBy: "James Miller",      type: "Contractor Documents",     project: "DE/2025/02", pdfData: null, annotations: [] }
+            { id: "SD/DE-2025-02/000001A", status: "submitted-ig",  site: "Pump Station",    date: "2025-05-10", submittedBy: "Michael Brown",     type: "Contractor Documents",     project: "DE/2025/02", pdfData: null, annotations: [] },
+            { id: "SD/DE-2025-02/000002A", status: "closed",        site: "Pipeline",        date: "2025-05-09", submittedBy: "Emma Davis",        type: "Sub Contractor Documents", project: "DE/2025/02", pdfData: null, annotations: [] },
+            { id: "SD/DE-2025-02/000003A", status: "cancelled",     site: "Reservoir",       date: "2025-05-08", submittedBy: "James Miller",      type: "Contractor Documents",     project: "DE/2025/02", pdfData: null, annotations: [] }
         ],
         'DE/2025/09': [
-            { id: "SD/25/09/000001A", status: "submitted-wsg", site: "Distribution",    date: "2025-09-07", submittedBy: "Olivia Garcia",     type: "Sub Contractor Documents", project: "DE/2025/09", pdfData: null, annotations: [] },
-            { id: "SD/25/09/000002A", status: "reopen",        site: "Treatment Plant", date: "2025-09-06", submittedBy: "William Rodriguez", type: "Contractor Documents",     project: "DE/2025/09", pdfData: null, annotations: [] },
-            { id: "SD/25/09/000003A", status: "draft",         site: "Pump Station",    date: "2025-09-05", submittedBy: "David Wilson",      type: "Contractor Documents",     project: "DE/2025/09", pdfData: null, annotations: [] },
-            { id: "SD/25/09/000004A", status: "closed",        site: "Pipeline",        date: "2025-09-04", submittedBy: "Jane Smith",        type: "Sub Contractor Documents", project: "DE/2025/09", pdfData: null, annotations: [] },
-            { id: "SD/25/09/000005A", status: "submitted-ig",  site: "Reservoir",       date: "2025-09-03", submittedBy: "John Doe",          type: "Contractor Documents",     project: "DE/2025/09", pdfData: null, annotations: [] }
+            { id: "SD/DE-2025-09/000001A", status: "submitted-wsg", site: "Distribution",    date: "2025-09-07", submittedBy: "Olivia Garcia",     type: "Sub Contractor Documents", project: "DE/2025/09", pdfData: null, annotations: [] },
+            { id: "SD/DE-2025-09/000002A", status: "reopen",        site: "Treatment Plant", date: "2025-09-06", submittedBy: "William Rodriguez", type: "Contractor Documents",     project: "DE/2025/09", pdfData: null, annotations: [] },
+            { id: "SD/DE-2025-09/000003A", status: "draft",         site: "Pump Station",    date: "2025-09-05", submittedBy: "David Wilson",      type: "Contractor Documents",     project: "DE/2025/09", pdfData: null, annotations: [] },
+            { id: "SD/DE-2025-09/000004A", status: "closed",        site: "Pipeline",        date: "2025-09-04", submittedBy: "Jane Smith",        type: "Sub Contractor Documents", project: "DE/2025/09", pdfData: null, annotations: [] },
+            { id: "SD/DE-2025-09/000005A", status: "submitted-ig",  site: "Reservoir",       date: "2025-09-03", submittedBy: "John Doe",          type: "Contractor Documents",     project: "DE/2025/09", pdfData: null, annotations: [] }
         ]
     };
 
@@ -168,45 +168,39 @@ document.addEventListener('DOMContentLoaded', function () {
      *   其他       → SD/XX/000001A
      * 規則：掃描「當前項目」的所有記錄，找出最大數字 +1
      */
+    // ==================== ★ 自動生成 Diary ID（Spec 格式 + 含合同号）====================
+    /**
+     * 生成下一個 Diary ID
+     * 格式: SD/{ContractNo}/000001A
+     *   例: SD/DE-2026-05/000001A
+     *   - SD: Site Diary
+     *   - DE-2026-05: 合同号（项目标识）
+     *   - 000001: 6 位 serial（当前项目内独立递增）
+     *   - A: Revision
+     */
     function generateNextDiaryId() {
-        const projectId = (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.getProjectId)
-            ? DWSS_Auth.getProjectId()
-            : null;
+        var contractCode = getContractCode();               // DE-2026-05
+        var prefix = 'SD/' + contractCode + '/';
+        var ID_SUFFIX = 'A';
+        var ID_PAD    = 6;
 
-        // 依項目決定前綴
-        let ID_PREFIX;
-        if (projectId === 'DE/2026/05') {
-            ID_PREFIX = 'SD/26/';
-        } else if (projectId === 'DE/2025/02') {
-            ID_PREFIX = 'SD/25/02/';
-        } else if (projectId === 'DE/2025/09') {
-            ID_PREFIX = 'SD/25/09/';
-        } else {
-            ID_PREFIX = 'SD/XX/';
-        }
+        var escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        var re = new RegExp('^' + escaped + '(\\d+)[A-Za-z]?$');
 
-        const ID_SUFFIX = 'A';
-        const ID_PAD    = 6;
+        // ★ 只在「當前項目」的記錄裡找最大 serial（保证同项目不重复）
+        var projectData = getProjectData();
 
-        // 轉義正則特殊字元
-        const escaped = ID_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const re = new RegExp('^' + escaped + '(\\d+)[A-Za-z]?$');
-
-        // ★ 從「當前項目」的記錄中找最大數字
-        const projectData = getProjectData();
-
-        let maxNum = 0;
+        var maxNum = 0;
         projectData.forEach(function (item) {
             if (!item || item.id == null) return;
-            const m = String(item.id).match(re);
+            var m = String(item.id).match(re);
             if (m) {
-                const n = parseInt(m[1], 10);
+                var n = parseInt(m[1], 10);
                 if (!isNaN(n) && n > maxNum) maxNum = n;
             }
         });
 
-        const next = maxNum + 1;
-        return ID_PREFIX + String(next).padStart(ID_PAD, '0') + ID_SUFFIX;
+        return prefix + String(maxNum + 1).padStart(ID_PAD, '0') + ID_SUFFIX;
     }
 
     // ==================== 狀態更改下拉選單生成 ====================
@@ -240,7 +234,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const monthEl = document.getElementById('month-count');
 
         const data = dataToUse || diaryData;
-        
+
         if (totalEl) totalEl.textContent = data.length;
         if (monthEl) {
             const currentMonth = new Date().getMonth() + 1;
