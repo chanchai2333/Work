@@ -680,7 +680,7 @@
     </script>
 
     <!-- ============================================================
-         ★ 表單覆蓋層 v20 — 假期格子可編輯（預設「假期」）
+         ★ 表單覆蓋層 v21 — Contract No. 自動從登入 Project ID 帶入
          ============================================================ -->
     <script>
     (function () {
@@ -1189,9 +1189,13 @@
             overlay.className = 'pdf-form-overlay';
             overlay.dataset.page = pageNum;
 
-            /* ★ Contract No. — 新增 */
-            var defaultContractNo = pageData.contractno || '';
+            /* ★ Contract No. — 自動從登入時的 Project ID 帶入
+               優先順序：已存的值 → sessionStorage.currentProjectId → 空字串 */
+            var defaultContractNo = pageData.contractno
+                                 || sessionStorage.getItem('currentProjectId')
+                                 || '';
             overlay.appendChild(createTextInput('contractno', FORM_LAYOUT.header.contractno, defaultContractNo, pageNum));
+
             var defaultPlantName = pageData.nameOfPlant || (currentDocObj && currentDocObj.site) || '';
             overlay.appendChild(createTextInput('nameOfPlant', FORM_LAYOUT.header.nameOfPlant, defaultPlantName, pageNum));
             overlay.appendChild(createTextInput('sorItem',     FORM_LAYOUT.header.sorItem,     pageData.sorItem,     pageNum));
@@ -1283,11 +1287,11 @@
 
             pdfPage.appendChild(overlay);
 
-            /* ★ 新增：渲染完成後，把 DOM 裡的預設值同步到 allFormData */
+            /* ★ 渲染完成後，把 DOM 裡的預設值同步到 allFormData */
             syncDomToFormData(pageNum, overlay);
         }
 
-        /* ★ 新增：將 DOM 顯示的所有值寫入 allFormData（僅在尚未有值時） */
+        /* ★ 將 DOM 顯示的所有值寫入 allFormData（僅在尚未有值時） */
         function syncDomToFormData(pageNum, overlay) {
             if (!allFormData[pageNum]) allFormData[pageNum] = {};
             var fields = overlay.querySelectorAll('[data-field-id]');
@@ -1303,7 +1307,7 @@
             });
             persistFormData();
         }
-        
+
         function hookSaveButton() {
             ['save-btn', 'submit-btn'].forEach(function (id) {
                 var btn = document.getElementById(id);
@@ -1329,6 +1333,10 @@
                 console.warn('[DSD Form] 無法解析 Period 起始日，日期不會自動填入');
             }
 
+            /* ★ Contract No. 來源檢查（僅供 debug） */
+            var pid = sessionStorage.getItem('currentProjectId');
+            console.log('[DSD Form] currentProjectId =', pid || '(none)');
+
             var pageWrapper = document.getElementById('page-wrapper');
             if (!pageWrapper) return;
 
@@ -1351,7 +1359,7 @@
             setTimeout(function () { clearInterval(interval); }, 60000);
 
             hookSaveButton();
-            console.log('[DSD Form] Overlay v20 (假期格子可編輯). Doc:', currentDocId);
+            console.log('[DSD Form] Overlay v21 (Contract No. 自動帶入). Doc:', currentDocId);
         }
 
         if (document.readyState === 'loading') {

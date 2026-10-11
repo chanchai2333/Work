@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="styles/main.css">
     <script src="scripts/theme-config.js"></script>
     <style>
-        /* 狀態更改下拉選單樣式 */
         .status-change-select {
             padding: 6px 8px;
             border-radius: 6px;
@@ -19,40 +18,14 @@
             min-width: 120px;
             vertical-align: middle;
         }
-        .status-change-select:hover {
-            border-color: #3498db;
-        }
-        .status-change-select:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 2px rgba(52,152,219,0.2);
-        }
-
-        /* 權限鎖定提示 */
-        .permission-lock-hint {
-            font-size: 0.7rem;
-            color: #e74c3c;
-            display: inline-block;
-            margin-left: 8px;
-            white-space: nowrap;
-        }
-
-        /* 操作按鈕樣式 */
+        .status-change-select:hover { border-color: #3498db; }
+        .status-change-select:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 2px rgba(52,152,219,0.2); }
+        .permission-lock-hint { font-size: 0.7rem; color: #e74c3c; display: inline-block; margin-left: 8px; white-space: nowrap; }
         .action-btn {
-            padding: 8px 12px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.9rem;
-            min-width: 36px;
-            min-height: 36px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            margin: 2px;
-            vertical-align: middle;
+            padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer;
+            transition: all 0.3s ease; display: inline-flex; align-items: center;
+            justify-content: center; font-size: 0.9rem; min-width: 36px; min-height: 36px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin: 2px; vertical-align: middle;
         }
         .view-btn { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
         .view-btn:hover { background: linear-gradient(135deg, #2980b9, #2471a3); transform: translateY(-2px); }
@@ -61,7 +34,6 @@
         .delete-btn { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; }
         .delete-btn:hover { background: linear-gradient(135deg, #c0392b, #e74c3c); transform: translateY(-2px); }
 
-        /* 狀態標籤顏色 */
         .status-draft { background: rgba(149,165,166,0.2); color: #848f90; }
         .status-submitted-wsg { background: rgba(52,152,219,0.2); color: #2980b9; }
         .status-submitted-ig { background: rgba(46,204,113,0.2); color: #27ae60; }
@@ -70,30 +42,17 @@
         .status-cancelled { background: rgba(231,76,60,0.2); color: #c0392b; }
 
         .status-badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            display: inline-block;
-            text-align: center;
-            white-space: nowrap;
+            padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;
+            font-weight: 500; display: inline-block; text-align: center; white-space: nowrap;
         }
 
-        /* 響應式設計 */
         @media (max-width: 768px) {
-            .action-btn {
-                width: 100%;
-                margin: 2px 0;
-            }
-            .status-change-select {
-                width: 100%;
-                margin: 2px 0;
-            }
+            .action-btn { width: 100%; margin: 2px 0; }
+            .status-change-select { width: 100%; margin: 2px 0; }
         }
     </style>
 </head>
 <body>
-    <!-- 主内容区域 -->
     <div class="main-content">
         <div class="header">
             <h1 data-i18n="safety.inspection">Safety Inspection</h1>
@@ -181,7 +140,7 @@
                             </tr>
                         </thead>
                         <tbody id="inspection-table-body">
-                            <tr><td colspan="6" style="text-align: center; padding: 40px;"><i class="fas fa-spinner fa-spin"></i> Loading inspection records...</td></tr>
+                            <tr><td colspan="7" style="text-align: center; padding: 40px;"><i class="fas fa-spinner fa-spin"></i> Loading inspection records...</td></tr>
                         </tbody>
                     </table>
                     <div id="no-results-message" class="no-results" style="display: none;" data-i18n="no.matching.documents">No matching inspections found. Please try different filters.</div>
@@ -235,9 +194,229 @@
     <script src="scripts/permissions.js"></script>
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
+
+    <!-- ============================================================ -->
+    <!-- ★ getContractCode — 提供給 safety inspect ID 生成使用           -->
+    <!-- ============================================================ -->
+    <script>
+    (function () {
+        'use strict';
+        if (window.getContractCode) return;
+
+        window.getContractCode = function () {
+            var pid = sessionStorage.getItem('currentProjectId');
+
+            if (!pid) {
+                try {
+                    var u = JSON.parse(localStorage.getItem('current_user') || '{}');
+                    if (u && Array.isArray(u.projectIds) && u.projectIds.length > 0) {
+                        pid = u.projectIds[0];
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            if (!pid) {
+                try {
+                    var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+                    if (s && Array.isArray(s.projectIds) && s.projectIds.length > 0) {
+                        pid = s.projectIds[0];
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            if (!pid) pid = 'DE/2026/05';
+
+            return String(pid).replace(/\//g, '-');
+        };
+
+        console.log('[SafetyInspect] ✓ getContractCode ready, currentProjectId =',
+                    sessionStorage.getItem('currentProjectId') || '(fallback)',
+                    '→ contractCode =',
+                    window.getContractCode());
+    })();
+    </script>
+
     <script src="scripts/safetyinspect.js"></script>
     <script src="scripts/sidebar.js"></script>
-    
+
+    <!-- ============================================================ -->
+    <!-- ★★★ Inspection ID 自動遞增修正                                -->
+    <!-- ------------------------------------------------------------ -->
+    <!-- 格式：SSR/WSI/{合同代碼}/{6 位序號}A                            -->
+    <!--   e.g. SSR/WSI/DE-2026-05/000001A                              -->
+    <!-- 策略：                                                        -->
+    <!--   1. 掃描 localStorage 所有 key，找「任何包含 inspection 記錄  -->
+    <!--      的陣列」（不依賴特定 key 名稱）                          -->
+    <!--   2. 過濾出 ID 前綴 = SSR/WSI/{contractCode}/ 的記錄          -->
+    <!--   3. 找最大序號 +1                                            -->
+    <!--   4. 點 Add New Inspection 後覆蓋 input-inspect-id 欄位        -->
+    <!-- ============================================================ -->
+    <script>
+    (function () {
+        'use strict';
+        if (window.__inspectIdAutoIncrementBound) return;
+        window.__inspectIdAutoIncrementBound = true;
+
+        var ID_PREFIX   = 'SSR/WSI/';
+        var ID_SUFFIX   = 'A';
+        var ID_PAD      = 6;
+
+        function escapeRegExp(s) {
+            return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        /* 掃描 localStorage 所有 key，蒐集所有可能的 inspection ID */
+        function collectAllInspectIds() {
+            var ids = [];
+            var seen = {};
+
+            /* (a) 從所有 localStorage 陣列記錄中找 */
+            try {
+                for (var i = 0; i < localStorage.length; i++) {
+                    var key = localStorage.key(i);
+                    if (!key) continue;
+                    /* 跳過明顯不相關的 key（節省時間） */
+                    /* 但仍掃所有 keys，避免遺漏 */
+
+                    var raw = localStorage.getItem(key);
+                    if (!raw || raw.length < 2) continue;
+                    /* 只處理 JSON 開頭是 [ 或 { 的 */
+                    var c = raw.charAt(0);
+                    if (c !== '[' && c !== '{') continue;
+
+                    var data;
+                    try { data = JSON.parse(raw); } catch (e) { continue; }
+
+                    /* 支援 Array 或 Object of Arrays */
+                    var arrs = [];
+                    if (Array.isArray(data)) {
+                        arrs.push(data);
+                    } else if (data && typeof data === 'object') {
+                        /* 也可能包在 {data: [...]} 之類 */
+                        Object.keys(data).forEach(function (k) {
+                            if (Array.isArray(data[k])) arrs.push(data[k]);
+                        });
+                    }
+
+                    arrs.forEach(function (arr) {
+                        arr.forEach(function (item) {
+                            if (item && item.id != null) {
+                                var idStr = String(item.id);
+                                if (idStr.indexOf(ID_PREFIX) === 0 && !seen[idStr]) {
+                                    seen[idStr] = true;
+                                    ids.push(idStr);
+                                }
+                            }
+                        });
+                    });
+                }
+            } catch (e) {
+                console.warn('[SafetyInspect] scan localStorage failed:', e);
+            }
+
+            /* (b) 從當前表格 DOM 收集（含被過濾後仍可能存在的記錄） */
+            try {
+                var tbody = document.getElementById('inspection-table-body');
+                if (tbody) {
+                    var rows = tbody.querySelectorAll('tr');
+                    for (var r = 0; r < rows.length; r++) {
+                        var firstCell = rows[r].cells && rows[r].cells[0];
+                        if (!firstCell) continue;
+                        var txt = firstCell.textContent.trim();
+                        if (txt && txt.indexOf(ID_PREFIX) === 0 && !seen[txt]) {
+                            seen[txt] = true;
+                            ids.push(txt);
+                        }
+                    }
+                }
+            } catch (e) { /* ignore */ }
+
+            return ids;
+        }
+
+        /**
+         * 計算下一個 Inspection ID
+         *   prefix = "SSR/WSI/" + getContractCode() + "/"
+         *   格式：{prefix}{6 位}{suffix}
+         */
+        window.computeNextInspectId = function () {
+            var contractCode = window.getContractCode();            // DE-2026-05
+            var prefix = ID_PREFIX + contractCode + '/';            // SSR/WSI/DE-2026-05/
+            var re = new RegExp('^' + escapeRegExp(prefix) + '(\\d+)[A-Za-z]?$');
+
+            var ids = collectAllInspectIds();
+            var maxNum = 0;
+            ids.forEach(function (id) {
+                var m = id.match(re);
+                if (m) {
+                    var n = parseInt(m[1], 10);
+                    if (!isNaN(n) && n > maxNum) maxNum = n;
+                }
+            });
+
+            var nextNum = maxNum + 1;
+            var numStr = String(nextNum);
+            while (numStr.length < ID_PAD) numStr = '0' + numStr;
+            var newId = prefix + numStr + ID_SUFFIX;
+
+            console.log('[SafetyInspect] ✓ Inspection ID 生成:', newId,
+                        '(現有最大序號 =', maxNum, ', prefix =', prefix, ')');
+            return newId;
+        };
+
+        /* 監聽 Add New Inspection 按鈕 → modal 顯示後覆蓋欄位 */
+        document.addEventListener('click', function (e) {
+            var btn = e.target && e.target.closest ? e.target.closest('#add-inspection-btn') : null;
+            if (!btn) return;
+
+            /* 用 setTimeout 讓 safetyinspect.js 的 handler 先跑完 */
+            setTimeout(function () {
+                var modal = document.getElementById('add-inspect-modal');
+                if (!modal || modal.style.display === 'none') return;
+
+                var idInput = document.getElementById('input-inspect-id');
+                if (!idInput) return;
+
+                var correctId = window.computeNextInspectId();
+                idInput.value = correctId;
+
+                /* 若 safetyinspect.js 之後又改回錯誤的值，用 observer 擋下 */
+                if (!idInput.__dsdIdLocked) {
+                    idInput.__dsdIdLocked = true;
+                    var lockValue = correctId;
+                    var obs = new MutationObserver(function () {
+                        if (idInput.value !== lockValue) {
+                            if (idInput.__dsdUserEdited) {
+                                obs.disconnect();
+                                return;
+                            }
+                            idInput.value = lockValue;
+                        }
+                    });
+                    obs.observe(idInput, { attributes: true, attributeFilter: ['value'] });
+
+                    /* 使用者主動輸入 → 標記為已編輯，停止覆蓋 */
+                    idInput.addEventListener('input', function () {
+                        idInput.__dsdUserEdited = true;
+                        lockValue = idInput.value;
+                    });
+
+                    /* modal 關閉 → 重置旗標 */
+                    var modalObs = new MutationObserver(function () {
+                        if (modal.style.display === 'none') {
+                            idInput.__dsdIdLocked = false;
+                            idInput.__dsdUserEdited = false;
+                            obs.disconnect();
+                            modalObs.disconnect();
+                        }
+                    });
+                    modalObs.observe(modal, { attributes: true, attributeFilter: ['style'] });
+                }
+            }, 100);
+        }, false);
+    })();
+    </script>
+
     <!-- 侧边栏状态持久化 -->
     <script>
         (function() {

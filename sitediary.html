@@ -29,33 +29,10 @@
         .status-rejected { background: rgba(231,76,60,0.2); color: #c0392b; }
         .status-pending { background: rgba(243,156,18,0.2); color: #d35400; }
 
-        /* ★ Period 輸入框樣式 */
-        .period-inputs {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-        .period-inputs input[type="date"] {
-            flex: 1;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-family: inherit;
-            font-size: 0.9rem;
-            min-width: 0;
-        }
-        .period-inputs input[type="date"]:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 2px rgba(52,152,219,0.15);
-        }
-        .period-inputs .period-sep {
-            color: #64748b;
-            font-weight: 700;
-            flex: 0 0 auto;
-            user-select: none;
-        }
+        .period-inputs { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        .period-inputs input[type="date"] { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; font-size: 0.9rem; min-width: 0; }
+        .period-inputs input[type="date"]:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 2px rgba(52,152,219,0.15); }
+        .period-inputs .period-sep { color: #64748b; font-weight: 700; flex: 0 0 auto; user-select: none; }
 
         @media (max-width: 768px) {
             .action-btn { width: 100%; margin: 2px 0; }
@@ -82,7 +59,6 @@
                 <label data-i18n="site">Site</label>
                 <input type="text" id="input-site" required>
 
-                <!-- ★ Period 改成兩個日期 -->
                 <label data-i18n="period">Period</label>
                 <div class="period-inputs">
                     <input type="date" id="input-date-start" required>
@@ -180,7 +156,6 @@
                                 <th data-i18n="status">Status</th>
                                 <th data-i18n="Approval status">Approval Status</th>
                                 <th data-i18n="site">Site</th>
-                                <!-- ★ Date → Period -->
                                 <th data-i18n="period">Period</th>
                                 <th data-i18n="submitted.by">Submitted By</th>
                                 <th data-i18n="document.type">Document Type</th>
@@ -203,11 +178,168 @@
     <script src="scripts/permissions.js"></script>
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
+
+    <!-- ============================================================ -->
+    <!-- ★★★ getContractCode — 提供給 sitediary.js 使用                -->
+    <!-- ============================================================ -->
+    <script>
+    (function () {
+        'use strict';
+        if (window.getContractCode) return;
+
+        window.getContractCode = function () {
+            var pid = sessionStorage.getItem('currentProjectId');
+
+            if (!pid) {
+                try {
+                    var u = JSON.parse(localStorage.getItem('current_user') || '{}');
+                    if (u && Array.isArray(u.projectIds) && u.projectIds.length > 0) {
+                        pid = u.projectIds[0];
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            if (!pid) {
+                try {
+                    var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+                    if (s && Array.isArray(s.projectIds) && s.projectIds.length > 0) {
+                        pid = s.projectIds[0];
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            if (!pid) pid = 'DE/2026/05';
+
+            return String(pid).replace(/\//g, '-');
+        };
+
+        console.log('[SiteDiary] ✓ getContractCode ready, currentProjectId =',
+                    sessionStorage.getItem('currentProjectId') || '(fallback)',
+                    '→ contractCode =',
+                    window.getContractCode());
+    })();
+    </script>
+
     <script src="scripts/sitediary.js"></script>
     <script src="scripts/sidebar.js"></script>
-    <!-- ============================================================
-         ★ Save 修正（Period 版本）
-         ============================================================ -->
+
+    <!-- ============================================================ -->
+    <!-- ★★★ Diary ID 自動遞增修正                                    -->
+    <!-- ------------------------------------------------------------ -->
+    <!-- 策略：不依賴 DWSS_Auth.getProjectId() / getProjectData()，    -->
+    <!--       直接掃 localStorage.siteDiaryData 中所有符合當前合同    -->
+    <!--       前綴的 ID，找最大尾號 +1。                              -->
+    <!--       時機：點 Add New Diary → modal 顯示後 100ms 覆蓋欄位。  -->
+    <!-- ============================================================ -->
+    <script>
+    (function () {
+        'use strict';
+        if (window.__dsdIdAutoIncrementBound) return;
+        window.__dsdIdAutoIncrementBound = true;
+
+        var PRIMARY_KEY = 'siteDiaryData';
+        var ID_SUFFIX = 'A';
+        var ID_PAD    = 6;
+
+        function loadAll() {
+            try {
+                var raw = localStorage.getItem(PRIMARY_KEY);
+                if (!raw) return [];
+                var d = JSON.parse(raw);
+                return Array.isArray(d) ? d : [];
+            } catch (e) { return []; }
+        }
+
+        /**
+         * 計算下一個 Diary ID
+         *   prefix = "SD/" + getContractCode() + "/"
+         *   掃所有記錄中 id 匹配 prefix + 數字 + 選用字母
+         *   取 max + 1，補零到 6 位，加 suffix A
+         */
+        window.computeNextDiaryId = function () {
+            var contractCode = window.getContractCode();     // DE-2026-05
+            var prefix = 'SD/' + contractCode + '/';         // SD/DE-2026-05/
+            var escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            var re = new RegExp('^' + escaped + '(\\d+)[A-Za-z]?$');
+
+            var list = loadAll();
+            var maxNum = 0;
+            list.forEach(function (item) {
+                if (!item || item.id == null) return;
+                var m = String(item.id).match(re);
+                if (m) {
+                    var n = parseInt(m[1], 10);
+                    if (!isNaN(n) && n > maxNum) maxNum = n;
+                }
+            });
+
+            var next = maxNum + 1;
+            var nextStr = String(next);
+            while (nextStr.length < ID_PAD) nextStr = '0' + nextStr;
+            var newId = prefix + nextStr + ID_SUFFIX;
+
+            console.log('[SiteDiary] ✓ Diary ID 生成:', newId,
+                        '(現有最大尾號 =', maxNum, ', prefix =', prefix, ')');
+            return newId;
+        };
+
+        /* 監聽 Add New Diary 按鈕 → modal 顯示後覆蓋欄位 */
+        document.addEventListener('click', function (e) {
+            var btn = e.target && e.target.closest ? e.target.closest('#add-diary-btn') : null;
+            if (!btn) return;
+
+            /* 用 setTimeout 讓 sitediary.js 的 handler 先跑完（它會設定錯誤的值） */
+            setTimeout(function () {
+                var modal = document.getElementById('add-diary-modal');
+                if (!modal || modal.style.display === 'none') return;
+
+                var idInput = document.getElementById('input-diary-id');
+                if (!idInput) return;
+
+                var correctId = window.computeNextDiaryId();
+                idInput.value = correctId;
+
+                /* 若 sitediary.js 之後又改回錯誤的值，用 observer 擋下 */
+                if (!idInput.__dsdIdLocked) {
+                    idInput.__dsdIdLocked = true;
+                    var lockValue = correctId;
+                    var obs = new MutationObserver(function () {
+                        if (idInput.value !== lockValue) {
+                            /* 使用者手動編輯過 → 解鎖，不再覆蓋 */
+                            if (idInput.__dsdUserEdited) {
+                                obs.disconnect();
+                                return;
+                            }
+                            idInput.value = lockValue;
+                        }
+                    });
+                    obs.observe(idInput, { attributes: true, attributeFilter: ['value'] });
+
+                    /* 使用者主動輸入 → 標記為已編輯，停止覆蓋 */
+                    idInput.addEventListener('input', function () {
+                        idInput.__dsdUserEdited = true;
+                        lockValue = idInput.value;
+                    });
+
+                    /* modal 關閉 → 重置旗標 */
+                    var modalObs = new MutationObserver(function () {
+                        if (modal.style.display === 'none') {
+                            idInput.__dsdIdLocked = false;
+                            idInput.__dsdUserEdited = false;
+                            obs.disconnect();
+                            modalObs.disconnect();
+                        }
+                    });
+                    modalObs.observe(modal, { attributes: true, attributeFilter: ['style'] });
+                }
+            }, 100);
+        }, false);   /* bubble 階段，讓 sitediary.js 的 listener 先執行 */
+    })();
+    </script>
+
+    <!-- ============================================================ -->
+    <!-- ★ Save 修正（Period 版本）                                    -->
+    <!-- ============================================================ -->
     <script>
     (function () {
         'use strict';
@@ -238,7 +370,6 @@
             return el ? el.value.trim() : '';
         }
 
-        /* 格式化日期：YYYY-MM-DD → DD/MM/YYYY */
         function fmtDate(yyyymmdd) {
             if (!yyyymmdd) return '';
             var parts = yyyymmdd.split('-');
@@ -280,20 +411,23 @@
                 return;
             }
 
-            /* ★ Period 顯示格式："01/08/2026 ~ 15/08/2026" */
             var periodStr = fmtDate(startDate) + ' ~ ' + fmtDate(endDate);
+
+            /* ★ 綁定到當前項目（與 ID 前綴一致） */
+            var projectId = sessionStorage.getItem('currentProjectId') || null;
 
             var record = {
                 id: id,
                 status: status,
                 approvalStatus: 'pending',
                 site: site,
-                date: periodStr,            // 表格顯示用（相容）
-                startDate: startDate,       // 排序用
-                endDate: endDate,           // 排序用
-                period: periodStr,          // 顯示用
+                date: periodStr,
+                startDate: startDate,
+                endDate: endDate,
+                period: periodStr,
                 submittedBy: submittedBy,
                 type: type,
+                project: projectId,
                 annotations: [],
                 totalPages: 10,
                 usesTemplate: true,
@@ -337,9 +471,9 @@
     })();
     </script>
 
-    <!-- ============================================================
-         ★ Site Diary → editdsdsitediary.html 導向
-         ============================================================ -->
+    <!-- ============================================================ -->
+    <!-- ★ Site Diary → editdsdsitediary.html 導向                     -->
+    <!-- ============================================================ -->
     <script>
     (function () {
         'use strict';
@@ -438,15 +572,9 @@
     })();
     </script>
 
-    <!-- ============================================================
-         ★ 新增：表格按日期倒序排列（最新在最上面）
-         ------------------------------------------------------------
-         策略：
-         1. 用 MutationObserver 監聽 tbody 變化
-         2. 每次 sitediary.js 渲染完成後，延遲 100ms 執行排序
-         3. 用 _sorting flag 防止無限迴圈
-         4. 按 startDate || date || createdAt 倒序排序
-         ============================================================ -->
+    <!-- ============================================================ -->
+    <!-- ★ 表格按日期倒序排列（最新在最上面）                          -->
+    <!-- ============================================================ -->
     <script>
     (function () {
         'use strict';
@@ -466,19 +594,15 @@
             } catch (e) { return []; }
         }
 
-        /* 從記錄中取得排序 key（越新越大） */
         function getSortKey(record) {
             if (!record) return '';
-            /* 優先使用 startDate（Period 開始日） */
             if (record.startDate) return record.startDate;
-            /* 相容舊資料：date 可能是 "2026-08-31" 或 "31/08/2026" */
             if (record.date) {
                 var d = record.date;
                 var m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
                 if (m) return d;
                 var m2 = d.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
                 if (m2) return m2[3] + '-' + m2[2] + '-' + m2[1];
-                /* 若是 period 字串 "31/08/2026 ~ 15/09/2026"，取開始日 */
                 var m3 = d.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
                 if (m3) return m3[3] + '-' + m3[2] + '-' + m3[1];
             }
@@ -505,13 +629,11 @@
                 var idB = b.cells && b.cells[0] ? b.cells[0].textContent.trim() : '';
                 var keyA = getSortKey(map[idA]);
                 var keyB = getSortKey(map[idB]);
-                /* 倒序：新的在前 */
                 if (keyA < keyB) return 1;
                 if (keyA > keyB) return -1;
                 return 0;
             });
 
-            /* 檢查是否已經正確排序（避免不必要 DOM 操作） */
             var same = true;
             for (var i = 0; i < rows.length; i++) {
                 if (rows[i] !== sortedRows[i]) { same = false; break; }
@@ -520,10 +642,9 @@
 
             _sorting = true;
             try {
-                /* 用 DocumentFragment 一次性重排，避免多次 reflow */
                 var frag = document.createDocumentFragment();
                 sortedRows.forEach(function (row) {
-                    frag.appendChild(row);   // appendChild 會自動從原位置移除
+                    frag.appendChild(row);
                 });
                 tbody.appendChild(frag);
             } catch (e) {
@@ -549,7 +670,6 @@
             });
             observer.observe(tbody, { childList: true });
 
-            /* 初次執行 */
             scheduleSort();
         }
 

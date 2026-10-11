@@ -112,8 +112,7 @@
             <form id="add-wage-form" enctype="multipart/form-data">
                 <!-- ★ Document ID（可編輯） -->
                 <label>Document ID</label>
-                <input type="text" id="input-doc-id"
-                       style="color:#1e40af; font-weight:700;">
+                <input type="text" id="input-doc-id">
 
                 <label>Document Type</label>
                 <select id="input-type" required>
@@ -160,7 +159,215 @@
     <script src="scripts/sidebar.js"></script>
     <script src="scripts/ac-lock.js"></script>
     <script src="scripts/locked-ac.js"></script>
+
+    <!-- ============================================================ -->
+    <!-- ★ getContractCode — 提供給 labourwage.js 及本頁 ID 生成使用     -->
+    <!-- ============================================================ -->
+    <script>
+    (function () {
+        'use strict';
+        if (window.getContractCode) return;
+
+        window.getContractCode = function () {
+            var pid = sessionStorage.getItem('currentProjectId');
+
+            if (!pid) {
+                try {
+                    var u = JSON.parse(localStorage.getItem('current_user') || '{}');
+                    if (u && Array.isArray(u.projectIds) && u.projectIds.length > 0) {
+                        pid = u.projectIds[0];
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            if (!pid) {
+                try {
+                    var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+                    if (s && Array.isArray(s.projectIds) && s.projectIds.length > 0) {
+                        pid = s.projectIds[0];
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            if (!pid) pid = 'DE/2026/05';
+
+            return String(pid).replace(/\//g, '-');
+        };
+
+        console.log('[LabourWage] ✓ getContractCode ready, currentProjectId =',
+                    sessionStorage.getItem('currentProjectId') || '(fallback)',
+                    '→ contractCode =',
+                    window.getContractCode());
+    })();
+    </script>
+
     <script src="scripts/labourwage.js"></script>
+
+    <!-- ============================================================ -->
+    <!-- ★★★ Document ID 自動遞增修正                                  -->
+    <!-- ------------------------------------------------------------ -->
+    <!-- 格式：LRR/{合同代碼}/{6 位序號}A                                -->
+    <!--   e.g. LRR/DE-2026-05/000001A                                  -->
+    <!-- 策略：                                                        -->
+    <!--   1. 掃描 localStorage 所有 key，找任何含 ID 的陣列            -->
+    <!--   2. 過濾出 ID 前綴 = LRR/{contractCode}/ 的記錄               -->
+    <!--   3. 找最大序號 +1                                            -->
+    <!--   4. 點 Add New Wage Record 後覆蓋 input-doc-id 欄位           -->
+    <!-- ============================================================ -->
+    <script>
+    (function () {
+        'use strict';
+        if (window.__labourIdAutoIncrementBound) return;
+        window.__labourIdAutoIncrementBound = true;
+
+        var ID_PREFIX = 'LRR/';
+        var ID_SUFFIX = 'A';
+        var ID_PAD    = 6;
+
+        function escapeRegExp(s) {
+            return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        /* 掃描 localStorage 所有 key，蒐集所有可能的 labour wage ID */
+        function collectAllLabourIds() {
+            var ids = [];
+            var seen = {};
+
+            try {
+                for (var i = 0; i < localStorage.length; i++) {
+                    var key = localStorage.key(i);
+                    if (!key) continue;
+
+                    var raw = localStorage.getItem(key);
+                    if (!raw || raw.length < 2) continue;
+                    var c = raw.charAt(0);
+                    if (c !== '[' && c !== '{') continue;
+
+                    var data;
+                    try { data = JSON.parse(raw); } catch (e) { continue; }
+
+                    var arrs = [];
+                    if (Array.isArray(data)) {
+                        arrs.push(data);
+                    } else if (data && typeof data === 'object') {
+                        Object.keys(data).forEach(function (k) {
+                            if (Array.isArray(data[k])) arrs.push(data[k]);
+                        });
+                    }
+
+                    arrs.forEach(function (arr) {
+                        arr.forEach(function (item) {
+                            if (item && item.id != null) {
+                                var idStr = String(item.id);
+                                if (idStr.indexOf(ID_PREFIX) === 0 && !seen[idStr]) {
+                                    seen[idStr] = true;
+                                    ids.push(idStr);
+                                }
+                            }
+                        });
+                    });
+                }
+            } catch (e) {
+                console.warn('[LabourWage] scan localStorage failed:', e);
+            }
+
+            /* 從當前表格 DOM 收集 */
+            try {
+                var tbody = document.getElementById('wage-table-body');
+                if (tbody) {
+                    var rows = tbody.querySelectorAll('tr');
+                    for (var r = 0; r < rows.length; r++) {
+                        var firstCell = rows[r].cells && rows[r].cells[0];
+                        if (!firstCell) continue;
+                        var txt = firstCell.textContent.trim();
+                        if (txt && txt.indexOf(ID_PREFIX) === 0 && !seen[txt]) {
+                            seen[txt] = true;
+                            ids.push(txt);
+                        }
+                    }
+                }
+            } catch (e) { /* ignore */ }
+
+            return ids;
+        }
+
+        /**
+         * 計算下一個 Document ID
+         *   prefix = "LRR/" + getContractCode() + "/"
+         */
+        window.computeNextLabourId = function () {
+            var contractCode = window.getContractCode();     // DE-2026-05
+            var prefix = ID_PREFIX + contractCode + '/';     // LRR/DE-2026-05/
+            var re = new RegExp('^' + escapeRegExp(prefix) + '(\\d+)[A-Za-z]?$');
+
+            var ids = collectAllLabourIds();
+            var maxNum = 0;
+            ids.forEach(function (id) {
+                var m = id.match(re);
+                if (m) {
+                    var n = parseInt(m[1], 10);
+                    if (!isNaN(n) && n > maxNum) maxNum = n;
+                }
+            });
+
+            var nextNum = maxNum + 1;
+            var numStr = String(nextNum);
+            while (numStr.length < ID_PAD) numStr = '0' + numStr;
+            var newId = prefix + numStr + ID_SUFFIX;
+
+            console.log('[LabourWage] ✓ Document ID 生成:', newId,
+                        '(現有最大序號 =', maxNum, ', prefix =', prefix, ')');
+            return newId;
+        };
+
+        /* 監聽 Add New Wage Record 按鈕 → modal 顯示後覆蓋欄位 */
+        document.addEventListener('click', function (e) {
+            var btn = e.target && e.target.closest ? e.target.closest('#add-wage-btn') : null;
+            if (!btn) return;
+
+            setTimeout(function () {
+                var modal = document.getElementById('add-wage-modal');
+                if (!modal || modal.style.display === 'none') return;
+
+                var idInput = document.getElementById('input-doc-id');
+                if (!idInput) return;
+
+                var correctId = window.computeNextLabourId();
+                idInput.value = correctId;
+
+                if (!idInput.__lrrIdLocked) {
+                    idInput.__lrrIdLocked = true;
+                    var lockValue = correctId;
+                    var obs = new MutationObserver(function () {
+                        if (idInput.value !== lockValue) {
+                            if (idInput.__lrrUserEdited) {
+                                obs.disconnect();
+                                return;
+                            }
+                            idInput.value = lockValue;
+                        }
+                    });
+                    obs.observe(idInput, { attributes: true, attributeFilter: ['value'] });
+
+                    idInput.addEventListener('input', function () {
+                        idInput.__lrrUserEdited = true;
+                        lockValue = idInput.value;
+                    });
+
+                    var modalObs = new MutationObserver(function () {
+                        if (modal.style.display === 'none') {
+                            idInput.__lrrIdLocked = false;
+                            idInput.__lrrUserEdited = false;
+                            obs.disconnect();
+                            modalObs.disconnect();
+                        }
+                    });
+                    modalObs.observe(modal, { attributes: true, attributeFilter: ['style'] });
+                }
+            }, 100);
+        }, false);
+    })();
+    </script>
 
     <style>
         .labour-wage-page { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 30px; box-sizing: border-box; }
@@ -193,7 +400,6 @@
     </style>
 
     <script>
-        // 日期 & 側邊欄狀態
         (function() {
             function saveSidebarState() {
                 var sb = document.querySelector('.sidebar');
