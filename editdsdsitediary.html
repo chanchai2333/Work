@@ -747,6 +747,7 @@
 
         var FORM_LAYOUT = {
             header: {
+                contractno:   { left: '56.00%', top: '6.3%',  width: '8.5%', height: '4%'    },
                 nameOfPlant:  { left: '12.71%', top: '11.3%',  width: '33.37%', height: '3%'    },
                 sorItem:      { left: '56.6%',  top: '12.6%',  width: '11.0%',  height: '4.0%'  },
                 ceNo:         { left: '81.0%',  top: '12.5%',  width: '13.5%',  height: '4.3%'  },
@@ -1188,6 +1189,9 @@
             overlay.className = 'pdf-form-overlay';
             overlay.dataset.page = pageNum;
 
+            /* ★ Contract No. — 新增 */
+            var defaultContractNo = pageData.contractno || '';
+            overlay.appendChild(createTextInput('contractno', FORM_LAYOUT.header.contractno, defaultContractNo, pageNum));
             var defaultPlantName = pageData.nameOfPlant || (currentDocObj && currentDocObj.site) || '';
             overlay.appendChild(createTextInput('nameOfPlant', FORM_LAYOUT.header.nameOfPlant, defaultPlantName, pageNum));
             overlay.appendChild(createTextInput('sorItem',     FORM_LAYOUT.header.sorItem,     pageData.sorItem,     pageNum));
