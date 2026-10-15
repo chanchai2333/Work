@@ -708,5 +708,209 @@
             });
         })();
     </script>
+<!-- ============================================================ -->
+<!-- ★ Status Change History 補丁                                  -->
+<!-- ============================================================ -->
+<script>
+(function () {
+    'use strict';
+    if (window.__diaryHistoryBound) return;
+    window.__diaryHistoryBound = true;
+
+    var PRIMARY_KEY = 'siteDiaryData';
+
+    /* ---------- 讀取記錄 ---------- */
+    function loadRecords() {
+        try {
+            var raw = localStorage.getItem(PRIMARY_KEY);
+            if (!raw) return [];
+            var d = JSON.parse(raw);
+            return Array.isArray(d) ? d : [];
+        } catch (e) { return []; }
+    }
+
+    /* ---------- 時間格式 ---------- */
+    function fmtDateTime(iso) {
+        if (!iso) return '—';
+        try {
+            var d = new Date(iso);
+            if (isNaN(d.getTime())) return iso;
+            var yy = d.getFullYear();
+            var mm = String(d.getMonth() + 1).padStart(2, '0');
+            var dd = String(d.getDate()).padStart(2, '0');
+            var hh = String(d.getHours()).padStart(2, '0');
+            var mi = String(d.getMinutes()).padStart(2, '0');
+            return yy + '-' + mm + '-' + dd + ' ' + hh + ':' + mi;
+        } catch (e) { return iso; }
+    }
+
+    function escapeHtml(s) {
+        if (s == null) return '';
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    /* ---------- 狀態顯示名稱 ---------- */
+    function statusLabel(s) {
+        var map = {
+            'draft': 'Draft',
+            'submitted-wsg': 'Submitted to WSG',
+            'submitted-ig': 'Submitted to IG',
+            'closed': 'Closed',
+            'reopen': 'Reopen',
+            'cancelled': 'Cancelled',
+            'approved': 'Approved',
+            'rejected': 'Rejected',
+            'pending': 'Pending Approval',
+            'endorsed': 'Endorsed',
+            'submitted': 'Submitted'
+        };
+        return map[s] || s || '—';
+    }
+
+    /* ---------- 顯示 History Modal ---------- */
+    function showHistory(diaryId) {
+        var records = loadRecords();
+        var record = null;
+        for (var i = 0; i < records.length; i++) {
+            if (String(records[i].id) === String(diaryId)) { record = records[i]; break; }
+        }
+        if (!record) { alert('Record not found.'); return; }
+
+        var modal = document.getElementById('history-modal');
+        var content = document.getElementById('history-content');
+        if (!modal || !content) return;
+
+        var history = Array.isArray(record.statusHistory) ? record.statusHistory : [];
+
+        var html = '';
+        html += '<div style="margin-bottom: 16px; padding: 12px 16px; background: #f8fafc; border-radius: 8px;">';
+        html += '<div style="font-size: 0.8rem; color: #64748b; margin-bottom: 4px;">Document ID</div>';
+        html += '<div style="font-weight: 700; color: #1e40af;">' + escapeHtml(record.id) + '</div>';
+        html += '</div>';
+
+        /* 若完全沒有歷史，也顯示「當前狀態」作為唯讀資訊 */
+        if (history.length === 0) {
+            html += '<div style="padding: 30px; text-align: center; color: #94a3b8; font-style: italic;">';
+            html += '<i class="fas fa-inbox" style="font-size: 28px; display: block; margin-bottom: 10px;"></i>';
+            html += 'No status change history yet.';
+            html += '</div>';
+            html += '<div style="margin-top: 12px; padding: 10px 14px; background: #eff6ff; border-radius: 6px; font-size: 0.85rem; color: #1e40af;">';
+            html += '<strong>Current status:</strong> ' + escapeHtml(statusLabel(record.status));
+            html += '</div>';
+        } else {
+            html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">';
+            html += '<thead><tr style="background: #f1f5f9;">';
+            html += '<th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0;">Date / Time</th>';
+            html += '<th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0;">From</th>';
+            html += '<th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0;">To</th>';
+            html += '<th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0;">Changed By</th>';
+            html += '</tr></thead><tbody>';
+
+            history.slice().reverse().forEach(function (h) {
+                html += '<tr>';
+                html += '<td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; white-space: nowrap;">' + escapeHtml(fmtDateTime(h.changedAt)) + '</td>';
+                html += '<td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9;">' + escapeHtml(statusLabel(h.from)) + '</td>';
+                html += '<td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; color: #2980b9; font-weight: 600;">' + escapeHtml(statusLabel(h.to)) + '</td>';
+                html += '<td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9;">' + escapeHtml(h.changedBy || '—') + '</td>';
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+        }
+
+        content.innerHTML = html;
+        modal.style.display = 'flex';
+    }
+
+    function closeHistory() {
+        var modal = document.getElementById('history-modal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    /* ---------- 點擊事件：顯示 / 關閉 ---------- */
+    document.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('.history-btn') : null;
+        if (btn) {
+            e.preventDefault();
+            e.stopPropagation();
+            showHistory(btn.dataset.id);
+            return;
+        }
+        if (e.target && e.target.id === 'close-history-modal') {
+            closeHistory();
+            return;
+        }
+        var modal = document.getElementById('history-modal');
+        if (modal && e.target === modal) closeHistory();
+    });
+
+    /* ---------- 給每行注入 History 按鈕 ---------- */
+    function injectHistoryButtons() {
+        var tbody = document.getElementById('diary-table-body');
+        if (!tbody) { setTimeout(injectHistoryButtons, 500); return; }
+
+        var rows = tbody.querySelectorAll('tr');
+        for (var i = 0; i < rows.length; i++) {
+            var row = rows[i];
+            var firstCell = row.cells && row.cells[0];
+            if (!firstCell) continue;
+            var diaryId = firstCell.textContent.trim();
+            if (!diaryId) continue;
+
+            var actionCell = row.cells[row.cells.length - 1];
+            if (!actionCell) continue;
+            if (actionCell.querySelector('.history-btn')) continue;
+
+            var btn = document.createElement('button');
+            btn.className = 'action-btn history-btn';
+            btn.dataset.id = diaryId;
+            btn.title = 'View status change history';
+            btn.innerHTML = '<i class="fas fa-history"></i>';
+            btn.style.cssText =
+                'background: linear-gradient(135deg, #8e44ad, #732d91); color: white;';
+
+            actionCell.appendChild(btn);
+        }
+    }
+
+    /* ---------- 監聽 tbody 變化 ---------- */
+    function bindObserver() {
+        var tbody = document.getElementById('diary-table-body');
+        if (!tbody) { setTimeout(bindObserver, 500); return; }
+
+        var obs = new MutationObserver(function () {
+            injectHistoryButtons();
+        });
+        obs.observe(tbody, { childList: true });
+
+        injectHistoryButtons();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+            setTimeout(bindObserver, 500);
+        });
+    } else {
+        setTimeout(bindObserver, 500);
+    }
+})();
+</script>
+<!-- ============================================================ -->
+<!-- ★ Status Change History Modal                                -->
+<!-- ============================================================ -->
+<div class="modal" id="history-modal" style="display:none;">
+    <div class="modal-content" style="max-width: 780px;">
+        <h3><i class="fas fa-history"></i> Status Change History</h3>
+        <div id="history-content" style="margin: 16px 0;"></div>
+        <div class="modal-actions">
+            <button type="button" class="btn" id="close-history-modal">Close</button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

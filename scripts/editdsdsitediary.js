@@ -1149,16 +1149,42 @@
             alert('This document has already been approved.');
             return;
         }
+        if (currentDoc.status && currentDoc.status !== 'draft') {
+            alert('This document has already been submitted.');
+            return;
+        }
         if (!confirm('Submit this document for approval?')) return;
 
         flushEditingTextBoxes();
         currentDoc.annotations = annotations;
-        currentDoc.approvalStatus = 'pending';
-        currentDoc.submittedDate = new Date().toISOString();
 
         var sessionData = {};
         try { sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch (e) {}
-        currentDoc.submittedBy = sessionData.userName || currentDoc.submittedBy || 'Unknown';
+        var userName = sessionData.userName || currentDoc.submittedBy || 'Unknown';
+        var userRole = (sessionData.permissions && sessionData.permissions.name)
+                       || sessionData.userRole
+                       || sessionData.role
+                       || '';
+
+        var oldStatus = currentDoc.status || 'draft';
+        var newStatus = 'submitted-wsg';
+        var nowIso = new Date().toISOString();
+
+        /* ★ 記錄 status 變更歷史 */
+        if (!Array.isArray(currentDoc.statusHistory)) currentDoc.statusHistory = [];
+        currentDoc.statusHistory.push({
+            from: oldStatus,
+            to: newStatus,
+            changedBy: userName,
+            changedRole: userRole,
+            changedAt: nowIso,
+            action: 'submit'
+        });
+
+        currentDoc.status = newStatus;
+        currentDoc.approvalStatus = 'pending';
+        currentDoc.submittedDate = nowIso;
+        currentDoc.submittedBy = userName;
 
         updateDocumentInfo(currentDoc);
         saveChanges();

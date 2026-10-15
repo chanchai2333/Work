@@ -281,5 +281,188 @@
         }, 500);
     });
     </script>
+<!-- ============================================================ -->
+<!-- ★ 文檔鎖定：Submit 後禁止編輯（三個編輯頁通用）v2             -->
+<!-- ============================================================ -->
+<script>
+(function () {
+    'use strict';
+    if (window.__docLockPatchInstalled) return;
+    window.__docLockPatchInstalled = true;
+
+    /* ---------- 判斷文檔是否已提交/鎖定 ----------
+       規則：
+         1. 有 submittedDate → 一定鎖（DSD / LabourWage 提交時會寫入）
+         2. approvalStatus 是 approved / rejected / cancelled → 鎖
+         3. status 不是 draft → 鎖（Safety Inspection 提交後 status = submitted-wsg）
+         4. 其他（含新建時 approvalStatus='pending' 但無 submittedDate）→ 不鎖
+    */
+    function isLocked(doc) {
+        if (!doc) return false;
+
+        if (doc.submittedDate) return true;
+
+        var a = doc.approvalStatus;
+        if (a === 'approved' || a === 'rejected' || a === 'cancelled') return true;
+
+        var s = doc.status;
+        if (s && s !== 'draft') return true;
+
+        return false;
+    }
+
+    /* ---------- 從 sessionStorage 讀當前文檔 ---------- */
+    function readCurrentDoc() {
+        var sources = [
+            'editDocument',
+            'currentInspectionRecord',
+            'currentDiaryRecord',
+            'currentWageRecord',
+            'currentRecord'
+        ];
+        for (var i = 0; i < sources.length; i++) {
+            var raw = sessionStorage.getItem(sources[i]);
+            if (!raw) continue;
+            try {
+                var d = JSON.parse(raw);
+                if (d && typeof d === 'object' && d.id) return d;
+            } catch (e) {}
+        }
+        return null;
+    }
+
+    /* ---------- 注入鎖定樣式（只注一次） ---------- */
+    function injectLockStyle() {
+        if (document.getElementById('document-lock-style')) return;
+        var style = document.createElement('style');
+        style.id = 'document-lock-style';
+        style.textContent = [
+            '.document-locked #draw-canvas,',
+            '.document-locked #pdf-canvas,',
+            '.document-locked .pdf-form-overlay,',
+            '.document-locked .safety-form-overlay,',
+            '.document-locked .text-annotation,',
+            '.document-locked .tick-mark {',
+            '  pointer-events: none !important;',
+            '}',
+
+            '.document-locked .pdf-field,',
+            '.document-locked .pdf-checkbox,',
+            '.document-locked .pdf-sign,',
+            '.document-locked .pdf-image,',
+            '.document-locked .pdf-signature-cell,',
+            '.document-locked .signature-cell {',
+            '  pointer-events: none !important;',
+            '  opacity: 0.85;',
+            '}',
+
+            '.document-locked .tool-btn,',
+            '.document-locked #undo-btn,',
+            '.document-locked #delete-selected-btn,',
+            '.document-locked #lock-btn,',
+            '.document-locked #save-btn,',
+            '.document-locked #cancel-btn,',
+            '.document-locked #submit-btn {',
+            '  display: none !important;',
+            '}',
+
+            '.document-lock-badge {',
+            '  display: inline-flex; align-items: center; gap: 6px;',
+            '  background: #fef3c7; color: #92400e;',
+            '  padding: 6px 14px; border-radius: 20px;',
+            '  font-weight: 600; font-size: 0.85rem;',
+            '  margin-left: 12px;',
+            '  box-shadow: 0 1px 3px rgba(0,0,0,0.05);',
+            '}'
+        ].join('\n');
+        document.head.appendChild(style);
+    }
+
+    /* ---------- 套用鎖定 ---------- */
+    function applyLock(doc) {
+        if (document.body.classList.contains('document-locked')) return;
+
+        injectLockStyle();
+        document.body.classList.add('document-locked');
+
+        if (!document.querySelector('.document-lock-badge')) {
+            var target =
+                document.querySelector('.doc-title-section h2') ||
+                document.querySelector('.document-header h2') ||
+                document.querySelector('.document-header');
+
+            if (target) {
+                var badge = document.createElement('span');
+                badge.className = 'document-lock-badge';
+                badge.innerHTML = '<i class="fas fa-lock"></i> Read-only (submitted)';
+                target.appendChild(badge);
+            }
+        }
+
+        document.querySelectorAll('input, textarea, select').forEach(function (el) {
+            el.disabled = true;
+        });
+
+        var obs = new MutationObserver(function (mutations) {
+            mutations.forEach(function (m) {
+                m.addedNodes.forEach(function (n) {
+                    if (n.nodeType !== 1) return;
+                    if (n.matches && n.matches('input, textarea, select')) {
+                        n.disabled = true;
+                    }
+                    if (n.querySelectorAll) {
+                        n.querySelectorAll('input, textarea, select').forEach(function (el) {
+                            el.disabled = true;
+                        });
+                    }
+                });
+            });
+        });
+        obs.observe(document.body, { childList: true, subtree: true });
+
+        console.log('[DocLock] 🔒 文檔已鎖定，狀態 =',
+                    (doc && (doc.approvalStatus || doc.status)) || 'submitted',
+                    doc && doc.submittedDate ? '| submittedDate=' + doc.submittedDate : '');
+    }
+
+    /* ---------- 初次載入檢查 ---------- */
+    function checkOnLoad() {
+        var doc = readCurrentDoc();
+        if (doc && isLocked(doc)) {
+            applyLock(doc);
+        } else if (doc) {
+            console.log('[DocLock] 未鎖定（草稿狀態）|',
+                        'status =', doc.status,
+                        '| approvalStatus =', doc.approvalStatus,
+                        '| submittedDate =', doc.submittedDate || '(none)');
+        }
+    }
+
+    /* ---------- 監聽 Submit 按鈕 ---------- */
+    document.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('#submit-btn') : null;
+        if (!btn) return;
+
+        setTimeout(function () {
+            var doc = readCurrentDoc();
+            if (doc && isLocked(doc)) applyLock(doc);
+        }, 400);
+
+        setTimeout(function () {
+            var doc = readCurrentDoc();
+            if (doc && isLocked(doc)) applyLock(doc);
+        }, 2000);
+    }, false);
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', checkOnLoad);
+    } else {
+        checkOnLoad();
+    }
+
+    setTimeout(checkOnLoad, 1200);
+    setTimeout(checkOnLoad, 2500);
+})();
+</script>
 </body>
 </html>
