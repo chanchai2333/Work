@@ -382,7 +382,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     alert('❌ This record does not belong to your current project.');
                     return;
                 }
-                sessionStorage.setItem('currentDocument', JSON.stringify({
+
+                const payload = {
                     id: record.id,
                     status: record.status,
                     statusText: getStatusText(record.status),
@@ -393,7 +394,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     project: record.project || null,
                     pdfData: record.pdfData || null,
                     annotations: record.annotations || []
-                }));
+                };
+
+                // ✅ Write to ALL keys so any document page can read it
+                sessionStorage.setItem('currentDocument',    JSON.stringify(payload));
+                sessionStorage.setItem('viewDocument',       JSON.stringify(payload));
+                sessionStorage.setItem('currentDiaryRecord', JSON.stringify(payload));
+                sessionStorage.setItem('currentRecord',      JSON.stringify(payload));
+
                 window.location.href = 'sitediarydocument.html';
             } else {
                 alert('Document not found');
