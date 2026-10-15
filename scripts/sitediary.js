@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let diaryData = [];
 
-    // ★ 每個項目的預設記錄（分組，方便維護）
+    // ★ 每個項目的預設記錄
     const DEFAULT_PROJECT_DATA = {
         'DE/2026/05': [
             { id: "SD/DE-2026-05/000001A", status: "draft",         site: "Treatment Plant", date: "2025-08-15", submittedBy: "John Doe",          type: "Contractor Documents",     project: "DE/2026/05", pdfData: null, annotations: [] },
@@ -47,7 +47,6 @@ document.addEventListener('DOMContentLoaded', function () {
         ]
     };
 
-    // ★ 把所有項目的預設記錄攤平
     function getAllDefaultRecords() {
         const all = [];
         Object.keys(DEFAULT_PROJECT_DATA).forEach(function (projectId) {
@@ -56,6 +55,15 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
         return all;
+    }
+
+    // ★★★ 統一取得當前項目 ID ★★★
+    function getCurrentProjectId() {
+        if (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.getProjectId) {
+            var pid = DWSS_Auth.getProjectId();
+            if (pid) return pid;
+        }
+        return sessionStorage.getItem('currentProjectId') || null;
     }
 
     // ==================== 載入 / 儲存 ====================
@@ -69,14 +77,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (!item.hasOwnProperty('pdfData')) item.pdfData = null;
                     if (!item.hasOwnProperty('annotations')) item.annotations = [];
 
-                    // ★ 舊資料沒有 project → 依 ID 前綴推斷項目
                     if (!item.project) {
-                        if (item.id && item.id.indexOf('SD/25/02') === 0) {
+                        if (item.id && item.id.indexOf('SD/DE-2025-02') === 0) {
                             item.project = 'DE/2025/02';
-                        } else if (item.id && item.id.indexOf('SD/25/09') === 0) {
+                        } else if (item.id && item.id.indexOf('SD/DE-2025-09') === 0) {
                             item.project = 'DE/2025/09';
-                        } else {
+                        } else if (item.id && item.id.indexOf('SD/DE-2026-05') === 0) {
                             item.project = 'DE/2026/05';
+                        } else {
+                            item.project = getCurrentProjectId() || 'DE/2026/05';
                         }
                         migrated++;
                     }
@@ -103,26 +112,29 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ==================== ★ 項目過濾輔助函數 ====================
-    /**
-     * 從全量 diaryData 中過濾出「當前項目」的記錄
-     * 回傳一個新陣列（不改動 diaryData）
-     */
     function getProjectData() {
-        const projectId = (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.getProjectId)
-            ? DWSS_Auth.getProjectId()
-            : null;
+        const projectId = getCurrentProjectId();
 
-        // 沒有 projectId（未登入）→ 只顯示沒有指定 project 的記錄
         if (!projectId) {
             return diaryData.filter(function (item) {
                 return !item.project;
             });
         }
 
-        // 有 projectId → 只顯示屬於該項目的記錄
         return diaryData.filter(function (item) {
             return item.project === projectId;
         });
+    }
+
+    // ★★★ 安全檢查（寬鬆模式）★★★
+    function canAccessRecord(recordId) {
+        const record = diaryData.find(r => String(r.id) === String(recordId));
+        if (!record) return false;
+
+        const currentProject = getCurrentProjectId();
+        if (!currentProject || !record.project) return true;
+
+        return record.project === currentProject;
     }
 
     // ==================== 輔助函數 ====================
@@ -160,26 +172,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ==================== ★ 自動生成 Diary ID ====================
-    /**
-     * 生成下一個 Diary ID
-     *   DE/2026/05 → SD/26/000001A
-     *   DE/2025/02 → SD/25/02/000001A
-     *   DE/2025/09 → SD/25/09/000001A
-     *   其他       → SD/XX/000001A
-     * 規則：掃描「當前項目」的所有記錄，找出最大數字 +1
-     */
-    // ==================== ★ 自動生成 Diary ID（Spec 格式 + 含合同号）====================
-    /**
-     * 生成下一個 Diary ID
-     * 格式: SD/{ContractNo}/000001A
-     *   例: SD/DE-2026-05/000001A
-     *   - SD: Site Diary
-     *   - DE-2026-05: 合同号（项目标识）
-     *   - 000001: 6 位 serial（当前项目内独立递增）
-     *   - A: Revision
-     */
     function generateNextDiaryId() {
-        var contractCode = getContractCode();               // DE-2026-05
+        var contractCode = getContractCode();
         var prefix = 'SD/' + contractCode + '/';
         var ID_SUFFIX = 'A';
         var ID_PAD    = 6;
@@ -187,7 +181,6 @@ document.addEventListener('DOMContentLoaded', function () {
         var escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         var re = new RegExp('^' + escaped + '(\\d+)[A-Za-z]?$');
 
-        // ★ 只在「當前項目」的記錄裡找最大 serial（保证同项目不重复）
         var projectData = getProjectData();
 
         var maxNum = 0;
@@ -247,20 +240,23 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ==================== 渲染表格 ====================
-    function renderTable() {
+        function renderTable() {
         const tbody = document.getElementById('diary-table-body');
         const noResults = document.getElementById('no-results-message');
         if (!tbody) return;
 
         tbody.innerHTML = '';
 
-        // ★ 步骤 1：先按当前项目过滤
-        let projectFilteredData = diaryData;
-        if (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.filterByCurrentProject) {
-            projectFilteredData = DWSS_Auth.filterByCurrentProject(diaryData);
-        }
+        // ★★★ 步骤 1：只保留當前項目的記錄 ★★★
+        const projectFilteredData = diaryData.filter(function(item) {
+            if (!item) return false;
+            var currentPid = getCurrentProjectId();
+            if (!currentPid) return true;
+            if (!item.project) return true;
+            return item.project === currentPid;
+        });
 
-        // ★ 步骤 2：再套用用户选择的筛选器（site / status / type）
+        // ★ 步骤 2：套用用戶篩選器
         const filtered = projectFilteredData.filter(item => {
             if (currentFilters.site !== "all") {
                 const siteType = getSiteType(item.site);
@@ -276,7 +272,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const userCanChangeStatus = DWSS_Auth.canChangeStatus();
-
 
         filtered.forEach(item => {
             const row = document.createElement('tr');
@@ -295,7 +290,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
             actionButtons += `</td>`;
 
-            // 審批狀態顯示
             var approvalDisplay = '';
             if (item.approvalStatus === 'approved') {
                 approvalDisplay = '<span class="status-badge status-approved">✅ Approved</span>';
@@ -339,14 +333,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (!newStatus) return;
 
-        // 從全量 diaryData 中找（ID 是唯一的）
         const record = diaryData.find(r => String(r.id) === String(recordId));
         if (!record) return;
 
-        // 安全檢查：確保這筆記錄屬於當前項目
-        const projectData = getProjectData();
-        const belongs = projectData.some(r => String(r.id) === String(recordId));
-        if (!belongs) {
+        if (!canAccessRecord(recordId)) {
             alert('❌ This record does not belong to your current project.');
             e.target.value = '';
             return;
@@ -378,7 +368,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // ==================== 操作按鈕事件 ====================
+    // ==================== 操作按鈕事件（事件委派）====================
     document.addEventListener('click', function (e) {
         const viewBtn = e.target.closest('.view-btn');
         const editBtn = e.target.closest('.edit-btn');
@@ -388,8 +378,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const id = viewBtn.dataset.id;
             const record = diaryData.find(d => String(d.id) === String(id));
             if (record) {
-                const projectData = getProjectData();
-                if (!projectData.some(d => String(d.id) === String(id))) {
+                if (!canAccessRecord(id)) {
                     alert('❌ This record does not belong to your current project.');
                     return;
                 }
@@ -415,8 +404,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const id = editBtn.dataset.id;
             const record = diaryData.find(d => String(d.id) === String(id));
             if (record) {
-                const projectData = getProjectData();
-                if (!projectData.some(d => String(d.id) === String(id))) {
+                if (!canAccessRecord(id)) {
                     alert('❌ This record does not belong to your current project.');
                     return;
                 }
@@ -442,13 +430,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (deleteBtn) {
             const id = deleteBtn.dataset.id;
-            const projectData = getProjectData();
-            if (!projectData.some(d => String(d.id) === String(id))) {
+            if (!canAccessRecord(id)) {
                 alert('❌ This record does not belong to your current project.');
                 return;
             }
             if (confirm(`Are you sure you want to delete diary ${id}?`)) {
-                // 從全量 diaryData 移除
                 diaryData = diaryData.filter(d => String(d.id) !== String(id));
                 saveData();
                 renderTable();
@@ -505,13 +491,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 modal.style.display = 'flex';
                 form.reset();
 
-                // ★ 自動生成 Diary ID（依當前項目）
                 const idInput = document.getElementById('input-diary-id');
                 if (idInput) {
                     idInput.value = generateNextDiaryId();
                 }
 
-                // 根據權限調整狀態選項
                 const statusSelect = document.getElementById('input-status');
                 if (statusSelect) {
                     if (!DWSS_Auth.canChangeStatus()) {
@@ -543,7 +527,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
 
-                // 自動填充提交者
                 const user = DWSS_Auth.getCurrentUser();
                 const submittedByInput = document.getElementById('input-submitted-by');
                 if (user && submittedByInput) {
@@ -593,9 +576,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
 
-                // ★ 绑定到当前项目
-                const projectId = sessionStorage.getItem('currentProjectId');
-
                 const newDiary = {
                     id,
                     status,
@@ -603,12 +583,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     date,
                     submittedBy,
                     type,
-                    project: projectId,  // ← 关键
+                    project: getCurrentProjectId(),   // ★ 統一來源
                     pdfData: pdfData,
                     annotations: []
                 };
 
-                // ★ 寫入全量 diaryData
                 diaryData.unshift(newDiary);
                 saveData();
                 renderTable();

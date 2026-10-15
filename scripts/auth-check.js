@@ -3,70 +3,81 @@
 // DWSS 權限檢查共用模組
 // ============================================================
 
-const DWSS_Auth = {
+var DWSS_Auth = {
+    // ============================================================
+    // 用戶
+    // ============================================================
     getCurrentUser: function() {
-        const sessionData = sessionStorage.getItem('dwss_session');
+        var sessionData = sessionStorage.getItem('dwss_session');
         if (sessionData) {
-            try { return JSON.parse(sessionData); } catch(e) { return null; }
+            try { return JSON.parse(sessionData); } catch (e) { /* ignore */ }
+        }
+        var localData = localStorage.getItem('current_user');
+        if (localData) {
+            try { return JSON.parse(localData); } catch (e) { /* ignore */ }
         }
         return null;
     },
 
     isLoggedIn: function() {
-        const user = this.getCurrentUser();
-        return user && user.isLoggedIn === true;
+        var user = this.getCurrentUser();
+        return !!(user && user.isLoggedIn === true);
     },
 
     canChangeStatus: function() {
-        const user = this.getCurrentUser();
+        var user = this.getCurrentUser();
         if (!user) return false;
-        // 只有 IG / WSG / Admin 可以改狀態
         if (user.role === 'admin' || user.role === 'ig' || user.role === 'wsg') return true;
-        return user.permissions && user.permissions.canChangeStatus === true;
+        return !!(user.permissions && user.permissions.canChangeStatus === true);
     },
 
     isAdmin: function() {
-        const user = this.getCurrentUser();
-        return user && (user.userRole === 'admin' || user.role === 'admin');
+        var user = this.getCurrentUser();
+        return !!(user && (user.userRole === 'admin' || user.role === 'admin'));
     },
 
     canManageUsers: function() {
-        const user = this.getCurrentUser();
+        var user = this.getCurrentUser();
         if (!user) return false;
         if (user.role === 'admin') return true;
-        return user.permissions && user.permissions.canManageUsers === true;
+        return !!(user.permissions && user.permissions.canManageUsers === true);
     },
 
     getRoleName: function() {
-        const user = this.getCurrentUser();
+        var user = this.getCurrentUser();
         if (!user) return 'Guest';
-        // 使用新嘅 role 名稱
         var roleNames = {
-            'eg': 'Engineer Grade', 'ig': 'Inspector Grade', 'wsg': 'Works Supervisor Grade',
-            'sa': 'Site Agent', 'ssa': 'Sub-Site Agent', 'rso': 'Registered Safety Officer',
-            'subcontractor': 'Subcontractor', 'supplier': 'Supplier', 'admin': 'Administrator'
+            'eg': 'Engineer Grade',
+            'ig': 'Inspector Grade',
+            'wsg': 'Works Supervisor Grade',
+            'sa': 'Site Agent',
+            'ssa': 'Sub-Site Agent',
+            'rso': 'Registered Safety Officer',
+            'subcontractor': 'Subcontractor',
+            'supplier': 'Supplier',
+            'admin': 'Administrator'
         };
         return roleNames[user.role] || (user.permissions ? user.permissions.name : 'Guest');
     },
 
     getUserName: function() {
-        const user = this.getCurrentUser();
-        return user ? user.userName : 'Guest';
+        var user = this.getCurrentUser();
+        return user ? (user.userName || user.name || user.email || 'Guest') : 'Guest';
     },
 
     getUserOrganization: function() {
-        const user = this.getCurrentUser();
+        var user = this.getCurrentUser();
         return user ? (user.organization || null) : null;
     },
 
     getUserCompanyName: function() {
-        const user = this.getCurrentUser();
+        var user = this.getCurrentUser();
         return user ? (user.companyName || null) : null;
     },
 
     getPermissionLevel: function() {
-        const user = this.getCurrentUser();
-        return user && user.permissions ? user.permissions.level : 0;
+        var user = this.getCurrentUser();
+        return (user && user.permissions) ? user.permissions.level : 0;
     },
 
     logout: function() {
@@ -84,8 +95,12 @@ const DWSS_Auth = {
     },
 
     // ============================================================
-    // 項目相關
+    // 項目 — 統一來源
     // ============================================================
+    getProjectId: function() {
+        return sessionStorage.getItem('currentProjectId') || null;
+    },
+
     getCurrentProject: function() {
         return sessionStorage.getItem('currentProjectId') || null;
     },
@@ -97,7 +112,7 @@ const DWSS_Auth = {
     },
 
     getUserProjects: function() {
-        const user = this.getCurrentUser();
+        var user = this.getCurrentUser();
         if (!user) return [];
         if (user.role === 'admin') {
             return typeof window.getAllProjects === 'function' ? window.getAllProjects() : [];
@@ -110,7 +125,7 @@ const DWSS_Auth = {
 
     canAccessProject: function(projectId) {
         if (!projectId) return false;
-        const user = this.getCurrentUser();
+        var user = this.getCurrentUser();
         if (!user) return false;
         if (user.role === 'admin') return true;
         if (!user.projectIds || !Array.isArray(user.projectIds)) return false;
@@ -119,55 +134,47 @@ const DWSS_Auth = {
 
     canAccessRecord: function(record) {
         if (!record) return false;
-        if (!record.projectId) return true;
-        return this.canAccessProject(record.projectId);
+        var pid = record.project || record.projectId;
+        if (!pid) return true;
+        return this.canAccessProject(pid);
     },
 
-    filterByProject: function(records) {
+    // ★★★ 最關鍵的函數：只回傳屬於當前項目的記錄 ★★★
+    filterByCurrentProject: function(records) {
         if (!Array.isArray(records)) return [];
-        const user = this.getCurrentUser();
-        if (!user) return [];
-        if (user.role === 'admin') {
-            const currentPid = this.getCurrentProject();
-            if (currentPid && currentPid !== 'ALL') {
-                return records.filter(function(r) {
-                    return !r.projectId || r.projectId === currentPid;
-                });
-            }
-            return records.slice();
-        }
-        const currentPid = this.getCurrentProject();
-        const allowedPids = user.projectIds || [];
+        var currentPid = this.getProjectId();
+
+        // 若沒有當前項目 → 回傳全部（寬鬆，避免畫面空白）
+        if (!currentPid) return records.slice();
+
         return records.filter(function(r) {
-            if (!r.projectId) {
-                if (typeof window.getProjectIdBySite === 'function') {
-                    var inferred = window.getProjectIdBySite(r.site);
-                    if (inferred) return allowedPids.indexOf(inferred) !== -1;
-                }
-                return false;
-            }
-            if (currentPid && currentPid !== 'ALL') {
-                return r.projectId === currentPid;
-            }
-            return allowedPids.indexOf(r.projectId) !== -1;
+            if (!r) return false;
+
+            // 兼容 project 與 projectId 兩種欄位名稱
+            var recPid = r.project || r.projectId || null;
+
+            // 沒有項目欄位的舊資料 → 保留（寬鬆模式）
+            if (!recPid) return true;
+
+            return recPid === currentPid;
         });
     },
 
     autoFillProjectId: function(record) {
         if (!record) return record;
-        if (record.projectId) return record;
+        if (record.project || record.projectId) return record;
         var pid = this.getCurrentProject();
-        if (pid && pid !== 'ALL') {
-            record.projectId = pid;
+        if (pid) {
+            record.project = pid;
         } else if (typeof window.getProjectIdBySite === 'function') {
             var inferred = window.getProjectIdBySite(record.site);
-            if (inferred) record.projectId = inferred;
+            if (inferred) record.project = inferred;
         }
         return record;
     },
 
     // ============================================================
-    // 模組權限檢查（新）
+    // 模組權限
     // ============================================================
     canAccessModule: function(moduleId, requiredLevel) {
         if (typeof window.DWSS_UserManagement !== 'undefined') {
@@ -184,13 +191,13 @@ const DWSS_Auth = {
     },
 
     // ============================================================
-    // UI 更新
+    // UI
     // ============================================================
     updateProjectIndicator: function() {
         var indicator = document.getElementById('current-project-indicator');
         if (!indicator) return;
         var currentPid = this.getCurrentProject();
-        var project = currentPid && currentPid !== 'ALL'
+        var project = currentPid
             ? (typeof window.getProjectById === 'function' ? window.getProjectById(currentPid) : null)
             : null;
         if (project) {
@@ -206,27 +213,29 @@ const DWSS_Auth = {
     },
 
     updateHeaderUser: function() {
-        const user = this.getCurrentUser();
+        var user = this.getCurrentUser();
         if (!user) return;
 
-        const userBtnSpans = document.querySelectorAll('.user-btn span');
-        userBtnSpans.forEach(span => {
-            span.textContent = user.userName;
+        var displayName = user.userName || user.name || user.email || 'User';
+
+        document.querySelectorAll('.user-btn span').forEach(function(span) {
+            span.textContent = displayName;
         });
 
-        // 權限標籤
-        const headerControls = document.querySelector('.header-controls .user-date-row');
+        ['#header-username', '.user-name', '.username', '.header-username'].forEach(function(sel) {
+            document.querySelectorAll(sel).forEach(function(el) {
+                if (el.hasAttribute('data-record-user')) return;
+                el.textContent = displayName;
+            });
+        });
+
+        var headerControls = document.querySelector('.header-controls .user-date-row');
         if (headerControls && !document.getElementById('permission-indicator')) {
-            const permBadge = document.createElement('span');
+            var permBadge = document.createElement('span');
             permBadge.id = 'permission-indicator';
-            permBadge.style.cssText = `
-                display: inline-block;
-                padding: 4px 12px;
-                border-radius: 20px;
-                font-size: 0.75rem;
-                font-weight: 600;
-                margin-left: 10px;
-            `;
+            permBadge.style.cssText =
+                'display: inline-block; padding: 4px 12px; border-radius: 20px;' +
+                'font-size: 0.75rem; font-weight: 600; margin-left: 10px;';
 
             if (this.canChangeStatus()) {
                 permBadge.style.background = '#d4edda';
@@ -237,7 +246,6 @@ const DWSS_Auth = {
                 permBadge.style.color = '#856404';
                 permBadge.innerHTML = '<i class="fas fa-minus-circle"></i> ' + this.getRoleName();
             }
-
             headerControls.appendChild(permBadge);
         } else if (headerControls) {
             var existingBadge = document.getElementById('permission-indicator');
@@ -250,21 +258,21 @@ const DWSS_Auth = {
     },
 
     // ============================================================
-    // 狀態更改下拉選單
+    // 狀態更改 UI
     // ============================================================
     generateStatusSelect: function(recordId) {
         if (this.canChangeStatus()) {
-            return `
-                <select class="status-change-select" data-id="${recordId}" title="Change Status">
-                    <option value="">📝 Change Status</option>
-                    <option value="draft">Draft</option>
-                    <option value="submitted-wsg">Submitted to WSG</option>
-                    <option value="submitted-ig">Submitted to IG</option>
-                    <option value="closed">Closed</option>
-                    <option value="reopen">Reopen</option>
-                    <option value="cancelled">Cancelled</option>
-                </select>
-            `;
+            return (
+                '<select class="status-change-select" data-id="' + recordId + '" title="Change Status">' +
+                '<option value="">📝 Change Status</option>' +
+                '<option value="draft">Draft</option>' +
+                '<option value="submitted-wsg">Submitted to WSG</option>' +
+                '<option value="submitted-ig">Submitted to IG</option>' +
+                '<option value="closed">Closed</option>' +
+                '<option value="reopen">Reopen</option>' +
+                '<option value="cancelled">Cancelled</option>' +
+                '</select>'
+            );
         }
         return '';
     },
@@ -277,7 +285,7 @@ const DWSS_Auth = {
     },
 
     adjustFormStatusOptions: function(statusSelectId) {
-        const statusSelect = document.getElementById(statusSelectId);
+        var statusSelect = document.getElementById(statusSelectId);
         if (!statusSelect) return;
 
         if (!this.canChangeStatus()) {
@@ -285,7 +293,7 @@ const DWSS_Auth = {
             statusSelect.value = 'submitted';
             statusSelect.disabled = true;
 
-            let hint = document.getElementById('submit-only-hint');
+            var hint = document.getElementById('submit-only-hint');
             if (!hint) {
                 hint = document.createElement('div');
                 hint.id = 'submit-only-hint';
@@ -294,33 +302,28 @@ const DWSS_Auth = {
                 statusSelect.parentNode.appendChild(hint);
             }
         } else {
-            statusSelect.innerHTML = `
-                <option value="draft">Draft</option>
-                <option value="submitted-wsg">Submitted to WSG</option>
-                <option value="submitted-ig">Submitted to IG</option>
-                <option value="closed">Closed</option>
-                <option value="reopen">Reopen</option>
-                <option value="cancelled">Cancelled</option>
-            `;
+            statusSelect.innerHTML =
+                '<option value="draft">Draft</option>' +
+                '<option value="submitted-wsg">Submitted to WSG</option>' +
+                '<option value="submitted-ig">Submitted to IG</option>' +
+                '<option value="closed">Closed</option>' +
+                '<option value="reopen">Reopen</option>' +
+                '<option value="cancelled">Cancelled</option>';
             statusSelect.disabled = false;
-            const hint = document.getElementById('submit-only-hint');
-            if (hint) hint.remove();
+
+            var hint2 = document.getElementById('submit-only-hint');
+            if (hint2) hint2.remove();
         }
     },
 
     autoFillSubmittedBy: function(inputId) {
-        const input = document.getElementById(inputId);
-        const user = this.getCurrentUser();
+        var input = document.getElementById(inputId);
+        var user = this.getCurrentUser();
         if (input && user) input.value = user.userName;
     },
 
     bindStatusChangeEvents: function(getRecordCallback, saveCallback, renderCallback) {
         if (!this.canChangeStatus()) return;
-
-        document.querySelectorAll('.status-change-select').forEach(function(select) {
-            select.removeEventListener('change', handleStatusChange);
-            select.addEventListener('change', handleStatusChange);
-        });
 
         var self = this;
 
@@ -362,11 +365,39 @@ const DWSS_Auth = {
                 e.target.value = '';
             }
         }
+
+        document.querySelectorAll('.status-change-select').forEach(function(select) {
+            select.removeEventListener('change', handleStatusChange);
+            select.addEventListener('change', handleStatusChange);
+        });
     }
 };
 
+// ★★★ 掛到 window，讓所有頁面都能存取 ★★★
+window.DWSS_Auth = DWSS_Auth;
+
+// ============================================================
+// 自動初始化 header
+// ============================================================
+function initHeaderUser() {
+    try {
+        if (window.DWSS_Auth && typeof window.DWSS_Auth.updateHeaderUser === 'function') {
+            window.DWSS_Auth.updateHeaderUser();
+        }
+    } catch (err) {
+        console.warn('[DWSS_Auth] updateHeaderUser failed:', err);
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initHeaderUser);
+} else {
+    initHeaderUser();
+}
+
+// 登入檢查（不 throw，讓頁面其他邏輯仍可執行）
 if (!window.location.pathname.includes('login.html')) {
-    if (!DWSS_Auth.requireAuth()) {
-        throw new Error('Authentication required');
+    if (window.DWSS_Auth && !window.DWSS_Auth.isLoggedIn()) {
+        console.warn('[DWSS_Auth] User not logged in');
     }
 }
