@@ -240,14 +240,13 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ==================== 渲染表格 ====================
-        function renderTable() {
+    function renderTable() {
         const tbody = document.getElementById('diary-table-body');
         const noResults = document.getElementById('no-results-message');
         if (!tbody) return;
 
         tbody.innerHTML = '';
 
-        // ★★★ 步骤 1：只保留當前項目的記錄 ★★★
         const projectFilteredData = diaryData.filter(function(item) {
             if (!item) return false;
             var currentPid = getCurrentProjectId();
@@ -256,7 +255,6 @@ document.addEventListener('DOMContentLoaded', function () {
             return item.project === currentPid;
         });
 
-        // ★ 步骤 2：套用用戶篩選器
         const filtered = projectFilteredData.filter(item => {
             if (currentFilters.site !== "all") {
                 const siteType = getSiteType(item.site);
@@ -276,6 +274,9 @@ document.addEventListener('DOMContentLoaded', function () {
         filtered.forEach(item => {
             const row = document.createElement('tr');
 
+            var displayStatus = item.status || 'draft';
+            var displayApproval = item.approvalStatus || 'pending';
+
             let actionButtons = `
                 <td>
                     <button class="action-btn view-btn" data-id="${item.id}" title="View"><i class="fas fa-eye"></i></button>
@@ -291,9 +292,9 @@ document.addEventListener('DOMContentLoaded', function () {
             actionButtons += `</td>`;
 
             var approvalDisplay = '';
-            if (item.approvalStatus === 'approved') {
+            if (displayApproval === 'approved') {
                 approvalDisplay = '<span class="status-badge status-approved">✅ Approved</span>';
-            } else if (item.approvalStatus === 'rejected') {
+            } else if (displayApproval === 'rejected') {
                 approvalDisplay = '<span class="status-badge status-rejected">❌ Rejected</span>';
             } else {
                 approvalDisplay = '<span class="status-badge status-pending">⏳ Pending</span>';
@@ -301,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             row.innerHTML = `
                 <td>${item.id}</td>
-                <td><span class="status-badge status-${item.status}">${getStatusText(item.status)}</span></td>
+                <td><span class="status-badge status-${displayStatus}">${getStatusText(displayStatus)}</span></td>
                 <td>${approvalDisplay}</td>
                 <td>${item.site}</td>
                 <td>${formatDate(item.date)}</td>
@@ -387,6 +388,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     id: record.id,
                     status: record.status,
                     statusText: getStatusText(record.status),
+                    approvalStatus: record.approvalStatus || 'pending',
                     site: record.site,
                     date: formatDate(record.date),
                     submittedBy: record.submittedBy,

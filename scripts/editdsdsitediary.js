@@ -152,15 +152,18 @@
             'draft': 'Draft', 'submitted': 'Submitted',
             'submitted-wsg': 'Submitted to WSG', 'submitted-ig': 'Submitted to IG',
             'endorsed': 'Endorsed', 'cancelled': 'Cancelled',
-            'approved': 'Approved', 'rejected': 'Rejected', 'pending': 'Pending Approval'
+            'approved': 'Approved', 'rejected': 'Rejected', 'pending': 'Pending Approval',
+            'closed': 'Closed', 'reopen': 'Reopen'
         };
         var clsMap = {
             'draft': 'status-draft', 'submitted': 'status-submitted',
             'submitted-wsg': 'status-submitted', 'submitted-ig': 'status-submitted',
             'endorsed': 'status-approved', 'cancelled': 'status-cancelled',
-            'approved': 'status-approved', 'rejected': 'status-rejected', 'pending': 'status-pending'
+            'approved': 'status-approved', 'rejected': 'status-rejected', 'pending': 'status-pending',
+            'closed': 'status-approved', 'reopen': 'status-pending'
         };
-        var key = doc.approvalStatus || doc.status || 'draft';
+
+        var key = doc.status || 'draft';
         statusEl.textContent = statusMap[key] || doc.statusText || 'Draft';
         statusEl.className = 'doc-status';
         if (clsMap[key]) statusEl.classList.add(clsMap[key]);
@@ -1172,22 +1175,27 @@
                        || '';
 
         var oldStatus = currentDoc.status || 'draft';
+        var oldApproval = currentDoc.approvalStatus || 'pending';
         var newStatus = 'submitted-wsg';
+        var newApproval = 'pending';
         var nowIso = new Date().toISOString();
 
-        /* ★ 記錄 status 變更歷史 */
         if (!Array.isArray(currentDoc.statusHistory)) currentDoc.statusHistory = [];
-        currentDoc.statusHistory.push({
-            from: oldStatus,
-            to: newStatus,
-            changedBy: userName,
-            changedRole: userRole,
-            changedAt: nowIso,
-            action: 'submit'
-        });
+        if (oldStatus !== newStatus || oldApproval !== newApproval) {
+            currentDoc.statusHistory.push({
+                from: oldStatus,
+                to: newStatus,
+                fromApproval: oldApproval,
+                toApproval: newApproval,
+                changedBy: userName,
+                changedRole: userRole,
+                changedAt: nowIso,
+                action: 'submit'
+            });
+        }
 
         currentDoc.status = newStatus;
-        currentDoc.approvalStatus = 'pending';
+        currentDoc.approvalStatus = newApproval;
         currentDoc.submittedDate = nowIso;
         currentDoc.submittedBy = userName;
 
@@ -1205,20 +1213,58 @@
             alert('❌ You do not have permission to approve documents.');
             return;
         }
-        if (currentDoc.approvalStatus === 'approved') {
-            alert('This document has already been approved.');
+
+        var statusNow = currentDoc.status || 'draft';
+        var approvalNow = currentDoc.approvalStatus || 'pending';
+
+        var newStatus, newApproval, actionLabel;
+        if (statusNow === 'submitted-wsg' && approvalNow === 'pending') {
+            newStatus = 'submitted-ig';
+            newApproval = 'pending';
+            actionLabel = 'Submitted to WSG → Submitted to IG (pending approval)';
+        } else if (statusNow === 'submitted-ig' && approvalNow === 'pending') {
+            newStatus = 'closed';
+            newApproval = 'approved';
+            actionLabel = 'Submitted to IG → Closed (Approved)';
+        } else {
+            alert('This document cannot be approved in its current state.\n\nStatus: '
+                  + statusNow + '\nApproval: ' + approvalNow);
             return;
         }
-        if (!confirm('Approve this document?')) return;
 
-        currentDoc.approvalStatus = 'approved';
-        currentDoc.approvedBy = sessionData.userName || 'Unknown';
-        currentDoc.approvedDate = new Date().toISOString();
+        if (!confirm('Approve this document?\n\n' + actionLabel)) return;
+
+        var userName = sessionData.userName || 'Unknown';
+        var userRole = (sessionData.permissions && sessionData.permissions.name) || '';
+        var nowIso = new Date().toISOString();
+
+        if (!Array.isArray(currentDoc.statusHistory)) currentDoc.statusHistory = [];
+        currentDoc.statusHistory.push({
+            from: statusNow,
+            to: newStatus,
+            fromApproval: approvalNow,
+            toApproval: newApproval,
+            changedBy: userName,
+            changedRole: userRole,
+            changedAt: nowIso,
+            action: 'approve'
+        });
+
+        currentDoc.status = newStatus;
+        currentDoc.approvalStatus = newApproval;
+
+        if (newStatus === 'submitted-ig') {
+            currentDoc.wsgApprovedBy = userName;
+            currentDoc.wsgApprovedDate = nowIso;
+        } else if (newStatus === 'closed') {
+            currentDoc.approvedBy = userName;
+            currentDoc.approvedDate = nowIso;
+        }
 
         updateDocumentInfo(currentDoc);
         saveChanges();
         updateApprovalButtons();
-        alert('✅ Document approved!');
+        alert('✅ Document approved!\n\n' + actionLabel);
     }
 
     function rejectDocument() {
@@ -1229,16 +1275,40 @@
             alert('❌ You do not have permission to reject documents.');
             return;
         }
-        if (!confirm('Reject this document?')) return;
+        if (currentDoc.approvalStatus === 'approved') {
+            alert('Approved documents cannot be rejected.');
+            return;
+        }
+        if (!confirm('Reject this document?\n\nThe status will be reset to Draft and you can edit and re-submit.')) return;
 
+        var userName = sessionData.userName || 'Unknown';
+        var userRole = (sessionData.permissions && sessionData.permissions.name) || '';
+        var nowIso = new Date().toISOString();
+        var oldStatus = currentDoc.status || 'draft';
+        var oldApproval = currentDoc.approvalStatus || 'pending';
+
+        if (!Array.isArray(currentDoc.statusHistory)) currentDoc.statusHistory = [];
+        currentDoc.statusHistory.push({
+            from: oldStatus,
+            to: 'draft',
+            fromApproval: oldApproval,
+            toApproval: 'rejected',
+            changedBy: userName,
+            changedRole: userRole,
+            changedAt: nowIso,
+            action: 'reject'
+        });
+
+        currentDoc.status = 'draft';
         currentDoc.approvalStatus = 'rejected';
-        currentDoc.rejectedBy = sessionData.userName || 'Unknown';
-        currentDoc.rejectedDate = new Date().toISOString();
+        delete currentDoc.submittedDate;
+        currentDoc.rejectedBy = userName;
+        currentDoc.rejectedDate = nowIso;
 
         updateDocumentInfo(currentDoc);
         saveChanges();
         updateApprovalButtons();
-        alert('❌ Document rejected.');
+        alert('❌ Document rejected. Status reset to Draft — you can now edit and re-submit.');
     }
 
     function updateApprovalButtons() {
@@ -1249,26 +1319,41 @@
         try { sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch (e) {}
         var canApprove = sessionData.permissions && sessionData.permissions.canChangeStatus;
 
+        var statusNow = (currentDoc && currentDoc.status) || 'draft';
+        var approvalNow = (currentDoc && currentDoc.approvalStatus) || 'pending';
+
+        var canClickApprove = (approvalNow === 'pending')
+                           && (statusNow === 'submitted-wsg' || statusNow === 'submitted-ig');
+
+        var canClickReject = (approvalNow === 'pending')
+                          && (statusNow === 'submitted-wsg' || statusNow === 'submitted-ig');
+
         if (!canApprove) {
             if (approveBtn) approveBtn.style.display = 'none';
             if (rejectBtn) rejectBtn.style.display = 'none';
         } else {
             if (approveBtn) {
                 approveBtn.style.display = 'inline-flex';
-                approveBtn.disabled = !!(currentDoc && currentDoc.approvalStatus === 'approved');
-                approveBtn.style.opacity = approveBtn.disabled ? '0.5' : '1';
+                approveBtn.disabled = !canClickApprove;
+                approveBtn.style.opacity = canClickApprove ? '1' : '0.5';
+                approveBtn.style.cursor = canClickApprove ? 'pointer' : 'not-allowed';
             }
             if (rejectBtn) {
                 rejectBtn.style.display = 'inline-flex';
-                rejectBtn.disabled = !!(currentDoc && currentDoc.approvalStatus === 'rejected');
-                rejectBtn.style.opacity = rejectBtn.disabled ? '0.5' : '1';
+                rejectBtn.disabled = !canClickReject;
+                rejectBtn.style.opacity = canClickReject ? '1' : '0.5';
+                rejectBtn.style.cursor = canClickReject ? 'pointer' : 'not-allowed';
             }
         }
 
         if (submitBtn) {
-            var disabled = !!(currentDoc && currentDoc.approvalStatus === 'approved');
-            submitBtn.disabled = disabled;
-            submitBtn.style.opacity = disabled ? '0.5' : '1';
+            if (statusNow === 'draft' || !statusNow) {
+                submitBtn.style.display = 'inline-flex';
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+            } else {
+                submitBtn.style.display = 'none';
+            }
         }
     }
 

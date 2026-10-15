@@ -293,6 +293,7 @@
 
         var FORM_LAYOUT = {
             header: {
+                contractno:   { left: '56.00%', top: '7.8%',  width: '8.5%',  height: '4%'    },
                 nameOfPlant:  { left: '12.71%', top: '11.3%',  width: '33.37%', height: '3%'    },
                 sorItem:      { left: '56.6%',  top: '12.6%',  width: '11.0%',  height: '4.0%'  },
                 ceNo:         { left: '81.0%',  top: '12.5%',  width: '13.5%',  height: '4.3%'  },
@@ -495,19 +496,23 @@
 
             var statusEl = document.getElementById('docStatus');
             if (!statusEl) return;
+
             var statusMap = {
                 'draft': 'Draft', 'submitted': 'Submitted',
                 'submitted-wsg': 'Submitted to WSG', 'submitted-ig': 'Submitted to IG',
                 'endorsed': 'Endorsed', 'cancelled': 'Cancelled',
-                'approved': 'Approved', 'rejected': 'Rejected', 'pending': 'Pending Approval'
+                'approved': 'Approved', 'rejected': 'Rejected', 'pending': 'Pending Approval',
+                'closed': 'Closed', 'reopen': 'Reopen'
             };
             var clsMap = {
                 'draft': 'status-draft', 'submitted': 'status-submitted',
                 'submitted-wsg': 'status-submitted', 'submitted-ig': 'status-submitted',
                 'endorsed': 'status-approved', 'cancelled': 'status-cancelled',
-                'approved': 'status-approved', 'rejected': 'status-rejected', 'pending': 'status-pending'
+                'approved': 'status-approved', 'rejected': 'status-rejected', 'pending': 'status-pending',
+                'closed': 'status-approved', 'reopen': 'status-pending'
             };
-            var key = doc.approvalStatus || doc.status || 'draft';
+
+            var key = doc.status || 'draft';
             statusEl.textContent = statusMap[key] || doc.statusText || 'Draft';
             statusEl.className = 'doc-status';
             if (clsMap[key]) statusEl.classList.add(clsMap[key]);
@@ -600,6 +605,11 @@
             var overlay = document.createElement('div');
             overlay.className = 'pdf-form-overlay';
             overlay.dataset.page = pageNum;
+            /* ★ Contract No. — 優先順序：已存的值 → 登入項目 → 空字串 */
+            var defaultContractNo = pageData.contractno
+                                 || sessionStorage.getItem('currentProjectId')
+                                 || '';
+            overlay.appendChild(createTextField('contractno', FORM_LAYOUT.header.contractno, defaultContractNo));
 
             var defaultPlantName = pageData.nameOfPlant || (currentDocObj && currentDocObj.site) || '';
             overlay.appendChild(createTextField('nameOfPlant', FORM_LAYOUT.header.nameOfPlant, defaultPlantName));
