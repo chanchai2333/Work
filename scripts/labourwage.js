@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let wageData = [];
     let currentFilters = { type: "all", status: "all", site: "all" };
 
-    // ★ 每個項目的預設記錄（平均分配）
+    // ★ 每個項目的預設記錄
     const DEFAULT_PROJECT_DATA = {
         'DE/2026/05': [
             { id: "LRR/DE-2026-05/000001A", type: "GF527A",     typeText: "GF527A - Return on Construction Site Employment", status: "draft",     site: "Treatment Plant", period: "01-Sep-2025 to 07-Sep-2025",  submittedBy: "John Doe",   periodStart: "2025-09-01", periodEnd: "2025-09-07", project: "DE/2026/05", pdfData: null, annotations: [] },
@@ -45,11 +45,10 @@ document.addEventListener("DOMContentLoaded", function () {
         'DE/2025/09': [
             { id: "LRR/DE-2025-09/000001A", type: "GF527-2017", typeText: "GF527 (2017) - Labour Wage",                       status: "confirm",   site: "Reservoir",       period: "01-Sep-2025 to 15-Sep-2025", submittedBy: "Olivia Garcia", periodStart: "2025-09-01", periodEnd: "2025-09-15", project: "DE/2025/09", pdfData: null, annotations: [] },
             { id: "LRR/DE-2025-09/000002A", type: "GF527A",     typeText: "GF527A - Return on Construction Site Employment", status: "submitted", site: "Treatment Plant", period: "01-Sep-2025 to 07-Sep-2025",  submittedBy: "David Wilson",  periodStart: "2025-09-01", periodEnd: "2025-09-07", project: "DE/2025/09", pdfData: null, annotations: [] },
-            { id: "LRR/dE-2025-09/000003A", type: "GF527-2003", typeText: "GF527 (2003) - Labour Wage",                       status: "endorsed",  site: "Pipeline",        period: "01-Aug-2025 to 31-Aug-2025", submittedBy: "James Miller",  periodStart: "2025-08-01", periodEnd: "2025-08-31", project: "DE/2025/09", pdfData: null, annotations: [] }
+            { id: "LRR/DE-2025-09/000003A", type: "GF527-2003", typeText: "GF527 (2003) - Labour Wage",                       status: "endorsed",  site: "Pipeline",        period: "01-Aug-2025 to 31-Aug-2025", submittedBy: "James Miller",  periodStart: "2025-08-01", periodEnd: "2025-08-31", project: "DE/2025/09", pdfData: null, annotations: [] }
         ]
     };
 
-    // ★ 把所有項目的預設記錄攤平
     function getAllDefaultRecords() {
         const all = [];
         Object.keys(DEFAULT_PROJECT_DATA).forEach(function (projectId) {
@@ -58,6 +57,15 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         });
         return all;
+    }
+
+    // ★★★ 統一取得當前項目 ID ★★★
+    function getCurrentProjectId() {
+        if (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.getProjectId) {
+            var pid = DWSS_Auth.getProjectId();
+            if (pid) return pid;
+        }
+        return sessionStorage.getItem('currentProjectId') || null;
     }
 
     // ==================== 載入 / 儲存 ====================
@@ -72,14 +80,15 @@ document.addEventListener("DOMContentLoaded", function () {
                     if (!item.hasOwnProperty('annotations')) item.annotations = [];
                     if (!item.status) item.status = 'draft';
 
-                    // ★ 舊資料沒有 project → 依 ID 前綴推斷
                     if (!item.project) {
-                        if (item.id && item.id.indexOf('LRR/XX/25/02') === 0) {
+                        if (item.id && item.id.indexOf('LRR/DE-2025-02') === 0) {
                             item.project = 'DE/2025/02';
-                        } else if (item.id && item.id.indexOf('LRR/XX/25/09') === 0) {
+                        } else if (item.id && item.id.indexOf('LRR/DE-2025-09') === 0) {
                             item.project = 'DE/2025/09';
-                        } else {
+                        } else if (item.id && item.id.indexOf('LRR/DE-2026-05') === 0) {
                             item.project = 'DE/2026/05';
+                        } else {
+                            item.project = getCurrentProjectId() || 'DE/2026/05';
                         }
                         migrated++;
                     }
@@ -107,11 +116,9 @@ document.addEventListener("DOMContentLoaded", function () {
         localStorage.setItem('labourWageData', JSON.stringify(wageData));
     }
 
-    // ★ 項目過濾輔助函數
+    // ★ 項目過濾
     function getProjectData() {
-        const projectId = (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.getProjectId)
-            ? DWSS_Auth.getProjectId()
-            : null;
+        const projectId = getCurrentProjectId();
 
         if (!projectId) {
             return wageData.filter(function (item) {
@@ -121,6 +128,17 @@ document.addEventListener("DOMContentLoaded", function () {
         return wageData.filter(function (item) {
             return item.project === projectId;
         });
+    }
+
+    // ★★★ 安全檢查（寬鬆模式）★★★
+    function canAccessRecord(recordId) {
+        const record = wageData.find(r => String(r.id) === String(recordId));
+        if (!record) return false;
+
+        const currentProject = getCurrentProjectId();
+        if (!currentProject || !record.project) return true;
+
+        return record.project === currentProject;
     }
 
     // ==================== 自動生成 Document ID ====================
@@ -181,19 +199,22 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ==================== 渲染 ====================
-    function renderWageTable() {
+        function renderWageTable() {
         var tbody = document.getElementById('wage-table-body');
         var noResults = document.getElementById('no-results-message');
         if (!tbody) return;
         tbody.innerHTML = '';
 
-        // ★ 步骤 1：先按项目过滤
-        var projectFilteredData = wageData;
-        if (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.filterByCurrentProject) {
-            projectFilteredData = DWSS_Auth.filterByCurrentProject(wageData);
-        }
+        // ★★★ 步骤 1：只保留當前項目的記錄 ★★★
+        var projectFilteredData = wageData.filter(function(item) {
+            if (!item) return false;
+            var currentPid = getCurrentProjectId();
+            if (!currentPid) return true;
+            if (!item.project) return true;
+            return item.project === currentPid;
+        });
 
-        // ★ 步骤 2：再套用筛选器
+        // ★ 步骤 2：套用用戶篩選器
         var filtered = projectFilteredData.filter(function(item) {
             if (currentFilters.type !== "all" && item.type !== currentFilters.type) return false;
             if (currentFilters.status !== "all") {
@@ -248,7 +269,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         updateStats(projectFilteredData);
-        bindActionButtons();
 
         if (window.DWSS_Auth) {
             DWSS_Auth.bindStatusChangeEvents(
@@ -258,7 +278,7 @@ document.addEventListener("DOMContentLoaded", function () {
             );
         }
     }
-
+    
     function updateStats(dataToUse) {
         var projectData = dataToUse || wageData;
 
@@ -282,87 +302,56 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // ==================== 操作按鈕 ====================
-    function bindActionButtons() {
-        document.querySelectorAll('.view-btn').forEach(function(btn) {
-            btn.removeEventListener('click', handleView);
-            btn.addEventListener('click', handleView);
-        });
-        document.querySelectorAll('.edit-btn').forEach(function(btn) {
-            btn.removeEventListener('click', handleEdit);
-            btn.addEventListener('click', handleEdit);
-        });
-        document.querySelectorAll('.delete-btn').forEach(function(btn) {
-            btn.removeEventListener('click', handleDelete);
-            btn.addEventListener('click', handleDelete);
-        });
-    }
+    // ==================== 操作按鈕（事件委派）====================
+    document.addEventListener('click', function (e) {
+        const viewBtn = e.target.closest('.view-btn');
+        const editBtn = e.target.closest('.edit-btn');
+        const deleteBtn = e.target.closest('.delete-btn');
 
-    function handleView(e) {
-        var wageId = e.currentTarget.getAttribute('data-id');
-        var record = wageData.find(function(r) { return String(r.id) === String(wageId); });
-        if (!record) { alert('Record not found'); return; }
+        if (viewBtn) {
+            var wageId = viewBtn.getAttribute('data-id');
+            var record = wageData.find(function(r) { return String(r.id) === String(wageId); });
+            if (!record) { alert('Record not found'); return; }
 
-        // ★ 安全檢查
-        const projectData = getProjectData();
-        if (!projectData.some(r => String(r.id) === String(wageId))) {
-            alert('❌ This record does not belong to your current project.');
-            return;
+            if (!canAccessRecord(wageId)) {
+                alert('❌ This record does not belong to your current project.');
+                return;
+            }
+
+            sessionStorage.setItem('currentWageRecord', JSON.stringify(record));
+            sessionStorage.setItem('viewDocument', JSON.stringify(record));
+            window.location.href = 'labourdocument.html';
         }
 
-        sessionStorage.setItem('currentWageRecord', JSON.stringify(record));
-        sessionStorage.setItem('viewDocument', JSON.stringify(record));
-        window.location.href = 'labourdocument.html';
-    }
+        if (editBtn) {
+            var wageId = editBtn.getAttribute('data-id');
+            var record = wageData.find(function(r) { return String(r.id) === String(wageId); });
+            if (!record) { alert('Record not found'); return; }
 
-    function handleEdit(e) {
-        var wageId = e.currentTarget.getAttribute('data-id');
-        var record = wageData.find(function(r) { return String(r.id) === String(wageId); });
-        if (!record) { alert('Record not found'); return; }
+            if (!canAccessRecord(wageId)) {
+                alert('❌ This record does not belong to your current project.');
+                return;
+            }
 
-        const projectData = getProjectData();
-        if (!projectData.some(r => String(r.id) === String(wageId))) {
-            alert('❌ This record does not belong to your current project.');
-            return;
-        }
-
-        var btn = e.currentTarget;
-        var originalHtml = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        btn.disabled = true;
-
-        // 從 sessionStorage 取得模板
-        var templateCacheKey = 'labour_template_' + record.type;
-        var cached = sessionStorage.getItem(templateCacheKey);
-
-        var finalize = function() {
             sessionStorage.setItem('currentWageRecord', JSON.stringify(record));
             window.location.href = 'editlabour.html';
-        };
-
-        if (cached) {
-            finalize();
-        } else {
-            // 沒有快取也直接跳，讓 editlabour.js 自己處理
-            finalize();
-        }
-    }
-
-    function handleDelete(e) {
-        var wageId = e.currentTarget.getAttribute('data-id');
-
-        const projectData = getProjectData();
-        if (!projectData.some(r => String(r.id) === String(wageId))) {
-            alert('❌ This record does not belong to your current project.');
-            return;
         }
 
-        if (confirm('Are you sure you want to delete this wage record?')) {
-            wageData = wageData.filter(function(r) { return String(r.id) !== String(wageId); });
-            saveData();
-            renderWageTable();
+        if (deleteBtn) {
+            var wageId = deleteBtn.getAttribute('data-id');
+
+            if (!canAccessRecord(wageId)) {
+                alert('❌ This record does not belong to your current project.');
+                return;
+            }
+
+            if (confirm('Are you sure you want to delete this wage record?')) {
+                wageData = wageData.filter(function(r) { return String(r.id) !== String(wageId); });
+                saveData();
+                renderWageTable();
+            }
         }
-    }
+    });
 
     // ==================== 篩選器 ====================
     function setupFilterEvents() {
@@ -410,7 +399,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 modal.style.display = 'flex';
                 addForm.reset();
 
-                // ★ 自動生成 Document ID（依項目）
                 var docIdInput = document.getElementById('input-doc-id');
                 if (docIdInput) {
                     docIdInput.value = generateNextLabourWageId();
@@ -483,11 +471,6 @@ document.addEventListener("DOMContentLoaded", function () {
                            date.getFullYear();
                 }
 
-                // ★ 取得當前項目
-                var projectId = (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.getProjectId)
-                    ? DWSS_Auth.getProjectId()
-                    : null;
-
                 var newWage = {
                     id: newId,
                     type: type,
@@ -498,10 +481,10 @@ document.addEventListener("DOMContentLoaded", function () {
                     submittedBy: submittedBy,
                     periodStart: periodStart,
                     periodEnd: periodEnd,
-                    project: sessionStorage.getItem('currentProjectId'),   // ← 关键
+                    project: getCurrentProjectId(),   // ★ 統一來源
                     pdfData: pdfData,
                     annotations: []
-};
+                };
 
                 wageData.push(newWage);
                 saveData();

@@ -46,6 +46,15 @@ document.addEventListener("DOMContentLoaded", function() {
         return all;
     }
 
+    // ★★★ 統一取得當前項目 ID（唯一來源）★★★
+    function getCurrentProjectId() {
+        if (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.getProjectId) {
+            var pid = DWSS_Auth.getProjectId();
+            if (pid) return pid;
+        }
+        return sessionStorage.getItem('currentProjectId') || null;
+    }
+
     // ---------- 載入 / 儲存 ----------
     function loadData() {
         const stored = localStorage.getItem(STORAGE_KEY);
@@ -59,12 +68,14 @@ document.addEventListener("DOMContentLoaded", function() {
 
                     // ★ 舊資料沒有 project → 依 ID 前綴推斷
                     if (!item.project) {
-                        if (item.id && item.id.indexOf('SSR/WSI/25/02') === 0) {
+                        if (item.id && item.id.indexOf('SSR/WSI/DE-2025-02') === 0) {
                             item.project = 'DE/2025/02';
-                        } else if (item.id && item.id.indexOf('SSR/WSI/25/09') === 0) {
+                        } else if (item.id && item.id.indexOf('SSR/WSI/DE-2025-09') === 0) {
                             item.project = 'DE/2025/09';
-                        } else {
+                        } else if (item.id && item.id.indexOf('SSR/WSI/DE-2026-05') === 0) {
                             item.project = 'DE/2026/05';
+                        } else {
+                            item.project = getCurrentProjectId() || 'DE/2026/05';
                         }
                         migrated++;
                     }
@@ -90,11 +101,9 @@ document.addEventListener("DOMContentLoaded", function() {
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(inspectionData));
     }
 
-    // ★ 項目過濾輔助函數
+    // ★ 項目過濾輔助函數（使用統一的 getCurrentProjectId）
     function getProjectData() {
-        const projectId = (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.getProjectId)
-            ? DWSS_Auth.getProjectId()
-            : null;
+        const projectId = getCurrentProjectId();
 
         if (!projectId) {
             return inspectionData.filter(function (item) {
@@ -104,6 +113,20 @@ document.addEventListener("DOMContentLoaded", function() {
         return inspectionData.filter(function (item) {
             return item.project === projectId;
         });
+    }
+
+    // ★★★ 安全檢查：只有當記錄確實屬於其他項目時才擋下 ★★★
+    function canAccessRecord(recordId) {
+        const record = inspectionData.find(r => String(r.id) === String(recordId));
+        if (!record) return false;
+
+        const currentProject = getCurrentProjectId();
+
+        // 如果沒有當前項目，或記錄沒有 project → 允許（寬鬆模式）
+        if (!currentProject || !record.project) return true;
+
+        // 只有當記錄明確屬於其他項目時才擋下
+        return record.project === currentProject;
     }
 
     // ---------- 輔助函數 ----------
@@ -221,81 +244,88 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    function renderInspectionTable() {
-    const tbody = document.getElementById('inspection-table-body');
-    const noResults = document.getElementById('no-results-message');
-    if (!tbody) return;
+        function renderInspectionTable() {
+        const tbody = document.getElementById('inspection-table-body');
+        const noResults = document.getElementById('no-results-message');
+        if (!tbody) return;
 
-    tbody.innerHTML = '';
+        tbody.innerHTML = '';
 
-    // ★ 步骤 1：先按项目过滤
-    let projectFilteredData = inspectionData;
-    if (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.filterByCurrentProject) {
-        projectFilteredData = DWSS_Auth.filterByCurrentProject(inspectionData);
-    }
+        // ★★★ 步骤 1：只保留當前項目的記錄 ★★★
+        const projectFilteredData = inspectionData.filter(function(item) {
+            if (!item) return false;
+            var currentPid = getCurrentProjectId();
 
-    // ★ 步骤 2：再套用用户筛选器
-    const filtered = projectFilteredData.filter(item => {
-        if (currentFilters.site !== "all") {
-            const siteType = getSiteType(item.site);
-            if (siteType !== currentFilters.site) return false;
-        }
-        if (currentFilters.status !== "all" && item.status !== currentFilters.status) return false;
-        return true;
-    });
+            // 沒有當前項目 → 顯示全部（避免空白）
+            if (!currentPid) return true;
 
-    if (noResults) {
-        noResults.style.display = filtered.length === 0 ? 'block' : 'none';
-    }
+            // 沒有 project 的舊資料 → 保留
+            if (!item.project) return true;
 
-    const userCanChangeStatus = DWSS_Auth.canChangeStatus();
+            // 只保留屬於當前項目的
+            return item.project === currentPid;
+        });
 
-    filtered.forEach(item => {
-        const row = document.createElement('tr');
+        // ★ 步骤 2：套用用戶篩選器
+        const filtered = projectFilteredData.filter(item => {
+            if (currentFilters.site !== "all") {
+                const siteType = getSiteType(item.site);
+                if (siteType !== currentFilters.site) return false;
+            }
+            if (currentFilters.status !== "all" && item.status !== currentFilters.status) return false;
+            return true;
+        });
 
-        let actionButtons = `
-            <td>
-                <button class="action-btn view-btn" data-id="${item.id}" title="View"><i class="fas fa-eye"></i></button>
-                <button class="action-btn edit-btn" data-id="${item.id}" title="Edit"><i class="fas fa-edit"></i></button>
-                ${generateSafetyStatusSelect(item.id)}
-                <button class="action-btn delete-btn" data-id="${item.id}" title="Delete"><i class="fas fa-trash"></i></button>
-        `;
-
-        if (!userCanChangeStatus) {
-            actionButtons += `<span class="permission-lock-hint"><i class="fas fa-lock"></i> Status change requires higher permission</span>`;
+        if (noResults) {
+            noResults.style.display = filtered.length === 0 ? 'block' : 'none';
         }
 
-        actionButtons += `</td>`;
+        const userCanChangeStatus = DWSS_Auth.canChangeStatus();
 
-        // ★ 審批狀態顯示（新增）
-        var approvalDisplay = '';
-        if (item.approvalStatus === 'approved') {
-            approvalDisplay = '<span class="status-badge status-approved">✅ Approved</span>';
-        } else if (item.approvalStatus === 'rejected') {
-            approvalDisplay = '<span class="status-badge status-rejected">❌ Rejected</span>';
-        } else {
-            approvalDisplay = '<span class="status-badge status-pending">⏳ Pending</span>';
+        filtered.forEach(item => {
+            const row = document.createElement('tr');
+
+            let actionButtons = `
+                <td>
+                    <button class="action-btn view-btn" data-id="${item.id}" title="View"><i class="fas fa-eye"></i></button>
+                    <button class="action-btn edit-btn" data-id="${item.id}" title="Edit"><i class="fas fa-edit"></i></button>
+                    ${generateSafetyStatusSelect(item.id)}
+                    <button class="action-btn delete-btn" data-id="${item.id}" title="Delete"><i class="fas fa-trash"></i></button>
+            `;
+
+            if (!userCanChangeStatus) {
+                actionButtons += `<span class="permission-lock-hint"><i class="fas fa-lock"></i> Status change requires higher permission</span>`;
+            }
+
+            actionButtons += `</td>`;
+
+            var approvalDisplay = '';
+            if (item.approvalStatus === 'approved') {
+                approvalDisplay = '<span class="status-badge status-approved">✅ Approved</span>';
+            } else if (item.approvalStatus === 'rejected') {
+                approvalDisplay = '<span class="status-badge status-rejected">❌ Rejected</span>';
+            } else {
+                approvalDisplay = '<span class="status-badge status-pending">⏳ Pending</span>';
+            }
+
+            row.innerHTML = `
+                <td>${item.id}</td>
+                <td><span class="status-badge status-${item.status}">${getStatusText(item.status)}</span></td>
+                <td>${approvalDisplay}</td>
+                <td>${item.site}</td>
+                <td>${formatDisplayDate(item.date)}</td>
+                <td>${item.inspector}</td>
+                ${actionButtons}
+            `;
+            tbody.appendChild(row);
+        });
+
+        updateStats(projectFilteredData);
+
+        if (userCanChangeStatus) {
+            bindSafetyStatusChangeEvents();
         }
-
-        row.innerHTML = `
-            <td>${item.id}</td>
-            <td><span class="status-badge status-${item.status}">${getStatusText(item.status)}</span></td>
-            <td>${approvalDisplay}</td>
-            <td>${item.site}</td>
-            <td>${formatDisplayDate(item.date)}</td>
-            <td>${item.inspector}</td>
-            ${actionButtons}
-        `;
-        tbody.appendChild(row);
-    });
-
-    attachActionEvents();
-    updateStats(projectFilteredData);
-
-    if (userCanChangeStatus) {
-        bindSafetyStatusChangeEvents();
     }
-}
 
     // ---------- 狀態更改事件 ----------
     function bindSafetyStatusChangeEvents() {
@@ -314,9 +344,8 @@ document.addEventListener("DOMContentLoaded", function() {
         const record = inspectionData.find(r => String(r.id) === String(recordId));
         if (!record) return;
 
-        // ★ 安全檢查：確保屬於當前項目
-        const projectData = getProjectData();
-        if (!projectData.some(r => String(r.id) === String(recordId))) {
+        // ★ 安全檢查
+        if (!canAccessRecord(recordId)) {
             alert('❌ This record does not belong to your current project.');
             e.target.value = '';
             return;
@@ -348,92 +377,80 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    function attachActionEvents() {
-        document.querySelectorAll('.view-btn').forEach(btn => {
-            btn.removeEventListener('click', handleView);
-            btn.addEventListener('click', handleView);
-        });
-        document.querySelectorAll('.edit-btn').forEach(btn => {
-            btn.removeEventListener('click', handleEdit);
-            btn.addEventListener('click', handleEdit);
-        });
-        document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.removeEventListener('click', handleDelete);
-            btn.addEventListener('click', handleDelete);
-        });
-    }
+    // ---------- 操作處理（使用事件委派，避免綁定失效）----------
+    document.addEventListener('click', function (e) {
+        const viewBtn = e.target.closest('.view-btn');
+        const editBtn = e.target.closest('.edit-btn');
+        const deleteBtn = e.target.closest('.delete-btn');
 
-    // ---------- 操作處理 ----------
-    function handleView(e) {
-        const id = e.currentTarget.getAttribute('data-id');
-        const doc = inspectionData.find(d => String(d.id) === String(id));
-        if (!doc) { alert('Document not found'); return; }
+        if (viewBtn) {
+            const id = viewBtn.getAttribute('data-id');
+            const doc = inspectionData.find(d => String(d.id) === String(id));
+            if (!doc) { alert('Document not found'); return; }
 
-        // ★ 安全檢查
-        const projectData = getProjectData();
-        if (!projectData.some(d => String(d.id) === String(id))) {
-            alert('❌ This record does not belong to your current project.');
-            return;
+            // ★ 安全檢查（寬鬆模式）
+            if (!canAccessRecord(id)) {
+                alert('❌ This record does not belong to your current project.');
+                return;
+            }
+
+            const fullDoc = {
+                id: doc.id,
+                status: doc.status,
+                statusText: getStatusText(doc.status),
+                site: doc.site,
+                date: formatDisplayDate(doc.date),
+                inspector: doc.inspector,
+                project: doc.project || null,
+                pdfData: doc.pdfData || null,
+                annotations: doc.annotations || []
+            };
+            sessionStorage.setItem('currentDocument', JSON.stringify(fullDoc));
+            window.location.href = 'safetyinspectdocument.html';
         }
 
-        const fullDoc = {
-            id: doc.id,
-            status: doc.status,
-            statusText: getStatusText(doc.status),
-            site: doc.site,
-            date: formatDisplayDate(doc.date),
-            inspector: doc.inspector,
-            project: doc.project || null,
-            pdfData: doc.pdfData || null,
-            annotations: doc.annotations || []
-        };
-        sessionStorage.setItem('currentDocument', JSON.stringify(fullDoc));
-        window.location.href = 'safetyinspectdocument.html';
-    }
+        if (editBtn) {
+            const id = editBtn.getAttribute('data-id');
+            const doc = inspectionData.find(d => String(d.id) === String(id));
+            if (!doc) { alert('Document not found'); return; }
 
-    function handleEdit(e) {
-        const id = e.currentTarget.getAttribute('data-id');
-        const doc = inspectionData.find(d => String(d.id) === String(id));
-        if (!doc) { alert('Document not found'); return; }
+            if (!canAccessRecord(id)) {
+                alert('❌ This record does not belong to your current project.');
+                return;
+            }
 
-        const projectData = getProjectData();
-        if (!projectData.some(d => String(d.id) === String(id))) {
-            alert('❌ This record does not belong to your current project.');
-            return;
+            sessionStorage.setItem('editDocument', JSON.stringify({
+                id: doc.id,
+                status: doc.status,
+                statusText: getStatusText(doc.status),
+                site: doc.site,
+                date: formatDisplayDate(doc.date),
+                inspector: doc.inspector,
+                submittedBy: doc.inspector,
+                type: 'Safety Inspection',
+                project: doc.project || null,
+                pdfData: doc.pdfData || '',
+                annotations: doc.annotations || []
+            }));
+            window.location.href = 'editsafetypdf.html';
         }
 
-        sessionStorage.setItem('editDocument', JSON.stringify({
-            id: doc.id,
-            status: doc.status,
-            statusText: getStatusText(doc.status),
-            site: doc.site,
-            date: formatDisplayDate(doc.date),
-            inspector: doc.inspector,
-            submittedBy: doc.inspector,
-            type: 'Safety Inspection',
-            project: doc.project || null,
-            pdfData: doc.pdfData || '',
-            annotations: doc.annotations || []
-        }));
-        window.location.href = 'editsafetypdf.html';
-    }
+        if (deleteBtn) {
+            const id = deleteBtn.getAttribute('data-id');
 
-    function handleDelete(e) {
-        const id = e.currentTarget.getAttribute('data-id');
+            if (!canAccessRecord(id)) {
+                alert('❌ This record does not belong to your current project.');
+                return;
+            }
 
-        const projectData = getProjectData();
-        if (!projectData.some(d => String(d.id) === String(id))) {
-            alert('❌ This record does not belong to your current project.');
-            return;
+            if (confirm(`Are you sure you want to delete inspection ${id}?`)) {
+                inspectionData = inspectionData.filter(d => String(d.id) !== String(id));
+                saveData();
+                renderInspectionTable();
+                updateStats();
+            }
         }
-
-        if (confirm(`Are you sure you want to delete inspection ${id}?`)) {
-            inspectionData = inspectionData.filter(d => String(d.id) !== String(id));
-            saveData();
-            renderInspectionTable();
-            updateStats();
-        }
-    }
+    });
 
     // ---------- 篩選器事件 ----------
     function setupFilterEvents() {
@@ -442,42 +459,33 @@ document.addEventListener("DOMContentLoaded", function() {
             const options = group.querySelector('.filter-options');
             if (!toggle || !options) return;
 
-            toggle.removeEventListener('click', toggleHandler);
-            toggle.addEventListener('click', toggleHandler);
-
-            function toggleHandler(e) {
+            toggle.addEventListener('click', function(e) {
                 e.stopPropagation();
                 document.querySelectorAll('.filter-options').forEach(opt => {
                     if (opt !== options) opt.classList.remove('open');
                 });
                 options.classList.toggle('open');
-            }
-
-            group.querySelectorAll('.filter-option').forEach(opt => {
-                opt.removeEventListener('click', optionHandler);
-                opt.addEventListener('click', optionHandler);
             });
 
-            function optionHandler(e) {
-                e.stopPropagation();
-                const option = e.currentTarget;
-                group.querySelectorAll('.filter-option').forEach(o => o.classList.remove('active'));
-                option.classList.add('active');
-                toggle.querySelector('span').textContent = option.textContent;
+            group.querySelectorAll('.filter-option').forEach(opt => {
+                opt.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    group.querySelectorAll('.filter-option').forEach(o => o.classList.remove('active'));
+                    opt.classList.add('active');
+                    toggle.querySelector('span').textContent = opt.textContent;
 
-                const filterType = option.dataset.filter;
-                const filterValue = option.dataset.value;
-                currentFilters[filterType] = filterValue;
-                renderInspectionTable();
-                options.classList.remove('open');
-            }
+                    const filterType = opt.dataset.filter;
+                    const filterValue = opt.dataset.value;
+                    currentFilters[filterType] = filterValue;
+                    renderInspectionTable();
+                    options.classList.remove('open');
+                });
+            });
         });
 
-        document.removeEventListener('click', outsideClickListener);
-        document.addEventListener('click', outsideClickListener);
-        function outsideClickListener() {
+        document.addEventListener('click', function() {
             document.querySelectorAll('.filter-options').forEach(opt => opt.classList.remove('open'));
-        }
+        });
     }
 
     // ---------- 新增檢查模態框 ----------
@@ -493,13 +501,11 @@ document.addEventListener("DOMContentLoaded", function() {
                 modal.style.display = 'flex';
                 form.reset();
 
-                // ★ 自動生成 Inspection ID（依項目）
                 const idInput = document.getElementById('input-inspect-id');
                 if (idInput) {
                     idInput.value = generateNextSafetyId();
                 }
 
-                // ★ 根據權限調整狀態選項
                 const statusSelect = document.getElementById('input-inspect-status');
                 if (statusSelect) {
                     if (!DWSS_Auth.canChangeStatus()) {
@@ -531,7 +537,6 @@ document.addEventListener("DOMContentLoaded", function() {
                     }
                 }
 
-                // 自動填充檢查員名稱
                 const user = DWSS_Auth.getCurrentUser();
                 const inspectorInput = document.getElementById('input-inspect-by');
                 if (user && inspectorInput) {
@@ -577,11 +582,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     }
                 }
 
-                // ★ 取得當前項目
-                const projectId = (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.getProjectId)
-                    ? DWSS_Auth.getProjectId()
-                    : null;
-
+                // ★★★ 使用統一的 getCurrentProjectId() ★★★
                 const newInspection = {
                     id,
                     status,
@@ -589,7 +590,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     date,
                     inspector,
                     approvalStatus: 'pending',
-                    project: sessionStorage.getItem('currentProjectId'),   // ← 关键
+                    project: getCurrentProjectId(),
                     pdfData: pdfData,
                     annotations: []
                 };

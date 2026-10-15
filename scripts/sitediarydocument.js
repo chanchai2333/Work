@@ -1,6 +1,5 @@
 // ===== Site Diary Document Viewer (PDF.js + Annotations) =====
-// 完全使用 DOM 渲染文本框，與 editpdf.html 保持一致
-(function() {
+(function () {
     'use strict';
 
     // ---------- 全局变量 ----------
@@ -9,25 +8,14 @@
     let totalPages = 0;
     let annotations = [];
     let currentDocId = null;
-    
-    // 雙重縮放設定：保持 CSS 視覺佈局 1.0，內部渲染像素改為 2.0 
-    const baseScale = 1.0; 
+
+    const baseScale = 1.0;
     const renderScale = 2.0;
 
-    // ---------- DOM 引用 ----------
-    const pdfCanvas = document.getElementById('pdf-canvas');
-    const annoCanvas = document.getElementById('annotation-canvas');
-    const textContainer = document.getElementById('text-annotation-container');
-    const ctx = pdfCanvas.getContext('2d');
-    const annoCtx = annoCanvas.getContext('2d');
-    const loadingEl = document.getElementById('pdf-loading');
-    const errorEl = document.getElementById('pdf-error');
-    const noPdfEl = document.getElementById('no-pdf-message');
-    const controlsEl = document.getElementById('pdf-controls');
-    const currentPageSpan = document.getElementById('pdf-current-page');
-    const totalPagesSpan = document.getElementById('pdf-total-pages');
-    const printBtn = document.getElementById('print-pdf-btn');
-    const downloadBtn = document.getElementById('download-pdf-btn');
+    // ---------- DOM 引用（稍後在 DOMContentLoaded 指派） ----------
+    let pdfCanvas, annoCanvas, textContainer, ctx, annoCtx,
+        loadingEl, errorEl, noPdfEl, controlsEl,
+        currentPageSpan, totalPagesSpan, printBtn, downloadBtn;
 
     // ---------- 辅助函数 ----------
     function syncGlobalDate() {
@@ -35,7 +23,9 @@
         const span = document.querySelector('.date-display span');
         if (stored && span) span.textContent = stored;
         else if (span) {
-            span.textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            span.textContent = new Date().toLocaleDateString('en-US', {
+                year: 'numeric', month: 'long', day: 'numeric'
+            });
         }
     }
 
@@ -45,12 +35,36 @@
         if (!stored) return [];
         try {
             const diaryData = JSON.parse(stored);
-            const doc = diaryData.find(d => d.id === docId);
+            const doc = diaryData.find(d => String(d.id) === String(docId));
             return doc && doc.annotations ? doc.annotations : [];
         } catch (e) {
             console.error('Failed to load annotations:', e);
             return [];
         }
+    }
+
+    // ★★★ 從多個 sessionStorage key 讀取（含 fallback） ★★★
+    function getDocumentData() {
+        var keys = [
+            'currentDocument',
+            'viewDocument',
+            'editDocument',
+            'currentDiaryRecord',
+            'currentRecord',
+            'currentWageRecord'
+        ];
+        for (var i = 0; i < keys.length; i++) {
+            var raw = sessionStorage.getItem(keys[i]);
+            if (!raw) continue;
+            try {
+                var d = JSON.parse(raw);
+                if (d && d.id) {
+                    console.log('[sitediarydocument] loaded from key:', keys[i], '→ id:', d.id);
+                    return d;
+                }
+            } catch (e) { /* try next */ }
+        }
+        return null;
     }
 
     // ---------- 绘制非文本注释 ----------
@@ -156,22 +170,20 @@
         annoCtx.clearRect(0, 0, annoCanvas.width, annoCanvas.height);
         annotations.forEach(anno => {
             if (anno.type !== 'text') {
-                // 過濾：只繪製屬於當前頁面的標註
                 if (anno.page !== undefined && anno.page !== currentPage) return;
                 if (anno.page === undefined && currentPage !== 1) return;
-                
                 drawAnnotation(anno, scale);
             }
         });
     }
 
-    // ---------- 渲染文本框 ----------
     function renderTextAnnotations(scale) {
+        if (!textContainer) return;
         textContainer.innerHTML = '';
-        
-        // 過濾：只顯示屬於當前頁面的文本標註
-        const textAnnos = annotations.filter(a => a.type === 'text' && (a.page === currentPage || (a.page === undefined && currentPage === 1)));
-        
+        const textAnnos = annotations.filter(a =>
+            a.type === 'text' &&
+            (a.page === currentPage || (a.page === undefined && currentPage === 1))
+        );
         textAnnos.forEach(anno => {
             const el = document.createElement('div');
             el.className = 'text-annotation-view';
@@ -185,18 +197,16 @@
         });
     }
 
-    // ---------- 适应宽度 ----------
     function fitToWidth() {
         return Promise.resolve();
     }
 
-    // ---------- 渲染单页 ----------
     function renderPage(pageNum) {
         if (!pdfDoc) return Promise.reject('No PDF document');
         return pdfDoc.getPage(pageNum).then(page => {
             const viewport = page.getViewport({ scale: renderScale });
             const cssViewport = page.getViewport({ scale: baseScale });
-            
+
             pdfCanvas.width = viewport.width;
             pdfCanvas.height = viewport.height;
             annoCanvas.width = viewport.width;
@@ -204,7 +214,7 @@
 
             const widthPx = cssViewport.width + 'px';
             const heightPx = cssViewport.height + 'px';
-            
+
             pdfCanvas.style.width = widthPx;
             pdfCanvas.style.height = heightPx;
             annoCanvas.style.width = widthPx;
@@ -215,10 +225,10 @@
         }).then(() => {
             const offsetX = pdfCanvas.offsetLeft || 0;
             const offsetY = pdfCanvas.offsetTop || 0;
-            
+
             annoCanvas.style.left = offsetX + 'px';
             annoCanvas.style.top = offsetY + 'px';
-            
+
             textContainer.style.left = offsetX + 'px';
             textContainer.style.top = offsetY + 'px';
             textContainer.style.width = pdfCanvas.style.width;
@@ -229,53 +239,51 @@
 
             redrawAnnotations(renderScale);
             renderTextAnnotations(baseScale);
-            
         }).catch(err => {
             console.error('Render page error:', err);
             throw err;
         });
     }
 
-    // ---------- 加载文档 ----------
+    // ★★★ 用新的 fallback 讀取 ★★★
     function loadDocument() {
-        const documentDataRaw = sessionStorage.getItem('currentDocument');
-        if (!documentDataRaw) {
-            loadingEl.style.display = 'none';
-            errorEl.textContent = 'No document data available. Please go back and select a record.';
-            errorEl.style.display = 'block';
-            return;
-        }
+        var documentData = getDocumentData();
 
-        let documentData;
-        try {
-            documentData = JSON.parse(documentDataRaw);
-        } catch (e) {
-            loadingEl.style.display = 'none';
-            errorEl.textContent = 'Invalid document data.';
-            errorEl.style.display = 'block';
+        if (!documentData) {
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (errorEl) {
+                errorEl.textContent = 'No document data available. Please go back and select a record.';
+                errorEl.style.display = 'block';
+            }
             return;
         }
 
         currentDocId = documentData.id;
-        document.getElementById('docId').textContent = documentData.id || 'N/A';
-        document.getElementById('docTitle').textContent = `${documentData.site || ''} - ${documentData.type || ''}`;
-        document.getElementById('docSite').textContent = documentData.site || 'N/A';
-        document.getElementById('docDate').textContent = documentData.date || 'N/A';
-        document.getElementById('docAuthor').textContent = documentData.submittedBy || 'N/A';
-        const statusEl = document.getElementById('docStatus');
+        var idEl = document.getElementById('docId');
+        if (idEl) idEl.textContent = documentData.id || 'N/A';
+        var titleEl = document.getElementById('docTitle');
+        if (titleEl) titleEl.textContent = (documentData.site || '') + ' - ' + (documentData.type || '');
+        var siteEl = document.getElementById('docSite');
+        if (siteEl) siteEl.textContent = documentData.site || 'N/A';
+        var dateEl = document.getElementById('docDate');
+        if (dateEl) dateEl.textContent = documentData.date || 'N/A';
+        var authorEl = document.getElementById('docAuthor');
+        if (authorEl) authorEl.textContent = documentData.submittedBy || 'N/A';
+        var statusEl = document.getElementById('docStatus');
         if (statusEl) {
             statusEl.textContent = documentData.statusText || 'Draft';
             statusEl.className = 'doc-status';
         }
 
-        annotations = loadAnnotationsFromStorage(currentDocId);
+        annotations = documentData.annotations
+            || loadAnnotationsFromStorage(currentDocId);
 
         let pdfSrc = documentData.pdfData || documentData.pdfUrl || null;
         if (!pdfSrc) {
-            loadingEl.style.display = 'none';
-            noPdfEl.style.display = 'block';
-            printBtn.style.display = 'none';
-            downloadBtn.style.display = 'none';
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (noPdfEl) noPdfEl.style.display = 'block';
+            if (printBtn) printBtn.style.display = 'none';
+            if (downloadBtn) downloadBtn.style.display = 'none';
             return;
         }
 
@@ -289,80 +297,63 @@
                 for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
                 pdfSource = { data: bytes };
             } catch (e) {
-                loadingEl.style.display = 'none';
-                errorEl.textContent = 'Invalid PDF data (Base64 decode failed).';
-                errorEl.style.display = 'block';
+                if (loadingEl) loadingEl.style.display = 'none';
+                if (errorEl) {
+                    errorEl.textContent = 'Invalid PDF data (Base64 decode failed).';
+                    errorEl.style.display = 'block';
+                }
                 return;
             }
         } else {
             pdfSource = { url: pdfSrc };
         }
 
-        loadingEl.style.display = 'flex';
-        errorEl.style.display = 'none';
-        noPdfEl.style.display = 'none';
-        printBtn.style.display = 'none';
-        downloadBtn.style.display = 'none';
+        if (loadingEl) loadingEl.style.display = 'flex';
+        if (errorEl) errorEl.style.display = 'none';
+        if (noPdfEl) noPdfEl.style.display = 'none';
+        if (printBtn) printBtn.style.display = 'none';
+        if (downloadBtn) downloadBtn.style.display = 'none';
 
         pdfjsLib.getDocument(pdfSource).promise.then(pdf => {
             pdfDoc = pdf;
             totalPages = pdf.numPages;
-            totalPagesSpan.textContent = totalPages;
+            if (totalPagesSpan) totalPagesSpan.textContent = totalPages;
             currentPage = 1;
-            controlsEl.style.display = 'flex';
-            loadingEl.style.display = 'none';
-            printBtn.style.display = 'inline-flex';
-            downloadBtn.style.display = 'inline-flex';
+            if (controlsEl) controlsEl.style.display = 'flex';
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (printBtn) printBtn.style.display = 'inline-flex';
+            if (downloadBtn) downloadBtn.style.display = 'inline-flex';
 
             return fitToWidth().then(() => renderPage(currentPage));
         }).catch(err => {
             console.error('PDF loading error:', err);
-            loadingEl.style.display = 'none';
-            errorEl.textContent = 'Failed to load PDF: ' + (err.message || 'Unknown error');
-            errorEl.style.display = 'block';
-            printBtn.style.display = 'none';
-            downloadBtn.style.display = 'none';
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (errorEl) {
+                errorEl.textContent = 'Failed to load PDF: ' + (err.message || 'Unknown error');
+                errorEl.style.display = 'block';
+            }
+            if (printBtn) printBtn.style.display = 'none';
+            if (downloadBtn) downloadBtn.style.display = 'none';
         });
     }
 
-    // ---------- 生成包含注释的 PDF（支持多页） ----------
     async function generateAnnotatedPDF() {
         const wrapper = document.getElementById('pdf-canvas-wrapper');
-        if (!wrapper) {
-            alert('PDF content not available.');
-            throw new Error('No wrapper');
-        }
+        if (!wrapper) { alert('PDF content not available.'); throw new Error('No wrapper'); }
 
         const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({
-            orientation: 'p',
-            unit: 'mm',
-            format: 'a4',
-            compress: true
-        });
-
+        const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
         let firstPage = true;
 
-        // 循环所有页面
         for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-            // 渲染该页（等待完成）
             await renderPage(pageNum);
-            // 等待 DOM 更新
             await new Promise(resolve => requestAnimationFrame(resolve));
-
-            // 截图当前 wrapper（包含 PDF 和注释）
             const canvas = await html2canvas(wrapper, {
-                scale: 2.0,
-                useCORS: true,
-                backgroundColor: '#ffffff',
-                logging: false
+                scale: 2.0, useCORS: true, backgroundColor: '#ffffff', logging: false
             });
-
             const imgData = canvas.toDataURL('image/jpeg', 0.85);
             const imgWidth = 210;
-            const pageHeight = 297;
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
             if (firstPage) {
                 pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
                 firstPage = false;
@@ -371,23 +362,17 @@
                 pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
             }
         }
-
-        // 恢复到第一页（方便后续查看）
         await renderPage(1);
         return pdf;
     }
 
-    // ---------- 另存为（使用 File System Access API，支持时弹出保存对话框） ----------
     async function saveAsPDF(pdf) {
         if (window.showSaveFilePicker) {
             try {
                 const blob = pdf.output('blob');
                 const handle = await window.showSaveFilePicker({
                     suggestedName: 'document_with_annotations.pdf',
-                    types: [{
-                        description: 'PDF Document',
-                        accept: { 'application/pdf': ['.pdf'] }
-                    }]
+                    types: [{ description: 'PDF Document', accept: { 'application/pdf': ['.pdf'] } }]
                 });
                 const writable = await handle.createWritable();
                 await writable.write(blob);
@@ -400,48 +385,33 @@
         pdf.save('document_with_annotations.pdf');
     }
 
-    // ---------- 打印 ----------
     function printPDF() {
         generateAnnotatedPDF().then(pdf => {
             const pdfBlob = pdf.output('blob');
             const url = URL.createObjectURL(pdfBlob);
             const win = window.open(url, '_blank');
-            if (win) {
-                win.onload = function() {
-                    win.print();
-                };
-            } else {
-                alert('Please allow pop-ups to print.');
-            }
-        }).catch(err => {
-            alert('Print failed: ' + err.message);
-        });
+            if (win) { win.onload = function () { win.print(); }; }
+            else { alert('Please allow pop-ups to print.'); }
+        }).catch(err => { alert('Print failed: ' + err.message); });
     }
 
-    // ---------- 下载 ----------
     function downloadPDF() {
-        generateAnnotatedPDF().then(pdf => {
-            saveAsPDF(pdf);
-        }).catch(err => {
-            alert('Download failed: ' + err.message);
-        });
+        generateAnnotatedPDF()
+            .then(pdf => saveAsPDF(pdf))
+            .catch(err => alert('Download failed: ' + err.message));
     }
 
-    // ---------- 导航 ----------
     function setupControls() {
-        document.getElementById('pdf-prev').addEventListener('click', () => {
-            if (currentPage > 1) renderPage(currentPage - 1);
-        });
-        document.getElementById('pdf-next').addEventListener('click', () => {
-            if (currentPage < totalPages) renderPage(currentPage + 1);
-        });
+        const prevBtn = document.getElementById('pdf-prev');
+        const nextBtn = document.getElementById('pdf-next');
+        if (prevBtn) prevBtn.addEventListener('click', () => { if (currentPage > 1) renderPage(currentPage - 1); });
+        if (nextBtn) nextBtn.addEventListener('click', () => { if (currentPage < totalPages) renderPage(currentPage + 1); });
     }
 
-    // ---------- 按钮事件 ----------
     function bindEvents() {
         const backBtn = document.getElementById('back-to-diary-btn');
         if (backBtn) {
-            backBtn.addEventListener('click', function(e) {
+            backBtn.addEventListener('click', function (e) {
                 e.preventDefault();
                 window.location.href = 'sitediary.html';
             });
@@ -450,8 +420,23 @@
         if (downloadBtn) downloadBtn.addEventListener('click', downloadPDF);
     }
 
-    // ---------- 初始化 ----------
-    document.addEventListener('DOMContentLoaded', function() {
+    // ---------- ★ DOMContentLoaded: 拿 DOM refs + 啟動 ----------
+    document.addEventListener('DOMContentLoaded', function () {
+        pdfCanvas     = document.getElementById('pdf-canvas');
+        annoCanvas    = document.getElementById('annotation-canvas');
+        textContainer = document.getElementById('text-annotation-container');
+        ctx           = pdfCanvas  ? pdfCanvas.getContext('2d')  : null;
+        annoCtx       = annoCanvas ? annoCanvas.getContext('2d') : null;
+
+        loadingEl       = document.getElementById('pdf-loading');
+        errorEl         = document.getElementById('pdf-error');
+        noPdfEl         = document.getElementById('no-pdf-message');
+        controlsEl      = document.getElementById('pdf-controls');
+        currentPageSpan = document.getElementById('pdf-current-page');
+        totalPagesSpan  = document.getElementById('pdf-total-pages');
+        printBtn        = document.getElementById('print-pdf-btn');
+        downloadBtn     = document.getElementById('download-pdf-btn');
+
         syncGlobalDate();
         loadDocument();
         setupControls();

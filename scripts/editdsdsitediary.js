@@ -1118,9 +1118,14 @@
         currentDoc.usesTemplate = true;
 
         try {
-            sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
-            sessionStorage.setItem('currentDiaryRecord', JSON.stringify(currentDoc));
+            sessionStorage.setItem('editDocument',        JSON.stringify(currentDoc));
+            sessionStorage.setItem('currentDiaryRecord',  JSON.stringify(currentDoc));
+            sessionStorage.setItem('currentRecord',       JSON.stringify(currentDoc));
+            // ★ Add these
+            sessionStorage.setItem('currentDocument',     JSON.stringify(currentDoc));
+            sessionStorage.setItem('viewDocument',        JSON.stringify(currentDoc));
         } catch (e) { /* ignore */ }
+
 
         var stored = localStorage.getItem(STORAGE_KEY);
         var data = [];
