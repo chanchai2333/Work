@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- 核心權限模組-->
+    <!-- 核心權限模組 -->
     <script src="scripts/permissions.js"></script>
     <!-- 密碼 / 電郵服務 -->
     <script src="scripts/password-lifecycle.js"></script>
@@ -60,7 +60,6 @@
             align-items: center;
             gap: 4px;
         }
-
         .user-company i {
             font-size: 0.65rem;
             color: #94a3b8;
@@ -75,17 +74,8 @@
             line-height: 1.3;
             white-space: nowrap;
         }
-
-        .org-badge strong {
-            font-weight: 700;
-            font-size: 0.78rem;
-        }
-
-        .org-badge small {
-            font-size: 0.65rem;
-            opacity: 0.8;
-            margin-top: 1px;
-        }
+        .org-badge strong { font-weight: 700; font-size: 0.78rem; }
+        .org-badge small { font-size: 0.65rem; opacity: 0.8; margin-top: 1px; }
 
         .project-tag {
             display: inline-block;
@@ -123,10 +113,7 @@
             align-items: flex-start;
             gap: 8px;
         }
-        .permissions-list li i {
-            margin-top: 3px;
-            flex-shrink: 0;
-        }
+        .permissions-list li i { margin-top: 3px; flex-shrink: 0; }
 
         .sidebar.collapsed .logo { display: none !important; }
 
@@ -151,8 +138,9 @@
             background: #f8fafc;
             border-radius: 8px;
             border: 1px solid #e2e8f0;
+            max-height: 220px;
+            overflow-y: auto;
         }
-
         .project-checkboxes label {
             display: flex;
             align-items: center;
@@ -161,6 +149,7 @@
             color: #334155;
             cursor: pointer;
         }
+        .project-checkboxes label:hover { color: #1d4ed8; }
 
         .module-permissions-grid {
             display: grid;
@@ -171,7 +160,6 @@
             border-radius: 8px;
             border: 1px solid #e2e8f0;
         }
-
         .module-permission-row {
             display: grid;
             grid-template-columns: 1fr 150px;
@@ -180,11 +168,7 @@
             padding: 6px 0;
             border-bottom: 1px solid #f1f5f9;
         }
-
-        .module-permission-row:last-child {
-            border-bottom: none;
-        }
-
+        .module-permission-row:last-child { border-bottom: none; }
         .module-permission-label {
             display: flex;
             align-items: center;
@@ -193,19 +177,126 @@
             color: #334155;
             font-size: 0.88rem;
         }
-
         .module-permission-label i {
             color: #64748b;
             width: 18px;
             text-align: center;
         }
-
         .module-permission-select {
             padding: 6px 10px;
             border: 1px solid #cbd5e1;
             border-radius: 6px;
             font-size: 0.85rem;
             background: white;
+        }
+
+        /* ============================================================
+           Group Picker (checkbox list — replaces <select multiple>)
+           ============================================================ */
+        .team-picker {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            background: #fff;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            max-height: 260px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            box-sizing: border-box;
+        }
+        .team-picker * { box-sizing: border-box; }
+        .team-picker-header {
+            display: flex;
+            gap: 8px;
+            padding: 8px;
+            border-bottom: 1px solid #e5e7eb;
+            background: #f9fafb;
+            flex-shrink: 0;
+        }
+        .team-picker-header input[type="text"] {
+            flex: 1;
+            min-width: 0;
+            padding: 6px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .team-picker-header input[type="text"]:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52,152,219,0.15);
+        }
+        .team-picker-header button {
+            padding: 6px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #4b5563;
+            white-space: nowrap;
+            transition: background 0.12s, border-color 0.12s;
+        }
+        .team-picker-header button:hover { background: #f3f4f6; border-color: #9ca3af; }
+        .team-picker-list {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            padding: 6px;
+            min-height: 100px;
+        }
+        .team-picker-list::-webkit-scrollbar { width: 8px; }
+        .team-picker-list::-webkit-scrollbar-track { background: #f3f4f6; }
+        .team-picker-list::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .team-picker-list label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.12s;
+            margin: 0;
+        }
+        .team-picker-list label:hover { background: #f0f9ff; }
+        .team-picker-list label.checked { background: #dbeafe; }
+        .team-picker-list input[type="checkbox"] {
+            width: 16px; height: 16px; cursor: pointer;
+            accent-color: #2563eb; flex-shrink: 0; margin: 0;
+        }
+        .team-picker-list .user-name {
+            flex: 1; min-width: 0; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap; color: #1f2937;
+        }
+        .team-picker-list .user-role {
+            font-size: 0.72rem; color: #6b7280; background: #f3f4f6;
+            padding: 2px 8px; border-radius: 10px; text-transform: uppercase;
+            letter-spacing: 0.3px; font-weight: 600; flex-shrink: 0;
+        }
+        .team-picker-list label.checked .user-role {
+            background: #bfdbfe; color: #1e40af;
+        }
+        .team-picker-empty {
+            padding: 20px 12px; text-align: center; color: #9ca3af;
+            font-style: italic; font-size: 0.85rem;
+        }
+        .team-picker-footer {
+            padding: 8px 12px; border-top: 1px solid #e5e7eb;
+            background: #f9fafb; font-size: 0.8rem; color: #4b5563;
+            display: flex; justify-content: space-between; align-items: center;
+            flex-shrink: 0;
+        }
+        .team-picker-footer .team-picker-count {
+            font-weight: 600; color: #2563eb;
+        }
+        .team-picker-footer .team-picker-hint {
+            font-size: 0.72rem; color: #9ca3af;
         }
 
         @media (max-width: 768px) {
@@ -401,7 +492,7 @@
 
             <!-- Add/Edit Modal -->
             <div id="add-user-modal" class="modal" style="display: none;">
-                <div class="modal-content" style="max-width: 720px;">
+                <div class="modal-content" style="max-width: 720px; max-height: 90vh; overflow-y: auto;">
                     <h3><i class="fas fa-user-plus"></i> <span id="modal-title-text">Add New User</span></h3>
                     <form id="add-user-form">
 
@@ -467,14 +558,30 @@
                             </div>
                         </div>
 
+                        <!-- ★ Projects — populated from storage by JS -->
                         <div class="form-group">
                             <label>Projects</label>
-                            <div class="project-checkboxes">
-                                <label><input type="checkbox" class="project-checkbox" value="PROJ-A"> Treatment Plant Upgrade</label>
-                                <label><input type="checkbox" class="project-checkbox" value="PROJ-B"> Pipeline Replacement</label>
-                                <label><input type="checkbox" class="project-checkbox" value="PROJ-C"> Reservoir Maintenance</label>
-                                <label><input type="checkbox" class="project-checkbox" value="PROJ-D"> Distribution Network</label>
-                                <label><input type="checkbox" class="project-checkbox" value="PROJ-E"> Pump Station Upgrade</label>
+                            <div class="project-checkboxes" id="project-checkboxes-container"></div>
+                        </div>
+
+                        <!-- ★ Groups — checkbox picker (no Ctrl/Shift needed) -->
+                        <div class="form-group">
+                            <label>Groups</label>
+                            <div class="team-picker" id="user-groups-picker">
+                                <div class="team-picker-header">
+                                    <input type="text" id="user-groups-search" placeholder="Search group...">
+                                    <button type="button" id="user-groups-select-all" title="Select all visible">
+                                        <i class="fas fa-check-double"></i> All
+                                    </button>
+                                    <button type="button" id="user-groups-clear-all" title="Clear selection">
+                                        <i class="fas fa-times"></i> Clear
+                                    </button>
+                                </div>
+                                <div class="team-picker-list" id="user-groups-list"></div>
+                                <div class="team-picker-footer">
+                                    <span><span class="team-picker-count" id="user-groups-count">0</span> selected</span>
+                                    <span class="team-picker-hint">Click any row to toggle</span>
+                                </div>
                             </div>
                         </div>
 
@@ -500,7 +607,9 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            DWSS_Auth.updateHeaderUser();
+            if (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.updateHeaderUser) {
+                DWSS_Auth.updateHeaderUser();
+            }
 
             // 日期
             var storedDate = sessionStorage.getItem('globalDate');

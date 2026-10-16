@@ -2,234 +2,105 @@
 // ============================================================
 // AEL DWSS User Management
 // Contract No. DE/2024/12
-// 跟隨 Submission of DWSS Proposal_Rev0_Revised.doc
-// Section 1.3 Roles of Key Parties + Section 11.1.2 User Management
 // ============================================================
 
 (function () {
     'use strict';
 
     // ============================================================
-    // 1. 組織定義 (Organizations) — 真實合約名稱
+    // 1. 組織定義
     // ============================================================
     var ORGANIZATIONS = {
         'SERVICE_MANAGER': {
-            id: 'SERVICE_MANAGER',
-            name: 'Service Manager',
+            id: 'SERVICE_MANAGER', name: 'Service Manager',
             fullName: 'Drainage Services Department (DSD)',
-            shortName: 'DSD',
-            color: '#2c3e50',
+            shortName: 'DSD', color: '#2c3e50',
             description: 'Drainage Services Department — EG, IG, WSG',
             contract: 'Contract No. DE/2024/12'
         },
         'CONTRACTOR': {
-            id: 'CONTRACTOR',
-            name: 'Contractor',
+            id: 'CONTRACTOR', name: 'Contractor',
             fullName: 'REC - AEL Joint Venture',
-            shortName: 'REC-AEL',
-            color: '#e74c3c',
+            shortName: 'REC-AEL', color: '#e74c3c',
             description: 'Main Contractor — SA, SSA, RSO',
             contract: 'Contract No. DE/2024/12'
         },
         'SUBCONTRACTOR': {
-            id: 'SUBCONTRACTOR',
-            name: 'Subcontractor',
+            id: 'SUBCONTRACTOR', name: 'Subcontractor',
             fullName: 'Subcontractor',
-            shortName: 'SUB',
-            color: '#f39c12',
+            shortName: 'SUB', color: '#f39c12',
             description: 'Subcontracted parties',
             contract: 'Contract No. DE/2024/12'
         },
         'SUPPLIER': {
-            id: 'SUPPLIER',
-            name: 'Supplier',
+            id: 'SUPPLIER', name: 'Supplier',
             fullName: 'Supplier',
-            shortName: 'SUP',
-            color: '#9b59b6',
+            shortName: 'SUP', color: '#9b59b6',
             description: 'Material & equipment suppliers',
             contract: 'Contract No. DE/2024/12'
         },
         'SYSTEM_VENDOR': {
-            id: 'SYSTEM_VENDOR',
-            name: 'System Vendor',
+            id: 'SYSTEM_VENDOR', name: 'System Vendor',
             fullName: 'AEL - Associated Engineers Ltd.',
-            shortName: 'AEL',
-            color: '#3498db',
+            shortName: 'AEL', color: '#3498db',
             description: 'System Administrator & Platform Provider',
             contract: 'Contract No. DE/2024/12'
         }
     };
 
     // ============================================================
-    // 2. 角色定義 (Roles) — Proposal Section 1.3
+    // 2. 角色定義
     // ============================================================
     var ROLES = {
-        'eg': {
-            id: 'eg',
-            name: 'Engineer Grade',
-            shortName: 'EG',
-            organization: 'SERVICE_MANAGER',
-            description: 'Receives accepted records for oversight',
-            color: '#2c3e50'
-        },
-        'ig': {
-            id: 'ig',
-            name: 'Inspector Grade',
-            shortName: 'IG',
-            organization: 'SERVICE_MANAGER',
-            description: 'Primary approver — approve, reject, cancel, close',
-            color: '#16a085'
-        },
-        'wsg': {
-            id: 'wsg',
-            name: 'Works Supervisor Grade',
-            shortName: 'WSG',
-            organization: 'SERVICE_MANAGER',
-            description: 'First-line reviewer — review, reopen',
-            color: '#27ae60'
-        },
-        'sa': {
-            id: 'sa',
-            name: 'Site Agent',
-            shortName: 'SA',
-            organization: 'CONTRACTOR',
-            description: 'Submit and revise records',
-            color: '#e74c3c'
-        },
-        'ssa': {
-            id: 'ssa',
-            name: 'Sub-Site Agent',
-            shortName: 'SSA',
-            organization: 'CONTRACTOR',
-            description: 'Submit and revise records',
-            color: '#c0392b'
-        },
-        'rso': {
-            id: 'rso',
-            name: 'Registered Safety Officer',
-            shortName: 'RSO',
-            organization: 'CONTRACTOR',
-            description: 'Submit safety inspection records',
-            color: '#d35400'
-        },
-        'subcontractor': {
-            id: 'subcontractor',
-            name: 'Subcontractor User',
-            shortName: 'SUB',
-            organization: 'SUBCONTRACTOR',
-            description: 'Read-only access to assigned modules',
-            color: '#f39c12'
-        },
-        'supplier': {
-            id: 'supplier',
-            name: 'Supplier User',
-            shortName: 'SUP',
-            organization: 'SUPPLIER',
-            description: 'Read-only access to assigned modules',
-            color: '#9b59b6'
-        },
-        'admin': {
-            id: 'admin',
-            name: 'System Administrator',
-            shortName: 'ADMIN',
-            organization: 'SYSTEM_VENDOR',
-            description: 'Full system administration',
-            color: '#3498db'
-        }
+        'eg': { id: 'eg', name: 'Engineer Grade', shortName: 'EG', organization: 'SERVICE_MANAGER', description: 'Receives accepted records for oversight', color: '#2c3e50' },
+        'ig': { id: 'ig', name: 'Inspector Grade', shortName: 'IG', organization: 'SERVICE_MANAGER', description: 'Primary approver', color: '#16a085' },
+        'wsg': { id: 'wsg', name: 'Works Supervisor Grade', shortName: 'WSG', organization: 'SERVICE_MANAGER', description: 'First-line reviewer', color: '#27ae60' },
+        'sa': { id: 'sa', name: 'Site Agent', shortName: 'SA', organization: 'CONTRACTOR', description: 'Submit and revise records', color: '#e74c3c' },
+        'ssa': { id: 'ssa', name: 'Sub-Site Agent', shortName: 'SSA', organization: 'CONTRACTOR', description: 'Submit and revise records', color: '#c0392b' },
+        'rso': { id: 'rso', name: 'Registered Safety Officer', shortName: 'RSO', organization: 'CONTRACTOR', description: 'Submit safety inspection records', color: '#d35400' },
+        'subcontractor': { id: 'subcontractor', name: 'Subcontractor User', shortName: 'SUB', organization: 'SUBCONTRACTOR', description: 'Read-only access', color: '#f39c12' },
+        'supplier': { id: 'supplier', name: 'Supplier User', shortName: 'SUP', organization: 'SUPPLIER', description: 'Read-only access', color: '#9b59b6' },
+        'admin': { id: 'admin', name: 'System Administrator', shortName: 'ADMIN', organization: 'SYSTEM_VENDOR', description: 'Full system administration', color: '#3498db' }
     };
 
     // ============================================================
-    // 3. 功能模組定義 (Modules)
+    // 3. 功能模組
     // ============================================================
     var MODULES = {
-        'dashboard':       { id: 'dashboard',       name: 'Dashboard',           icon: 'fa-home' },
-        'sitediary':       { id: 'sitediary',       name: 'Site Diary',          icon: 'fa-book' },
-        'safetyinspect':   { id: 'safetyinspect',   name: 'Safety Inspection',   icon: 'fa-clipboard-check' },
-        'sitelocations':   { id: 'sitelocations',   name: 'Site Locations',      icon: 'fa-map-marked-alt' },
-        'labourwage':      { id: 'labourwage',      name: 'Labour Wage',         icon: 'fa-money-bill-wave' },
-        'settings':        { id: 'settings',        name: 'System Settings',     icon: 'fa-cogs' },
-        'usermanagement':  { id: 'usermanagement',  name: 'User Management',     icon: 'fa-users' },
-        'ssss':            { id: 'ssss',            name: 'SSSS / 4S',           icon: 'fa-shield-alt' }
+        'dashboard':       { id: 'dashboard',       name: 'Dashboard',         icon: 'fa-home' },
+        'sitediary':       { id: 'sitediary',       name: 'Site Diary',        icon: 'fa-book' },
+        'safetyinspect':   { id: 'safetyinspect',   name: 'Safety Inspection', icon: 'fa-clipboard-check' },
+        'sitelocations':   { id: 'sitelocations',   name: 'Site Locations',    icon: 'fa-map-marked-alt' },
+        'labourwage':      { id: 'labourwage',      name: 'Labour Wage',       icon: 'fa-money-bill-wave' },
+        'settings':        { id: 'settings',        name: 'System Settings',   icon: 'fa-cogs' },
+        'usermanagement':  { id: 'usermanagement',  name: 'User Management',   icon: 'fa-users' },
+        'ssss':            { id: 'ssss',            name: 'SSSS / 4S',         icon: 'fa-shield-alt' }
     };
 
     // ============================================================
-    // 4. 存取級別 (Access Levels)
+    // 4. 存取級別
     // ============================================================
     var ACCESS_LEVELS = {
-        'none':    { label: 'No Access',        value: 0, color: '#94a3b8' },
-        'view':    { label: 'View Only',        value: 1, color: '#3498db' },
-        'edit':    { label: 'Edit & Submit',    value: 2, color: '#27ae60' },
-        'approve': { label: 'Edit & Approve',   value: 3, color: '#f39c12' },
-        'admin':   { label: 'Full Admin',       value: 4, color: '#e74c3c' }
+        'none':    { label: 'No Access',      value: 0, color: '#94a3b8' },
+        'view':    { label: 'View Only',      value: 1, color: '#3498db' },
+        'edit':    { label: 'Edit & Submit',  value: 2, color: '#27ae60' },
+        'approve': { label: 'Edit & Approve', value: 3, color: '#f39c12' },
+        'admin':   { label: 'Full Admin',     value: 4, color: '#e74c3c' }
     };
 
     // ============================================================
-    // 5. 角色預設模組權限 (Role Templates)
+    // 5. 角色預設模組權限
     // ============================================================
     var ROLE_TEMPLATES = {
-        'eg': {
-            modules: {
-                dashboard: 'view', sitediary: 'view', safetyinspect: 'view',
-                sitelocations: 'view', labourwage: 'view', settings: 'none',
-                usermanagement: 'none', ssss: 'view'
-            }
-        },
-        'ig': {
-            modules: {
-                dashboard: 'view', sitediary: 'approve', safetyinspect: 'approve',
-                sitelocations: 'view', labourwage: 'approve', settings: 'none',
-                usermanagement: 'none', ssss: 'view'
-            }
-        },
-        'wsg': {
-            modules: {
-                dashboard: 'view', sitediary: 'approve', safetyinspect: 'view',
-                sitelocations: 'view', labourwage: 'view', settings: 'none',
-                usermanagement: 'none', ssss: 'view'
-            }
-        },
-        'sa': {
-            modules: {
-                dashboard: 'view', sitediary: 'edit', safetyinspect: 'edit',
-                sitelocations: 'edit', labourwage: 'edit', settings: 'none',
-                usermanagement: 'none', ssss: 'view'
-            }
-        },
-        'ssa': {
-            modules: {
-                dashboard: 'view', sitediary: 'edit', safetyinspect: 'edit',
-                sitelocations: 'view', labourwage: 'edit', settings: 'none',
-                usermanagement: 'none', ssss: 'view'
-            }
-        },
-        'rso': {
-            modules: {
-                dashboard: 'view', sitediary: 'view', safetyinspect: 'edit',
-                sitelocations: 'view', labourwage: 'view', settings: 'none',
-                usermanagement: 'none', ssss: 'view'
-            }
-        },
-        'subcontractor': {
-            modules: {
-                dashboard: 'view', sitediary: 'view', safetyinspect: 'view',
-                sitelocations: 'view', labourwage: 'view', settings: 'none',
-                usermanagement: 'none', ssss: 'none'
-            }
-        },
-        'supplier': {
-            modules: {
-                dashboard: 'none', sitediary: 'none', safetyinspect: 'none',
-                sitelocations: 'view', labourwage: 'view', settings: 'none',
-                usermanagement: 'none', ssss: 'none'
-            }
-        },
-        'admin': {
-            modules: {
-                dashboard: 'admin', sitediary: 'admin', safetyinspect: 'admin',
-                sitelocations: 'admin', labourwage: 'admin', settings: 'admin',
-                usermanagement: 'admin', ssss: 'admin'
-            }
-        }
+        'eg':   { modules: { dashboard:'view', sitediary:'view', safetyinspect:'view', sitelocations:'view', labourwage:'view', settings:'none', usermanagement:'none', ssss:'view' } },
+        'ig':   { modules: { dashboard:'view', sitediary:'approve', safetyinspect:'approve', sitelocations:'view', labourwage:'approve', settings:'none', usermanagement:'none', ssss:'view' } },
+        'wsg':  { modules: { dashboard:'view', sitediary:'approve', safetyinspect:'view', sitelocations:'view', labourwage:'view', settings:'none', usermanagement:'none', ssss:'view' } },
+        'sa':   { modules: { dashboard:'view', sitediary:'edit', safetyinspect:'edit', sitelocations:'edit', labourwage:'edit', settings:'none', usermanagement:'none', ssss:'view' } },
+        'ssa':  { modules: { dashboard:'view', sitediary:'edit', safetyinspect:'edit', sitelocations:'view', labourwage:'edit', settings:'none', usermanagement:'none', ssss:'view' } },
+        'rso':  { modules: { dashboard:'view', sitediary:'view', safetyinspect:'edit', sitelocations:'view', labourwage:'view', settings:'none', usermanagement:'none', ssss:'view' } },
+        'subcontractor': { modules: { dashboard:'view', sitediary:'view', safetyinspect:'view', sitelocations:'view', labourwage:'view', settings:'none', usermanagement:'none', ssss:'none' } },
+        'supplier':      { modules: { dashboard:'none', sitediary:'none', safetyinspect:'none', sitelocations:'view', labourwage:'view', settings:'none', usermanagement:'none', ssss:'none' } },
+        'admin':         { modules: { dashboard:'admin', sitediary:'admin', safetyinspect:'admin', sitelocations:'admin', labourwage:'admin', settings:'admin', usermanagement:'admin', ssss:'admin' } }
     };
 
     // ============================================================
@@ -310,214 +181,26 @@
     var UserManagement = {
 
         users: [
-            // === System Vendor (AEL) ===
-            {
-                id: 1,
-                name: 'Admin',
-                email: 'admin@ael-dwss.com',
-                username: 'admin',
-                password: 'admin123',
-                organization: 'SYSTEM_VENDOR',
-                companyName: 'AEL - Associated Engineers Ltd.',
-                contractNo: 'Contract No. DE/2024/12',
-                role: 'admin',
-                department: 'System Administration',
-                status: 'online',
-                addedDate: '2024-01-15',
-                projectIds: [],
-                groupIds: [],
-                passwordChanged: false,
-                passwordChangedAt: null,
-                passwordExpiresAt: null
-            },
-            // === Service Manager (DSD) ===
-            {
-                id: 2,
-                name: 'Kenneth Daluz',
-                email: 'kenneth.daluz@dsd.gov.hk',
-                username: 'kenneth',
-                password: 'officer123',
-                organization: 'SERVICE_MANAGER',
-                companyName: 'Drainage Services Department (DSD)',
-                contractNo: 'Contract No. DE/2024/12',
-                role: 'eg',
-                department: 'Engineer Grade',
-                status: 'online',
-                addedDate: '2024-02-10',
-                projectIds: ['PROJ-A', 'PROJ-B'],
-                groupIds: [],
-                passwordChanged: false,
-                passwordChangedAt: null,
-                passwordExpiresAt: null
-            },
-            {
-                id: 3,
-                name: 'TANG Chi Long, Gary',
-                email: 'gcifang@dsd.gov.hk',
-                username: 'garytang',
-                password: 'aei123',
-                organization: 'SERVICE_MANAGER',
-                companyName: 'Drainage Services Department (DSD)',
-                contractNo: 'Contract No. DE/2024/12',
-                role: 'ig',
-                department: 'Inspector Grade',
-                status: 'online',
-                addedDate: '2024-02-15',
-                projectIds: ['PROJ-A'],
-                groupIds: [],
-                passwordChanged: false,
-                passwordChangedAt: null,
-                passwordExpiresAt: null
-            },
-            {
-                id: 4,
-                name: 'FUNG Wai Ching',
-                email: 'wcfung04@dsd.gov.hk',
-                username: 'wcfung',
-                password: 'wsg123',
-                organization: 'SERVICE_MANAGER',
-                companyName: 'Drainage Services Department (DSD)',
-                contractNo: 'Contract No. DE/2024/12',
-                role: 'wsg',
-                department: 'Works Supervisor Grade',
-                status: 'online',
-                addedDate: '2024-03-01',
-                projectIds: ['PROJ-A'],
-                groupIds: [],
-                passwordChanged: false,
-                passwordChangedAt: null,
-                passwordExpiresAt: null
-            },
-            // === Contractor (REC-AEL JV) ===
-            {
-                id: 5,
-                name: 'John Smith',
-                email: 'john.smith@rec-ael.com',
-                username: 'john',
-                password: 'inspector123',
-                organization: 'CONTRACTOR',
-                companyName: 'REC - AEL Joint Venture',
-                contractNo: 'Contract No. DE/2024/12',
-                role: 'sa',
-                department: 'Site Agent',
-                status: 'online',
-                addedDate: '2024-03-15',
-                projectIds: ['PROJ-B'],
-                groupIds: [],
-                passwordChanged: false,
-                passwordChangedAt: null,
-                passwordExpiresAt: null
-            },
-            {
-                id: 6,
-                name: 'Sarah Johnson',
-                email: 'sarah.j@rec-ael.com',
-                username: 'sarah',
-                password: 'contractor123',
-                organization: 'CONTRACTOR',
-                companyName: 'REC - AEL Joint Venture',
-                contractNo: 'Contract No. DE/2024/12',
-                role: 'ssa',
-                department: 'Sub-Site Agent',
-                status: 'offline',
-                addedDate: '2024-04-01',
-                projectIds: ['PROJ-C'],
-                groupIds: [],
-                passwordChanged: false,
-                passwordChangedAt: null,
-                passwordExpiresAt: null
-            },
-            {
-                id: 7,
-                name: 'Robert Chen',
-                email: 'robert.chen@rec-ael.com',
-                username: 'robert',
-                password: 'rso123',
-                organization: 'CONTRACTOR',
-                companyName: 'REC - AEL Joint Venture',
-                contractNo: 'Contract No. DE/2024/12',
-                role: 'rso',
-                department: 'Registered Safety Officer',
-                status: 'online',
-                addedDate: '2024-04-05',
-                projectIds: ['PROJ-A', 'PROJ-B'],
-                groupIds: [],
-                passwordChanged: false,
-                passwordChangedAt: null,
-                passwordExpiresAt: null
-            },
-            // === Subcontractor ===
-            {
-                id: 8,
-                name: 'WONG Lap Pan',
-                email: 'lpwong@abc-eng.com',
-                username: 'lpwong',
-                password: 'sub123',
-                organization: 'SUBCONTRACTOR',
-                companyName: 'ABC Engineering Ltd.',
-                contractNo: 'Contract No. DE/2024/12',
-                role: 'subcontractor',
-                department: 'Subcontractor Team A',
-                status: 'online',
-                addedDate: '2024-04-10',
-                projectIds: ['PROJ-A'],
-                groupIds: [],
-                passwordChanged: false,
-                passwordChangedAt: null,
-                passwordExpiresAt: null
-            },
-            // === Supplier ===
-            {
-                id: 9,
-                name: 'Emma Wilson',
-                email: 'emma.w@xyz-supply.com',
-                username: 'emma',
-                password: 'supplier123',
-                organization: 'SUPPLIER',
-                companyName: 'XYZ Materials Supply Co.',
-                contractNo: 'Contract No. DE/2024/12',
-                role: 'supplier',
-                department: 'Material Supplier',
-                status: 'offline',
-                addedDate: '2024-04-15',
-                projectIds: ['PROJ-A'],
-                groupIds: [],
-                passwordChanged: false,
-                passwordChangedAt: null,
-                passwordExpiresAt: null
-            },
-            // === Service Manager (多一個 IG) ===
-            {
-                id: 10,
-                name: 'CHA Chi Ming',
-                email: 'cmcha02@dsd.gov.hk',
-                username: 'cmcha',
-                password: 'ig123',
-                organization: 'SERVICE_MANAGER',
-                companyName: 'Drainage Services Department (DSD)',
-                contractNo: 'Contract No. DE/2024/12',
-                role: 'ig',
-                department: 'Inspector Grade',
-                status: 'online',
-                addedDate: '2024-04-20',
-                projectIds: ['PROJ-A', 'PROJ-B'],
-                groupIds: [],
-                passwordChanged: false,
-                passwordChangedAt: null,
-                passwordExpiresAt: null
-            }
+            { id: 1,  name:'Admin',              email:'admin@ael-dwss.com',      username:'admin',     password:'admin123',    organization:'SYSTEM_VENDOR',  companyName:'AEL - Associated Engineers Ltd.',    contractNo:'Contract No. DE/2024/12', role:'admin',         department:'System Administration',   status:'online',  addedDate:'2024-01-15', projectIds:[],                  groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            { id: 2,  name:'Kenneth Daluz',      email:'kenneth.daluz@dsd.gov.hk', username:'kenneth',  password:'officer123',  organization:'SERVICE_MANAGER', companyName:'Drainage Services Department (DSD)', contractNo:'Contract No. DE/2024/12', role:'eg',            department:'Engineer Grade',         status:'online',  addedDate:'2024-02-10', projectIds:['PROJ-A','PROJ-B'], groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            { id: 3,  name:'TANG Chi Long, Gary', email:'gcifang@dsd.gov.hk',       username:'garytang',  password:'aei123',      organization:'SERVICE_MANAGER', companyName:'Drainage Services Department (DSD)', contractNo:'Contract No. DE/2024/12', role:'ig',            department:'Inspector Grade',        status:'online',  addedDate:'2024-02-15', projectIds:['PROJ-A'],          groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            { id: 4,  name:'FUNG Wai Ching',     email:'wcfung04@dsd.gov.hk',      username:'wcfung',   password:'wsg123',      organization:'SERVICE_MANAGER', companyName:'Drainage Services Department (DSD)', contractNo:'Contract No. DE/2024/12', role:'wsg',           department:'Works Supervisor Grade', status:'online',  addedDate:'2024-03-01', projectIds:['PROJ-A'],          groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            { id: 5,  name:'John Smith',         email:'john.smith@rec-ael.com',   username:'john',     password:'inspector123',organization:'CONTRACTOR',      companyName:'REC - AEL Joint Venture',            contractNo:'Contract No. DE/2024/12', role:'sa',            department:'Site Agent',             status:'online',  addedDate:'2024-03-15', projectIds:['PROJ-B'],          groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            { id: 6,  name:'Sarah Johnson',      email:'sarah.j@rec-ael.com',      username:'sarah',    password:'contractor123',organization:'CONTRACTOR',     companyName:'REC - AEL Joint Venture',            contractNo:'Contract No. DE/2024/12', role:'ssa',           department:'Sub-Site Agent',         status:'offline', addedDate:'2024-04-01', projectIds:['PROJ-C'],          groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            { id: 7,  name:'Robert Chen',        email:'robert.chen@rec-ael.com',  username:'robert',   password:'rso123',      organization:'CONTRACTOR',      companyName:'REC - AEL Joint Venture',            contractNo:'Contract No. DE/2024/12', role:'rso',           department:'Registered Safety Officer', status:'online', addedDate:'2024-04-05', projectIds:['PROJ-A','PROJ-B'], groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            { id: 8,  name:'WONG Lap Pan',       email:'lpwong@abc-eng.com',       username:'lpwong',   password:'sub123',      organization:'SUBCONTRACTOR',   companyName:'ABC Engineering Ltd.',               contractNo:'Contract No. DE/2024/12', role:'subcontractor', department:'Subcontractor Team A',   status:'online',  addedDate:'2024-04-10', projectIds:['PROJ-A'],          groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            { id: 9,  name:'Emma Wilson',        email:'emma.w@xyz-supply.com',    username:'emma',     password:'supplier123', organization:'SUPPLIER',        companyName:'XYZ Materials Supply Co.',           contractNo:'Contract No. DE/2024/12', role:'supplier',      department:'Material Supplier',      status:'offline', addedDate:'2024-04-15', projectIds:['PROJ-A'],          groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            { id: 10, name:'CHA Chi Ming',       email:'cmcha02@dsd.gov.hk',       username:'cmcha',    password:'ig123',       organization:'SERVICE_MANAGER', companyName:'Drainage Services Department (DSD)', contractNo:'Contract No. DE/2024/12', role:'ig',            department:'Inspector Grade',        status:'online',  addedDate:'2024-04-20', projectIds:['PROJ-A','PROJ-B'], groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null }
         ],
 
-        currentFilters: {
-            organization: 'all',
-            role: 'all',
-            status: 'all',
-            sort: 'name-asc'
-        },
-
+        currentFilters: { organization: 'all', role: 'all', status: 'all', sort: 'name-asc' },
         currentPage: 1,
         itemsPerPage: 10,
+        selectedGroupIds: new Set(),
 
+        // ============================================================
+        // INIT
+        // ============================================================
         init: function () {
             this.loadFromStorage();
             this.renderUserTable();
@@ -525,6 +208,11 @@
             this.setupActionButtons();
             this.updateUserStats();
             this.initModalOptions();
+
+            // ★ New pickers
+            this.renderProjectCheckboxes([]);
+            this.setupGroupsPicker();
+            this.renderGroupsList('');
         },
 
         loadFromStorage: function () {
@@ -536,31 +224,28 @@
                         this.users = parsed;
                     }
                 }
-            } catch (e) {
-                console.warn('[UserManagement] Failed to load:', e);
-            }
+            } catch (e) { console.warn('[UserManagement] Failed to load:', e); }
         },
 
         saveToStorage: function () {
-            try {
-                localStorage.setItem(USERS_KEY, JSON.stringify(this.users));
-            } catch (e) {
-                console.error('[UserManagement] Failed to save:', e);
-            }
+            try { localStorage.setItem(USERS_KEY, JSON.stringify(this.users)); }
+            catch (e) { console.error('[UserManagement] Failed to save:', e); }
         },
 
         escapeHtml: function (str) {
             if (!str) return '';
             return String(str).replace(/[&<>"']/g, function (m) {
-                return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m];
+                return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[m];
             });
         },
 
+        // ============================================================
+        // TABLE RENDERING
+        // ============================================================
         renderUserTable: function () {
             var tbody = document.getElementById('users-table-body');
             var noResults = document.getElementById('no-results-message');
             if (!tbody) return;
-
             tbody.innerHTML = '';
             var self = this;
 
@@ -580,9 +265,7 @@
 
             this.updatePaginationInfo(startIndex + 1, endIndex, totalUsers);
 
-            if (noResults) {
-                noResults.style.display = pagedUsers.length === 0 ? 'block' : 'none';
-            }
+            if (noResults) noResults.style.display = pagedUsers.length === 0 ? 'block' : 'none';
 
             pagedUsers.forEach(function (user) {
                 var row = document.createElement('tr');
@@ -639,9 +322,9 @@
         sortUsers: function (users, sortBy) {
             return users.slice().sort(function (a, b) {
                 switch (sortBy) {
-                    case 'name-asc': return a.name.localeCompare(b.name);
+                    case 'name-asc':  return a.name.localeCompare(b.name);
                     case 'name-desc': return b.name.localeCompare(a.name);
-                    case 'date-asc': return new Date(a.addedDate) - new Date(b.addedDate);
+                    case 'date-asc':  return new Date(a.addedDate) - new Date(b.addedDate);
                     case 'date-desc': return new Date(b.addedDate) - new Date(a.addedDate);
                     case 'org-asc':
                         var orgA = ORGANIZATIONS[a.organization] ? ORGANIZATIONS[a.organization].name : '';
@@ -699,11 +382,8 @@
                 orgSelect.addEventListener('change', function () {
                     var org = ORGANIZATIONS[this.value];
                     self.updateRoleOptions(this.value);
-
                     var companyInput = document.getElementById('input-user-company');
-                    if (companyInput && org) {
-                        companyInput.value = org.fullName;
-                    }
+                    if (companyInput && org) companyInput.value = org.fullName;
                 });
             }
 
@@ -721,7 +401,6 @@
                 roleSelect.disabled = true;
                 return;
             }
-
             roleSelect.disabled = false;
 
             Object.keys(ROLES).forEach(function (k) {
@@ -776,6 +455,185 @@
             return perms;
         },
 
+        // ============================================================
+        // PROJECTS (from storage with fallback)
+        // ============================================================
+        getProjectsFromStorage: function () {
+            var keys = ['projects', 'dwss_projects', 'projectList', 'allProjects', 'ael_dwss_projects'];
+            for (var i = 0; i < keys.length; i++) {
+                try {
+                    var raw = localStorage.getItem(keys[i]);
+                    if (!raw) continue;
+                    var arr = JSON.parse(raw);
+                    if (Array.isArray(arr) && arr.length > 0) {
+                        return arr.map(function (p) {
+                            return {
+                                id: p.id || p.code || p.name,
+                                name: p.name || p.id || p.code
+                            };
+                        });
+                    }
+                } catch (e) { /* try next */ }
+            }
+            return [];
+        },
+
+        renderProjectCheckboxes: function (checkedProjectIds) {
+            var container = document.getElementById('project-checkboxes-container');
+            if (!container) return;
+
+            checkedProjectIds = (checkedProjectIds || []).map(String);
+            container.innerHTML = '';
+
+            var projects = this.getProjectsFromStorage();
+
+            if (!projects.length) {
+                projects = [
+                    { id: 'PROJ-A', name: 'Treatment Plant Upgrade' },
+                    { id: 'PROJ-B', name: 'Pipeline Replacement' },
+                    { id: 'PROJ-C', name: 'Reservoir Maintenance' },
+                    { id: 'PROJ-D', name: 'Distribution Network' },
+                    { id: 'PROJ-E', name: 'Pump Station Upgrade' }
+                ];
+            }
+
+            projects.forEach(function (p) {
+                var label = document.createElement('label');
+                var cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.className = 'project-checkbox';
+                cb.value = p.id;
+                cb.checked = checkedProjectIds.indexOf(String(p.id)) !== -1;
+
+                label.appendChild(cb);
+                label.appendChild(document.createTextNode(' ' + p.name));
+                container.appendChild(label);
+            });
+        },
+
+        // ============================================================
+        // GROUPS (checkbox picker)
+        // ============================================================
+        getGroups: function () {
+            return loadGroups();
+        },
+
+        setupGroupsPicker: function () {
+            var self = this;
+            var searchEl = document.getElementById('user-groups-search');
+            var allBtn   = document.getElementById('user-groups-select-all');
+            var clearBtn = document.getElementById('user-groups-clear-all');
+
+            if (searchEl) {
+                searchEl.addEventListener('input', function () {
+                    self.renderGroupsList(searchEl.value);
+                });
+            }
+            if (allBtn) {
+                allBtn.addEventListener('click', function () {
+                    var q = (searchEl && searchEl.value || '').toLowerCase();
+                    self.getGroups().forEach(function (g) {
+                        var name = (g.name || g.id || '').toLowerCase();
+                        if (q && name.indexOf(q) === -1) return;
+                        self.selectedGroupIds.add(g.id);
+                    });
+                    self.renderGroupsList(searchEl ? searchEl.value : '');
+                    self.updateGroupsCount();
+                });
+            }
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function () {
+                    self.selectedGroupIds.clear();
+                    self.renderGroupsList(searchEl ? searchEl.value : '');
+                    self.updateGroupsCount();
+                });
+            }
+        },
+
+        renderGroupsList: function (filterText) {
+            var listEl = document.getElementById('user-groups-list');
+            if (!listEl) return;
+
+            listEl.innerHTML = '';
+            var groups = this.getGroups();
+            var query = (filterText || '').trim().toLowerCase();
+
+            if (!groups.length) {
+                var empty = document.createElement('div');
+                empty.className = 'team-picker-empty';
+                empty.textContent = 'No groups defined yet.';
+                listEl.appendChild(empty);
+                this.updateGroupsCount();
+                return;
+            }
+
+            var self = this;
+            var shown = 0;
+            groups.forEach(function (g) {
+                var name = g.name || g.id || '';
+                if (query && name.toLowerCase().indexOf(query) === -1) return;
+                shown++;
+
+                var label = document.createElement('label');
+                if (self.selectedGroupIds.has(g.id)) label.classList.add('checked');
+
+                var cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.value = g.id;
+                cb.checked = self.selectedGroupIds.has(g.id);
+                cb.addEventListener('change', function () {
+                    if (cb.checked) {
+                        self.selectedGroupIds.add(g.id);
+                        label.classList.add('checked');
+                    } else {
+                        self.selectedGroupIds.delete(g.id);
+                        label.classList.remove('checked');
+                    }
+                    self.updateGroupsCount();
+                });
+
+                var nameSpan = document.createElement('span');
+                nameSpan.className = 'user-name';
+                nameSpan.textContent = name;
+
+                var descSpan = document.createElement('span');
+                descSpan.className = 'user-role';
+                descSpan.textContent = (g.description || '').substring(0, 20) || 'GROUP';
+
+                label.appendChild(cb);
+                label.appendChild(nameSpan);
+                label.appendChild(descSpan);
+                listEl.appendChild(label);
+            });
+
+            if (shown === 0) {
+                var nm = document.createElement('div');
+                nm.className = 'team-picker-empty';
+                nm.textContent = 'No matching groups.';
+                listEl.appendChild(nm);
+            }
+
+            this.updateGroupsCount();
+        },
+
+        updateGroupsCount: function () {
+            var el = document.getElementById('user-groups-count');
+            if (el) el.textContent = String(this.selectedGroupIds.size);
+        },
+
+        setSelectedGroups: function (ids) {
+            this.selectedGroupIds = new Set((ids || []).map(String));
+            this.renderGroupsList('');
+            this.updateGroupsCount();
+        },
+
+        getSelectedGroups: function () {
+            return Array.from(this.selectedGroupIds);
+        },
+
+        // ============================================================
+        // FILTER EVENTS
+        // ============================================================
         setupFilterEvents: function () {
             var self = this;
 
@@ -787,7 +645,6 @@
                 toggle.addEventListener('click', function (e) {
                     e.stopPropagation();
                     e.preventDefault();
-
                     document.querySelectorAll('.filter-options').forEach(function (opt) {
                         if (opt !== options) opt.classList.remove('open', 'show');
                     });
@@ -810,7 +667,6 @@
                         var filterValue = option.dataset.value;
 
                         UserManagement.currentFilters[filterType] = filterValue;
-
                         if (filterType === 'sort') UserManagement.currentPage = 1;
 
                         UserManagement.renderUserTable();
@@ -838,7 +694,6 @@
                     }
                 });
             }
-
             if (nextBtn) {
                 nextBtn.addEventListener('click', function () {
                     var total = UserManagement.users.length;
@@ -851,28 +706,25 @@
             }
         },
 
+        // ============================================================
+        // ACTION BUTTONS
+        // ============================================================
         setupActionButtons: function () {
             var self = this;
 
             var addUserBtn = document.getElementById('add-user-btn');
             if (addUserBtn) {
-                addUserBtn.addEventListener('click', function () {
-                    self.openAddModal();
-                });
+                addUserBtn.addEventListener('click', function () { self.openAddModal(); });
             }
 
             var cancelBtn = document.getElementById('cancel-add-user');
             if (cancelBtn) {
-                cancelBtn.addEventListener('click', function () {
-                    self.closeModal();
-                });
+                cancelBtn.addEventListener('click', function () { self.closeModal(); });
             }
 
             var refreshBtn = document.querySelector('.refresh-btn');
             if (refreshBtn) {
-                refreshBtn.addEventListener('click', function () {
-                    self.renderUserTable();
-                });
+                refreshBtn.addEventListener('click', function () { self.renderUserTable(); });
             }
 
             var addForm = document.getElementById('add-user-form');
@@ -884,6 +736,9 @@
             }
         },
 
+        // ============================================================
+        // MODAL
+        // ============================================================
         openAddModal: function () {
             var modalTitle = document.querySelector('#add-user-modal h3 span');
             var submitBtn = document.querySelector('#add-user-form button[type="submit"]');
@@ -900,13 +755,18 @@
             this.updateRoleOptions('');
             this.renderModulePermissions(null);
 
-            // 重設公司名 + 合約編號
             var companyInput = document.getElementById('input-user-company');
             if (companyInput) companyInput.value = '';
             var contractInput = document.getElementById('input-user-contract');
             if (contractInput) contractInput.value = 'Contract No. DE/2024/12';
 
-            document.querySelectorAll('.project-checkbox').forEach(function (cb) { cb.checked = false; });
+            // ★ Reset pickers
+            this.renderProjectCheckboxes([]);
+            this.selectedGroupIds.clear();
+            this.renderGroupsList('');
+            this.updateGroupsCount();
+            var searchEl = document.getElementById('user-groups-search');
+            if (searchEl) searchEl.value = '';
 
             var modal = document.getElementById('add-user-modal');
             if (modal) modal.style.display = 'flex';
@@ -928,6 +788,9 @@
             }
         },
 
+        // ============================================================
+        // SUBMIT
+        // ============================================================
         handleSubmit: function () {
             var submitBtn = document.querySelector('#add-user-form button[type="submit"]');
             var editingUserId = submitBtn ? submitBtn.dataset.editingUserId : null;
@@ -948,20 +811,15 @@
             if (!organization) { alert('❌ Please select Organization.'); return; }
             if (!role) { alert('❌ Please select Role.'); return; }
 
+            // ★ Read pickers
             var projectIds = [];
             document.querySelectorAll('.project-checkbox:checked').forEach(function (cb) {
                 projectIds.push(cb.value);
             });
 
-            var modulePermissions = this.collectModulePermissions();
+            var groupIds = this.getSelectedGroups();
 
-            var groupSelect = document.getElementById('input-user-groups');
-            var groupIds = [];
-            if (groupSelect) {
-                Array.from(groupSelect.selectedOptions).forEach(function (opt) {
-                    if (opt.value) groupIds.push(opt.value);
-                });
-            }
+            var modulePermissions = this.collectModulePermissions();
 
             if (editingUserId) {
                 var userId = parseInt(editingUserId, 10);
@@ -1021,13 +879,15 @@
             this.closeModal();
         },
 
+        // ============================================================
+        // EVENT LISTENERS FOR ROWS
+        // ============================================================
         attachEventListeners: function () {
             var self = this;
 
             document.querySelectorAll('.edit-user-btn').forEach(function (btn) {
                 var newBtn = btn.cloneNode(true);
                 btn.parentNode.replaceChild(newBtn, btn);
-
                 newBtn.addEventListener('click', function () {
                     var userId = parseInt(this.getAttribute('data-id'), 10);
                     self.openEditModal(userId);
@@ -1037,7 +897,6 @@
             document.querySelectorAll('.delete-user-btn').forEach(function (btn) {
                 var newBtn = btn.cloneNode(true);
                 btn.parentNode.replaceChild(newBtn, btn);
-
                 newBtn.addEventListener('click', function () {
                     var userId = parseInt(this.getAttribute('data-id'), 10);
                     var user = self.users.find(function (u) { return u.id === userId; });
@@ -1054,6 +913,9 @@
             });
         },
 
+        // ============================================================
+        // EDIT MODAL
+        // ============================================================
         openEditModal: function (userId) {
             var user = this.users.find(function (u) { return u.id === userId; });
             if (!user) return;
@@ -1080,18 +942,16 @@
             document.getElementById('input-user-department').value = user.department || '';
             document.getElementById('input-user-status').value = user.status || 'online';
 
-            document.querySelectorAll('.project-checkbox').forEach(function (cb) {
-                cb.checked = (user.projectIds || []).indexOf(cb.value) !== -1;
-            });
+            // ★ Load projects — from storage, check user's
+            this.renderProjectCheckboxes(user.projectIds || []);
 
+            // ★ Load groups — check user's
+            this.setSelectedGroups(user.groupIds || []);
+            var searchEl = document.getElementById('user-groups-search');
+            if (searchEl) searchEl.value = '';
+
+            // Module permissions
             this.renderModulePermissions(user.modulePermissions);
-
-            var groupSelect = document.getElementById('input-user-groups');
-            if (groupSelect) {
-                Array.from(groupSelect.options).forEach(function (opt) {
-                    opt.selected = (user.groupIds || []).indexOf(opt.value) !== -1;
-                });
-            }
 
             var modalTitle = document.querySelector('#add-user-modal h3 span');
             var submitBtn = document.querySelector('#add-user-form button[type="submit"]');
@@ -1107,7 +967,7 @@
     };
 
     // ============================================================
-    // 10. 公開 API
+    // PUBLIC API
     // ============================================================
     window.UserManagement = UserManagement;
 
@@ -1118,20 +978,13 @@
         ACCESS_LEVELS: ACCESS_LEVELS,
         ROLE_TEMPLATES: ROLE_TEMPLATES,
 
-        getAllOrganizations: function () {
-            return Object.keys(ORGANIZATIONS).map(function (k) { return ORGANIZATIONS[k]; });
-        },
-        getAllRoles: function () {
-            return Object.keys(ROLES).map(function (k) { return ROLES[k]; });
-        },
+        getAllOrganizations: function () { return Object.keys(ORGANIZATIONS).map(function (k) { return ORGANIZATIONS[k]; }); },
+        getAllRoles:         function () { return Object.keys(ROLES).map(function (k) { return ROLES[k]; }); },
         getRolesByOrganization: function (orgId) {
-            return Object.keys(ROLES).filter(function (k) {
-                return ROLES[k].organization === orgId;
-            }).map(function (k) { return ROLES[k]; });
+            return Object.keys(ROLES).filter(function (k) { return ROLES[k].organization === orgId; })
+                                     .map(function (k) { return ROLES[k]; });
         },
-        getAllModules: function () {
-            return Object.keys(MODULES).map(function (k) { return MODULES[k]; });
-        },
+        getAllModules: function () { return Object.keys(MODULES).map(function (k) { return MODULES[k]; }); },
 
         getUserAccess: getUserAccess,
         canAccess: canAccess,
