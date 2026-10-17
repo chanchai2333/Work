@@ -1,17 +1,7 @@
 /**
  * editsafetypdf.js - PDF 編輯頁面 (Safety Inspection)
- * 新增 Submit 功能：將 draft 狀態改為 submitted-wsg
- * ★ 格子建立方式參考 editlabour.js
- * ★ 修正：側邊欄展開/收起時表單格子會錯位
- * ★ Type checkbox 與 Header 都改為「按頁碼 (page)」配置
- * ★ Header 支援 '*' 通用欄位 + 單頁覆蓋
- * ★ Header 欄位支援多行輸入 (multiline: true → textarea)
- * ★ Header 欄位支援手寫簽名 (sign: true → 點擊彈出 modal 手寫)
- * ★ Header 欄位支援圖片上傳 (image: true → 點擊選檔，自動壓縮)
- * ★ 修正 Save：參考 editdsdsitediary.js
- *   - saveChanges 同步多個 sessionStorage key + 更新 localStorage 陣列
- *   - loadDocumentData 從 localStorage 補全 sessionStorage 缺失的欄位
- *     （避免列表頁覆蓋 editDocument 導致編輯內容讀不回來）
+ * 對齊 Workflow：Draft -> Inspector Submitted -> Submit to IG -> IG Endorsed
+ * 新增權限與連續審批功能（參考 editdsdsitediary.js）
  */
 (function() {
     'use strict';
@@ -201,21 +191,14 @@
     function getStatusText(status) {
         const map = {
             'draft': 'Draft',
-            'submitted-wsg': 'Submitted to WSG',
-            'submitted-ig': 'Submitted to IG',
-            'closed': 'Closed',
-            'reopen': 'Reopen',
+            'submitted-ig': 'Submitted to IG',  // 確保這裡是 Submitted to IG
+            'closed': 'IG Endorsed',
+            'reopen': 'Reopened',
             'cancelled': 'Cancelled'
         };
         return map[status] || status || 'Draft';
     }
 
-    // ========================================
-    // ★ 讀取文件（參考 editdsdsitediary.js）
-    //   - 從多個 sessionStorage key 讀
-    //   - 用 localStorage 裡的完整記錄補全缺失字段
-    //     （避免列表頁只寫摘要到 editDocument 導致編輯內容讀不回來）
-    // ========================================
     function loadDocumentData() {
         var sources = ['editDocument', 'currentInspectionRecord', 'currentRecord'];
         var doc = null;
@@ -229,7 +212,9 @@
         }
         if (!doc) return null;
 
-        // ★ 從 localStorage 找同一份記錄，補全 sessionStorage 缺少的字段
+        // 舊資料相容
+        if (doc.status === 'submitted-wsg') doc.status = 'submitted';
+
         try {
             var stored = localStorage.getItem('inspectionData');
             if (stored) {
@@ -240,15 +225,13 @@
                         if (String(list[k].id) === String(doc.id)) { full = list[k]; break; }
                     }
                     if (full) {
-                        // ★ 合併策略：doc（sessionStorage 當前編輯態）優先；
-                        //   如果 doc 某個字段是 undefined / null，才用 full（localStorage）的值補上
+                        if (full.status === 'submitted-wsg') full.status = 'submitted';
                         var merged = Object.assign({}, full);
                         Object.keys(doc).forEach(function (key) {
                             if (doc[key] !== undefined && doc[key] !== null) {
                                 merged[key] = doc[key];
                             }
                         });
-                        // ★ 針對關鍵字段，若 doc 沒有具體值則用 full
                         if (!merged.safetyFormData && full.safetyFormData) {
                             merged.safetyFormData = full.safetyFormData;
                         }
@@ -275,16 +258,6 @@
         const statusDisplay = document.getElementById('docStatusDisplay');
         if (statusDisplay) {
             statusDisplay.textContent = getStatusText(doc.status);
-        }
-
-        if (submitBtn) {
-            if (doc.status && doc.status !== 'draft') {
-                submitBtn.disabled = true;
-                submitBtn.title = 'Document already submitted';
-            } else {
-                submitBtn.disabled = false;
-                submitBtn.title = 'Submit this document to WSG';
-            }
         }
 
         annotations = doc.annotations || [];
@@ -337,7 +310,7 @@
     }
 
     // ========================================
-    // ★ 表單欄位 CSS
+    // ★ 表單與簽名 (同前)
     // ========================================
     function ensureSafetyFormStyle() {
         if (document.getElementById('safety-pdf-form-style')) return;
@@ -427,9 +400,6 @@
         document.head.appendChild(style);
     }
 
-    // ========================================
-    // ★ 建立格子
-    // ========================================
     function buildSafetyCheckbox(field) {
         var box = document.createElement('div');
         box.className = 'pdf-checkbox';
@@ -512,9 +482,6 @@
         return el;
     }
 
-    // ========================================
-    // ★ 簽名欄位
-    // ========================================
     function buildSafetySignature(field) {
         var wrap = document.createElement('div');
         wrap.className = 'pdf-sign';
@@ -579,9 +546,6 @@
         cell.appendChild(clearBtn);
     }
 
-    // ========================================
-    // ★ 圖片欄位
-    // ========================================
     function buildSafetyImageField(field) {
         var wrap = document.createElement('div');
         wrap.className = 'pdf-image';
@@ -678,9 +642,6 @@
         cell.appendChild(clearBtn);
     }
 
-    // ========================================
-    // ★ 圖片壓縮：目標 < 1MB
-    // ========================================
     function compressImage(file, maxDim, startQuality, callback) {
         if (file.size <= 1024 * 1024) {
             var readerSmall = new FileReader();
@@ -745,7 +706,7 @@
     }
 
     // ========================================
-    // ★ 手寫簽名 Modal
+    // ★ 手寫簽名 Modal (同前)
     // ========================================
     var _safetySigModal = null;
     var _safetySigCanvas = null;
@@ -914,9 +875,6 @@
         closeSafetySignModal();
     }
 
-    // ========================================
-    // ★ 讓 overlay 精確對齊 canvas
-    // ========================================
     function alignSafetyOverlay() {
         if (!container || !canvas) return;
         var overlay = container.querySelector('.safety-form-overlay');
@@ -936,9 +894,6 @@
         overlay.style.height = canvasRect.height + 'px';
     }
 
-    // ========================================
-    // ★ 注入固定表單
-    // ========================================
     function injectSafetyFormFields(pageNum) {
         if (!container) return;
 
@@ -959,7 +914,6 @@
 
         var fields = [];
 
-        // 1-1. Type checkbox
         var pageTypeCbs = SAFETY_LAYOUT.typeCheckboxes[pageNum] || [];
         pageTypeCbs.forEach(function (cb) {
             fields.push({
@@ -978,7 +932,6 @@
             });
         });
 
-        // 1-2. Header
         var pageHeaderDefaults = SAFETY_LAYOUT.header['*'] || {};
         var pageHeaderOverride = SAFETY_LAYOUT.header[pageNum] || {};
         var pageHeader = Object.assign({}, pageHeaderDefaults, pageHeaderOverride);
@@ -1019,7 +972,6 @@
             });
         });
 
-        // 1-3. 評分格
         var ratingKeys = ['A', 'B', 'C', 'N/A'];
         SAFETY_LAYOUT.sections.forEach(function (section) {
             if (section.page !== pageNum) return;
@@ -1066,13 +1018,8 @@
 
         alignSafetyOverlay();
         requestAnimationFrame(alignSafetyOverlay);
-
-        console.log('[SafetyEdit] ✓ 注入表單 (Page ' + pageNum + ', ' + fields.length + ' 欄位)');
     }
 
-    // ========================================
-    // ★ 自動儲存表單資料（僅 sessionStorage）
-    // ========================================
     function autoSaveSafetyData() {
         if (!currentDoc) return;
         currentDoc.safetyFormData = safetyFormData;
@@ -1161,7 +1108,6 @@
 
     function updateTextPositions() {
         const { offsetX, offsetY } = getCanvasOffset();
-
         textBoxElements.forEach(el => {
             const id = el.dataset.id;
             const anno = annotations.find(a => a._id == id);
@@ -1177,7 +1123,6 @@
         textBoxElements = [];
 
         const textAnnos = annotations.filter(a => a.type === 'text' && (a.page === currentPage || (a.page === undefined && currentPage === 1)));
-
         textAnnos.forEach(anno => {
             const el = createTextBoxElement(anno);
             container.appendChild(el);
@@ -1907,14 +1852,10 @@
 
     // ========================================
     // ★ 保存（參考 editdsdsitediary.js）
-    //   - 同步所有編輯到 currentDoc
-    //   - 寫入多個 sessionStorage key
-    //   - 更新 localStorage 陣列
     // ========================================
     function saveChanges() {
         if (!currentDoc) { alert('No document to save.'); return; }
 
-        // 保存正在編輯的文本框
         document.querySelectorAll('.text-annotation.editing').forEach(el => {
             const id = el.dataset.id;
             const anno = annotations.find(a => a._id == id);
@@ -1922,26 +1863,20 @@
                 el.contentEditable = false;
                 el.classList.remove('editing');
                 const newText = el.textContent.trim();
-                if (newText) {
-                    anno.text = newText;
-                } else {
-                    deleteAnnotation(anno._id);
-                }
+                if (newText) { anno.text = newText; }
+                else { deleteAnnotation(anno._id); }
             }
         });
 
-        // ★ 同步所有編輯到 currentDoc
         currentDoc.annotations = annotations;
         currentDoc.safetyFormData = safetyFormData;
 
-        // ★ 同步到多個 sessionStorage key（跟 editdsdsitediary.js 一樣）
         try {
             sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
             sessionStorage.setItem('currentInspectionRecord', JSON.stringify(currentDoc));
             sessionStorage.setItem('currentRecord', JSON.stringify(currentDoc));
         } catch (e) { /* ignore */ }
 
-        // ★ localStorage 更新（用陣列方式，參考 editdsdsitediary.js）
         var STORAGE_KEY = 'inspectionData';
         var data = [];
         var stored = localStorage.getItem(STORAGE_KEY);
@@ -1962,6 +1897,7 @@
         catch (e) { console.error('[SafetyEdit] Save failed', e); }
 
         alert('✅ Document saved successfully!');
+        // ★ 原本這裡有一行 window.location.href = 'safetyinspect.html'; 請將其刪除，保持在當前頁面
     }
 
     function submitDocument() {
@@ -1969,11 +1905,11 @@
             alert('No document to submit.');
             return;
         }
-        if (currentDoc.status !== 'draft') {
+        if (currentDoc.status !== 'draft' && currentDoc.status !== 'reopen') {
             alert('This document has already been submitted.');
             return;
         }
-        if (!confirm('Submit this document to WSG? The status will change to "Submitted to WSG".')) {
+        if (!confirm('Submit this document for approval? Status will change to "Submitted to IG".')) {
             return;
         }
 
@@ -1984,49 +1920,198 @@
                 el.contentEditable = false;
                 el.classList.remove('editing');
                 const newText = el.textContent.trim();
-                if (newText) {
-                    anno.text = newText;
-                } else {
-                    deleteAnnotation(anno._id);
-                }
+                if (newText) { anno.text = newText; }
+                else { deleteAnnotation(anno._id); }
             }
         });
 
         currentDoc.annotations = annotations;
         currentDoc.safetyFormData = safetyFormData;
-        currentDoc.status = 'submitted-wsg';
 
-        const statusDisplay = document.getElementById('docStatusDisplay');
-        if (statusDisplay) statusDisplay.textContent = 'Submitted to WSG';
+        var sessionData = {};
+        try { sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch (e) {}
+        var userName = sessionData.userName || currentDoc.inspector || 'Unknown';
+
+        var oldStatus = currentDoc.status || 'draft';
+        var oldApproval = currentDoc.approvalStatus || 'pending';
+        
+        // ★ 直接變成 Submitted to IG
+        var newStatus = 'submitted-ig'; 
+        var newApproval = 'pending';
+        var nowIso = new Date().toISOString();
+
+        if (!Array.isArray(currentDoc.statusHistory)) currentDoc.statusHistory = [];
+        currentDoc.statusHistory.push({
+            from: oldStatus,
+            to: newStatus,
+            fromApproval: oldApproval,
+            toApproval: newApproval,
+            changedBy: userName,
+            changedAt: nowIso,
+            action: 'submit'
+        });
+
+        currentDoc.status = newStatus;
+        currentDoc.approvalStatus = newApproval;
+        currentDoc.submittedDate = nowIso;
+        currentDoc.submittedBy = userName;
+
+        var statusDisplay = document.getElementById('docStatusDisplay');
+        if (statusDisplay) statusDisplay.textContent = 'Submitted to IG';
         if (submitBtn) submitBtn.disabled = true;
 
-        var STORAGE_KEY = 'inspectionData';
-        var data = [];
-        var stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            try {
-                var parsed = JSON.parse(stored);
-                if (Array.isArray(parsed)) data = parsed;
-            } catch (e) { data = []; }
-        }
-        var idx = -1;
-        for (var i = 0; i < data.length; i++) {
-            if (String(data[i].id) === String(currentDoc.id)) { idx = i; break; }
-        }
-        if (idx !== -1) data[idx] = currentDoc;
-        else data.push(currentDoc);
-
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
-        catch (e) { console.error('[SafetyEdit] Save failed', e); }
-
-        try {
-            sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
-            sessionStorage.setItem('currentInspectionRecord', JSON.stringify(currentDoc));
-            sessionStorage.setItem('currentRecord', JSON.stringify(currentDoc));
-        } catch (e) {}
-
-        alert('✅ Document submitted to WSG successfully!');
+        saveChanges();
+        updateApprovalButtons();
+        alert('✅ Document submitted to IG successfully!');
         window.location.href = 'safetyinspect.html';
+    }
+
+    function approveDocument() {
+        if (!currentDoc) return;
+        var sessionData = {};
+        try { sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch (e) {}
+        if (!sessionData.permissions || !sessionData.permissions.canChangeStatus) {
+            alert('❌ You do not have permission to approve documents.');
+            return;
+        }
+
+        var statusNow = currentDoc.status || 'draft';
+        var approvalNow = currentDoc.approvalStatus || 'pending';
+
+        var newStatus, newApproval, actionLabel;
+        
+        // ★ 只剩下這一個 Endorse 判斷
+        if (statusNow === 'submitted-ig' && approvalNow === 'pending') {
+            newStatus = 'closed';
+            newApproval = 'approved';
+            actionLabel = 'Submitted to IG → IG Endorsed (Approved)';
+        } else {
+            alert('This document cannot be approved in its current state.\n\nStatus: '
+                  + statusNow + '\nApproval: ' + approvalNow);
+            return;
+        }
+
+        if (!confirm('Approve this document?\n\n' + actionLabel)) return;
+
+        var userName = sessionData.userName || 'Unknown';
+        var userRole = (sessionData.permissions && sessionData.permissions.name) || '';
+        var nowIso = new Date().toISOString();
+
+        if (!Array.isArray(currentDoc.statusHistory)) currentDoc.statusHistory = [];
+        currentDoc.statusHistory.push({
+            from: statusNow,
+            to: newStatus,
+            fromApproval: approvalNow,
+            toApproval: newApproval,
+            changedBy: userName,
+            changedRole: userRole,
+            changedAt: nowIso,
+            action: 'approve'
+        });
+
+        currentDoc.status = newStatus;
+        currentDoc.approvalStatus = newApproval;
+
+        currentDoc.approvedBy = userName;
+        currentDoc.approvedDate = nowIso;
+
+        var statusDisplay = document.getElementById('docStatusDisplay');
+        if (statusDisplay) statusDisplay.textContent = getStatusText(newStatus);
+
+        saveChanges();
+        updateApprovalButtons();
+        alert('✅ Document approved!\n\n' + actionLabel);
+        window.location.href = 'safetyinspect.html';
+    }
+
+    function rejectDocument() {
+        if (!currentDoc) return;
+        var sessionData = {};
+        try { sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch (e) {}
+        if (!sessionData.permissions || !sessionData.permissions.canChangeStatus) {
+            alert('❌ You do not have permission to reject documents.');
+            return;
+        }
+        if (currentDoc.approvalStatus === 'approved') {
+            alert('Approved documents cannot be rejected.');
+            return;
+        }
+        if (!confirm('Reject this document?\n\nThe status will be reset to Draft and you can edit and re-submit.')) return;
+
+        var userName = sessionData.userName || 'Unknown';
+        var userRole = (sessionData.permissions && sessionData.permissions.name) || '';
+        var nowIso = new Date().toISOString();
+        var oldStatus = currentDoc.status || 'draft';
+        var oldApproval = currentDoc.approvalStatus || 'pending';
+
+        if (!Array.isArray(currentDoc.statusHistory)) currentDoc.statusHistory = [];
+        currentDoc.statusHistory.push({
+            from: oldStatus,
+            to: 'draft',
+            fromApproval: oldApproval,
+            toApproval: 'rejected',
+            changedBy: userName,
+            changedRole: userRole,
+            changedAt: nowIso,
+            action: 'reject'
+        });
+
+        currentDoc.status = 'draft';
+        currentDoc.approvalStatus = 'rejected';
+        delete currentDoc.submittedDate;
+        currentDoc.rejectedBy = userName;
+        currentDoc.rejectedDate = nowIso;
+
+        var statusDisplay = document.getElementById('docStatusDisplay');
+        if (statusDisplay) statusDisplay.textContent = 'Draft';
+
+        saveChanges();
+        updateApprovalButtons();
+        alert('❌ Document rejected. Status reset to Draft — you can now edit and re-submit.');
+        window.location.href = 'safetyinspect.html';
+    }
+
+    function updateApprovalButtons() {
+        if (!currentDoc) return;
+
+        var sessionData = {};
+        try { sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch (e) {}
+        var canApprove = sessionData.permissions && sessionData.permissions.canChangeStatus;
+
+        var statusNow = currentDoc.status || 'draft';
+        var approvalNow = currentDoc.approvalStatus || 'pending';
+
+        // ★ 只判斷 submitted-ig 才可以 Approve/Reject
+        var canClickApprove = (approvalNow === 'pending') && (statusNow === 'submitted-ig');
+        var canClickReject = (approvalNow === 'pending') && (statusNow === 'submitted-ig');
+
+        if (!canApprove) {
+            if (approveBtn) approveBtn.style.display = 'none';
+            if (rejectBtn) rejectBtn.style.display = 'none';
+        } else {
+            if (approveBtn) {
+                approveBtn.style.display = 'inline-flex';
+                approveBtn.disabled = !canClickApprove;
+                approveBtn.style.opacity = canClickApprove ? '1' : '0.5';
+                approveBtn.style.cursor = canClickApprove ? 'pointer' : 'not-allowed';
+            }
+            if (rejectBtn) {
+                rejectBtn.style.display = 'inline-flex';
+                rejectBtn.disabled = !canClickReject;
+                rejectBtn.style.opacity = canClickReject ? '1' : '0.5';
+                rejectBtn.style.cursor = canClickReject ? 'pointer' : 'not-allowed';
+            }
+        }
+
+        if (submitBtn) {
+            if (statusNow === 'draft' || statusNow === 'reopen' || !statusNow) {
+                submitBtn.style.display = 'inline-flex';
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+            } else {
+                submitBtn.style.display = 'none';
+            }
+        }
     }
 
     function cancelEditing() {
@@ -2063,17 +2148,8 @@
         document.getElementById('back-btn')?.addEventListener('click', goBack);
 
         if (submitBtn) submitBtn.addEventListener('click', submitDocument);
-
-        if (approveBtn) {
-            approveBtn.addEventListener('click', function() {
-                alert('Approve functionality not yet implemented.');
-            });
-        }
-        if (rejectBtn) {
-            rejectBtn.addEventListener('click', function() {
-                alert('Reject functionality not yet implemented.');
-            });
-        }
+        if (approveBtn) approveBtn.addEventListener('click', approveDocument);
+        if (rejectBtn) rejectBtn.addEventListener('click', rejectDocument);
     }
 
     window.addEventListener('resize', () => {
@@ -2130,5 +2206,7 @@
         history = [];
         saveHistory();
         updateLockButtonState();
+        
+        setTimeout(function() { updateApprovalButtons(); }, 500);
     });
 })();

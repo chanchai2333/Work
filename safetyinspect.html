@@ -35,16 +35,40 @@
         .delete-btn:hover { background: linear-gradient(135deg, #c0392b, #e74c3c); transform: translateY(-2px); }
 
         .status-draft { background: rgba(149,165,166,0.2); color: #848f90; }
-        .status-submitted-wsg { background: rgba(52,152,219,0.2); color: #2980b9; }
+        .status-submitted { background: rgba(52,152,219,0.2); color: #2980b9; }
         .status-submitted-ig { background: rgba(46,204,113,0.2); color: #27ae60; }
         .status-closed { background: rgba(39,174,96,0.2); color: #1e8449; }
         .status-reopen { background: rgba(243,156,18,0.2); color: #d35400; }
         .status-cancelled { background: rgba(231,76,60,0.2); color: #c0392b; }
+        .status-approved { background: rgba(46,204,113,0.2); color: #27ae60; }
+        .status-rejected { background: rgba(231,76,60,0.2); color: #c0392b; }
+        .status-pending { background: rgba(243,156,18,0.2); color: #d35400; }
 
         .status-badge {
             padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;
             font-weight: 500; display: inline-block; text-align: center; white-space: nowrap;
         }
+
+        /* ====== ★ 分類區塊樣式 ====== */
+        .diary-category-section { margin-bottom: 28px; }
+        .diary-category-section:last-child { margin-bottom: 0; }
+        .diary-category-section .table-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .category-count {
+            display: inline-block; min-width: 26px; text-align: center;
+            padding: 2px 10px; border-radius: 12px;
+            font-size: 0.8rem; font-weight: 700;
+            background: #e0e7ff; color: #3730a3;
+        }
+        .diary-category-section[data-category="overdue"] .category-count { background: #fee2e2; color: #991b1b; }
+        .diary-category-section[data-category="pending"] .category-count { background: #fef3c7; color: #92400e; }
+        .diary-category-section[data-category="closed"]  .category-count { background: #d1fae5; color: #065f46; }
+        .diary-category-section[data-category="other"]   .category-count { background: #e5e7eb; color: #374151; }
+
+        .category-desc { color: #64748b; font-size: 0.82rem; margin: 4px 0 12px 0; }
+        .diary-category-section[data-category="overdue"] .table-title i { color: #e74c3c; }
+        .diary-category-section[data-category="pending"] .table-title i { color: #f39c12; }
+        .diary-category-section[data-category="closed"]  .table-title i { color: #27ae60; }
+        .diary-category-section[data-category="other"]   .table-title i { color: #7f8c8d; }
 
         @media (max-width: 768px) {
             .action-btn { width: 100%; margin: 2px 0; }
@@ -113,39 +137,137 @@
                         <div class="filter-options">
                             <div class="filter-option active" data-filter="status" data-value="all" data-i18n="all.statuses">All Statuses</div>
                             <div class="filter-option" data-filter="status" data-value="draft" data-i18n="status.draft">Draft</div>
-                            <div class="filter-option" data-filter="status" data-value="submitted-wsg" data-i18n="status.submitted.wsg">Submitted to WSG</div>
-                            <div class="filter-option" data-filter="status" data-value="submitted-ig" data-i18n="status.submitted.ig">Submitted to IG</div>
-                            <div class="filter-option" data-filter="status" data-value="closed" data-i18n="status.closed">Closed</div>
-                            <div class="filter-option" data-filter="status" data-value="reopen" data-i18n="status.reopen">Reopen</div>
-                            <div class="filter-option" data-filter="status" data-value="cancelled" data-i18n="status.cancelled">Cancelled</div>
+                            <div class="filter-option" data-filter="status" data-value="submitted-ig">Submit to IG</div>
+                            <div class="filter-option" data-filter="status" data-value="closed">IG Endorsed</div>
+                            <div class="filter-option" data-filter="status" data-value="reopen">Reopened</div>
+                            <div class="filter-option" data-filter="status" data-value="cancelled">Cancelled</div>
                         </div>
                     </div>
                 </section>
             </div>
+
             <section class="content-section">
-                <div class="table-header">
-                    <h2 class="table-title" data-i18n="inspection.entries">Safety Inspection Entries</h2>
-                </div>
-                <div class="table-container">
-                    <table class="diary-table">
-                        <thead>
-                            <tr>
-                                <th data-i18n="inspection.id">Inspection ID</th>
-                                <th data-i18n="status">Status</th>
-                                <th>Approval Status</th>
-                                <th data-i18n="site">Site</th>
-                                <th data-i18n="date">Date</th>
-                                <th data-i18n="inspector">Inspector</th>
-                                <th data-i18n="actions">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="inspection-table-body">
-                            <tr><td colspan="7" style="text-align: center; padding: 40px;"><i class="fas fa-spinner fa-spin"></i> Loading inspection records...</td></tr>
-                        </tbody>
-                    </table>
-                    <div id="no-results-message" class="no-results" style="display: none;" data-i18n="no.matching.documents">No matching inspections found. Please try different filters.</div>
+                <div id="inspection-tables-container">
+
+                    <!-- ===== Overdue Documents ===== -->
+                    <div class="diary-category-section" data-category="overdue">
+                        <div class="table-header">
+                            <h2 class="table-title">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span data-i18n="category.overdue">Overdue Documents</span>
+                                <span class="category-count" id="overdue-count">0</span>
+                            </h2>
+                            <p class="category-desc" data-i18n="category.overdue.desc">Draft inspections older than 14 days</p>
+                        </div>
+                        <div class="table-container">
+                            <table class="diary-table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="inspection.id">Inspection ID</th>
+                                        <th data-i18n="status">Status</th>
+                                        <th>Approval Status</th>
+                                        <th data-i18n="site">Site</th>
+                                        <th data-i18n="date">Date</th>
+                                        <th data-i18n="inspector">Inspector</th>
+                                        <th data-i18n="actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="overdue-table-body"></tbody>
+                            </table>
+                            <div id="overdue-no-results" class="no-results" style="display: none;">No overdue documents.</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== Pending Documents ===== -->
+                    <div class="diary-category-section" data-category="pending">
+                        <div class="table-header">
+                            <h2 class="table-title">
+                                <i class="fas fa-clock"></i>
+                                <span data-i18n="category.pending">Pending Documents</span>
+                                <span class="category-count" id="pending-count">0</span>
+                            </h2>
+                            <p class="category-desc" data-i18n="category.pending.desc">Submitted but not yet approved</p>
+                        </div>
+                        <div class="table-container">
+                            <table class="diary-table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="inspection.id">Inspection ID</th>
+                                        <th data-i18n="status">Status</th>
+                                        <th>Approval Status</th>
+                                        <th data-i18n="site">Site</th>
+                                        <th data-i18n="date">Date</th>
+                                        <th data-i18n="inspector">Inspector</th>
+                                        <th data-i18n="actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pending-table-body"></tbody>
+                            </table>
+                            <div id="pending-no-results" class="no-results" style="display: none;">No pending documents.</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== Closed Documents ===== -->
+                    <div class="diary-category-section" data-category="closed">
+                        <div class="table-header">
+                            <h2 class="table-title">
+                                <i class="fas fa-check-circle"></i>
+                                <span data-i18n="category.closed">Closed Documents</span>
+                                <span class="category-count" id="closed-count">0</span>
+                            </h2>
+                            <p class="category-desc" data-i18n="category.closed.desc">Completed, closed, or cancelled inspections</p>
+                        </div>
+                        <div class="table-container">
+                            <table class="diary-table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="inspection.id">Inspection ID</th>
+                                        <th data-i18n="status">Status</th>
+                                        <th>Approval Status</th>
+                                        <th data-i18n="site">Site</th>
+                                        <th data-i18n="date">Date</th>
+                                        <th data-i18n="inspector">Inspector</th>
+                                        <th data-i18n="actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="closed-table-body"></tbody>
+                            </table>
+                            <div id="closed-no-results" class="no-results" style="display: none;">No closed documents.</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== Other Documents (Draft within 14 days, Reopen) ===== -->
+                    <div class="diary-category-section" data-category="other">
+                        <div class="table-header">
+                            <h2 class="table-title">
+                                <i class="fas fa-folder"></i>
+                                <span data-i18n="category.other">Other Documents</span>
+                                <span class="category-count" id="other-count">0</span>
+                            </h2>
+                            <p class="category-desc" data-i18n="category.other.desc">Drafts within 14 days, reopened, or in progress</p>
+                        </div>
+                        <div class="table-container">
+                            <table class="diary-table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="inspection.id">Inspection ID</th>
+                                        <th data-i18n="status">Status</th>
+                                        <th>Approval Status</th>
+                                        <th data-i18n="site">Site</th>
+                                        <th data-i18n="date">Date</th>
+                                        <th data-i18n="inspector">Inspector</th>
+                                        <th data-i18n="actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="other-table-body"></tbody>
+                            </table>
+                            <div id="other-no-results" class="no-results" style="display: none;">No other documents.</div>
+                        </div>
+                    </div>
+
                 </div>
             </section>
+            
             <footer>
                 <p data-i18n="copyright">© 2025 AEL DWSS System. All rights reserved.</p>
                 <p data-i18n="platform">AEL DWSS Platform</p>
@@ -164,11 +286,10 @@
                 <label data-i18n="status">Status</label>
                 <select id="input-inspect-status" required>
                     <option value="draft" data-i18n="status.draft">Draft</option>
-                    <option value="submitted-wsg" data-i18n="status.submitted.wsg">Submitted to WSG</option>
-                    <option value="submitted-ig" data-i18n="status.submitted.ig">Submitted to IG</option>
-                    <option value="closed" data-i18n="status.closed">Closed</option>
-                    <option value="reopen" data-i18n="status.reopen">Reopen</option>
-                    <option value="cancelled" data-i18n="status.cancelled">Cancelled</option>
+                    <option value="submitted-ig">Submitted to IG</option>
+                    <option value="closed">IG Endorsed</option>
+                    <option value="reopen">Reopened</option>
+                    <option value="cancelled">Cancelled</option>
                 </select>
 
                 <label data-i18n="site">Site</label>
@@ -196,17 +317,12 @@
     <script src="scripts/app.js"></script>
     <script src="scripts/auth-check.js"></script>
 
-    <!-- ============================================================ -->
-    <!-- ★ getContractCode — 提供給 safety inspect ID 生成使用           -->
-    <!-- ============================================================ -->
     <script>
     (function () {
         'use strict';
         if (window.getContractCode) return;
-
         window.getContractCode = function () {
             var pid = sessionStorage.getItem('currentProjectId');
-
             if (!pid) {
                 try {
                     var u = JSON.parse(localStorage.getItem('current_user') || '{}');
@@ -215,7 +331,6 @@
                     }
                 } catch (e) { /* ignore */ }
             }
-
             if (!pid) {
                 try {
                     var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
@@ -224,12 +339,9 @@
                     }
                 } catch (e) { /* ignore */ }
             }
-
             if (!pid) pid = 'DE/2026/05';
-
             return String(pid).replace(/\//g, '-');
         };
-
         console.log('[SafetyInspect] ✓ getContractCode ready, currentProjectId =',
                     sessionStorage.getItem('currentProjectId') || '(fallback)',
                     '→ contractCode =',
@@ -240,18 +352,6 @@
     <script src="scripts/safetyinspect.js"></script>
     <script src="scripts/sidebar.js"></script>
 
-    <!-- ============================================================ -->
-    <!-- ★★★ Inspection ID 自動遞增修正                                -->
-    <!-- ------------------------------------------------------------ -->
-    <!-- 格式：SSR/WSI/{合同代碼}/{6 位序號}A                            -->
-    <!--   e.g. SSR/WSI/DE-2026-05/000001A                              -->
-    <!-- 策略：                                                        -->
-    <!--   1. 掃描 localStorage 所有 key，找「任何包含 inspection 記錄  -->
-    <!--      的陣列」（不依賴特定 key 名稱）                          -->
-    <!--   2. 過濾出 ID 前綴 = SSR/WSI/{contractCode}/ 的記錄          -->
-    <!--   3. 找最大序號 +1                                            -->
-    <!--   4. 點 Add New Inspection 後覆蓋 input-inspect-id 欄位        -->
-    <!-- ============================================================ -->
     <script>
     (function () {
         'use strict';
@@ -266,34 +366,25 @@
             return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         }
 
-        /* 掃描 localStorage 所有 key，蒐集所有可能的 inspection ID */
         function collectAllInspectIds() {
             var ids = [];
             var seen = {};
-
-            /* (a) 從所有 localStorage 陣列記錄中找 */
             try {
                 for (var i = 0; i < localStorage.length; i++) {
                     var key = localStorage.key(i);
                     if (!key) continue;
-                    /* 跳過明顯不相關的 key（節省時間） */
-                    /* 但仍掃所有 keys，避免遺漏 */
-
                     var raw = localStorage.getItem(key);
                     if (!raw || raw.length < 2) continue;
-                    /* 只處理 JSON 開頭是 [ 或 { 的 */
                     var c = raw.charAt(0);
                     if (c !== '[' && c !== '{') continue;
 
                     var data;
                     try { data = JSON.parse(raw); } catch (e) { continue; }
 
-                    /* 支援 Array 或 Object of Arrays */
                     var arrs = [];
                     if (Array.isArray(data)) {
                         arrs.push(data);
                     } else if (data && typeof data === 'object') {
-                        /* 也可能包在 {data: [...]} 之類 */
                         Object.keys(data).forEach(function (k) {
                             if (Array.isArray(data[k])) arrs.push(data[k]);
                         });
@@ -315,10 +406,9 @@
                 console.warn('[SafetyInspect] scan localStorage failed:', e);
             }
 
-            /* (b) 從當前表格 DOM 收集（含被過濾後仍可能存在的記錄） */
             try {
-                var tbody = document.getElementById('inspection-table-body');
-                if (tbody) {
+                var tbodies = document.querySelectorAll('#inspection-tables-container tbody');
+                tbodies.forEach(function(tbody) {
                     var rows = tbody.querySelectorAll('tr');
                     for (var r = 0; r < rows.length; r++) {
                         var firstCell = rows[r].cells && rows[r].cells[0];
@@ -329,20 +419,15 @@
                             ids.push(txt);
                         }
                     }
-                }
+                });
             } catch (e) { /* ignore */ }
 
             return ids;
         }
 
-        /**
-         * 計算下一個 Inspection ID
-         *   prefix = "SSR/WSI/" + getContractCode() + "/"
-         *   格式：{prefix}{6 位}{suffix}
-         */
         window.computeNextInspectId = function () {
-            var contractCode = window.getContractCode();            // DE-2026-05
-            var prefix = ID_PREFIX + contractCode + '/';            // SSR/WSI/DE-2026-05/
+            var contractCode = window.getContractCode();
+            var prefix = ID_PREFIX + contractCode + '/';
             var re = new RegExp('^' + escapeRegExp(prefix) + '(\\d+)[A-Za-z]?$');
 
             var ids = collectAllInspectIds();
@@ -365,12 +450,10 @@
             return newId;
         };
 
-        /* 監聽 Add New Inspection 按鈕 → modal 顯示後覆蓋欄位 */
         document.addEventListener('click', function (e) {
             var btn = e.target && e.target.closest ? e.target.closest('#add-inspection-btn') : null;
             if (!btn) return;
 
-            /* 用 setTimeout 讓 safetyinspect.js 的 handler 先跑完 */
             setTimeout(function () {
                 var modal = document.getElementById('add-inspect-modal');
                 if (!modal || modal.style.display === 'none') return;
@@ -381,7 +464,6 @@
                 var correctId = window.computeNextInspectId();
                 idInput.value = correctId;
 
-                /* 若 safetyinspect.js 之後又改回錯誤的值，用 observer 擋下 */
                 if (!idInput.__dsdIdLocked) {
                     idInput.__dsdIdLocked = true;
                     var lockValue = correctId;
@@ -396,13 +478,11 @@
                     });
                     obs.observe(idInput, { attributes: true, attributeFilter: ['value'] });
 
-                    /* 使用者主動輸入 → 標記為已編輯，停止覆蓋 */
                     idInput.addEventListener('input', function () {
                         idInput.__dsdUserEdited = true;
                         lockValue = idInput.value;
                     });
 
-                    /* modal 關閉 → 重置旗標 */
                     var modalObs = new MutationObserver(function () {
                         if (modal.style.display === 'none') {
                             idInput.__dsdIdLocked = false;
@@ -418,7 +498,109 @@
     })();
     </script>
 
-    <!-- 侧边栏状态持久化 -->
+    <script>
+    (function () {
+        'use strict';
+        if (window.__inspectSortBound) return;
+        window.__inspectSortBound = true;
+
+        var PRIMARY_KEY = 'inspectionData';
+        var _sorting = false;
+        var _sortTimer = null;
+
+        function loadRecords() {
+            try {
+                var raw = localStorage.getItem(PRIMARY_KEY);
+                if (!raw) return [];
+                var d = JSON.parse(raw);
+                return Array.isArray(d) ? d : [];
+            } catch (e) { return []; }
+        }
+
+        function getSortKey(record) {
+            if (!record) return '';
+            if (record.date) {
+                var d = record.date;
+                var m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                if (m) return d;
+                var m2 = d.match(/^(\d{2})-([A-Za-z]{3})-(\d{4})$/);
+                if (m2) {
+                    var monthMap = { 'Jan':'01','Feb':'02','Mar':'03','Apr':'04','May':'05','Jun':'06',
+                                     'Jul':'07','Aug':'08','Sep':'09','Oct':'10','Nov':'11','Dec':'12' };
+                    return m2[3] + '-' + (monthMap[m2[2]] || '01') + '-' + m2[1];
+                }
+            }
+            if (record.createdAt) return record.createdAt;
+            return '';
+        }
+
+        function sortTableByDate() {
+            if (_sorting) return;
+            var tbodies = document.querySelectorAll('#inspection-tables-container .diary-table tbody');
+            if (!tbodies.length) return;
+
+            var records = loadRecords();
+            var map = {};
+            records.forEach(function (r) {
+                if (r && r.id != null) map[String(r.id)] = r;
+            });
+
+            _sorting = true;
+            try {
+                tbodies.forEach(function (tbody) {
+                    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+                    if (rows.length < 2) return;
+
+                    var sortedRows = rows.slice().sort(function (a, b) {
+                        var idA = a.cells && a.cells[0] ? a.cells[0].textContent.trim() : '';
+                        var idB = b.cells && b.cells[0] ? b.cells[0].textContent.trim() : '';
+                        var keyA = getSortKey(map[idA]);
+                        var keyB = getSortKey(map[idB]);
+                        if (keyA < keyB) return 1;
+                        if (keyA > keyB) return -1;
+                        return 0;
+                    });
+
+                    var same = true;
+                    for (var i = 0; i < rows.length; i++) {
+                        if (rows[i] !== sortedRows[i]) { same = false; break; }
+                    }
+                    if (same) return;
+
+                    var frag = document.createDocumentFragment();
+                    sortedRows.forEach(function (row) { frag.appendChild(row); });
+                    tbody.appendChild(frag);
+                });
+            } catch (e) {
+                console.error('[Sort] Failed to sort:', e);
+            }
+            _sorting = false;
+        }
+
+        function scheduleSort() {
+            if (_sortTimer) clearTimeout(_sortTimer);
+            _sortTimer = setTimeout(sortTableByDate, 100);
+        }
+
+        function bindSort() {
+            var container = document.getElementById('inspection-tables-container');
+            if (!container) { setTimeout(bindSort, 300); return; }
+            var observer = new MutationObserver(function () {
+                if (_sorting) return;
+                scheduleSort();
+            });
+            observer.observe(container, { childList: true, subtree: true });
+            scheduleSort();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bindSort);
+        } else {
+            bindSort();
+        }
+    })();
+    </script>
+
     <script>
         (function() {
             function saveSidebarState() {
@@ -449,5 +631,222 @@
             });
         })();
     </script>
+<!-- ============================================================ -->
+<!-- ★ Status Change History 補丁 (支援多個分類表格)               -->
+<!-- ============================================================ -->
+<script>
+(function () {
+    'use strict';
+    if (window.__inspectHistoryBound) return;
+    window.__inspectHistoryBound = true;
+
+    var PRIMARY_KEY = 'inspectionData';
+
+    function loadRecords() {
+        try {
+            var raw = localStorage.getItem(PRIMARY_KEY);
+            if (!raw) return [];
+            var d = JSON.parse(raw);
+            return Array.isArray(d) ? d : [];
+        } catch (e) { return []; }
+    }
+
+    function fmtDateTime(iso) {
+        if (!iso) return '—';
+        try {
+            var d = new Date(iso);
+            if (isNaN(d.getTime())) return iso;
+            var yy = d.getFullYear();
+            var mm = String(d.getMonth() + 1).padStart(2, '0');
+            var dd = String(d.getDate()).padStart(2, '0');
+            var hh = String(d.getHours()).padStart(2, '0');
+            var mi = String(d.getMinutes()).padStart(2, '0');
+            return yy + '-' + mm + '-' + dd + ' ' + hh + ':' + mi;
+        } catch (e) { return iso; }
+    }
+
+    function escapeHtml(s) {
+        if (s == null) return '';
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function statusLabel(s) {
+        var map = {
+            'draft': 'Draft',
+            'submitted': 'Inspector Submitted',
+            'submitted-ig': 'Submit to IG',
+            'closed': 'IG Endorsed',
+            'reopen': 'Reopened',
+            'cancelled': 'Cancelled',
+            'approved': 'Approved',
+            'rejected': 'Rejected',
+            'pending': 'Pending Approval'
+        };
+        return map[s] || s || '—';
+    }
+
+    function showHistory(diaryId) {
+        var records = loadRecords();
+        var record = null;
+        for (var i = 0; i < records.length; i++) {
+            if (String(records[i].id) === String(diaryId)) { record = records[i]; break; }
+        }
+        if (!record) { alert('Record not found.'); return; }
+
+        var modal = document.getElementById('history-modal');
+        var content = document.getElementById('history-content');
+        if (!modal || !content) return;
+
+        var history = Array.isArray(record.statusHistory) ? record.statusHistory : [];
+
+        var html = '';
+        html += '<div style="margin-bottom: 16px; padding: 12px 16px; background: #f8fafc; border-radius: 8px;">';
+        html += '<div style="font-size: 0.8rem; color: #64748b; margin-bottom: 4px;">Document ID</div>';
+        html += '<div style="font-weight: 700; color: #1e40af;">' + escapeHtml(record.id) + '</div>';
+        html += '</div>';
+
+        if (history.length === 0) {
+            html += '<div style="padding: 30px; text-align: center; color: #94a3b8; font-style: italic;">';
+            html += '<i class="fas fa-inbox" style="font-size: 28px; display: block; margin-bottom: 10px;"></i>';
+            html += 'No status change history yet.';
+            html += '</div>';
+            html += '<div style="margin-top: 12px; padding: 10px 14px; background: #eff6ff; border-radius: 6px; font-size: 0.85rem; color: #1e40af;">';
+            html += '<strong>Current status:</strong> ' + escapeHtml(statusLabel(record.status));
+            html += '</div>';
+        } else {
+            html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9rem; table-layout: auto;">';
+            html += '<thead><tr style="background: #f1f5f9;">';
+            html += '<th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0; white-space: nowrap;">Date / Time</th>';
+            html += '<th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0; white-space: nowrap;">From Status</th>';
+            html += '<th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0; white-space: nowrap;">To Status</th>';
+            html += '<th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0; white-space: nowrap;">Approval Status</th>';
+            html += '<th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0; white-space: nowrap;">Changed By</th>';
+            html += '</tr></thead><tbody>';
+
+            history.slice().reverse().forEach(function (h) {
+                var fa = h.fromApproval || '';
+                var ta = h.toApproval || '';
+
+                var approvalCell = '';
+                if (fa || ta) {
+                    var faLabel = fa ? statusLabel(fa) : '—';
+                    var taLabel = ta ? statusLabel(ta) : '—';
+                    if (fa === ta) {
+                        approvalCell = '<span style="color:#94a3b8;">' + escapeHtml(faLabel) + '</span>';
+                    } else {
+                        approvalCell =
+                            escapeHtml(faLabel) +
+                            ' <i class="fas fa-arrow-right" style="font-size:10px;color:#cbd5e1;margin:0 2px;"></i> ' +
+                            '<strong style="color:#8e44ad;">' + escapeHtml(taLabel) + '</strong>';
+                    }
+                } else {
+                    approvalCell = '<span style="color:#cbd5e1;">—</span>';
+                }
+
+                html += '<tr>';
+                html += '<td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; white-space: nowrap;">' + escapeHtml(fmtDateTime(h.changedAt)) + '</td>';
+                html += '<td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; white-space: nowrap;">' + escapeHtml(statusLabel(h.from)) + '</td>';
+                html += '<td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; white-space: nowrap; color: #2980b9; font-weight: 600;">' + escapeHtml(statusLabel(h.to)) + '</td>';
+                html += '<td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; white-space: nowrap;">' + approvalCell + '</td>';
+                html += '<td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; white-space: nowrap;">' + escapeHtml(h.changedBy || '—') + '</td>';
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+        }
+
+        content.innerHTML = html;
+        modal.style.display = 'flex';
+    }
+
+    function closeHistory() {
+        var modal = document.getElementById('history-modal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('.history-btn') : null;
+        if (btn) {
+            e.preventDefault();
+            e.stopPropagation();
+            showHistory(btn.dataset.id);
+            return;
+        }
+        if (e.target && e.target.id === 'close-history-modal') {
+            closeHistory();
+            return;
+        }
+        var modal = document.getElementById('history-modal');
+        if (modal && e.target === modal) closeHistory();
+    });
+
+    function injectHistoryButtons() {
+        var tbodies = document.querySelectorAll('#inspection-tables-container .diary-table tbody');
+        if (!tbodies.length) { setTimeout(injectHistoryButtons, 500); return; }
+
+        tbodies.forEach(function (tbody) {
+            var rows = tbody.querySelectorAll('tr');
+            for (var i = 0; i < rows.length; i++) {
+                var row = rows[i];
+                var firstCell = row.cells && row.cells[0];
+                if (!firstCell) continue;
+                var diaryId = firstCell.textContent.trim();
+                if (!diaryId) continue;
+
+                var actionCell = row.cells[row.cells.length - 1];
+                if (!actionCell) continue;
+                if (actionCell.querySelector('.history-btn')) continue;
+
+                var btn = document.createElement('button');
+                btn.className = 'action-btn history-btn';
+                btn.dataset.id = diaryId;
+                btn.title = 'View status change history';
+                btn.innerHTML = '<i class="fas fa-history"></i>';
+                btn.style.cssText =
+                    'background: linear-gradient(135deg, #8e44ad, #732d91); color: white;';
+
+                actionCell.appendChild(btn);
+            }
+        });
+    }
+
+    function bindObserver() {
+        var container = document.getElementById('inspection-tables-container');
+        if (!container) { setTimeout(bindObserver, 500); return; }
+
+        var obs = new MutationObserver(function () {
+            injectHistoryButtons();
+        });
+        obs.observe(container, { childList: true, subtree: true });
+
+        injectHistoryButtons();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+            setTimeout(bindObserver, 500);
+        });
+    } else {
+        setTimeout(bindObserver, 500);
+    }
+})();
+</script>
+<!-- ============================================================ -->
+<!-- ★ Status Change History Modal                                -->
+<!-- ============================================================ -->
+<div class="modal" id="history-modal" style="display:none;">
+    <div class="modal-content" style="max-width: 780px;">
+        <h3><i class="fas fa-history"></i> Status Change History</h3>
+        <div id="history-content" style="margin: 16px 0;"></div>
+        <div class="modal-actions">
+            <button type="button" class="btn" id="close-history-modal">Close</button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

@@ -124,20 +124,17 @@
             opacity: 0.6;
             cursor: not-allowed;
         }
+        .btn-approve { background: #27ae60; color: white; }
+        .btn-reject { background: #c0392b; color: white; }
 
-        /* 隱藏 Zoom 按鈕 */
         .pdf-controls .zoom-controls {
             display: none !important;
         }
 
-        /* 側邊欄折疊時隱藏 Logo */
         .sidebar.collapsed .logo {
             display: none !important;
         }
 
-        /* ============================================================
-           ★ 頁碼輸入框（參考 sitediary）
-           ============================================================ */
         .page-info {
             font-size: 14px;
             font-weight: 600;
@@ -178,9 +175,6 @@
             margin-left: 4px;
         }
 
-        /* ============================================================
-           ★ Safety Inspection 手寫簽名 Modal
-           ============================================================ */
         .safety-signature-modal-overlay {
             position: fixed;
             top: 0; left: 0;
@@ -298,6 +292,12 @@
         .safety-sig-btn-cancel:hover { background: #64748b; }
         .safety-sig-btn-save   { background: #10b981; color: #fff; }
         .safety-sig-btn-save:hover   { background: #059669; }
+        /* 加入在 <style> 內 */
+        .status-draft { background: rgba(149,165,166,0.2); color: #848f90; }
+        .status-submitted-ig { background: rgba(52,152,219,0.2); color: #2980b9; }
+        .status-closed { background: rgba(39,174,96,0.2); color: #1e8449; }
+        .status-reopen { background: rgba(243,156,18,0.2); color: #d35400; }
+        .status-cancelled { background: rgba(231,76,60,0.2); color: #c0392b; }
     </style>
 </head>
 <body>
@@ -335,10 +335,10 @@
                 <div class="document-actions">
                     <button class="btn btn-submit" id="submit-btn"><i class="fas fa-paper-plane"></i> Submit</button>
 
-                    <button class="btn" id="approve-btn" style="background: #27ae60; color: white;">
+                    <button class="btn btn-approve" id="approve-btn">
                         <i class="fas fa-check-circle"></i> Approve
                     </button>
-                    <button class="btn" id="reject-btn" style="background: #c0392b; color: white;">
+                    <button class="btn btn-reject" id="reject-btn">
                         <i class="fas fa-times-circle"></i> Reject
                     </button>
 
@@ -357,7 +357,6 @@
             </div>
 
             <div class="pdf-editor-container">
-                <!-- ★ 頁碼導航（參考 sitediary）：輸入框 + 跳頁，移除 Undo / Lock / Delete Selected -->
                 <div class="pdf-controls">
                     <button class="nav-btn" id="prev-page" title="上一頁"><i class="fas fa-chevron-left"></i></button>
                     <span class="page-info">
@@ -378,9 +377,6 @@
         </div>
     </div>
 
-    <!-- ============================================================
-         ★ Safety Inspection 手寫簽名 Modal
-         ============================================================ -->
     <div class="safety-signature-modal-overlay" id="safety-signature-modal-overlay">
         <div class="safety-signature-modal">
             <div class="safety-signature-modal-header">
@@ -448,28 +444,16 @@
     if (window.__docLockPatchInstalled) return;
     window.__docLockPatchInstalled = true;
 
-    /* ---------- 判斷文檔是否已提交/鎖定 ----------
-       規則：
-         1. 有 submittedDate → 一定鎖（DSD / LabourWage 提交時會寫入）
-         2. approvalStatus 是 approved / rejected / cancelled → 鎖
-         3. status 不是 draft → 鎖（Safety Inspection 提交後 status = submitted-wsg）
-         4. 其他（含新建時 approvalStatus='pending' 但無 submittedDate）→ 不鎖
-    */
     function isLocked(doc) {
         if (!doc) return false;
-
         if (doc.submittedDate) return true;
-
         var a = doc.approvalStatus;
         if (a === 'approved' || a === 'rejected' || a === 'cancelled') return true;
-
         var s = doc.status;
-        if (s && s !== 'draft') return true;
-
+        if (s && s !== 'draft' && s !== 'reopen') return true;
         return false;
     }
 
-    /* ---------- 從 sessionStorage 讀當前文檔 ---------- */
     function readCurrentDoc() {
         var sources = [
             'editDocument',
@@ -489,7 +473,6 @@
         return null;
     }
 
-    /* ---------- 注入鎖定樣式（只注一次） ---------- */
     function injectLockStyle() {
         if (document.getElementById('document-lock-style')) return;
         var style = document.createElement('style');
@@ -536,10 +519,8 @@
         document.head.appendChild(style);
     }
 
-    /* ---------- 套用鎖定 ---------- */
     function applyLock(doc) {
         if (document.body.classList.contains('document-locked')) return;
-
         injectLockStyle();
         document.body.classList.add('document-locked');
 
@@ -577,26 +558,15 @@
             });
         });
         obs.observe(document.body, { childList: true, subtree: true });
-
-        console.log('[DocLock] 🔒 文檔已鎖定，狀態 =',
-                    (doc && (doc.approvalStatus || doc.status)) || 'submitted',
-                    doc && doc.submittedDate ? '| submittedDate=' + doc.submittedDate : '');
     }
 
-    /* ---------- 初次載入檢查 ---------- */
     function checkOnLoad() {
         var doc = readCurrentDoc();
         if (doc && isLocked(doc)) {
             applyLock(doc);
-        } else if (doc) {
-            console.log('[DocLock] 未鎖定（草稿狀態）|',
-                        'status =', doc.status,
-                        '| approvalStatus =', doc.approvalStatus,
-                        '| submittedDate =', doc.submittedDate || '(none)');
         }
     }
 
-    /* ---------- 監聽 Submit 按鈕 ---------- */
     document.addEventListener('click', function (e) {
         var btn = e.target && e.target.closest ? e.target.closest('#submit-btn') : null;
         if (!btn) return;
@@ -620,6 +590,317 @@
 
     setTimeout(checkOnLoad, 1200);
     setTimeout(checkOnLoad, 2500);
+})();
+</script>
+<!-- ============================================================ -->
+<!-- ★ Submit / Approve / Reject 需密碼驗證 (v2 - 修復 disabled)   -->
+<!-- ============================================================ -->
+<script>
+(function () {
+    'use strict';
+    if (window.__actionPasswordPatchInstalled) return;
+    window.__actionPasswordPatchInstalled = true;
+
+    var ACTION_BUTTONS = {
+        'submit-btn':  { label: 'Submit'  },
+        'approve-btn': { label: 'Approve' },
+        'reject-btn':  { label: 'Reject'  }
+    };
+
+    function injectStyle() {
+        if (document.getElementById('action-pwd-style')) return;
+        var style = document.createElement('style');
+        style.id = 'action-pwd-style';
+        style.textContent = [
+            '.action-pwd-overlay {',
+            '  position: fixed; top: 0; left: 0; width: 100%; height: 100%;',
+            '  background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(2px);',
+            '  z-index: 999999; display: none; justify-content: center; align-items: center;',
+            '}',
+            '.action-pwd-overlay.visible { display: flex; }',
+            '.action-pwd-modal {',
+            '  background: #fff; border-radius: 12px; width: 420px; max-width: 92vw;',
+            '  box-shadow: 0 20px 60px rgba(0,0,0,0.35); overflow: hidden;',
+            '  animation: actionPwdSlide 0.18s ease-out;',
+            '}',
+            '@keyframes actionPwdSlide {',
+            '  from { transform: scale(0.95); opacity: 0; }',
+            '  to   { transform: scale(1);    opacity: 1; }',
+            '}',
+            '.action-pwd-header {',
+            '  padding: 14px 20px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0;',
+            '  display: flex; justify-content: space-between; align-items: center;',
+            '}',
+            '.action-pwd-header h3 {',
+            '  color: #1e293b; font-size: 1.05rem; font-weight: 600;',
+            '  display: flex; align-items: center; gap: 8px; margin: 0;',
+            '}',
+            '.action-pwd-body { padding: 20px; }',
+            '.action-pwd-desc {',
+            '  font-size: 0.9rem; color: #475569; margin-bottom: 14px; line-height: 1.5;',
+            '}',
+            '.action-pwd-desc strong { color: #1e40af; }',
+            '.action-pwd-input-wrap { position: relative; }',
+            '.action-pwd-input {',
+            '  width: 100%; padding: 10px 40px 10px 12px;',
+            '  border: 1px solid #cbd5e1; border-radius: 8px;',
+            '  font-size: 0.95rem; font-family: inherit; outline: none;',
+            '  transition: border-color 0.15s, box-shadow 0.15s;',
+            '  pointer-events: auto !important;',
+            '}',
+            '.action-pwd-input:focus {',
+            '  border-color: #3498db;',
+            '  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);',
+            '}',
+            '.action-pwd-toggle {',
+            '  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);',
+            '  background: transparent; border: none; cursor: pointer;',
+            '  color: #94a3b8; padding: 4px 6px; font-size: 0.95rem;',
+            '}',
+            '.action-pwd-toggle:hover { color: #475569; }',
+            '.action-pwd-error {',
+            '  color: #dc2626; font-size: 0.82rem; margin-top: 8px;',
+            '  min-height: 1.1em; display: none;',
+            '}',
+            '.action-pwd-error.visible { display: block; }',
+            '.action-pwd-footer {',
+            '  padding: 12px 20px; background: #f8fafc;',
+            '  border-top: 1px solid #e2e8f0;',
+            '  display: flex; justify-content: flex-end; gap: 8px;',
+            '}',
+            '.action-pwd-btn {',
+            '  padding: 8px 18px; border: none; border-radius: 6px;',
+            '  font-weight: 600; cursor: pointer; font-size: 0.9rem;',
+            '  display: inline-flex; align-items: center; gap: 6px;',
+            '  transition: all 0.2s;',
+            '}',
+            '.action-pwd-btn:hover { transform: translateY(-1px); }',
+            '.action-pwd-btn-cancel { background: #e2e8f0; color: #334155; }',
+            '.action-pwd-btn-cancel:hover { background: #cbd5e1; }',
+            '.action-pwd-btn-confirm { background: #10b981; color: #fff; }',
+            '.action-pwd-btn-confirm:hover { background: #059669; }',
+            '.action-pwd-btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }',
+            'body.document-locked #action-pwd-overlay input {',
+            '  pointer-events: auto !important;',
+            '  opacity: 1 !important;',
+            '}'
+        ].join('\n');
+        document.head.appendChild(style);
+    }
+
+    var modalEl, inputEl, errorEl, confirmBtn, cancelBtn, toggleBtn, descEl;
+    var pendingBtn = null;
+    var bypass = false;
+
+    function ensureModal() {
+        if (modalEl) return;
+        injectStyle();
+
+        modalEl = document.createElement('div');
+        modalEl.className = 'action-pwd-overlay';
+        modalEl.id = 'action-pwd-overlay';
+        modalEl.setAttribute('data-lock-exempt', 'true');   
+        modalEl.innerHTML =
+            '<div class="action-pwd-modal">' +
+                '<div class="action-pwd-header">' +
+                    '<h3><i class="fas fa-lock"></i> Confirm Password</h3>' +
+                    '<button class="action-pwd-btn-cancel" id="action-pwd-close" style="background:transparent;color:#64748b;font-size:1.4rem;padding:0 6px;line-height:1;">&times;</button>' +
+                '</div>' +
+                '<div class="action-pwd-body">' +
+                    '<div class="action-pwd-desc" id="action-pwd-desc">Please enter your password to continue.</div>' +
+                    '<div class="action-pwd-input-wrap">' +
+                        '<input type="password" class="action-pwd-input" id="action-pwd-input" placeholder="Password" autocomplete="off" data-lock-exempt="true">' +
+                        '<button type="button" class="action-pwd-toggle" id="action-pwd-toggle" title="Show/Hide" data-lock-exempt="true"><i class="fas fa-eye"></i></button>' +
+                    '</div>' +
+                    '<div class="action-pwd-error" id="action-pwd-error"></div>' +
+                '</div>' +
+                '<div class="action-pwd-footer">' +
+                    '<button class="action-pwd-btn action-pwd-btn-cancel" id="action-pwd-cancel" data-lock-exempt="true"><i class="fas fa-times"></i> Cancel</button>' +
+                    '<button class="action-pwd-btn action-pwd-btn-confirm" id="action-pwd-confirm" data-lock-exempt="true"><i class="fas fa-check"></i> Confirm</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(modalEl);
+
+        inputEl    = document.getElementById('action-pwd-input');
+        errorEl    = document.getElementById('action-pwd-error');
+        confirmBtn = document.getElementById('action-pwd-confirm');
+        cancelBtn  = document.getElementById('action-pwd-cancel');
+        toggleBtn  = document.getElementById('action-pwd-toggle');
+        descEl     = document.getElementById('action-pwd-desc');
+
+        var inputGuardObs = new MutationObserver(function () {
+            if (inputEl.disabled) inputEl.disabled = false;
+            if (inputEl.readOnly) inputEl.readOnly = false;
+        });
+        inputGuardObs.observe(inputEl, {
+            attributes: true,
+            attributeFilter: ['disabled', 'readonly']
+        });
+
+        var modalGuardObs = new MutationObserver(function () {
+            modalEl.querySelectorAll('input, textarea, select, button').forEach(function (el) {
+                if (el.disabled) el.disabled = false;
+            });
+        });
+        modalGuardObs.observe(modalEl, {
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['disabled']
+        });
+
+        cancelBtn.addEventListener('click', closeModal);
+        document.getElementById('action-pwd-close').addEventListener('click', closeModal);
+
+        toggleBtn.addEventListener('click', function () {
+            var t = inputEl.type === 'password' ? 'text' : 'password';
+            inputEl.type = t;
+            var icon = toggleBtn.querySelector('i');
+            if (icon) {
+                icon.classList.toggle('fa-eye');
+                icon.classList.toggle('fa-eye-slash');
+            }
+        });
+
+        confirmBtn.addEventListener('click', tryConfirm);
+        inputEl.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); tryConfirm(); }
+            else if (e.key === 'Escape') { e.preventDefault(); closeModal(); }
+        });
+
+        modalEl.addEventListener('click', function (e) {
+            if (e.target === modalEl) closeModal();
+        });
+    }
+
+    function getSession() {
+        try { return JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); }
+        catch (e) { return {}; }
+    }
+
+    function findCurrentUser() {
+        var s = getSession();
+        var users = [];
+        try { users = JSON.parse(localStorage.getItem('dwss_users_db') || '[]'); } catch (e) {}
+        if (!Array.isArray(users)) return null;
+
+        if (s.userId != null) {
+            for (var i = 0; i < users.length; i++) {
+                if (String(users[i].id) === String(s.userId)) return users[i];
+            }
+        }
+        if (s.userEmail) {
+            for (var j = 0; j < users.length; j++) {
+                if (users[j].email && users[j].email.toLowerCase() === String(s.userEmail).toLowerCase()) {
+                    return users[j];
+                }
+            }
+        }
+        return null;
+    }
+
+    function verifyPassword(pwd) {
+        var user = findCurrentUser();
+        if (!user) return false;
+        return String(user.password) === String(pwd);
+    }
+
+    function openModal(btn) {
+        ensureModal();
+        pendingBtn = btn;
+
+        inputEl.disabled = false;
+        inputEl.readOnly = false;
+        inputEl.style.pointerEvents = 'auto';
+        inputEl.style.opacity = '1';
+        confirmBtn.disabled = false;
+        cancelBtn.disabled = false;
+
+        var btnId = btn.id;
+        var info = ACTION_BUTTONS[btnId] || { label: 'Action' };
+        descEl.innerHTML = 'Please enter your password to confirm the <strong>' +
+                           info.label + '</strong> action.';
+
+        inputEl.value = '';
+        inputEl.type = 'password';
+        errorEl.classList.remove('visible');
+        errorEl.textContent = '';
+        var icon = toggleBtn.querySelector('i');
+        if (icon) { icon.classList.add('fa-eye'); icon.classList.remove('fa-eye-slash'); }
+
+        modalEl.classList.add('visible');
+        document.body.style.overflow = 'hidden';
+
+        setTimeout(function () {
+            inputEl.disabled = false;
+            inputEl.readOnly = false;
+            try { inputEl.focus(); } catch (e) {}
+        }, 30);
+        setTimeout(function () {
+            inputEl.disabled = false;
+            inputEl.readOnly = false;
+        }, 150);
+    }
+
+    function closeModal() {
+        if (!modalEl) return;
+        modalEl.classList.remove('visible');
+        document.body.style.overflow = '';
+        inputEl.value = '';
+        errorEl.classList.remove('visible');
+        errorEl.textContent = '';
+        pendingBtn = null;
+    }
+
+    function tryConfirm() {
+        var pwd = inputEl.value;
+        if (!pwd) {
+            errorEl.textContent = 'Please enter your password.';
+            errorEl.classList.add('visible');
+            return;
+        }
+
+        if (!verifyPassword(pwd)) {
+            errorEl.textContent = '❌ Incorrect password. Please try again.';
+            errorEl.classList.add('visible');
+            inputEl.value = '';
+            try { inputEl.focus(); } catch (e) {}
+            return;
+        }
+
+        var btn = pendingBtn;
+
+        modalEl.classList.remove('visible');
+        document.body.style.overflow = '';
+        inputEl.value = '';
+        errorEl.classList.remove('visible');
+        pendingBtn = null;
+
+        if (!btn) return;
+
+        bypass = true;
+        try { btn.click(); }
+        finally { setTimeout(function () { bypass = false; }, 80); }
+    }
+
+    document.addEventListener('click', function (e) {
+        if (bypass) return;
+
+        var btn = e.target && e.target.closest
+            ? e.target.closest('#submit-btn, #approve-btn, #reject-btn')
+            : null;
+        if (!btn) return;
+
+        if (btn.disabled) return;
+        var st = window.getComputedStyle(btn);
+        if (st.display === 'none' || st.visibility === 'hidden') return;
+
+        e.stopImmediatePropagation();
+        e.preventDefault();
+
+        openModal(btn);
+    }, true);
+
+    console.log('[ActionPwd] ✓ 已啟用（v2）— Submit / Approve / Reject 需密碼驗證');
 })();
 </script>
 </body>

@@ -147,6 +147,18 @@
         ]
     };
 
+    // 加入在 syncGlobalDate() 函數附近
+    function getStatusText(status) {
+        const map = {
+            'draft': 'Draft',
+            'submitted-ig': 'Submitted to IG',
+            'closed': 'IG Endorsed',
+            'reopen': 'Reopened',
+            'cancelled': 'Cancelled'
+        };
+        return map[status] || status || 'Draft';
+    }
+
     // ---------- 輔助函數 ----------
     function syncGlobalDate() {
         const stored = sessionStorage.getItem('globalDate');
@@ -555,9 +567,10 @@
         document.getElementById('docSite').textContent = documentData.site || 'N/A';
         document.getElementById('docDate').textContent = documentData.date || 'N/A';
         document.getElementById('docAuthor').textContent = documentData.inspector || documentData.submittedBy || 'N/A';
+        // 替換為：
         const statusEl = document.getElementById('docStatus');
         if (statusEl) {
-            statusEl.textContent = documentData.statusText || 'Draft';
+            statusEl.textContent = getStatusText(documentData.status);
             statusEl.className = `doc-status status-${documentData.status || 'draft'}`;
         }
 

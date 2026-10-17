@@ -1,4 +1,4 @@
-// safetyinspect.js - 安全檢查頁面邏輯（整合 DWSS 權限控制 + 項目隔離）
+// safetyinspect.js - 安全檢查頁面邏輯（整合 DWSS 權限控制 + 項目隔離 + 流程圖對齊）
 document.addEventListener("DOMContentLoaded", function() {
     // ---------- 權限檢查 ----------
     DWSS_Auth.updateHeaderUser();
@@ -8,21 +8,20 @@ document.addEventListener("DOMContentLoaded", function() {
 
     let inspectionData = [];
 
-    // 安全檢查狀態映射
+    // 安全檢查狀態映射（對齊流程圖：沒有 submit to WSG）
     const SAFETY_STATUS_MAP = {
         'draft': 'Draft',
-        'submitted-wsg': 'Submitted to WSG',
-        'submitted-ig': 'Submitted to IG',
-        'closed': 'Closed',
-        'reopen': 'Reopen',
+        'submitted-ig': 'Submit to IG',
+        'closed': 'IG Endorsed',
+        'reopen': 'Reopened',
         'cancelled': 'Cancelled'
     };
 
-    // ★ 每個項目的預設記錄（平均分配）
+    // ★ 每個項目的預設記錄
     const DEFAULT_PROJECT_DATA = {
         'DE/2026/05': [
             { id: "SSR/WSI/DE-2026-05/000001A", status: "draft",         site: "Treatment Plant", date: "2025-08-15", inspector: "John Doe",        project: "DE/2026/05", pdfData: null, annotations: [] },
-            { id: "SSR/WSI/DE-2026-05/000002A", status: "submitted-wsg", site: "Pipeline",        date: "2025-08-14", inspector: "Jane Smith",      project: "DE/2026/05", pdfData: null, annotations: [] },
+            { id: "SSR/WSI/DE-2026-05/000002A", status: "submitted",     site: "Pipeline",        date: "2025-08-14", inspector: "Jane Smith",      project: "DE/2026/05", pdfData: null, annotations: [] },
             { id: "SSR/WSI/DE-2026-05/000003A", status: "closed",        site: "Reservoir",       date: "2025-08-13", inspector: "Robert Johnson",  project: "DE/2026/05", pdfData: null, annotations: [] }
         ],
         'DE/2025/02': [
@@ -30,12 +29,11 @@ document.addEventListener("DOMContentLoaded", function() {
             { id: "SSR/WSI/DE-2025-02/000002A", status: "closed",     site: "Pipeline",        date: "2025-05-09", inspector: "Emma Davis",      project: "DE/2025/02", pdfData: null, annotations: [] }
         ],
         'DE/2025/09': [
-            { id: "SSR/WSI/DE-2025-09/000001A", status: "submitted-wsg", site: "Distribution", date: "2025-09-07", inspector: "Olivia Garcia",  project: "DE/2025/09", pdfData: null, annotations: [] },
+            { id: "SSR/WSI/DE-2025-09/000001A", status: "submitted",     site: "Distribution", date: "2025-09-07", inspector: "Olivia Garcia",  project: "DE/2025/09", pdfData: null, annotations: [] },
             { id: "SSR/WSI/DE-2025-09/000002A", status: "closed",        site: "Reservoir",    date: "2025-09-06", inspector: "David Wilson",   project: "DE/2025/09", pdfData: null, annotations: [] }
         ]
     };
 
-    // ★ 把所有項目的預設記錄攤平
     function getAllDefaultRecords() {
         const all = [];
         Object.keys(DEFAULT_PROJECT_DATA).forEach(function (projectId) {
@@ -46,7 +44,7 @@ document.addEventListener("DOMContentLoaded", function() {
         return all;
     }
 
-    // ★★★ 統一取得當前項目 ID（唯一來源）★★★
+    // ★★★ 統一取得當前項目 ID ★★★
     function getCurrentProjectId() {
         if (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.getProjectId) {
             var pid = DWSS_Auth.getProjectId();
@@ -65,8 +63,21 @@ document.addEventListener("DOMContentLoaded", function() {
                 inspectionData.forEach(item => {
                     if (!item.hasOwnProperty('pdfData')) item.pdfData = null;
                     if (!item.hasOwnProperty('annotations')) item.annotations = [];
+                    if (!item.hasOwnProperty('statusHistory')) item.statusHistory = [];
 
-                    // ★ 舊資料沒有 project → 依 ID 前綴推斷
+                    // ★ 舊資料自動修復：將 submitted-wsg 轉為 submitted
+                    if (item.status === 'submitted-wsg') {
+                        item.status = 'submitted';
+                    }
+
+                    if (item.status === 'reopen') {
+                        item.approvalStatus = 'pending';
+                    } else if (item.status === 'cancelled') {
+                        item.approvalStatus = 'cancelled';
+                    } else if (!item.approvalStatus) {
+                        item.approvalStatus = 'pending';
+                    }
+
                     if (!item.project) {
                         if (item.id && item.id.indexOf('SSR/WSI/DE-2025-02') === 0) {
                             item.project = 'DE/2025/02';
@@ -101,31 +112,20 @@ document.addEventListener("DOMContentLoaded", function() {
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(inspectionData));
     }
 
-    // ★ 項目過濾輔助函數（使用統一的 getCurrentProjectId）
+    // ★ 項目過濾輔助函數
     function getProjectData() {
         const projectId = getCurrentProjectId();
-
         if (!projectId) {
-            return inspectionData.filter(function (item) {
-                return !item.project;
-            });
+            return inspectionData.filter(function (item) { return !item.project; });
         }
-        return inspectionData.filter(function (item) {
-            return item.project === projectId;
-        });
+        return inspectionData.filter(function (item) { return item.project === projectId; });
     }
 
-    // ★★★ 安全檢查：只有當記錄確實屬於其他項目時才擋下 ★★★
     function canAccessRecord(recordId) {
         const record = inspectionData.find(r => String(r.id) === String(recordId));
         if (!record) return false;
-
         const currentProject = getCurrentProjectId();
-
-        // 如果沒有當前項目，或記錄沒有 project → 允許（寬鬆模式）
         if (!currentProject || !record.project) return true;
-
-        // 只有當記錄明確屬於其他項目時才擋下
         return record.project === currentProject;
     }
 
@@ -180,18 +180,15 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // ★ 自動生成 Safety Inspection ID（依項目）
+    // ★ 自動生成 Safety Inspection ID
     function generateNextSafetyId() {
         var contractCode = getContractCode();
         var prefix = 'SSR/WSI/' + contractCode + '/';
         var ID_SUFFIX = 'A';
         var ID_PAD    = 6;
-
         var escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         var re = new RegExp('^' + escaped + '(\\d+)[A-Za-z]?$');
-
         var projectData = getProjectData();
-
         var maxNum = 0;
         projectData.forEach(function (item) {
             if (!item || item.id == null) return;
@@ -201,7 +198,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (!isNaN(n) && n > maxNum) maxNum = n;
             }
         });
-
         return prefix + String(maxNum + 1).padStart(ID_PAD, '0') + ID_SUFFIX;
     }
 
@@ -212,15 +208,52 @@ document.addEventListener("DOMContentLoaded", function() {
                 <select class="status-change-select" data-id="${recordId}" title="Change Status">
                     <option value="">📝 Change Status</option>
                     <option value="draft">Draft</option>
-                    <option value="submitted-wsg">Submitted to WSG</option>
                     <option value="submitted-ig">Submitted to IG</option>
-                    <option value="closed">Closed</option>
-                    <option value="reopen">Reopen</option>
+                    <option value="closed">IG Endorsed</option>
+                    <option value="reopen">Reopened</option>
                     <option value="cancelled">Cancelled</option>
                 </select>
             `;
         }
         return '';
+    }
+
+    // ==================== ★ 分類：Overdue / Pending / Closed / Other ====================
+    const OVERDUE_DAYS = 14;
+
+    function parseInspectionDate(item) {
+        if (!item) return null;
+        var isoStr = formatDate(item.date);
+        if (isoStr) {
+            var parts = isoStr.split('-');
+            if (parts.length === 3) {
+                var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                if (!isNaN(d.getTime())) return d;
+            }
+        }
+        if (item.createdAt) {
+            var d2 = new Date(item.createdAt);
+            if (!isNaN(d2.getTime())) return d2;
+        }
+        return null;
+    }
+
+    function isOverdue(item) {
+        if (!item || item.status !== 'draft') return false;
+        var d = parseInspectionDate(item);
+        if (!d) return false;
+        var now = new Date();
+        var diffDays = (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24);
+        return diffDays > OVERDUE_DAYS;
+    }
+
+    // 替換原本的 categorize 函數
+    function categorize(item) {
+        var s = (item && item.status) || 'draft';
+        if (s === 'draft') return isOverdue(item) ? 'overdue' : 'other';
+        if (s === 'submitted-ig') return 'pending';
+        if (s === 'closed' || s === 'cancelled') return 'closed';
+        return 'other'; // reopen
     }
 
     // ---------- 渲染和統計 ----------
@@ -229,7 +262,6 @@ document.addEventListener("DOMContentLoaded", function() {
     function updateStats(dataToUse) {
         const totalEl = document.getElementById('total-inspections-count');
         const monthEl = document.getElementById('month-count');
-
         const data = dataToUse || inspectionData;
 
         if (totalEl) totalEl.textContent = data.length;
@@ -244,29 +276,74 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-        function renderInspectionTable() {
-        const tbody = document.getElementById('inspection-table-body');
-        const noResults = document.getElementById('no-results-message');
-        if (!tbody) return;
+    // ★ 行渲染
+    function buildRow(item, userCanChangeStatus) {
+        const row = document.createElement('tr');
+        var displayStatus = item.status || 'draft';
+        
+        var displayApproval = item.approvalStatus || 'pending';
+        if (item.status === 'reopen') displayApproval = 'pending';
+        if (item.status === 'cancelled') displayApproval = 'cancelled';
 
-        tbody.innerHTML = '';
+        let actionButtons = `
+            <td>
+                <button class="action-btn view-btn" data-id="${item.id}" title="View"><i class="fas fa-eye"></i></button>
+                <button class="action-btn edit-btn" data-id="${item.id}" title="Edit"><i class="fas fa-edit"></i></button>
+                ${generateSafetyStatusSelect(item.id)}
+                <button class="action-btn delete-btn" data-id="${item.id}" title="Delete"><i class="fas fa-trash"></i></button>
+        `;
 
-        // ★★★ 步骤 1：只保留當前項目的記錄 ★★★
+        if (!userCanChangeStatus) {
+            actionButtons += `<span class="permission-lock-hint"><i class="fas fa-lock"></i> Status change requires higher permission</span>`;
+        }
+        actionButtons += `</td>`;
+
+        var approvalDisplay = '';
+        if (displayApproval === 'approved') {
+            approvalDisplay = '<span class="status-badge status-approved">✅ Approved</span>';
+        } else if (displayApproval === 'rejected') {
+            approvalDisplay = '<span class="status-badge status-rejected">❌ Rejected</span>';
+        } else if (displayApproval === 'cancelled') {
+            approvalDisplay = '<span class="status-badge status-cancelled">🚫 Cancelled</span>';
+        } else {
+            approvalDisplay = '<span class="status-badge status-pending">⏳ Pending</span>';
+        }
+
+        row.innerHTML = `
+            <td>${item.id}</td>
+            <td><span class="status-badge status-${displayStatus}">${getStatusText(displayStatus)}</span></td>
+            <td>${approvalDisplay}</td>
+            <td>${item.site}</td>
+            <td>${formatDisplayDate(item.date)}</td>
+            <td>${item.inspector}</td>
+            ${actionButtons}
+        `;
+        return row;
+    }
+
+    // ★ 渲染表格（四分類）
+    function renderInspectionTable() {
+        const CATEGORIES = ['overdue', 'pending', 'closed', 'other'];
+        const TBODY_IDS = {
+            overdue: 'overdue-table-body',
+            pending: 'pending-table-body',
+            closed:  'closed-table-body',
+            other:   'other-table-body'
+        };
+
+        CATEGORIES.forEach(function (key) {
+            const el = document.getElementById(TBODY_IDS[key]);
+            if (el) el.innerHTML = '';
+        });
+
         const projectFilteredData = inspectionData.filter(function(item) {
             if (!item) return false;
             var currentPid = getCurrentProjectId();
-
-            // 沒有當前項目 → 顯示全部（避免空白）
             if (!currentPid) return true;
-
-            // 沒有 project 的舊資料 → 保留
             if (!item.project) return true;
-
-            // 只保留屬於當前項目的
             return item.project === currentPid;
         });
 
-        // ★ 步骤 2：套用用戶篩選器
         const filtered = projectFilteredData.filter(item => {
             if (currentFilters.site !== "all") {
                 const siteType = getSiteType(item.site);
@@ -276,48 +353,28 @@ document.addEventListener("DOMContentLoaded", function() {
             return true;
         });
 
-        if (noResults) {
-            noResults.style.display = filtered.length === 0 ? 'block' : 'none';
-        }
+        const buckets = { overdue: [], pending: [], closed: [], other: [] };
+        filtered.forEach(function (item) {
+            const key = categorize(item);
+            (buckets[key] || (buckets[key] = [])).push(item);
+        });
 
         const userCanChangeStatus = DWSS_Auth.canChangeStatus();
 
-        filtered.forEach(item => {
-            const row = document.createElement('tr');
+        CATEGORIES.forEach(function (key) {
+            const tbody = document.getElementById(TBODY_IDS[key]);
+            if (!tbody) return;
 
-            let actionButtons = `
-                <td>
-                    <button class="action-btn view-btn" data-id="${item.id}" title="View"><i class="fas fa-eye"></i></button>
-                    <button class="action-btn edit-btn" data-id="${item.id}" title="Edit"><i class="fas fa-edit"></i></button>
-                    ${generateSafetyStatusSelect(item.id)}
-                    <button class="action-btn delete-btn" data-id="${item.id}" title="Delete"><i class="fas fa-trash"></i></button>
-            `;
+            const items = buckets[key] || [];
+            items.forEach(function (item) {
+                tbody.appendChild(buildRow(item, userCanChangeStatus));
+            });
 
-            if (!userCanChangeStatus) {
-                actionButtons += `<span class="permission-lock-hint"><i class="fas fa-lock"></i> Status change requires higher permission</span>`;
-            }
+            const noRes = document.getElementById(key + '-no-results');
+            if (noRes) noRes.style.display = items.length === 0 ? 'block' : 'none';
 
-            actionButtons += `</td>`;
-
-            var approvalDisplay = '';
-            if (item.approvalStatus === 'approved') {
-                approvalDisplay = '<span class="status-badge status-approved">✅ Approved</span>';
-            } else if (item.approvalStatus === 'rejected') {
-                approvalDisplay = '<span class="status-badge status-rejected">❌ Rejected</span>';
-            } else {
-                approvalDisplay = '<span class="status-badge status-pending">⏳ Pending</span>';
-            }
-
-            row.innerHTML = `
-                <td>${item.id}</td>
-                <td><span class="status-badge status-${item.status}">${getStatusText(item.status)}</span></td>
-                <td>${approvalDisplay}</td>
-                <td>${item.site}</td>
-                <td>${formatDisplayDate(item.date)}</td>
-                <td>${item.inspector}</td>
-                ${actionButtons}
-            `;
-            tbody.appendChild(row);
+            const countBadge = document.getElementById(key + '-count');
+            if (countBadge) countBadge.textContent = items.length;
         });
 
         updateStats(projectFilteredData);
@@ -344,40 +401,69 @@ document.addEventListener("DOMContentLoaded", function() {
         const record = inspectionData.find(r => String(r.id) === String(recordId));
         if (!record) return;
 
-        // ★ 安全檢查
         if (!canAccessRecord(recordId)) {
             alert('❌ This record does not belong to your current project.');
             e.target.value = '';
             return;
         }
 
-        const oldStatus = getStatusText(record.status);
+        const oldStatus = record.status || 'draft';
+        const oldStatusText = getStatusText(oldStatus);
         const newStatusText = getStatusText(newStatus);
+        
+        let oldApproval = record.approvalStatus || 'pending';
+        let newApproval = 'pending';
+        if (newStatus === 'cancelled') {
+            newApproval = 'cancelled';
+        } else if (newStatus === 'reopen') {
+            newApproval = 'pending';
+        } else if (newStatus === 'closed') {
+            newApproval = 'approved';
+        }
+
         const user = DWSS_Auth.getCurrentUser();
 
         if (confirm(
             '⚠️ Change Status Confirmation\n\n' +
             'Inspection ID: ' + recordId + '\n' +
-            'From: ' + oldStatus + '\n' +
+            'From: ' + oldStatusText + '\n' +
             'To: ' + newStatusText + '\n' +
             'Changed by: ' + (user ? user.userName : 'Unknown') + ' (' + DWSS_Auth.getRoleName() + ')\n\n' +
             'Are you sure you want to change the status?'
         )) {
+            const now = new Date().toISOString();
+            const userName = user ? user.userName : 'Unknown';
+            const roleName = DWSS_Auth.getRoleName();
+
+            if (!Array.isArray(record.statusHistory)) {
+                record.statusHistory = [];
+            }
+            record.statusHistory.push({
+                changedAt: now,
+                from: oldStatus,
+                to: newStatus,
+                fromApproval: oldApproval,
+                toApproval: newApproval,
+                changedBy: userName,
+                role: roleName
+            });
+
             record.status = newStatus;
-            record.statusChangedBy = user ? user.userName : 'Unknown';
-            record.statusChangedAt = new Date().toISOString();
-            record.statusChangedRole = DWSS_Auth.getRoleName();
+            record.approvalStatus = newApproval;
+            record.statusChangedBy = userName;
+            record.statusChangedAt = now;
+            record.statusChangedRole = roleName;
 
             saveData();
             renderInspectionTable();
 
-            alert('✅ Status changed successfully!\n\n' + oldStatus + ' → ' + newStatusText);
+            alert('✅ Status changed successfully!\n\n' + oldStatusText + ' → ' + newStatusText);
         } else {
             e.target.value = '';
         }
     }
 
-    // ---------- 操作處理（使用事件委派，避免綁定失效）----------
+    // ---------- 操作處理 ----------
     document.addEventListener('click', function (e) {
         const viewBtn = e.target.closest('.view-btn');
         const editBtn = e.target.closest('.edit-btn');
@@ -387,8 +473,6 @@ document.addEventListener("DOMContentLoaded", function() {
             const id = viewBtn.getAttribute('data-id');
             const doc = inspectionData.find(d => String(d.id) === String(id));
             if (!doc) { alert('Document not found'); return; }
-
-            // ★ 安全檢查（寬鬆模式）
             if (!canAccessRecord(id)) {
                 alert('❌ This record does not belong to your current project.');
                 return;
@@ -398,6 +482,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 id: doc.id,
                 status: doc.status,
                 statusText: getStatusText(doc.status),
+                approvalStatus: doc.approvalStatus || 'pending',
                 site: doc.site,
                 date: formatDisplayDate(doc.date),
                 inspector: doc.inspector,
@@ -413,7 +498,6 @@ document.addEventListener("DOMContentLoaded", function() {
             const id = editBtn.getAttribute('data-id');
             const doc = inspectionData.find(d => String(d.id) === String(id));
             if (!doc) { alert('Document not found'); return; }
-
             if (!canAccessRecord(id)) {
                 alert('❌ This record does not belong to your current project.');
                 return;
@@ -430,19 +514,18 @@ document.addEventListener("DOMContentLoaded", function() {
                 type: 'Safety Inspection',
                 project: doc.project || null,
                 pdfData: doc.pdfData || '',
-                annotations: doc.annotations || []
+                annotations: doc.annotations || [],
+                approvalStatus: doc.approvalStatus || 'pending'
             }));
             window.location.href = 'editsafetypdf.html';
         }
 
         if (deleteBtn) {
             const id = deleteBtn.getAttribute('data-id');
-
             if (!canAccessRecord(id)) {
                 alert('❌ This record does not belong to your current project.');
                 return;
             }
-
             if (confirm(`Are you sure you want to delete inspection ${id}?`)) {
                 inspectionData = inspectionData.filter(d => String(d.id) !== String(id));
                 saveData();
@@ -502,16 +585,14 @@ document.addEventListener("DOMContentLoaded", function() {
                 form.reset();
 
                 const idInput = document.getElementById('input-inspect-id');
-                if (idInput) {
-                    idInput.value = generateNextSafetyId();
-                }
+                if (idInput) idInput.value = generateNextSafetyId();
 
                 const statusSelect = document.getElementById('input-inspect-status');
                 if (statusSelect) {
                     if (!DWSS_Auth.canChangeStatus()) {
-                        statusSelect.innerHTML = '<option value="submitted-wsg">Submitted to WSG</option>';
-                        statusSelect.value = 'submitted-wsg';
-                        statusSelect.disabled = true;
+                            statusSelect.innerHTML = '<option value="submitted-ig">Submitted to IG</option>';
+                            statusSelect.value = 'submitted-ig';
+                            statusSelect.disabled = true;
 
                         let hint = document.getElementById('submit-only-hint');
                         if (!hint) {
@@ -521,17 +602,15 @@ document.addEventListener("DOMContentLoaded", function() {
                             hint.innerHTML = '<i class="fas fa-info-circle"></i> <strong>Submit Only Mode:</strong> You can only submit inspections. Status changes require Admin/Officer/AEI permission.';
                             statusSelect.parentNode.appendChild(hint);
                         }
-                    } else {
-                        statusSelect.innerHTML = `
-                            <option value="draft">Draft</option>
-                            <option value="submitted-wsg">Submitted to WSG</option>
-                            <option value="submitted-ig">Submitted to IG</option>
-                            <option value="closed">Closed</option>
-                            <option value="reopen">Reopen</option>
-                            <option value="cancelled">Cancelled</option>
-                        `;
-                        statusSelect.disabled = false;
-
+                        } else {
+                            statusSelect.innerHTML = `
+                                <option value="draft">Draft</option>
+                                <option value="submitted-ig">Submitted to IG</option>
+                                <option value="closed">IG Endorsed</option>
+                                <option value="reopen">Reopened</option>
+                                <option value="cancelled">Cancelled</option>
+                            `;
+                            statusSelect.disabled = false;
                         const hint = document.getElementById('submit-only-hint');
                         if (hint) hint.remove();
                     }
@@ -539,9 +618,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 const user = DWSS_Auth.getCurrentUser();
                 const inspectorInput = document.getElementById('input-inspect-by');
-                if (user && inspectorInput) {
-                    inspectorInput.value = user.userName;
-                }
+                if (user && inspectorInput) inspectorInput.value = user.userName;
             });
         }
         if (cancelBtn && modal) {
@@ -582,17 +659,24 @@ document.addEventListener("DOMContentLoaded", function() {
                     }
                 }
 
-                // ★★★ 使用統一的 getCurrentProjectId() ★★★
+                let initialApproval = 'pending';
+                if (status === 'cancelled') {
+                    initialApproval = 'cancelled';
+                } else if (status === 'closed') {
+                    initialApproval = 'approved';
+                }
+
                 const newInspection = {
                     id,
                     status,
+                    approvalStatus: initialApproval,
                     site,
                     date,
                     inspector,
-                    approvalStatus: 'pending',
                     project: getCurrentProjectId(),
                     pdfData: pdfData,
-                    annotations: []
+                    annotations: [],
+                    statusHistory: []
                 };
                 inspectionData.unshift(newInspection);
                 saveData();

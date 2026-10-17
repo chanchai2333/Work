@@ -34,6 +34,27 @@
         .period-inputs input[type="date"]:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 2px rgba(52,152,219,0.15); }
         .period-inputs .period-sep { color: #64748b; font-weight: 700; flex: 0 0 auto; user-select: none; }
 
+        /* ====== ★ 分類區塊樣式 ====== */
+        .diary-category-section { margin-bottom: 28px; }
+        .diary-category-section:last-child { margin-bottom: 0; }
+        .diary-category-section .table-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .category-count {
+            display: inline-block; min-width: 26px; text-align: center;
+            padding: 2px 10px; border-radius: 12px;
+            font-size: 0.8rem; font-weight: 700;
+            background: #e0e7ff; color: #3730a3;
+        }
+        .diary-category-section[data-category="overdue"] .category-count { background: #fee2e2; color: #991b1b; }
+        .diary-category-section[data-category="pending"] .category-count { background: #fef3c7; color: #92400e; }
+        .diary-category-section[data-category="closed"]  .category-count { background: #d1fae5; color: #065f46; }
+        .diary-category-section[data-category="other"]   .category-count { background: #e5e7eb; color: #374151; }
+
+        .category-desc { color: #64748b; font-size: 0.82rem; margin: 4px 0 12px 0; }
+        .diary-category-section[data-category="overdue"] .table-title i { color: #e74c3c; }
+        .diary-category-section[data-category="pending"] .table-title i { color: #f39c12; }
+        .diary-category-section[data-category="closed"]  .table-title i { color: #27ae60; }
+        .diary-category-section[data-category="other"]   .table-title i { color: #7f8c8d; }
+
         @media (max-width: 768px) {
             .action-btn { width: 100%; margin: 2px 0; }
             .status-change-select { width: 100%; margin: 2px 0; }
@@ -145,26 +166,133 @@
                     </div>
                 </section>
             </div>
-            
+
+            <!-- ============================================== -->
+            <!-- ★ 分類表格：Overdue / Pending / Closed / Other -->
+            <!-- ============================================== -->
             <section class="content-section">
-                <div class="table-header"><h2 class="table-title" data-i18n="diary.entries">Site Diary Entries</h2></div>
-                <div class="table-container">
-                    <table class="diary-table">
-                        <thead>
-                            <tr>
-                                <th data-i18n="diary.id">Diary ID</th>
-                                <th data-i18n="status">Status</th>
-                                <th data-i18n="Approval status">Approval Status</th>
-                                <th data-i18n="site">Site</th>
-                                <th data-i18n="period">Period</th>
-                                <th data-i18n="submitted.by">Submitted By</th>
-                                <th data-i18n="document.type">Document Type</th>
-                                <th data-i18n="actions">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="diary-table-body"></tbody>
-                    </table>
-                    <div id="no-results-message" class="no-results" style="display: none;" data-i18n="no.matching.documents">No matching documents found. Please try different filters.</div>
+                <div id="diary-tables-container">
+
+                    <!-- ===== Overdue Documents ===== -->
+                    <div class="diary-category-section" data-category="overdue">
+                        <div class="table-header">
+                            <h2 class="table-title">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span data-i18n="category.overdue">Overdue Documents</span>
+                                <span class="category-count" id="overdue-count">0</span>
+                            </h2>
+                            <p class="category-desc" data-i18n="category.overdue.desc">Draft documents older than 14 days</p>
+                        </div>
+                        <div class="table-container">
+                            <table class="diary-table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="diary.id">Diary ID</th>
+                                        <th data-i18n="status">Status</th>
+                                        <th data-i18n="Approval status">Approval Status</th>
+                                        <th data-i18n="site">Site</th>
+                                        <th data-i18n="period">Period</th>
+                                        <th data-i18n="submitted.by">Submitted By</th>
+                                        <th data-i18n="document.type">Document Type</th>
+                                        <th data-i18n="actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="overdue-table-body"></tbody>
+                            </table>
+                            <div id="overdue-no-results" class="no-results" style="display: none;">No overdue documents.</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== Pending Documents ===== -->
+                    <div class="diary-category-section" data-category="pending">
+                        <div class="table-header">
+                            <h2 class="table-title">
+                                <i class="fas fa-clock"></i>
+                                <span data-i18n="category.pending">Pending Documents</span>
+                                <span class="category-count" id="pending-count">0</span>
+                            </h2>
+                            <p class="category-desc" data-i18n="category.pending.desc">Submitted but not yet approved</p>
+                        </div>
+                        <div class="table-container">
+                            <table class="diary-table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="diary.id">Diary ID</th>
+                                        <th data-i18n="status">Status</th>
+                                        <th data-i18n="Approval status">Approval Status</th>
+                                        <th data-i18n="site">Site</th>
+                                        <th data-i18n="period">Period</th>
+                                        <th data-i18n="submitted.by">Submitted By</th>
+                                        <th data-i18n="document.type">Document Type</th>
+                                        <th data-i18n="actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pending-table-body"></tbody>
+                            </table>
+                            <div id="pending-no-results" class="no-results" style="display: none;">No pending documents.</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== Closed Documents ===== -->
+                    <div class="diary-category-section" data-category="closed">
+                        <div class="table-header">
+                            <h2 class="table-title">
+                                <i class="fas fa-check-circle"></i>
+                                <span data-i18n="category.closed">Closed Documents</span>
+                                <span class="category-count" id="closed-count">0</span>
+                            </h2>
+                            <p class="category-desc" data-i18n="category.closed.desc">Completed, closed, or cancelled diaries</p>
+                        </div>
+                        <div class="table-container">
+                            <table class="diary-table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="diary.id">Diary ID</th>
+                                        <th data-i18n="status">Status</th>
+                                        <th data-i18n="Approval status">Approval Status</th>
+                                        <th data-i18n="site">Site</th>
+                                        <th data-i18n="period">Period</th>
+                                        <th data-i18n="submitted.by">Submitted By</th>
+                                        <th data-i18n="document.type">Document Type</th>
+                                        <th data-i18n="actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="closed-table-body"></tbody>
+                            </table>
+                            <div id="closed-no-results" class="no-results" style="display: none;">No closed documents.</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== Other Documents (Draft within 14 days, Reopen) ===== -->
+                    <div class="diary-category-section" data-category="other">
+                        <div class="table-header">
+                            <h2 class="table-title">
+                                <i class="fas fa-folder"></i>
+                                <span data-i18n="category.other">Other Documents</span>
+                                <span class="category-count" id="other-count">0</span>
+                            </h2>
+                            <p class="category-desc" data-i18n="category.other.desc">Drafts within 14 days, reopened, or in progress</p>
+                        </div>
+                        <div class="table-container">
+                            <table class="diary-table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="diary.id">Diary ID</th>
+                                        <th data-i18n="status">Status</th>
+                                        <th data-i18n="Approval status">Approval Status</th>
+                                        <th data-i18n="site">Site</th>
+                                        <th data-i18n="period">Period</th>
+                                        <th data-i18n="submitted.by">Submitted By</th>
+                                        <th data-i18n="document.type">Document Type</th>
+                                        <th data-i18n="actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="other-table-body"></tbody>
+                            </table>
+                            <div id="other-no-results" class="no-results" style="display: none;">No other documents.</div>
+                        </div>
+                    </div>
+
                 </div>
             </section>
             
@@ -226,11 +354,6 @@
 
     <!-- ============================================================ -->
     <!-- ★★★ Diary ID 自動遞增修正                                    -->
-    <!-- ------------------------------------------------------------ -->
-    <!-- 策略：不依賴 DWSS_Auth.getProjectId() / getProjectData()，    -->
-    <!--       直接掃 localStorage.siteDiaryData 中所有符合當前合同    -->
-    <!--       前綴的 ID，找最大尾號 +1。                              -->
-    <!--       時機：點 Add New Diary → modal 顯示後 100ms 覆蓋欄位。  -->
     <!-- ============================================================ -->
     <script>
     (function () {
@@ -251,15 +374,9 @@
             } catch (e) { return []; }
         }
 
-        /**
-         * 計算下一個 Diary ID
-         *   prefix = "SD/" + getContractCode() + "/"
-         *   掃所有記錄中 id 匹配 prefix + 數字 + 選用字母
-         *   取 max + 1，補零到 6 位，加 suffix A
-         */
         window.computeNextDiaryId = function () {
-            var contractCode = window.getContractCode();     // DE-2026-05
-            var prefix = 'SD/' + contractCode + '/';         // SD/DE-2026-05/
+            var contractCode = window.getContractCode();
+            var prefix = 'SD/' + contractCode + '/';
             var escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             var re = new RegExp('^' + escaped + '(\\d+)[A-Za-z]?$');
 
@@ -284,12 +401,10 @@
             return newId;
         };
 
-        /* 監聽 Add New Diary 按鈕 → modal 顯示後覆蓋欄位 */
         document.addEventListener('click', function (e) {
             var btn = e.target && e.target.closest ? e.target.closest('#add-diary-btn') : null;
             if (!btn) return;
 
-            /* 用 setTimeout 讓 sitediary.js 的 handler 先跑完（它會設定錯誤的值） */
             setTimeout(function () {
                 var modal = document.getElementById('add-diary-modal');
                 if (!modal || modal.style.display === 'none') return;
@@ -300,13 +415,11 @@
                 var correctId = window.computeNextDiaryId();
                 idInput.value = correctId;
 
-                /* 若 sitediary.js 之後又改回錯誤的值，用 observer 擋下 */
                 if (!idInput.__dsdIdLocked) {
                     idInput.__dsdIdLocked = true;
                     var lockValue = correctId;
                     var obs = new MutationObserver(function () {
                         if (idInput.value !== lockValue) {
-                            /* 使用者手動編輯過 → 解鎖，不再覆蓋 */
                             if (idInput.__dsdUserEdited) {
                                 obs.disconnect();
                                 return;
@@ -316,13 +429,11 @@
                     });
                     obs.observe(idInput, { attributes: true, attributeFilter: ['value'] });
 
-                    /* 使用者主動輸入 → 標記為已編輯，停止覆蓋 */
                     idInput.addEventListener('input', function () {
                         idInput.__dsdUserEdited = true;
                         lockValue = idInput.value;
                     });
 
-                    /* modal 關閉 → 重置旗標 */
                     var modalObs = new MutationObserver(function () {
                         if (modal.style.display === 'none') {
                             idInput.__dsdIdLocked = false;
@@ -334,7 +445,7 @@
                     modalObs.observe(modal, { attributes: true, attributeFilter: ['style'] });
                 }
             }, 100);
-        }, false);   /* bubble 階段，讓 sitediary.js 的 listener 先執行 */
+        }, false);
     })();
     </script>
 
@@ -413,14 +524,17 @@
             }
 
             var periodStr = fmtDate(startDate) + ' ~ ' + fmtDate(endDate);
-
-            /* ★ 綁定到當前項目（與 ID 前綴一致） */
             var projectId = sessionStorage.getItem('currentProjectId') || null;
+            
+            var approvalStatus = 'pending';
+            if (status === 'cancelled') {
+                approvalStatus = 'cancelled';
+            }
 
             var record = {
                 id: id,
                 status: status,
-                approvalStatus: 'pending',
+                approvalStatus: approvalStatus,
                 site: site,
                 date: periodStr,
                 startDate: startDate,
@@ -430,6 +544,7 @@
                 type: type,
                 project: projectId,
                 annotations: [],
+                statusHistory: [],
                 totalPages: 10,
                 usesTemplate: true,
                 createdAt: new Date().toISOString()
@@ -509,7 +624,7 @@
             return {
                 id: diaryId, status: statusKey,
                 site: txt(3), date: txt(4), submittedBy: txt(5), type: txt(6),
-                annotations: [], totalPages: 10, usesTemplate: true
+                annotations: [], statusHistory: [], totalPages: 10, usesTemplate: true
             };
         }
 
@@ -574,7 +689,7 @@
     </script>
 
     <!-- ============================================================ -->
-    <!-- ★ 表格按日期倒序排列（最新在最上面）                          -->
+    <!-- ★ 表格按日期倒序排列（支援多個分類表格）                     -->
     <!-- ============================================================ -->
     <script>
     (function () {
@@ -613,11 +728,9 @@
 
         function sortTableByDate() {
             if (_sorting) return;
-            var tbody = document.getElementById('diary-table-body');
-            if (!tbody) return;
 
-            var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
-            if (rows.length < 2) return;
+            var tbodies = document.querySelectorAll('#diary-tables-container .diary-table tbody');
+            if (!tbodies.length) return;
 
             var records = loadRecords();
             var map = {};
@@ -625,29 +738,32 @@
                 if (r && r.id != null) map[String(r.id)] = r;
             });
 
-            var sortedRows = rows.slice().sort(function (a, b) {
-                var idA = a.cells && a.cells[0] ? a.cells[0].textContent.trim() : '';
-                var idB = b.cells && b.cells[0] ? b.cells[0].textContent.trim() : '';
-                var keyA = getSortKey(map[idA]);
-                var keyB = getSortKey(map[idB]);
-                if (keyA < keyB) return 1;
-                if (keyA > keyB) return -1;
-                return 0;
-            });
-
-            var same = true;
-            for (var i = 0; i < rows.length; i++) {
-                if (rows[i] !== sortedRows[i]) { same = false; break; }
-            }
-            if (same) return;
-
             _sorting = true;
             try {
-                var frag = document.createDocumentFragment();
-                sortedRows.forEach(function (row) {
-                    frag.appendChild(row);
+                tbodies.forEach(function (tbody) {
+                    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+                    if (rows.length < 2) return;
+
+                    var sortedRows = rows.slice().sort(function (a, b) {
+                        var idA = a.cells && a.cells[0] ? a.cells[0].textContent.trim() : '';
+                        var idB = b.cells && b.cells[0] ? b.cells[0].textContent.trim() : '';
+                        var keyA = getSortKey(map[idA]);
+                        var keyB = getSortKey(map[idB]);
+                        if (keyA < keyB) return 1;
+                        if (keyA > keyB) return -1;
+                        return 0;
+                    });
+
+                    var same = true;
+                    for (var i = 0; i < rows.length; i++) {
+                        if (rows[i] !== sortedRows[i]) { same = false; break; }
+                    }
+                    if (same) return;
+
+                    var frag = document.createDocumentFragment();
+                    sortedRows.forEach(function (row) { frag.appendChild(row); });
+                    tbody.appendChild(frag);
                 });
-                tbody.appendChild(frag);
             } catch (e) {
                 console.error('[Sort] Failed to sort:', e);
             }
@@ -660,16 +776,14 @@
         }
 
         function bindSort() {
-            var tbody = document.getElementById('diary-table-body');
-            if (!tbody) {
-                setTimeout(bindSort, 300);
-                return;
-            }
+            var container = document.getElementById('diary-tables-container');
+            if (!container) { setTimeout(bindSort, 300); return; }
+
             var observer = new MutationObserver(function () {
                 if (_sorting) return;
                 scheduleSort();
             });
-            observer.observe(tbody, { childList: true });
+            observer.observe(container, { childList: true, subtree: true });
 
             scheduleSort();
         }
@@ -710,7 +824,7 @@
         })();
     </script>
 <!-- ============================================================ -->
-<!-- ★ Status Change History 補丁                                  -->
+<!-- ★ Status Change History 補丁 (支援多個分類表格)               -->
 <!-- ============================================================ -->
 <script>
 (function () {
@@ -720,7 +834,6 @@
 
     var PRIMARY_KEY = 'siteDiaryData';
 
-    /* ---------- 讀取記錄 ---------- */
     function loadRecords() {
         try {
             var raw = localStorage.getItem(PRIMARY_KEY);
@@ -730,7 +843,6 @@
         } catch (e) { return []; }
     }
 
-    /* ---------- 時間格式 ---------- */
     function fmtDateTime(iso) {
         if (!iso) return '—';
         try {
@@ -754,7 +866,6 @@
             .replace(/"/g, '&quot;');
     }
 
-    /* ---------- 狀態顯示名稱 ---------- */
     function statusLabel(s) {
         var map = {
             'draft': 'Draft',
@@ -801,10 +912,6 @@
             html += '<strong>Current status:</strong> ' + escapeHtml(statusLabel(record.status));
             html += '</div>';
         } else {
-            /* ============================================================
-               ★ 表頭 + 數據行：統一 5 欄
-                  Date / Time | From Status | To Status | Approval Status | Changed By
-               ============================================================ */
             html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9rem; table-layout: auto;">';
             html += '<thead><tr style="background: #f1f5f9;">';
             html += '<th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0; white-space: nowrap;">Date / Time</th>';
@@ -823,10 +930,8 @@
                     var faLabel = fa ? statusLabel(fa) : '—';
                     var taLabel = ta ? statusLabel(ta) : '—';
                     if (fa === ta) {
-                        /* 沒變化 → 只顯示一次，灰色 */
                         approvalCell = '<span style="color:#94a3b8;">' + escapeHtml(faLabel) + '</span>';
                     } else {
-                        /* 有變化 → 箭頭 + 新狀態粗體紫 */
                         approvalCell =
                             escapeHtml(faLabel) +
                             ' <i class="fas fa-arrow-right" style="font-size:10px;color:#cbd5e1;margin:0 2px;"></i> ' +
@@ -857,7 +962,6 @@
         if (modal) modal.style.display = 'none';
     }
 
-    /* ---------- 點擊事件：顯示 / 關閉 ---------- */
     document.addEventListener('click', function (e) {
         var btn = e.target && e.target.closest ? e.target.closest('.history-btn') : null;
         if (btn) {
@@ -874,44 +978,44 @@
         if (modal && e.target === modal) closeHistory();
     });
 
-    /* ---------- 給每行注入 History 按鈕 ---------- */
     function injectHistoryButtons() {
-        var tbody = document.getElementById('diary-table-body');
-        if (!tbody) { setTimeout(injectHistoryButtons, 500); return; }
+        var tbodies = document.querySelectorAll('#diary-tables-container .diary-table tbody');
+        if (!tbodies.length) { setTimeout(injectHistoryButtons, 500); return; }
 
-        var rows = tbody.querySelectorAll('tr');
-        for (var i = 0; i < rows.length; i++) {
-            var row = rows[i];
-            var firstCell = row.cells && row.cells[0];
-            if (!firstCell) continue;
-            var diaryId = firstCell.textContent.trim();
-            if (!diaryId) continue;
+        tbodies.forEach(function (tbody) {
+            var rows = tbody.querySelectorAll('tr');
+            for (var i = 0; i < rows.length; i++) {
+                var row = rows[i];
+                var firstCell = row.cells && row.cells[0];
+                if (!firstCell) continue;
+                var diaryId = firstCell.textContent.trim();
+                if (!diaryId) continue;
 
-            var actionCell = row.cells[row.cells.length - 1];
-            if (!actionCell) continue;
-            if (actionCell.querySelector('.history-btn')) continue;
+                var actionCell = row.cells[row.cells.length - 1];
+                if (!actionCell) continue;
+                if (actionCell.querySelector('.history-btn')) continue;
 
-            var btn = document.createElement('button');
-            btn.className = 'action-btn history-btn';
-            btn.dataset.id = diaryId;
-            btn.title = 'View status change history';
-            btn.innerHTML = '<i class="fas fa-history"></i>';
-            btn.style.cssText =
-                'background: linear-gradient(135deg, #8e44ad, #732d91); color: white;';
+                var btn = document.createElement('button');
+                btn.className = 'action-btn history-btn';
+                btn.dataset.id = diaryId;
+                btn.title = 'View status change history';
+                btn.innerHTML = '<i class="fas fa-history"></i>';
+                btn.style.cssText =
+                    'background: linear-gradient(135deg, #8e44ad, #732d91); color: white;';
 
-            actionCell.appendChild(btn);
-        }
+                actionCell.appendChild(btn);
+            }
+        });
     }
 
-    /* ---------- 監聽 tbody 變化 ---------- */
     function bindObserver() {
-        var tbody = document.getElementById('diary-table-body');
-        if (!tbody) { setTimeout(bindObserver, 500); return; }
+        var container = document.getElementById('diary-tables-container');
+        if (!container) { setTimeout(bindObserver, 500); return; }
 
         var obs = new MutationObserver(function () {
             injectHistoryButtons();
         });
-        obs.observe(tbody, { childList: true });
+        obs.observe(container, { childList: true, subtree: true });
 
         injectHistoryButtons();
     }
