@@ -1157,7 +1157,9 @@
             alert('This document has already been approved.');
             return;
         }
-        if (currentDoc.status && currentDoc.status !== 'draft') {
+        
+        // ★ 修改這裡：允許 draft 和 reopen 提交
+        if (currentDoc.status && currentDoc.status !== 'draft' && currentDoc.status !== 'reopen') {
             alert('This document has already been submitted.');
             return;
         }
@@ -1347,7 +1349,8 @@
         }
 
         if (submitBtn) {
-            if (statusNow === 'draft' || !statusNow) {
+            // ★ 修改這裡：允許 reopen 顯示 Submit 按鈕
+            if (statusNow === 'draft' || statusNow === 'reopen' || !statusNow) {
                 submitBtn.style.display = 'inline-flex';
                 submitBtn.disabled = false;
                 submitBtn.style.opacity = '1';

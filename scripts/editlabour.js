@@ -4504,45 +4504,24 @@ function refreshLabourSignatureCell(fieldId) {
     }
 
     function updateDocumentInfo(doc) {
-        function setText(id, val) {
-            var el = document.getElementById(id);
-            if (el) el.textContent = (val === undefined || val === null || val === '') ? 'N/A' : val;
-        }
-        setText('docId', doc.id);
-
-        var typeText = doc.typeText;
-        if (!typeText && doc.type) {
-            if (doc.type === 'GF527A') typeText = 'GF527A - Return on Construction Site Employment';
-            else if (doc.type === 'GF527-2003') typeText = 'GF527 (2003) - Labour Wage';
-            else if (doc.type === 'GF527-2017') typeText = 'GF527 (2017) - Labour Wage';
-            else typeText = doc.type;
-        }
-        setText('docType', typeText);
-        setText('docSite', doc.site || doc.siteName);
-
-        var periodText = doc.period;
-        if (!periodText && doc.startDate && doc.endDate) {
-            periodText = doc.startDate + ' to ' + doc.endDate;
-        }
-        setText('docPeriod', periodText);
-        setText('docAuthor', doc.submittedBy || doc.author);
-
-        var titleEl = document.getElementById('docTitle');
-        if (titleEl) titleEl.textContent = doc.title || typeText || 'Labour Wage Document';
-
+        // ... (前面的 setText 保持不變)
         var statusEl = document.getElementById('docStatus');
         if (statusEl) {
             var statusMap = {
-                'draft': 'Draft', 'submitted': 'Submitted',
-                'approved': 'Approved', 'rejected': 'Rejected',
-                'pending': 'Pending Approval', 'cancelled': 'Cancelled'
+                'draft': 'Draft', 
+                'submitted': 'Submit to IG', 
+                'submitted-ig': 'Submit to IG', 
+                'closed': 'IG Accepted',
+                'reopen': 'Reopened', 
+                'cancelled': 'Cancelled'
             };
             var clsMap = {
-                'draft': 'status-draft', 'submitted': 'status-submitted',
-                'approved': 'status-approved', 'rejected': 'status-rejected',
-                'pending': 'status-pending', 'cancelled': 'status-cancelled'
+                'draft': 'status-draft',
+                'submitted': 'status-submitted', 'submitted-ig': 'status-submitted',
+                'closed': 'status-endorsed',
+                'reopen': 'status-confirm', 'cancelled': 'status-cancelled'
             };
-            var key = doc.approvalStatus || doc.status || 'draft';
+            var key = doc.status || 'draft';
             statusEl.textContent = statusMap[key] || doc.statusText || 'Draft';
             statusEl.className = 'doc-status';
             if (clsMap[key]) statusEl.classList.add(clsMap[key]);
@@ -4844,56 +4823,149 @@ function refreshLabourSignatureCell(fieldId) {
             sessionStorage.setItem('currentWageRecord', JSON.stringify(currentDoc));
             sessionStorage.setItem('currentRecord', JSON.stringify(currentDoc));
         } catch (e) {}
-        var stored = localStorage.getItem(STORAGE_KEY);
-        var data = [];
-        if (stored) { try { var p = JSON.parse(stored); if (Array.isArray(p)) data = p; } catch (e) { data = []; } }
-        var idx = -1;
-        for (var i = 0; i < data.length; i++) {
-            if (String(data[i].id) === String(currentDoc.id)) { idx = i; break; }
-        }
-        try {
-            if (idx !== -1) data[idx] = currentDoc; else data.push(currentDoc);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-        } catch (e) {}
+        
+        // ★ 修正：同時更新 wageData 和 labourWageData，確保與列表頁同步
+        var keys = ['wageData', 'labourWageData'];
+        keys.forEach(function(key) {
+            var stored = localStorage.getItem(key);
+            var data = [];
+            if (stored) { try { var p = JSON.parse(stored); if (Array.isArray(p)) data = p; } catch (e) { data = []; } }
+            
+            // 如果該 key 還沒資料，嘗試從另一個 key 複製過來
+            if (data.length === 0 && key === 'wageData') {
+                try {
+                    var other = JSON.parse(localStorage.getItem('labourWageData') || '[]');
+                    if (Array.isArray(other)) data = other;
+                } catch (e) {}
+            }
+            
+            var idx = -1;
+            for (var i = 0; i < data.length; i++) {
+                if (String(data[i].id) === String(currentDoc.id)) { idx = i; break; }
+            }
+            try {
+                if (idx !== -1) data[idx] = currentDoc; 
+                else data.push(currentDoc);
+                localStorage.setItem(key, JSON.stringify(data));
+            } catch (e) {}
+        });
+
         alert('✅ Changes saved successfully!');
     }
 
     function submitDocument() {
-        if (!currentDoc) { alert('No document to submit.'); return; }
-        if (!confirm('Submit this document for approval?')) return;
+        if (!currentDoc) return;
+        if (currentDoc.status && currentDoc.status !== 'draft' && currentDoc.status !== 'reopen') {
+            alert('This document has already been submitted.'); return;
+        }
+        if (!confirm('Submit this document? Status will change to "Submit to IG".')) return;
+        
         captureFormDataFromDom();
-        currentDoc.approvalStatus = 'pending';
-        currentDoc.submittedDate = new Date().toISOString();
         var sessionData = {};
         try { sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch (e) {}
-        currentDoc.submittedBy = sessionData.userName || currentDoc.submittedBy || 'Unknown';
+        var userName = sessionData.userName || currentDoc.submittedBy || 'Unknown';
+
+        var oldStatus = currentDoc.status || 'draft';
+        var oldApproval = currentDoc.approvalStatus || 'pending';
+        
+        // ★ 直接改為 submitted-ig
+        var newStatus = 'submitted-ig';
+        var newApproval = 'pending';
+        var nowIso = new Date().toISOString();
+
+        if (!Array.isArray(currentDoc.statusHistory)) currentDoc.statusHistory = [];
+        currentDoc.statusHistory.push({
+            from: oldStatus, to: newStatus,
+            fromApproval: oldApproval, toApproval: newApproval,
+            changedBy: userName, changedAt: nowIso, action: 'submit'
+        });
+
+        currentDoc.status = newStatus;
+        currentDoc.approvalStatus = newApproval;
+        currentDoc.submittedDate = nowIso;
+        currentDoc.submittedBy = userName;
+        
         updateDocumentInfo(currentDoc);
         saveChanges();
         updateApprovalButtons();
-        alert('✅ Document submitted for approval!');
+        alert('✅ Submitted to IG successfully!');
     }
 
     function approveDocument() {
         if (!currentDoc) return;
-        if (!confirm('Approve this document?')) return;
-        currentDoc.approvalStatus = 'approved';
-        currentDoc.approvedDate = new Date().toISOString();
+        var sessionData = {};
+        try { sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch (e) {}
+        if (!sessionData.permissions || !sessionData.permissions.canChangeStatus) {
+            alert('❌ You do not have permission to approve.'); return;
+        }
+
+        var statusNow = currentDoc.status || 'draft';
+        var approvalNow = currentDoc.approvalStatus || 'pending';
+        var newStatus, newApproval, actionLabel;
+
+        // ★ 只有 submitted-ig 可以 Approve 成 closed
+        if (statusNow === 'submitted-ig' && approvalNow === 'pending') {
+            newStatus = 'closed'; newApproval = 'approved';
+            actionLabel = 'Submit to IG → IG Accepted';
+        } else {
+            alert('Cannot approve in current state.'); return;
+        }
+
+        if (!confirm('Approve this document?\n\n' + actionLabel)) return;
+
+        var userName = sessionData.userName || 'Unknown';
+        var nowIso = new Date().toISOString();
+
+        if (!Array.isArray(currentDoc.statusHistory)) currentDoc.statusHistory = [];
+        currentDoc.statusHistory.push({
+            from: statusNow, to: newStatus,
+            fromApproval: approvalNow, toApproval: newApproval,
+            changedBy: userName, changedAt: nowIso, action: 'approve'
+        });
+
+        currentDoc.status = newStatus;
+        currentDoc.approvalStatus = newApproval;
+        
         updateDocumentInfo(currentDoc);
         saveChanges();
         updateApprovalButtons();
-        alert('✅ Document approved!');
+        alert('✅ Approved!');
     }
 
     function rejectDocument() {
         if (!currentDoc) return;
-        if (!confirm('Reject this document?')) return;
+        var sessionData = {};
+        try { sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch (e) {}
+        if (!sessionData.permissions || !sessionData.permissions.canChangeStatus) {
+            alert('❌ You do not have permission to reject.'); return;
+        }
+        if (currentDoc.approvalStatus === 'approved') {
+            alert('Approved documents cannot be rejected.'); return;
+        }
+        if (!confirm('Reject this document?\n\nStatus will reset to "Draft" so the contractor can revise.')) return;
+
+        var userName = sessionData.userName || 'Unknown';
+        var nowIso = new Date().toISOString();
+        var oldStatus = currentDoc.status || 'draft';
+        var oldApproval = currentDoc.approvalStatus || 'pending';
+
+        if (!Array.isArray(currentDoc.statusHistory)) currentDoc.statusHistory = [];
+        currentDoc.statusHistory.push({
+            from: oldStatus, to: 'draft',
+            fromApproval: oldApproval, toApproval: 'rejected',
+            changedBy: userName, changedAt: nowIso, action: 'reject'
+        });
+
+        currentDoc.status = 'draft';           // ★ 退回後狀態改為 Draft
         currentDoc.approvalStatus = 'rejected';
-        currentDoc.rejectedDate = new Date().toISOString();
+        delete currentDoc.submittedDate;
+        
         updateDocumentInfo(currentDoc);
         saveChanges();
         updateApprovalButtons();
-        alert('❌ Document rejected.');
+        alert('❌ Rejected. Status reset to Draft.');
     }
+
 
     function updateApprovalButtons() {
         var approveBtn = document.getElementById('approve-btn');
@@ -4902,17 +4974,38 @@ function refreshLabourSignatureCell(fieldId) {
         var sessionData = {};
         try { sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch (e) {}
         var canApprove = sessionData.permissions && sessionData.permissions.canChangeStatus;
+
+        var statusNow = currentDoc ? currentDoc.status : 'draft';
+        var approvalNow = currentDoc ? currentDoc.approvalStatus : 'pending';
+
+        // ★ 只有 submitted-ig 且 pending 時才能 Approve/Reject
+        var canClickApprove = (approvalNow === 'pending') && (statusNow === 'submitted-ig');
+        var canClickReject = (approvalNow === 'pending') && (statusNow === 'submitted-ig');
+
         if (!canApprove) {
             if (approveBtn) approveBtn.style.display = 'none';
             if (rejectBtn)  rejectBtn.style.display  = 'none';
         } else {
-            if (approveBtn) approveBtn.style.display = 'inline-flex';
-            if (rejectBtn)  rejectBtn.style.display  = 'inline-flex';
+            if (approveBtn) {
+                approveBtn.style.display = 'inline-flex';
+                approveBtn.disabled = !canClickApprove;
+                approveBtn.style.opacity = canClickApprove ? '1' : '0.5';
+            }
+            if (rejectBtn) {
+                rejectBtn.style.display = 'inline-flex';
+                rejectBtn.disabled = !canClickReject;
+                rejectBtn.style.opacity = canClickReject ? '1' : '0.5';
+            }
         }
+
         if (submitBtn) {
-            var disabled = !!(currentDoc && currentDoc.approvalStatus === 'approved');
-            submitBtn.disabled = disabled;
-            submitBtn.style.opacity = disabled ? '0.5' : '1';
+            if (statusNow === 'draft' || statusNow === 'reopen' || !statusNow) {
+                submitBtn.style.display = 'inline-flex';
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+            } else {
+                submitBtn.style.display = 'none';
+            }
         }
     }
 

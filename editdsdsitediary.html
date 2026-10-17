@@ -1401,8 +1401,9 @@
         var s = doc.status || 'draft';
         var a = doc.approvalStatus || 'pending';
 
-        /* ★ draft 或 rejected 都可編輯 */
+        /* ★ draft / rejected / reopen 都可編輯 */
         if (s === 'draft') return false;
+        if (s === 'reopen') return false;   // ★ 加上這行
         if (a === 'rejected') return false;
 
         /* 其他情況都鎖定（submitted-wsg / submitted-ig / closed / approved） */

@@ -6,24 +6,66 @@ document.addEventListener("DOMContentLoaded", function () {
     // ==================== 狀態映射 ====================
     const STATUS_TEXT_MAP = {
         'draft': 'Draft',
-        'submitted': 'Submitted',
-        'submitted-wsg': 'Submitted to WSG',
-        'submitted-ig': 'Submitted to IG',
-        'endorsed': 'Endorsed',
-        'cancelled': 'Cancelled',
-        'confirm': "Client's Site Representative to Confirm",
-        'double-check': "Contractor/Contractor's Agent Double Check"
+        'submitted': 'Submit to IG',      // 兼容舊資料
+        'submitted-ig': 'Submit to IG',
+        'closed': 'IG Accepted',
+        'reopen': 'Reopened',
+        'cancelled': 'Cancelled'
     };
     const STATUS_CLASS_MAP = {
         'draft': 'status-draft',
         'submitted': 'status-submitted',
-        'submitted-wsg': 'status-submitted',
         'submitted-ig': 'status-submitted',
-        'endorsed': 'status-endorsed',
-        'cancelled': 'status-cancelled',
-        'confirm': 'status-confirm',
-        'double-check': 'status-double-check'
+        'closed': 'status-endorsed',
+        'reopen': 'status-confirm',
+        'cancelled': 'status-cancelled'
     };
+
+    // ==================== 載入 / 儲存 ====================
+    function initWageData() {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored && stored !== 'null' && stored !== '[]') {
+            try {
+                wageData = JSON.parse(stored);
+                let migrated = 0;
+                wageData.forEach(item => {
+                    if (!item.hasOwnProperty('pdfData')) item.pdfData = null;
+                    if (!item.hasOwnProperty('annotations')) item.annotations = [];
+                    
+                    // ★ 舊資料修復：直接轉為 submitted-ig
+                    if (!item.status || item.status === 'submitted') {
+                        item.status = 'submitted-ig';
+                    }
+
+                    if (!item.project) {
+                        if (item.id && item.id.indexOf('LRR/DE-2025-02') === 0) {
+                            item.project = 'DE/2025/02';
+                        } else if (item.id && item.id.indexOf('LRR/DE-2025-09') === 0) {
+                            item.project = 'DE/2025/09';
+                        } else if (item.id && item.id.indexOf('LRR/DE-2026-05') === 0) {
+                            item.project = 'DE/2026/05';
+                        } else {
+                            item.project = getCurrentProjectId() || 'DE/2026/05';
+                        }
+                        migrated++;
+                    }
+                });
+                if (migrated > 0) {
+                    console.log('[LabourWage] ✓ 已為 ' + migrated + ' 筆舊記錄補上 project');
+                }
+                saveData();
+            } catch(e) {
+                console.error('[LabourWage] 資料解析失敗，使用預設', e);
+                wageData = getAllDefaultRecords();
+                saveData();
+            }
+        } else {
+            console.log('[LabourWage] ✓ 首次載入，建立 3 個項目的預設資料');
+            wageData = getAllDefaultRecords();
+            saveData();
+        }
+        renderWageTable();
+    }
 
     // ==================== 數據管理 ====================
     const STORAGE_KEY = 'wageData';
@@ -167,6 +209,55 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ==================== 輔助 ====================
+        const OVERDUE_DAYS = 14;
+
+    function parseLabourDate(item) {
+        if (!item) return null;
+        if (item.periodStart) {
+            var d = new Date(item.periodStart);
+            if (!isNaN(d.getTime())) return d;
+        }
+        if (item.createdAt) {
+            var d2 = new Date(item.createdAt);
+            if (!isNaN(d2.getTime())) return d2;
+        }
+        return null;
+    }
+
+    function isOverdue(item) {
+        if (!item || item.status !== 'draft') return false;
+        var d = parseLabourDate(item);
+        if (!d) return false;
+        var now = new Date();
+        var diffDays = (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24);
+        return diffDays > OVERDUE_DAYS;
+    }
+
+    // ==================== 分類輔助 ====================
+    function categorize(item) {
+        var s = (item && item.status) || 'draft';
+        if (s === 'draft') return isOverdue(item) ? 'overdue' : 'other';
+        if (s === 'submitted-ig') return 'pending';
+        if (s === 'closed' || s === 'cancelled') return 'closed';
+        return 'other'; // reopen
+    }
+
+    function generateStatusSelect(recordId) {
+        if (window.DWSS_Auth && DWSS_Auth.canChangeStatus()) {
+            return `
+                <select class="status-change-select" data-id="${recordId}" title="Change Status">
+                    <option value="">📝 Change Status</option>
+                    <option value="draft">Draft</option>
+                    <option value="submitted-ig">Submit to IG</option>
+                    <option value="closed">IG Accepted</option>
+                    <option value="reopen">Reopened</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+            `;
+        }
+        return '';
+    }
+
     function getStatusClass(status) { return STATUS_CLASS_MAP[status] || 'status-draft'; }
     function getStatusText(status) { return STATUS_TEXT_MAP[status] || status || 'Draft'; }
 
@@ -199,13 +290,21 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ==================== 渲染 ====================
-        function renderWageTable() {
-        var tbody = document.getElementById('wage-table-body');
-        var noResults = document.getElementById('no-results-message');
-        if (!tbody) return;
-        tbody.innerHTML = '';
+    // ==================== 渲染表格 (四分類) ====================
+    function renderWageTable() {
+        const CATEGORIES = ['overdue', 'pending', 'closed', 'other'];
+        const TBODY_IDS = {
+            overdue: 'overdue-table-body',
+            pending: 'pending-table-body',
+            closed:  'closed-table-body',
+            other:   'other-table-body'
+        };
 
-        // ★★★ 步骤 1：只保留當前項目的記錄 ★★★
+        CATEGORIES.forEach(function (key) {
+            var el = document.getElementById(TBODY_IDS[key]);
+            if (el) el.innerHTML = '';
+        });
+
         var projectFilteredData = wageData.filter(function(item) {
             if (!item) return false;
             var currentPid = getCurrentProjectId();
@@ -214,7 +313,6 @@ document.addEventListener("DOMContentLoaded", function () {
             return item.project === currentPid;
         });
 
-        // ★ 步骤 2：套用用戶篩選器
         var filtered = projectFilteredData.filter(function(item) {
             if (currentFilters.type !== "all" && item.type !== currentFilters.type) return false;
             if (currentFilters.status !== "all") {
@@ -230,14 +328,26 @@ document.addEventListener("DOMContentLoaded", function () {
             return true;
         });
 
-        var sortedData = sortByDateDesc(filtered);
+        var buckets = { overdue: [], pending: [], closed: [], other: [] };
+        filtered.forEach(function (item) {
+            var key = categorize(item);
+            (buckets[key] || (buckets[key] = [])).push(item);
+        });
 
-        if (sortedData.length === 0) {
-            if (noResults) noResults.style.display = 'block';
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:40px; color:#999;">No records found</td></tr>';
-        } else {
-            if (noResults) noResults.style.display = 'none';
-            sortedData.forEach(function(item) {
+        var userCanChangeStatus = window.DWSS_Auth && DWSS_Auth.canChangeStatus();
+
+        CATEGORIES.forEach(function (key) {
+            var tbody = document.getElementById(TBODY_IDS[key]);
+            if (!tbody) return;
+
+            var items = buckets[key] || [];
+            items.sort(function(a, b) {
+                if (!a.periodStart) return 1;
+                if (!b.periodStart) return -1;
+                return b.periodStart.localeCompare(a.periodStart);
+            });
+
+            items.forEach(function(item) {
                 var row = document.createElement('tr');
                 var approvalDisplay = '';
                 if (item.approvalStatus === 'approved') {
@@ -248,6 +358,17 @@ document.addEventListener("DOMContentLoaded", function () {
                     approvalDisplay = '<span class="status-badge" style="background:rgba(243,156,18,0.2);color:#d35400;">⏳ Pending</span>';
                 }
 
+                var actionButtons = `
+                    <button class="action-btn view-btn" data-id="${item.id}" title="View"><i class="fas fa-eye"></i></button>
+                    <button class="action-btn edit-btn" data-id="${item.id}" title="Edit"><i class="fas fa-edit"></i></button>
+                    ${generateStatusSelect(item.id)}
+                    <button class="action-btn delete-btn" data-id="${item.id}" title="Delete"><i class="fas fa-trash"></i></button>
+                `;
+
+                if (!userCanChangeStatus) {
+                    actionButtons += `<span class="permission-lock-hint"><i class="fas fa-lock"></i> Status change requires higher permission</span>`;
+                }
+
                 row.innerHTML = `
                     <td>${item.id}</td>
                     <td>${item.typeText}</td>
@@ -256,26 +377,103 @@ document.addEventListener("DOMContentLoaded", function () {
                     <td>${item.site}</td>
                     <td>${item.period}</td>
                     <td>${item.submittedBy}</td>
-                    <td class="action-buttons">
-                        <button class="action-btn view-btn" data-id="${item.id}" title="View"><i class="fas fa-eye"></i></button>
-                        <button class="action-btn edit-btn" data-id="${item.id}" title="Edit"><i class="fas fa-edit"></i></button>
-                        ${window.DWSS_Auth ? DWSS_Auth.generateStatusSelect(item.id) : ''}
-                        <button class="action-btn delete-btn" data-id="${item.id}" title="Delete"><i class="fas fa-trash"></i></button>
-                        ${window.DWSS_Auth ? DWSS_Auth.generatePermissionHint() : ''}
-                    </td>
+                    <td class="action-buttons">${actionButtons}</td>
                 `;
                 tbody.appendChild(row);
             });
-        }
+
+            var noRes = document.getElementById(key + '-no-results');
+            if (noRes) noRes.style.display = items.length === 0 ? 'block' : 'none';
+
+            var countBadge = document.getElementById(key + '-count');
+            if (countBadge) countBadge.textContent = items.length;
+        });
 
         updateStats(projectFilteredData);
+        if (userCanChangeStatus) bindStatusChangeEvents();
+    }
 
-        if (window.DWSS_Auth) {
-            DWSS_Auth.bindStatusChangeEvents(
-                function(id) { return wageData.find(function(r) { return String(r.id) === String(id); }); },
-                function() { saveData(); },
-                function() { renderWageTable(); }
-            );
+    function generateStatusSelect(recordId) {
+        if (window.DWSS_Auth && DWSS_Auth.canChangeStatus()) {
+            return `
+                <select class="status-change-select" data-id="${recordId}" title="Change Status">
+                    <option value="">📝 Change Status</option>
+                    <option value="draft">Draft</option>
+                    <option value="submitted-ig">Submit to IG</option>
+                    <option value="closed">Closed</option>
+                    <option value="reopen">Reopened</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+            `;
+        }
+        return '';
+    }
+
+    function bindStatusChangeEvents() {
+        document.querySelectorAll('.status-change-select').forEach(function(select) {
+            select.removeEventListener('change', handleStatusChange);
+            select.addEventListener('change', handleStatusChange);
+        });
+    }
+
+    function handleStatusChange(e) {
+        var recordId = e.target.getAttribute('data-id');
+        var newStatus = e.target.value;
+        if (!newStatus) return;
+
+        var record = wageData.find(function(r) { return String(r.id) === String(recordId); });
+        if (!record) return;
+
+        if (!canAccessRecord(recordId)) {
+            alert('❌ This record does not belong to your current project.');
+            e.target.value = '';
+            return;
+        }
+
+        var oldStatus = record.status || 'draft';
+        var oldStatusText = getStatusText(oldStatus);
+        var newStatusText = getStatusText(newStatus);
+        
+        var oldApproval = record.approvalStatus || 'pending';
+        var newApproval = 'pending';
+        if (newStatus === 'cancelled') newApproval = 'cancelled';
+        if (newStatus === 'closed') newApproval = 'approved';
+
+        var user = window.DWSS_Auth ? DWSS_Auth.getCurrentUser() : { userName: 'Unknown' };
+
+        if (confirm(
+            '⚠️ Change Status Confirmation\n\n' +
+            'Document ID: ' + recordId + '\n' +
+            'From: ' + oldStatusText + '\n' +
+            'To: ' + newStatusText + '\n\n' +
+            'Are you sure you want to change the status?'
+        )) {
+            var now = new Date().toISOString();
+            var userName = user ? user.userName : 'Unknown';
+            var roleName = window.DWSS_Auth ? DWSS_Auth.getRoleName() : '';
+
+            if (!Array.isArray(record.statusHistory)) record.statusHistory = [];
+            record.statusHistory.push({
+                changedAt: now,
+                from: oldStatus,
+                to: newStatus,
+                fromApproval: oldApproval,
+                toApproval: newApproval,
+                changedBy: userName,
+                role: roleName
+            });
+
+            record.status = newStatus;
+            record.approvalStatus = newApproval;
+            record.statusChangedBy = userName;
+            record.statusChangedAt = now;
+            record.statusChangedRole = roleName;
+
+            saveData();
+            renderWageTable();
+            alert('✅ Status changed successfully!\n\n' + oldStatusText + ' → ' + newStatusText);
+        } else {
+            e.target.value = '';
         }
     }
     

@@ -82,20 +82,70 @@
             </div>
                     
             <section class="content-section">
-                <div class="table-header"><h2 class="table-title">Labour Wage Records</h2></div>
-                <div class="table-container">
-                    <table class="wage-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th><th>Document Type</th><th>Status</th><th>Approval</th>
-                                <th>Site</th><th>Period</th><th>Submitted By</th><th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="wage-table-body">
-                            <tr id="loading-row"><td colspan="8" style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin"></i> Loading wage records...</td></tr>
-                        </tbody>
-                    </table>
-                    <div id="no-results-message" class="no-results" style="display: none;">No matching wage records found.</div>
+                <div id="wage-tables-container">
+                    <!-- ===== Overdue ===== -->
+                    <div class="diary-category-section" data-category="overdue" style="margin-bottom: 24px;">
+                        <div class="table-header" style="display:flex; justify-content:space-between; align-items:center;">
+                            <h2 class="table-title"><i class="fas fa-exclamation-triangle" style="color:#e74c3c;"></i> Overdue Records <span class="category-count" id="overdue-count" style="background:#fee2e2; color:#991b1b; padding:2px 10px; border-radius:12px; font-size:0.8rem; margin-left:8px;">0</span></h2>
+                        </div>
+                        <div class="table-container" style="overflow-x:auto; margin-bottom: 20px;">
+                            <table class="wage-table" style="min-width: 1000px; width: 100%;">
+                                <thead>
+                                    <tr><th>ID</th><th>Document Type</th><th>Status</th><th>Approval</th><th>Site</th><th>Period</th><th>Submitted By</th><th>Actions</th></tr>
+                                </thead>
+                                <tbody id="overdue-table-body"></tbody>
+                            </table>
+                            <div id="overdue-no-results" class="no-results" style="display: none; padding: 20px; text-align: center; color: #7f8c8d;">No overdue records.</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== Pending ===== -->
+                    <div class="diary-category-section" data-category="pending" style="margin-bottom: 24px;">
+                        <div class="table-header" style="display:flex; justify-content:space-between; align-items:center;">
+                            <h2 class="table-title"><i class="fas fa-clock" style="color:#f39c12;"></i> Pending Records <span class="category-count" id="pending-count" style="background:#fef3c7; color:#92400e; padding:2px 10px; border-radius:12px; font-size:0.8rem; margin-left:8px;">0</span></h2>
+                        </div>
+                        <div class="table-container" style="overflow-x:auto; margin-bottom: 20px;">
+                            <table class="wage-table" style="min-width: 1000px; width: 100%;">
+                                <thead>
+                                    <tr><th>ID</th><th>Document Type</th><th>Status</th><th>Approval</th><th>Site</th><th>Period</th><th>Submitted By</th><th>Actions</th></tr>
+                                </thead>
+                                <tbody id="pending-table-body"></tbody>
+                            </table>
+                            <div id="pending-no-results" class="no-results" style="display: none; padding: 20px; text-align: center; color: #7f8c8d;">No pending records.</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== Closed ===== -->
+                    <div class="diary-category-section" data-category="closed" style="margin-bottom: 24px;">
+                        <div class="table-header" style="display:flex; justify-content:space-between; align-items:center;">
+                            <h2 class="table-title"><i class="fas fa-check-circle" style="color:#27ae60;"></i> Closed Records <span class="category-count" id="closed-count" style="background:#d1fae5; color:#065f46; padding:2px 10px; border-radius:12px; font-size:0.8rem; margin-left:8px;">0</span></h2>
+                        </div>
+                        <div class="table-container" style="overflow-x:auto; margin-bottom: 20px;">
+                            <table class="wage-table" style="min-width: 1000px; width: 100%;">
+                                <thead>
+                                    <tr><th>ID</th><th>Document Type</th><th>Status</th><th>Approval</th><th>Site</th><th>Period</th><th>Submitted By</th><th>Actions</th></tr>
+                                </thead>
+                                <tbody id="closed-table-body"></tbody>
+                            </table>
+                            <div id="closed-no-results" class="no-results" style="display: none; padding: 20px; text-align: center; color: #7f8c8d;">No closed records.</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== Other ===== -->
+                    <div class="diary-category-section" data-category="other" style="margin-bottom: 24px;">
+                        <div class="table-header" style="display:flex; justify-content:space-between; align-items:center;">
+                            <h2 class="table-title"><i class="fas fa-folder" style="color:#7f8c8d;"></i> Other Records <span class="category-count" id="other-count" style="background:#e5e7eb; color:#374151; padding:2px 10px; border-radius:12px; font-size:0.8rem; margin-left:8px;">0</span></h2>
+                        </div>
+                        <div class="table-container" style="overflow-x:auto; margin-bottom: 20px;">
+                            <table class="wage-table" style="min-width: 1000px; width: 100%;">
+                                <thead>
+                                    <tr><th>ID</th><th>Document Type</th><th>Status</th><th>Approval</th><th>Site</th><th>Period</th><th>Submitted By</th><th>Actions</th></tr>
+                                </thead>
+                                <tbody id="other-table-body"></tbody>
+                            </table>
+                            <div id="other-no-results" class="no-results" style="display: none; padding: 20px; text-align: center; color: #7f8c8d;">No other records.</div>
+                        </div>
+                    </div>
                 </div>
             </section>
         </div>
@@ -432,4 +482,149 @@
         })();
     </script>
 </body>
+    <!-- History Modal -->
+    <div class="modal" id="history-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+        <div class="modal-content" style="background:white; border-radius:12px; width:780px; max-width:95%; padding:24px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+            <h3 style="margin-top:0; color:#1e293b; display:flex; align-items:center; gap:8px;"><i class="fas fa-history"></i> Status Change History</h3>
+            <div id="history-content" style="margin: 16px 0; max-height: 60vh; overflow-y: auto;"></div>
+            <div style="text-align:right; margin-top:16px;">
+                <button type="button" class="btn" id="close-history-modal" style="background:#e2e8f0; color:#334155; border:none; padding:8px 18px; border-radius:6px; cursor:pointer;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Script 補丁 -->
+    <script>
+    (function () {
+        'use strict';
+        if (window.__labourHistoryBound) return;
+        window.__labourHistoryBound = true;
+
+        var PRIMARY_KEY = 'wageData';
+
+        function loadRecords() {
+            try {
+                var raw = localStorage.getItem(PRIMARY_KEY);
+                if (!raw) return [];
+                var d = JSON.parse(raw);
+                return Array.isArray(d) ? d : [];
+            } catch (e) { return []; }
+        }
+
+        function fmtDateTime(iso) {
+            if (!iso) return '—';
+            try {
+                var d = new Date(iso);
+                if (isNaN(d.getTime())) return iso;
+                var yy = d.getFullYear();
+                var mm = String(d.getMonth() + 1).padStart(2, '0');
+                var dd = String(d.getDate()).padStart(2, '0');
+                var hh = String(d.getHours()).padStart(2, '0');
+                var mi = String(d.getMinutes()).padStart(2, '0');
+                return yy + '-' + mm + '-' + dd + ' ' + hh + ':' + mi;
+            } catch (e) { return iso; }
+        }
+
+        function escapeHtml(s) {
+            if (s == null) return '';
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function statusLabel(s) {
+            var map = {
+                'draft': 'Draft', 'submitted': 'Inspector Submitted', 'submitted-ig': 'Submit to IG',
+                'closed': 'IG Accepted', 'reopen': 'Reopened', 'cancelled': 'Cancelled',
+                'approved': 'Approved', 'rejected': 'Rejected', 'pending': 'Pending Approval'
+            };
+            return map[s] || s || '—';
+        }
+
+        function showHistory(wageId) {
+            var records = loadRecords();
+            var record = null;
+            for (var i = 0; i < records.length; i++) {
+                if (String(records[i].id) === String(wageId)) { record = records[i]; break; }
+            }
+            if (!record) { alert('Record not found.'); return; }
+
+            var modal = document.getElementById('history-modal');
+            var content = document.getElementById('history-content');
+            if (!modal || !content) return;
+
+            var history = Array.isArray(record.statusHistory) ? record.statusHistory : [];
+            var html = '<div style="margin-bottom: 16px; padding: 12px 16px; background: #f8fafc; border-radius: 8px;"><div style="font-size: 0.8rem; color: #64748b; margin-bottom: 4px;">Document ID</div><div style="font-weight: 700; color: #1e40af;">' + escapeHtml(record.id) + '</div></div>';
+
+            if (history.length === 0) {
+                html += '<div style="padding: 30px; text-align: center; color: #94a3b8; font-style: italic;">No status change history yet.</div>';
+            } else {
+                html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">';
+                html += '<thead><tr style="background: #f1f5f9;"><th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">Date / Time</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">From</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">To</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">Approval</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">Changed By</th></tr></thead><tbody>';
+                history.slice().reverse().forEach(function (h) {
+                    var fa = h.fromApproval || ''; var ta = h.toApproval || '';
+                    var approvalCell = (fa || ta) ? (fa === ta ? escapeHtml(statusLabel(fa)) : escapeHtml(statusLabel(fa)) + ' <i class="fas fa-arrow-right" style="font-size:10px;"></i> <strong style="color:#8e44ad;">' + escapeHtml(statusLabel(ta)) + '</strong>') : '—';
+                    html += '<tr><td style="padding: 10px; border-bottom: 1px solid #f1f5f9;">' + escapeHtml(fmtDateTime(h.changedAt)) + '</td><td style="padding: 10px; border-bottom: 1px solid #f1f5f9;">' + escapeHtml(statusLabel(h.from)) + '</td><td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color:#2980b9; font-weight:600;">' + escapeHtml(statusLabel(h.to)) + '</td><td style="padding: 10px; border-bottom: 1px solid #f1f5f9;">' + approvalCell + '</td><td style="padding: 10px; border-bottom: 1px solid #f1f5f9;">' + escapeHtml(h.changedBy || '—') + '</td></tr>';
+                });
+                html += '</tbody></table>';
+            }
+            content.innerHTML = html;
+            modal.style.display = 'flex';
+        }
+
+        function closeHistory() {
+            var modal = document.getElementById('history-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        document.addEventListener('click', function (e) {
+            var btn = e.target && e.target.closest ? e.target.closest('.history-btn') : null;
+            if (btn) {
+                e.preventDefault(); e.stopPropagation();
+                showHistory(btn.dataset.id);
+                return;
+            }
+            if (e.target && e.target.id === 'close-history-modal') { closeHistory(); return; }
+            var modal = document.getElementById('history-modal');
+            if (modal && e.target === modal) closeHistory();
+        });
+
+        function injectHistoryButtons() {
+            var tbodies = document.querySelectorAll('#wage-tables-container .wage-table tbody');
+            if (!tbodies.length) { setTimeout(injectHistoryButtons, 500); return; }
+            tbodies.forEach(function (tbody) {
+                var rows = tbody.querySelectorAll('tr');
+                for (var i = 0; i < rows.length; i++) {
+                    var row = rows[i];
+                    var firstCell = row.cells && row.cells[0];
+                    if (!firstCell) continue;
+                    var wageId = firstCell.textContent.trim();
+                    if (!wageId) continue;
+                    var actionCell = row.cells[row.cells.length - 1];
+                    if (!actionCell) continue;
+                    if (actionCell.querySelector('.history-btn')) continue;
+                    var btn = document.createElement('button');
+                    btn.className = 'action-btn history-btn';
+                    btn.dataset.id = wageId;
+                    btn.title = 'View status change history';
+                    btn.innerHTML = '<i class="fas fa-history"></i>';
+                    btn.style.cssText = 'background: linear-gradient(135deg, #8e44ad, #732d91); color: white; margin-left: 4px;';
+                    actionCell.appendChild(btn);
+                }
+            });
+        }
+
+        function bindObserver() {
+            var container = document.getElementById('wage-tables-container');
+            if (!container) { setTimeout(bindObserver, 500); return; }
+            var obs = new MutationObserver(function () { injectHistoryButtons(); });
+            obs.observe(container, { childList: true, subtree: true });
+            injectHistoryButtons();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function () { setTimeout(bindObserver, 500); });
+        } else {
+            setTimeout(bindObserver, 500);
+        }
+    })();
+    </script>
 </html>
