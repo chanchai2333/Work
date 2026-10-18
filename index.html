@@ -1076,6 +1076,17 @@
                     </div>
                     <canvas id="labourWageChart"></canvas>
                 </div>
+                <!-- Overdue Trend Chart -->
+                <div class="trend-card" style="grid-column: 1 / -1;">
+                    <div class="chart-header">
+                        <h3><i class="fas fa-exclamation-triangle" style="color:#e74c3c;"></i> Overdue Documents Trend</h3>
+                        <div style="margin-top: 10px;">
+                            <label for="overdue-year-select" style="font-weight: normal; margin-right: 8px;">Year:</label>
+                            <select id="overdue-year-select" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc;"></select>
+                        </div>
+                    </div>
+                    <canvas id="overdueTrendChart"></canvas>
+                </div>
             </div>
 
             <!-- ★ 4S Button Bar (below charts) -->
@@ -1320,20 +1331,66 @@
         setTimeout(function() {
             DWSS_Auth.updateHeaderUser();
         }, 100);
+
+        window.addEventListener('storage', function(e) {
+            if (['siteDiaryData','inspectionData','wageData'].includes(e.key)) {
+                location.reload(); // or re-run KPI update functions
+            }
+        });
     </script>
 
     <!-- ============================================================
          自定义脚本：更新所有卡片 KPI 及趋势图（真实数据）
          ============================================================ -->
     <script>
-        (function() {
-            function getData(key, defaultData) {
-                const stored = localStorage.getItem(key);
-                if (stored) {
-                    try { return JSON.parse(stored); } catch(e) { return defaultData; }
+    (function() {
+
+        // ★ NEW: current project helper
+        function getCurrentProjectId() {
+            // 1) Prefer the session variable set at login
+            var pid = sessionStorage.getItem('currentProjectId');
+            if (pid) return pid;
+
+            // 2) Fallback: dwss_session
+            try {
+                var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+                if (s && Array.isArray(s.projectIds) && s.projectIds.length) {
+                    return s.projectIds[0];
                 }
-                return defaultData;
+            } catch (e) {}
+
+            // 3) Fallback: localStorage.current_user
+            try {
+                var u = JSON.parse(localStorage.getItem('current_user') || '{}');
+                if (u && Array.isArray(u.projectIds) && u.projectIds.length) {
+                    return u.projectIds[0];
+                }
+            } catch (e) {}
+
+            return null;
+        }
+
+        // ★ NEW: filter records by current project
+        function filterByCurrentProject(records) {
+            if (!Array.isArray(records)) return [];
+            var pid = getCurrentProjectId();
+            if (!pid) return records; // no login → show all (or return [] if you prefer)
+            return records.filter(function (r) {
+                if (!r) return false;
+                // Records without a project field → still include (legacy data)
+                if (!r.project) return true;
+                return String(r.project) === String(pid);
+            });
+        }
+
+        // Keep the original getData helper
+        function getData(key, defaultData) {
+            const stored = localStorage.getItem(key);
+            if (stored) {
+                try { return JSON.parse(stored); } catch(e) { return defaultData; }
             }
+            return defaultData;
+        }
 
             // ===== 1. Site Diary =====
             (function handleSiteDiary() {
@@ -1351,19 +1408,8 @@
                 updateTimeDisplay();
                 setInterval(updateTimeDisplay, 60000);
 
-                const diaryDefault = [
-                    { id: "SD-2025-001", status: "draft", site: "Treatment Plant", date: "2025-08-15", submittedBy: "John Doe", type: "Contractor Documents" },
-                    { id: "SD-2025-002", status: "submitted-wsg", site: "Pipeline", date: "2025-08-14", submittedBy: "Jane Smith", type: "Contractor Documents" },
-                    { id: "SD-2025-003", status: "submitted-ig", site: "Reservoir", date: "2025-08-13", submittedBy: "Robert Johnson", type: "Sub Contractor Documents" },
-                    { id: "SD-2025-004", status: "closed", site: "Distribution", date: "2025-08-12", submittedBy: "Sarah Williams", type: "Sub Contractor Documents" },
-                    { id: "SD-2025-005", status: "reopen", site: "Pump Station", date: "2025-08-11", submittedBy: "Michael Brown", type: "Contractor Documents" },
-                    { id: "SD-2025-006", status: "cancelled", site: "Treatment Plant", date: "2025-08-10", submittedBy: "David Wilson", type: "Contractor Documents" },
-                    { id: "SD-2025-007", status: "draft", site: "Pipeline", date: "2025-08-09", submittedBy: "Emma Davis", type: "Sub Contractor Documents" },
-                    { id: "SD-2025-008", status: "submitted-wsg", site: "Reservoir", date: "2025-08-08", submittedBy: "James Miller", type: "Contractor Documents" },
-                    { id: "SD-2025-009", status: "closed", site: "Distribution", date: "2025-08-07", submittedBy: "Olivia Garcia", type: "Sub Contractor Documents" },
-                    { id: "SD-2025-010", status: "reopen", site: "Pump Station", date: "2025-08-06", submittedBy: "William Rodriguez", type: "Contractor Documents" }
-                ];
-                let diaryData = getData('siteDiaryData', diaryDefault);
+                const diaryDefault = [];
+                let diaryData = filterByCurrentProject(getData('siteDiaryData', diaryDefault));
 
                 function updateDiaryKPI() {
                     const total = diaryData.length;
@@ -1511,7 +1557,7 @@
                     { id: "INSP-2025-2", status: "reopen", statusText: "Reopen", site: "Pipeline", date: "14-Sep-2025", inspector: "Jane Smith" },
                     { id: "INSP-2025-3", status: "closed", statusText: "Closed", site: "Reservoir", date: "13-Sep-2025", inspector: "Robert Johnson" }
                 ];
-                let inspectionData = getData('inspectionData', inspectionDefault);
+                let inspectionData = filterByCurrentProject(getData('inspectionData', inspectionDefault));
 
                 function updateInspectionKPI() {
                     const total = inspectionData.length;
@@ -1674,7 +1720,7 @@
                     { id: "GF-527A-2", type: "GF527A", typeText: "GF527A - Return on Construction Site Employment", status: "confirm", statusText: "Client's Site Representative to Confirm", site: "Distribution", periodStart: "2025-09-10", periodEnd: "2025-09-16" },
                     { id: "GF527-2003-LW-2", type: "GF527-2003", typeText: "GF527 (2003) - Labour Wage", status: "double-check", statusText: "Contractor/Contractor's Agent Double Check", site: "Pump Station", periodStart: "2025-09-05", periodEnd: "2025-09-11" }
                 ];
-                let wageData = getData('wageData', wageDefault);
+                let wageData = filterByCurrentProject(getData('wageData', wageDefault));
 
                 function updateWageKPI() {
                     const total = wageData.length;
@@ -1802,8 +1848,165 @@
                 }
                 waitForWageChart();
             })();
-
         })();
+
+        (function handleOverdueTrend() {
+    const OVERDUE_DAYS = 14;
+
+    function loadAll() {
+        const keys = ['siteDiaryData', 'inspectionData', 'wageData'];
+        const out = { diary: [], inspection: [], wage: [] };
+        const aliases = {
+            siteDiaryData: ['siteDiaryData'],
+            inspectionData: ['inspectionData', 'safetyInspectionData'],
+            wageData: ['wageData', 'labourWageData']
+        };
+        Object.keys(aliases).forEach((k, idx) => {
+            for (const key of aliases[k]) {
+                const raw = localStorage.getItem(key);
+                if (!raw) continue;
+                try {
+                    const arr = JSON.parse(raw);
+                    if (Array.isArray(arr) && arr.length) {
+                        // ★ filter by current project
+                        out[['diary','inspection','wage'][idx]] =
+                            filterByCurrentProject(arr);
+                        break;
+                    }
+                } catch(e) {}
+            }
+        });
+        return out;
+    }
+
+    function parseDate(str) {
+        if (!str) return null;
+        const d = new Date(str);
+        return isNaN(d.getTime()) ? null : d;
+    }
+
+    function isOverdue(item) {
+        const s = item.status || 'draft';
+        if (s !== 'draft' && s !== 'submitted-wsg' && s !== 'submitted-ig' && s !== 'submitted') return false;
+        // Use submission date
+        const dt = parseDate(item.date) || parseDate(item.periodStart) ||
+                   parseDate(item.startDate) || parseDate(item.createdAt);
+        if (!dt) return false;
+        const diff = (Date.now() - dt.getTime()) / 86400000;
+        return diff > OVERDUE_DAYS;
+    }
+
+    function getYear(d) {
+        if (!d) return null;
+        const dt = parseDate(d);
+        return dt ? dt.getFullYear().toString() : null;
+    }
+
+    function getMonth(item) {
+        const raw = item.date || item.periodStart || item.startDate || item.createdAt;
+        const dt = parseDate(raw);
+        return dt ? dt.getMonth() : null;
+    }
+
+    let overdueChart = null;
+
+    function renderOverdueChart(year) {
+        const canvas = document.getElementById('overdueTrendChart');
+        if (!canvas) return;
+        const { diary, inspection, wage } = loadAll();
+
+        const counts = {
+            diary: Array(12).fill(0),
+            inspection: Array(12).fill(0),
+            wage: Array(12).fill(0)
+        };
+        const sources = [
+            { key: 'diary', list: diary },
+            { key: 'inspection', list: inspection },
+            { key: 'wage', list: wage }
+        ];
+        sources.forEach(({key, list}) => {
+            list.forEach(item => {
+                if (!isOverdue(item)) return;
+                if (getYear(item.date || item.periodStart) !== year) return;
+                const m = getMonth(item);
+                if (m !== null) counts[key][m]++;
+            });
+        });
+
+        const labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        if (overdueChart) overdueChart.destroy();
+        overdueChart = new Chart(canvas.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Site Diary',
+                        data: counts.diary,
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52,152,219,0.1)',
+                        tension: 0.3, fill: true, pointRadius: 3
+                    },
+                    {
+                        label: 'Safety Inspection',
+                        data: counts.inspection,
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231,76,60,0.1)',
+                        tension: 0.3, fill: true, pointRadius: 3
+                    },
+                    {
+                        label: 'Labour Wage',
+                        data: counts.wage,
+                        borderColor: '#9b59b6',
+                        backgroundColor: 'rgba(155,89,182,0.1)',
+                        tension: 0.3, fill: true, pointRadius: 3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { mode: 'index', intersect: false }
+                },
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: 'Overdue Count' } }
+                }
+            }
+        });
+    }
+
+        function initOverdueYearSelector() {
+            const sel = document.getElementById('overdue-year-select');
+            if (!sel) return;
+            const { diary, inspection, wage } = loadAll();
+            const years = new Set();
+            [...diary, ...inspection, ...wage].forEach(item => {
+                const y = getYear(item.date || item.periodStart || item.createdAt);
+                if (y) years.add(y);
+            });
+            if (!years.size) years.add(new Date().getFullYear().toString());
+            sel.innerHTML = '';
+            const sorted = Array.from(years).sort();
+            const curYear = new Date().getFullYear().toString();
+            sorted.forEach(y => {
+                const o = document.createElement('option');
+                o.value = y; o.textContent = y;
+                if (y === curYear) o.selected = true;
+                sel.appendChild(o);
+            });
+            if (!sel.value && sorted.length) sel.value = sorted[0];
+            renderOverdueChart(sel.value);
+            sel.addEventListener('change', () => renderOverdueChart(sel.value));
+        }
+
+        function waitForChart() {
+            if (typeof Chart === 'undefined') { setTimeout(waitForChart, 200); return; }
+            initOverdueYearSelector();
+        }
+        waitForChart();
+    })();
     </script>
 
     <!-- ============================================================
@@ -2370,7 +2573,6 @@
             } else {
                 waitForChart(initSmartSite);
             }
-
         })();
     </script>
 
@@ -2525,6 +2727,12 @@
             }
 
         })();
+        // Reload when the current project changes from another tab
+        window.addEventListener('storage', function (e) {
+            if (e.key === 'currentProjectId' || e.key === null) {
+                location.reload();
+            }
+        });
         </script>
 </body>
 </html>

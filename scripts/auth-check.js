@@ -371,6 +371,8 @@ var DWSS_Auth = {
             select.addEventListener('change', handleStatusChange);
         });
     }
+    
+
 };
 
 // ★★★ 掛到 window，讓所有頁面都能存取 ★★★

@@ -317,7 +317,7 @@
             <li><a href="index.html" id="menu-dashboard"><i class="fas fa-home"></i><span class="menu-text" data-i18n="dashboard">Dashboard</span></a></li>
             <li><a href="sitediary.html" id="menu-sitediary"><i class="fas fa-book"></i><span class="menu-text" data-i18n="site.diary">Site Diary</span></a></li>
             <li><a href="safetyinspect.html" id="menu-safetyinspect"><i class="fas fa-clipboard-check"></i><span class="menu-text" data-i18n="safety.inspection">Safety Inspection</span></a></li>
-            <li><a href="sitelocations.html" id="menu-sitelocations"><i class="fas fa-map-marked-alt"></i><span class="menu-text" data-i18n="site.locations">Site Locations</span></a></li>
+            <li style="display: none;"><a href="sitelocations.html" id="menu-sitelocations"><i class="fas fa-map-marked-alt"></i><span class="menu-text" data-i18n="site.locations">Site Locations</span></a></li>
             <li><a href="labourwage.html" id="menu-labourwage"><i class="fas fa-money-bill-wave"></i><span class="menu-text" data-i18n="labour.wage">Labour Wage</span></a></li>
             <li><a href="settings.html" id="menu-settings"><i class="fas fa-cogs"></i><span class="menu-text" data-i18n="system.settings">System Settings</span></a></li>
             <li class="menu-item-with-submenu">
@@ -352,9 +352,6 @@
                         <i class="fas fa-user"></i> <span id="header-user-name">User</span>
                     </button>
                     <span id="permission-indicator"></span>
-                    <button id="top-logout-btn" class="logout-btn-top" style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; border: none; border-radius: 20px; padding: 10px 20px; font-weight: 600; margin-left: 10px;">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </button>
                 </div>
             </div>
         </div>
@@ -618,14 +615,6 @@
             else if (dateSpan) {
                 dateSpan.textContent = new Date().toLocaleDateString('en-US', {
                     year: 'numeric', month: 'long', day: 'numeric'
-                });
-            }
-
-            // Top logout
-            var topLogoutBtn = document.getElementById('top-logout-btn');
-            if (topLogoutBtn) {
-                topLogoutBtn.addEventListener('click', function () {
-                    DWSS_Auth.logout();
                 });
             }
 
