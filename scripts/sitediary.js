@@ -225,28 +225,50 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ==================== ★ 分類：Overdue / Pending / Closed / Other ====================
+    // ==================== ★ 分類：Overdue / Pending / Closed / Other ====================
     const OVERDUE_DAYS = 14;   // 超過 14 天 (兩星期) 仍為 Draft → Overdue
 
-    function parseDiaryDate(item) {
+    // ★ 改為解析「結束日期」(End Date)
+    function parseDiaryEndDate(item) {
         if (!item) return null;
 
-        if (item.startDate) {
-            var d1 = new Date(item.startDate);
+        // 1. 優先使用 endDate 欄位
+        if (item.endDate) {
+            var d1 = new Date(item.endDate);
             if (!isNaN(d1.getTime())) return d1;
         }
 
-        if (item.date) {
-            var s = String(item.date).trim();
-            var m1 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-            if (m1) return new Date(parseInt(m1[1], 10), parseInt(m1[2], 10) - 1, parseInt(m1[3], 10));
+        // 2. 嘗試從 period 或 date 解析 (通常格式為 "DD/MM/YYYY ~ DD/MM/YYYY" 或 "YYYY-MM-DD ~ YYYY-MM-DD")
+        var dateStr = item.period || item.date;
+        if (dateStr) {
+            var s = String(dateStr).trim();
+            
+            // 處理包含 "~" 的日期範圍
+            if (s.indexOf('~') !== -1) {
+                var parts = s.split('~');
+                var endPart = parts[1] ? parts[1].trim() : '';
+                
+                // 解析 yyyy-mm-dd
+                var m1 = endPart.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                if (m1) return new Date(parseInt(m1[1], 10), parseInt(m1[2], 10) - 1, parseInt(m1[3], 10));
 
-            var m2 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-            if (m2) return new Date(parseInt(m2[3], 10), parseInt(m2[2], 10) - 1, parseInt(m2[1], 10));
+                // 解析 dd/mm/yyyy
+                var m2 = endPart.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+                if (m2) return new Date(parseInt(m2[3], 10), parseInt(m2[2], 10) - 1, parseInt(m2[1], 10));
+            }
+
+            // 處理單一日期 (舊資料如果沒有 "~"，就直接當作結束日期)
+            var m3 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (m3) return new Date(parseInt(m3[1], 10), parseInt(m3[2], 10) - 1, parseInt(m3[3], 10));
+            
+            var m4 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+            if (m4) return new Date(parseInt(m4[3], 10), parseInt(m4[2], 10) - 1, parseInt(m4[1], 10));
 
             var d2 = new Date(s);
             if (!isNaN(d2.getTime())) return d2;
         }
 
+        // 3. 若都找不到，退而求其次使用創建時間
         if (item.createdAt) {
             var d3 = new Date(item.createdAt);
             if (!isNaN(d3.getTime())) return d3;
@@ -255,22 +277,23 @@ document.addEventListener('DOMContentLoaded', function () {
         return null;
     }
 
+    // ★ 判斷是否 Overdue
     function isOverdue(item) {
         if (!item || item.status !== 'draft') return false;
-        var d = parseDiaryDate(item);
-        if (!d) return false;
+        
+        var endDate = parseDiaryEndDate(item);
+        if (!endDate) return false;
+        
         var now = new Date();
-        var diffDays = (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24);
+        
+        // 將時間歸零，只比較「日期」部分
+        var end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+        var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        var diffDays = (today.getTime() - end.getTime()) / (1000 * 60 * 60 * 24);
         return diffDays > OVERDUE_DAYS;
     }
-
-    /**
-     * 分類規則：
-     *  overdue → status = draft 且日期超過 14 天
-     *  pending → status = submitted-wsg / submitted-ig
-     *  closed  → status = closed / cancelled
-     *  other   → draft 未超期, reopen
-     */
+    
     function categorize(item) {
         var s = (item && item.status) || 'draft';
 

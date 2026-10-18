@@ -4504,7 +4504,36 @@ function refreshLabourSignatureCell(fieldId) {
     }
 
     function updateDocumentInfo(doc) {
-        // ... (前面的 setText 保持不變)
+        // 1. 更新 Document ID
+        var docIdEl = document.getElementById('docId');
+        if (docIdEl) docIdEl.textContent = doc.id || 'N/A';
+
+        // 2. 更新 Document Type
+        var docTypeEl = document.getElementById('docType');
+        if (docTypeEl) {
+            var typeText = doc.typeText;
+            if (!typeText && doc.type) {
+                if (doc.type === 'GF527A') typeText = 'GF527A - Return on Construction Site Employment';
+                else if (doc.type === 'GF527-2003') typeText = 'GF527 (2003) - Labour Wage';
+                else if (doc.type === 'GF527-2017') typeText = 'GF527 (2017) - Labour Wage';
+                else typeText = doc.type;
+            }
+            docTypeEl.textContent = typeText || 'N/A';
+        }
+
+        // 3. 更新 Site
+        var docSiteEl = document.getElementById('docSite');
+        if (docSiteEl) docSiteEl.textContent = doc.site || doc.siteName || 'N/A';
+
+        // 4. 更新 Period
+        var docPeriodEl = document.getElementById('docPeriod');
+        if (docPeriodEl) docPeriodEl.textContent = doc.period || 'N/A';
+
+        // 5. 更新 Submitted By
+        var docAuthorEl = document.getElementById('docAuthor');
+        if (docAuthorEl) docAuthorEl.textContent = doc.submittedBy || doc.author || 'N/A';
+
+        // 6. 更新 Status (保留原本的邏輯)
         var statusEl = document.getElementById('docStatus');
         if (statusEl) {
             var statusMap = {

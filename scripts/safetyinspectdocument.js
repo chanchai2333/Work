@@ -213,14 +213,8 @@
         document.head.appendChild(style);
     }
 
-    function injectReadOnlyFormFields(pageNum, formData) {
-        if (!formData) return;
-        var wrapper = document.getElementById('pdf-canvas-wrapper');
-        if (!wrapper) return;
-        
-        var oldOverlay = wrapper.querySelector('.safety-form-overlay');
-        if (oldOverlay) oldOverlay.remove();
-        
+    function createReadOnlyOverlay(pageNum, formData) {
+        if (!formData) return null;
         ensureReadOnlyStyle();
         
         var overlay = document.createElement('div');
@@ -293,7 +287,18 @@
             }
         });
         
-        wrapper.appendChild(overlay);
+        return overlay;
+    }
+
+    function injectReadOnlyFormFields(pageNum, formData) {
+        var wrapper = document.getElementById('pdf-canvas-wrapper');
+        if (!wrapper) return;
+        
+        var oldOverlay = wrapper.querySelector('.safety-form-overlay');
+        if (oldOverlay) oldOverlay.remove();
+        
+        var overlay = createReadOnlyOverlay(pageNum, formData);
+        if (overlay) wrapper.appendChild(overlay);
     }
 
     function alignSafetyOverlay() {
@@ -711,21 +716,136 @@
         pdf.save('safety_inspection_with_annotations.pdf');
     }
 
-    function printPDF() {
-        generateAnnotatedPDF().then(pdf => {
-            const pdfBlob = pdf.output('blob');
-            const url = URL.createObjectURL(pdfBlob);
-            const win = window.open(url, '_blank');
-            if (win) {
-                win.onload = function() {
-                    win.print();
-                };
-            } else {
-                alert('Please allow pop-ups to print.');
+    async function printPDF() {
+        if (!pdfDoc) {
+            alert('PDF not loaded yet.');
+            return;
+        }
+
+        const originalText = loadingEl ? loadingEl.innerHTML : '';
+        if (loadingEl) {
+            loadingEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparing Print...';
+            loadingEl.style.display = 'flex';
+        }
+
+        try {
+            let printContainer = document.getElementById('print-only-container');
+            if (!printContainer) {
+                printContainer = document.createElement('div');
+                printContainer.id = 'print-only-container';
+                // 預設隱藏，打印時才顯示
+                printContainer.style.display = 'none';
+                document.body.appendChild(printContainer);
             }
-        }).catch(err => {
-            alert('Print failed: ' + err.message);
-        });
+            printContainer.innerHTML = '';
+
+            // 渲染每一頁並生成高解析度圖片+Overlay
+            for (let i = 1; i <= totalPages; i++) {
+                const page = await pdfDoc.getPage(i);
+                const viewport = page.getViewport({ scale: 2.5 }); // 高解析度
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                const ctx = canvas.getContext('2d');
+                
+                // 填白底
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                const imgUrl = canvas.toDataURL('image/jpeg', 0.95);
+
+                const pageWrap = document.createElement('div');
+                pageWrap.className = 'print-page';
+
+                const img = document.createElement('img');
+                img.src = imgUrl;
+                pageWrap.appendChild(img);
+
+                // 注入表單 Overlay
+                const overlay = createReadOnlyOverlay(i, safetyFormData);
+                if (overlay) pageWrap.appendChild(overlay);
+
+                printContainer.appendChild(pageWrap);
+            }
+
+            // 注入打印專用樣式
+            let styleEl = document.getElementById('dynamic-print-style');
+            if (styleEl) styleEl.remove();
+            
+            styleEl = document.createElement('style');
+            styleEl.id = 'dynamic-print-style';
+            styleEl.textContent = `
+                @media print {
+                    @page { size: A4 portrait; margin: 0; }
+                    html, body {
+                        margin: 0 !important; padding: 0 !important;
+                        background: #fff !important;
+                        width: auto !important; height: auto !important;
+                        overflow: visible !important;
+                    }
+                    body > *:not(#print-only-container) {
+                        display: none !important;
+                    }
+                    #print-only-container {
+                        display: block !important;
+                        width: 100% !important;
+                    }
+                    #print-only-container .print-page {
+                        page-break-after: always;
+                        break-after: page;
+                        width: 210mm;
+                        height: 297mm;
+                        margin: 0 auto;
+                        position: relative;
+                        overflow: hidden;
+                        background: #fff;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    #print-only-container .print-page:last-child {
+                        page-break-after: auto;
+                        break-after: auto;
+                    }
+                    #print-only-container .print-page img {
+                        max-width: 100%; max-height: 100%;
+                        object-fit: contain;
+                    }
+                    /* 確保 overlay 覆蓋在圖片正上方 */
+                    #print-only-container .print-page .safety-form-overlay {
+                        position: absolute;
+                        top: 0; left: 0;
+                        width: 100%; height: 100%;
+                    }
+                }
+            `;
+            document.head.appendChild(styleEl);
+
+            // 等待圖片加載與 DOM 渲染後觸發打印
+            setTimeout(() => {
+                window.print();
+                
+                // 打印對話框關閉後清理
+                setTimeout(() => {
+                    if (printContainer) printContainer.innerHTML = '';
+                    if (styleEl) styleEl.remove();
+                    if (loadingEl) {
+                        loadingEl.innerHTML = originalText;
+                        loadingEl.style.display = 'none';
+                    }
+                }, 1000);
+            }, 500);
+
+        } catch (err) {
+            console.error('Print failed:', err);
+            alert('Print preparation failed: ' + err.message);
+            if (loadingEl) {
+                loadingEl.innerHTML = originalText;
+                loadingEl.style.display = 'none';
+            }
+        }
     }
 
     function downloadPDF() {

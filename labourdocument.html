@@ -769,15 +769,8 @@
                 }
 
                 /* ─── 2. 勾選欄位 ─── */
-                var widthNum = parseFloat(f.width) || 100;
-                var isCheck =
-                    (f.type === 'check') ||
-                    (widthNum < 3 && (
-                        strVal === '1' ||
-                        strVal === '✓' ||
-                        strVal === 'true' ||
-                        strVal === 'TRUE'
-                    ));
+                // ★ 修正：只依賴 type 是否為 'check'，避免數字 '1' 被誤認為打勾
+                var isCheck = (f.type === 'check');
 
                 if (isCheck) {
                     var chkEl = document.createElement('div');
