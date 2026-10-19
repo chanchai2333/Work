@@ -1853,14 +1853,14 @@
         (function handleOverdueTrend() {
     const OVERDUE_DAYS = 14;
 
+    // 讀取資料
     function loadAll() {
-        const keys = ['siteDiaryData', 'inspectionData', 'wageData'];
-        const out = { diary: [], inspection: [], wage: [] };
         const aliases = {
             siteDiaryData: ['siteDiaryData'],
             inspectionData: ['inspectionData', 'safetyInspectionData'],
             wageData: ['wageData', 'labourWageData']
         };
+        const out = { diary: [], inspection: [], wage: [] };
         Object.keys(aliases).forEach((k, idx) => {
             for (const key of aliases[k]) {
                 const raw = localStorage.getItem(key);
@@ -1868,9 +1868,7 @@
                 try {
                     const arr = JSON.parse(raw);
                     if (Array.isArray(arr) && arr.length) {
-                        // ★ filter by current project
-                        out[['diary','inspection','wage'][idx]] =
-                            filterByCurrentProject(arr);
+                        out[['diary','inspection','wage'][idx]] = arr;
                         break;
                     }
                 } catch(e) {}
@@ -1879,63 +1877,164 @@
         return out;
     }
 
-    function parseDate(str) {
-        if (!str) return null;
-        const d = new Date(str);
-        return isNaN(d.getTime()) ? null : d;
+    // ==========================================
+    // 1. Site Diary 的解析 (原封不動搬自 sitediary.js)
+    // ==========================================
+    function getDiaryDate(item) {
+        if (!item) return null;
+        if (item.endDate) {
+            var d1 = new Date(item.endDate);
+            if (!isNaN(d1.getTime())) return d1;
+        }
+        var dateStr = item.period || item.date;
+        if (dateStr) {
+            var s = String(dateStr).trim();
+            if (s.indexOf('~') !== -1) {
+                var parts = s.split('~');
+                var endPart = parts[1] ? parts[1].trim() : '';
+                var m1 = endPart.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                if (m1) return new Date(parseInt(m1[1], 10), parseInt(m1[2], 10) - 1, parseInt(m1[3], 10));
+                var m2 = endPart.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+                if (m2) return new Date(parseInt(m2[3], 10), parseInt(m2[2], 10) - 1, parseInt(m2[1], 10));
+            }
+            var m3 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (m3) return new Date(parseInt(m3[1], 10), parseInt(m3[2], 10) - 1, parseInt(m3[3], 10));
+            var m4 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+            if (m4) return new Date(parseInt(m4[3], 10), parseInt(m4[2], 10) - 1, parseInt(m4[1], 10));
+            var d2 = new Date(s);
+            if (!isNaN(d2.getTime())) return d2;
+        }
+        if (item.createdAt) {
+            var d3 = new Date(item.createdAt);
+            if (!isNaN(d3.getTime())) return d3;
+        }
+        return null;
     }
 
-    function isOverdue(item) {
-        const s = item.status || 'draft';
-        if (s !== 'draft' && s !== 'submitted-wsg' && s !== 'submitted-ig' && s !== 'submitted') return false;
-        // Use submission date
-        const dt = parseDate(item.date) || parseDate(item.periodStart) ||
-                   parseDate(item.startDate) || parseDate(item.createdAt);
-        if (!dt) return false;
-        const diff = (Date.now() - dt.getTime()) / 86400000;
-        return diff > OVERDUE_DAYS;
+    function isDiaryOverdue(item) {
+        if (!item || item.status !== 'draft') return false;
+        var endDate = getDiaryDate(item);
+        if (!endDate) return false;
+        var now = new Date();
+        var end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+        var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        var diffDays = (today.getTime() - end.getTime()) / (1000 * 60 * 60 * 24);
+        return diffDays > OVERDUE_DAYS;
     }
 
-    function getYear(d) {
-        if (!d) return null;
-        const dt = parseDate(d);
-        return dt ? dt.getFullYear().toString() : null;
+    // ==========================================
+    // 2. Safety Inspection 的解析 (原封不動搬自 safetyinspect.js)
+    // ==========================================
+    function formatSafetyDate(dateString) {
+        if (!dateString) return '';
+        if (/^\d{2}-[A-Za-z]{3}-\d{4}$/.test(dateString)) {
+            const parts = dateString.split('-');
+            const monthMap = { 'Jan':'01','Feb':'02','Mar':'03','Apr':'04','May':'05','Jun':'06',
+                               'Jul':'07','Aug':'08','Sep':'09','Oct':'10','Nov':'11','Dec':'12' };
+            const month = monthMap[parts[1]] || '01';
+            return `${parts[2]}-${month}-${parts[0]}`;
+        }
+        const date = new Date(dateString);
+        if (isNaN(date)) return dateString;
+        const d = String(date.getDate()).padStart(2,'0');
+        const m = String(date.getMonth() + 1).padStart(2,'0');
+        const y = date.getFullYear();
+        return `${y}-${m}-${d}`;
     }
 
-    function getMonth(item) {
-        const raw = item.date || item.periodStart || item.startDate || item.createdAt;
-        const dt = parseDate(raw);
-        return dt ? dt.getMonth() : null;
+    function getInspectionDate(item) {
+        if (!item) return null;
+        var isoStr = formatSafetyDate(item.date);
+        if (isoStr) {
+            var parts = isoStr.split('-');
+            if (parts.length === 3) {
+                var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                if (!isNaN(d.getTime())) return d;
+            }
+        }
+        if (item.createdAt) {
+            var d2 = new Date(item.createdAt);
+            if (!isNaN(d2.getTime())) return d2;
+        }
+        return null;
     }
 
+    function isInspectionOverdue(item) {
+        if (!item || item.status !== 'draft') return false;
+        var d = getInspectionDate(item);
+        if (!d) return false;
+        var now = new Date();
+        var diffDays = (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24);
+        return diffDays > OVERDUE_DAYS;
+    }
+
+    // ==========================================
+    // 3. Labour Wage 的解析 (原封不動搬自 labourwage.js)
+    // ==========================================
+    function getWageDate(item) {
+        if (!item) return null;
+        if (item.periodStart) {
+            var d = new Date(item.periodStart);
+            if (!isNaN(d.getTime())) return d;
+        }
+        if (item.createdAt) {
+            var d2 = new Date(item.createdAt);
+            if (!isNaN(d2.getTime())) return d2;
+        }
+        return null;
+    }
+
+    function isWageOverdue(item) {
+        if (!item || item.status !== 'draft') return false;
+        var d = getWageDate(item);
+        if (!d) return false;
+        var now = new Date();
+        var diffDays = (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24);
+        return diffDays > OVERDUE_DAYS;
+    }
+
+    // ==========================================
+    // 圖表渲染
+    // ==========================================
     let overdueChart = null;
 
     function renderOverdueChart(year) {
         const canvas = document.getElementById('overdueTrendChart');
         if (!canvas) return;
+        
         const { diary, inspection, wage } = loadAll();
-
+        
         const counts = {
             diary: Array(12).fill(0),
             inspection: Array(12).fill(0),
             wage: Array(12).fill(0)
         };
-        const sources = [
-            { key: 'diary', list: diary },
-            { key: 'inspection', list: inspection },
-            { key: 'wage', list: wage }
-        ];
-        sources.forEach(({key, list}) => {
-            list.forEach(item => {
-                if (!isOverdue(item)) return;
-                if (getYear(item.date || item.periodStart) !== year) return;
-                const m = getMonth(item);
-                if (m !== null) counts[key][m]++;
-            });
+        
+        diary.forEach(item => {
+            if (isDiaryOverdue(item)) {
+                const d = getDiaryDate(item);
+                if (d && String(d.getFullYear()) === String(year)) counts.diary[d.getMonth()]++;
+            }
+        });
+
+        inspection.forEach(item => {
+            if (isInspectionOverdue(item)) {
+                const d = getInspectionDate(item);
+                if (d && String(d.getFullYear()) === String(year)) counts.inspection[d.getMonth()]++;
+            }
+        });
+
+        wage.forEach(item => {
+            if (isWageOverdue(item)) {
+                const d = getWageDate(item);
+                if (d && String(d.getFullYear()) === String(year)) counts.wage[d.getMonth()]++;
+            }
         });
 
         const labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        
         if (overdueChart) overdueChart.destroy();
+        
         overdueChart = new Chart(canvas.getContext('2d'), {
             type: 'line',
             data: {
@@ -1971,42 +2070,56 @@
                     tooltip: { mode: 'index', intersect: false }
                 },
                 scales: {
-                    y: { beginAtZero: true, title: { display: true, text: 'Overdue Count' } }
+                    y: { 
+                        beginAtZero: true, 
+                        suggestedMax: 20,      // ★ 至少顯示到 20，超過 20 會自動往上加
+                        ticks: { 
+                            stepSize: 1,
+                            precision: 0       // 避免出現小數點
+                        }, 
+                        title: { display: true, text: 'Overdue Count' } 
+                    }
                 }
             }
         });
     }
 
-        function initOverdueYearSelector() {
-            const sel = document.getElementById('overdue-year-select');
-            if (!sel) return;
-            const { diary, inspection, wage } = loadAll();
-            const years = new Set();
-            [...diary, ...inspection, ...wage].forEach(item => {
-                const y = getYear(item.date || item.periodStart || item.createdAt);
-                if (y) years.add(y);
-            });
-            if (!years.size) years.add(new Date().getFullYear().toString());
-            sel.innerHTML = '';
-            const sorted = Array.from(years).sort();
-            const curYear = new Date().getFullYear().toString();
-            sorted.forEach(y => {
-                const o = document.createElement('option');
-                o.value = y; o.textContent = y;
-                if (y === curYear) o.selected = true;
-                sel.appendChild(o);
-            });
-            if (!sel.value && sorted.length) sel.value = sorted[0];
-            renderOverdueChart(sel.value);
-            sel.addEventListener('change', () => renderOverdueChart(sel.value));
-        }
+    function initOverdueYearSelector() {
+        const sel = document.getElementById('overdue-year-select');
+        if (!sel) return;
+        const { diary, inspection, wage } = loadAll();
+        const years = new Set();
+        
+        diary.forEach(i => { const d = getDiaryDate(i); if(d) years.add(String(d.getFullYear())); });
+        inspection.forEach(i => { const d = getInspectionDate(i); if(d) years.add(String(d.getFullYear())); });
+        wage.forEach(i => { const d = getWageDate(i); if(d) years.add(String(d.getFullYear())); });
 
-        function waitForChart() {
-            if (typeof Chart === 'undefined') { setTimeout(waitForChart, 200); return; }
-            initOverdueYearSelector();
-        }
-        waitForChart();
-    })();
+        if (!years.size) years.add(new Date().getFullYear().toString());
+        
+        sel.innerHTML = '';
+        const sorted = Array.from(years).sort();
+        const curYear = new Date().getFullYear().toString();
+        
+        sorted.forEach(y => {
+            const o = document.createElement('option');
+            o.value = y; o.textContent = y;
+            if (y === curYear) o.selected = true;
+            sel.appendChild(o);
+        });
+        
+        if (!sel.value && sorted.length) sel.value = sorted[0];
+        
+        renderOverdueChart(sel.value);
+        sel.addEventListener('change', () => renderOverdueChart(sel.value));
+    }
+
+    function waitForChart() {
+        if (typeof Chart === 'undefined') { setTimeout(waitForChart, 200); return; }
+        initOverdueYearSelector();
+    }
+    waitForChart();
+})();
+
     </script>
 
     <!-- ============================================================
