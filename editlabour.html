@@ -90,19 +90,19 @@
         .loading-indicator { display: none; justify-content: center; align-items: center; gap: 10px; padding: 40px; color: #2563eb; font-weight: 600; background: #eff6ff; border-radius: 8px; }
         .loading-indicator.visible { display: flex; }
 
-                /* 先全部套用 6px */
-        .pdf-form-overlay .pdf-field[data-field-id^="g17_"] { font-size: 7px !important; }
-        .pdf-form-overlay .pdf-field[data-field-id^="gf_"]  { font-size: 7px !important; }  
+        /* 先全部套用 7px，並加上縮放比例 */
+        .pdf-form-overlay .pdf-field[data-field-id^="g17_"] { font-size: calc(7px * var(--pdf-zoom-scale, 1)) !important; }
+        .pdf-form-overlay .pdf-field[data-field-id^="gf_"]  { font-size: calc(7px * var(--pdf-zoom-scale, 1)) !important; }  
 
-        /* 再針對 01~116 覆蓋回你原本的字體大小 */
-        .pdf-form-overlay .pdf-field[data-field-id="g17_01"] { font-size: 11px !important; }
-        .pdf-form-overlay .pdf-field[data-field-id="g17_02"] { font-size: 11px !important; }
-        .pdf-form-overlay .pdf-field[data-field-id="g17_05"] { font-size: 11px !important; }
-        .pdf-form-overlay .pdf-field[data-field-id="g17_06"] { font-size: 11px !important; }
-        .pdf-form-overlay .pdf-field[data-field-id="g17_07"] { font-size: 11px !important; }
-        .pdf-form-overlay .pdf-field[data-field-id="g17_08"] { font-size: 11px !important; }
-        .pdf-form-overlay .pdf-field[data-field-id="g17_03"] { font-size: 8px !important; }
-        .pdf-form-overlay .pdf-field[data-field-id="g17_04"] { font-size: 8px !important; }
+        /* 再針對特定 ID 覆蓋回原本的字體大小，同樣加上縮放比例 */
+        .pdf-form-overlay .pdf-field[data-field-id="g17_01"] { font-size: calc(11px * var(--pdf-zoom-scale, 1)) !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_02"] { font-size: calc(11px * var(--pdf-zoom-scale, 1)) !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_05"] { font-size: calc(11px * var(--pdf-zoom-scale, 1)) !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_06"] { font-size: calc(11px * var(--pdf-zoom-scale, 1)) !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_07"] { font-size: calc(11px * var(--pdf-zoom-scale, 1)) !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_08"] { font-size: calc(11px * var(--pdf-zoom-scale, 1)) !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_03"] { font-size: calc(8px * var(--pdf-zoom-scale, 1)) !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_04"] { font-size: calc(8px * var(--pdf-zoom-scale, 1)) !important; }
 
 
         /* ★ 表單覆蓋層 */
@@ -120,7 +120,7 @@
             outline: none;
             font-family: Arial, sans-serif;
             color: #0a1a5c;
-            font-size: 11px;
+            font-size: calc(11px * var(--pdf-zoom-scale, 1));
             padding: 1px 3px;
             box-sizing: border-box;
             pointer-events: auto;

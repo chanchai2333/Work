@@ -3950,7 +3950,7 @@
             '}' +
             '.pdf-form-overlay .pdf-checkbox:hover {background:rgba(52,152,219,0.15);box-shadow:inset 0 0 0 1px #3498db;}' +
             '.pdf-form-overlay .pdf-checkbox.checked {background:rgba(46,204,113,0.15);border-color:#27ae60;}' +
-            '.pdf-form-overlay .pdf-checkbox .tick {display:none;color:#0a1a5c;font-weight:bold;font-size:0.9em;}' +
+            '.pdf-form-overlay .pdf-checkbox .tick {display:none;color:#0a1a5c;font-weight:bold;font-size: calc(0.9em * var(--pdf-zoom-scale, 1));}' +
             '.pdf-form-overlay .pdf-checkbox.checked .tick {display:inline-block;}';
         document.head.appendChild(style);
     }
@@ -4755,6 +4755,9 @@ function refreshLabourSignatureCell(fieldId) {
         pageDiv.dataset.page = activePageNum;
         pageDiv.style.width  = displaySize.w + 'px';
         pageDiv.style.height = displaySize.h + 'px';
+
+        // ★ 加入這一行，讓 CSS 可以抓到當前的縮放比例
+        pageDiv.style.setProperty('--pdf-zoom-scale', zoomLevel);
 
         var img = document.createElement('img');
         img.src = imgData;
