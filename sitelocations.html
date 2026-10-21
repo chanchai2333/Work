@@ -162,7 +162,7 @@
         .dwss-btn-danger { background: #e53935; color: #fff; }
         .dwss-btn-danger:hover { background: #b71c1c; }
         
-        /* ========== ★ 列表容器 - 可滾動 ========== */
+        /* ========== 列表容器 ========== */
         .site-list-container {
             width: 340px;
             flex-shrink: 0;
@@ -288,70 +288,6 @@
             .site-panel { width: 100%; right: -100%; }
             #site-map { height: 350px; }
         }
-        
-        .submissions-panel {
-            position: fixed; top: 0; right: -500px; width: 480px; height: 100vh;
-            background: #fff; box-shadow: -4px 0 24px rgba(0,0,0,0.18);
-            z-index: 9997; transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex; flex-direction: column; overflow: hidden;
-        }
-        .submissions-panel.show { right: 0; }
-        .submissions-header {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 16px 22px; border-bottom: 1px solid #e8e8e8;
-            background: #fff; flex-shrink: 0;
-        }
-        .submissions-header h3 { margin: 0; font-size: 17px; color: #222; }
-        .submissions-header .site-subtitle { font-size: 12px; color: #888; margin-top: 2px; }
-        .submissions-body { flex: 1; overflow-y: auto; padding: 16px 22px; }
-        
-        .submission-tabs {
-            display: flex; gap: 4px; margin-bottom: 16px;
-            background: #f5f5f5; border-radius: 8px; padding: 4px;
-        }
-        .submission-tab {
-            flex: 1; padding: 8px 10px; border: none; border-radius: 6px;
-            cursor: pointer; font-size: 12px; font-weight: 500;
-            background: transparent; color: #666; transition: all 0.2s;
-        }
-        .submission-tab.active {
-            background: #1a73e8; color: #fff;
-            box-shadow: 0 2px 6px rgba(26,115,232,0.3);
-        }
-        .submission-tab:hover:not(.active) { background: #e0e0e0; }
-        
-        .submission-card {
-            background: #fafafa; border: 1px solid #e8e8e8; border-radius: 10px;
-            padding: 14px 16px; margin-bottom: 10px; cursor: pointer;
-            transition: all 0.2s;
-        }
-        .submission-card:hover {
-            background: #f0f7ff; border-color: #1a73e8;
-            box-shadow: 0 2px 8px rgba(26,115,232,0.1);
-            transform: translateY(-2px);
-        }
-        .submission-card-header {
-            display: flex; justify-content: space-between; align-items: flex-start;
-            margin-bottom: 8px;
-        }
-        .submission-card-title { font-size: 14px; font-weight: 600; color: #333; }
-        .submission-card-id { font-size: 11px; color: #999; }
-        .status-badge {
-            padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;
-            display: inline-block;
-        }
-        .status-draft { background: #f5f5f5; color: #888; }
-        .status-submitted, .status-submitted-wsg, .status-submitted-ig { background: #e3f2fd; color: #1565c0; }
-        .status-endorsed, .status-closed { background: #e8f5e9; color: #2e7d32; }
-        .status-cancelled { background: #ffebee; color: #c62828; }
-        .status-confirm { background: #f3e5f5; color: #7b1fa2; }
-        .status-double-check, .status-reopen { background: #fff3e0; color: #e65100; }
-        
-        .submission-card-meta { font-size: 12px; color: #888; margin-top: 6px; }
-        .submission-card-meta i { margin-right: 4px; color: #999; }
-        
-        .no-submissions { text-align: center; padding: 40px 20px; color: #999; }
-        .no-submissions i { font-size: 48px; display: block; margin-bottom: 12px; color: #ccc; }
     </style>
 </head>
 
@@ -362,7 +298,7 @@
 
     <div class="main-content">
         <div class="header">
-            <h1>Site Location</h1>
+            <h1 data-i18n="site.locations">Site Locations</h1>
             <div class="header-controls">
                 <div class="user-date-row">
                     <div class="date-display">
@@ -374,12 +310,7 @@
             </div>
         </div>
         
-        <div class="search-buttons">
-            <form id="search-form" action="#" method="get">
-                <input type="text" name="search" placeholder="Search sites, reports, or data..." />
-                <button type="submit">Search</button>
-            </form>
-        </div>
+        <!-- ★ 已移除 Search Bar -->
 
         <div class="site-locations-page">
             <h2><i class="fas fa-map-marked-alt"></i> Site Locations</h2>
@@ -434,7 +365,7 @@
         </footer>
     </div>
 
-    <!-- 側邊面板 -->
+    <!-- 側邊面板 (編輯/新增 Site) -->
     <div class="site-panel" id="site-panel">
         <div class="panel-header">
             <h3 id="panel-title">Register New Site</h3>
@@ -512,26 +443,6 @@
         </div>
     </div>
 
-    <!-- 提交記錄面板 -->
-    <div class="submissions-panel" id="submissions-panel">
-        <div class="submissions-header">
-            <div>
-                <h3 id="submissions-title">Submissions</h3>
-                <div class="site-subtitle" id="submissions-subtitle"></div>
-            </div>
-            <button class="panel-close" id="submissions-close">&times;</button>
-        </div>
-        <div class="submissions-body" id="submissions-body">
-            <div class="submission-tabs">
-                <button class="submission-tab active" data-type="all">All</button>
-                <button class="submission-tab" data-type="siteDiary">Site Diary</button>
-                <button class="submission-tab" data-type="safetyInspection">Safety</button>
-                <button class="submission-tab" data-type="labourWage">Labour</button>
-            </div>
-            <div id="submissions-list"></div>
-        </div>
-    </div>
-
     <!-- 刪除對話框 -->
     <div class="delete-dialog-overlay" id="delete-dialog-overlay">
         <div class="delete-dialog">
@@ -554,13 +465,11 @@
         (function() {
             const STORAGE_KEY = 'dwss_site_data_v9';
             
-            // 獲取當前項目
             function getCurrentProjectId() {
                 return sessionStorage.getItem('currentProjectId') || 'DE/2026/05';
             }
             const CURRENT_PROJECT = getCurrentProjectId();
             
-            // 預設資料（按項目分類）
             const DEFAULT_PROJECT_DATA = {
                 'DE/2026/05': [
                     { id: 1, name: 'Stonecutters Island Sewage Treatment Works', category: 'Treatment Plant', icon: 'fa-water', lat: 22.3477, lng: 114.1358, lastUpdated: '15-Aug-25', status: 'active', description: 'Major sewage treatment facility serving Kowloon and Hong Kong Island. Phase 2 expansion in progress.', contact: 'Mr. Chan Tai Man', progress: 78 },
@@ -577,7 +486,6 @@
                 ]
             };
 
-            // 載入當前項目的資料
             function loadSiteData() {
                 const stored = localStorage.getItem(STORAGE_KEY);
                 let allData = [];
@@ -585,7 +493,6 @@
                 if (stored) {
                     try { allData = JSON.parse(stored); } catch(e) {}
                 } else {
-                    // 第一次載入，將預設資料寫入 localStorage
                     Object.keys(DEFAULT_PROJECT_DATA).forEach(pid => {
                         DEFAULT_PROJECT_DATA[pid].forEach(site => {
                             site.project = pid;
@@ -594,28 +501,19 @@
                     });
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
                 }
-                
-                // 過濾出當前項目
                 return allData.filter(s => s.project === CURRENT_PROJECT);
             }
             
-            // 儲存資料（更新當前項目，保留其他項目的資料）
             function saveSiteData() {
                 const stored = localStorage.getItem(STORAGE_KEY);
                 let allData = [];
                 if (stored) { try { allData = JSON.parse(stored); } catch(e) {} }
-                
-                // 移除當前項目的舊資料
                 allData = allData.filter(s => s.project !== CURRENT_PROJECT);
-                
-                // 將目前的 siteData 加上 project 寫回
                 siteData.forEach(s => { s.project = CURRENT_PROJECT; });
                 allData = allData.concat(siteData);
-                
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
             }
             
-            // 取得下一個全局唯一的 ID
             function getNextId() {
                 const stored = localStorage.getItem(STORAGE_KEY);
                 let allData = [];
@@ -666,7 +564,6 @@
             const deleteDialogConfirm = document.getElementById('delete-dialog-confirm');
             const listCount = document.getElementById('list-count');
             
-            // ==================== 圖標 ====================
             function createCustomIcon(iconName, isActive) {
                 const bg = isActive ? '#1a73e8' : '#555';
                 const s = isActive ? 44 : 40;
@@ -705,11 +602,8 @@
                     map.flyTo([site.lat, site.lng], 15, { duration: 0.8 });
                 }
                 if (markers[siteId]) markers[siteId].openPopup();
-                
-                openSubmissionsPanel(siteId);
             }
             
-            // ==================== 全局函數 ====================
             window._dwssEditSite = function(siteId) {
                 const site = siteData.find(s => s.id === siteId);
                 if (site) openPanel(site);
@@ -720,7 +614,6 @@
                 if (site) openDeleteConfirm(site);
             };
             
-            // ==================== 渲染 ====================
             function renderSiteList() {
                 siteListContainer.innerHTML = '';
                 if (siteData.length === 0) {
@@ -785,7 +678,6 @@
                 });
             }
             
-            // ==================== 反向地理編碼 ====================
             function reverseGeocode(lat, lng, callback) {
                 fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`)
                     .then(res => res.json())
@@ -801,7 +693,6 @@
                     .catch(() => callback('Unable to fetch address', 'Unknown'));
             }
             
-            // ==================== 選點 ====================
             function enterPickMode() {
                 if (isPickingLocation) return;
                 isPickingLocation = true;
@@ -854,7 +745,6 @@
                 exitPickMode();
             }
             
-            // ==================== 面板 ====================
             function openPanel(site) {
                 if (site) {
                     panelTitle.innerHTML = '<i class="fas fa-edit"></i> Edit Site';
@@ -898,7 +788,6 @@
                 exitPickMode();
             }
             
-            // ==================== 儲存 ====================
             function validateForm() {
                 let valid = true;
                 const name = document.getElementById('site-name').value.trim();
@@ -951,7 +840,6 @@
                 if (savedId) selectSite(savedId, true);
             }
             
-            // ==================== 刪除 ====================
             function openDeleteConfirm(site) {
                 deleteTargetId = site.id;
                 deleteSiteNameEl.textContent = site.name;
@@ -968,7 +856,6 @@
                 if (currentSiteId) selectSite(currentSiteId, true);
             }
             
-            // ==================== 搜索 ====================
             function setupSearch() {
                 if (!siteSearch) return;
                 siteSearch.addEventListener('input', function() {
@@ -1005,7 +892,6 @@
                 updateStats();
             }
             
-            // ==================== 事件 ====================
             function bindEvents() {
                 addSiteBtn.onclick = () => openPanel(null);
                 panelClose.onclick = closePanel;
@@ -1039,158 +925,12 @@
                     placePickMarker(e.latlng.lat, e.latlng.lng);
                 });
             }
-
-            // ==================== 提交記錄功能 ====================
-            let currentSubmissionsSiteId = null;
-            let currentSubmissionTab = 'all';
-
-            function getSiteSubmissions(siteName) {
-                const projectId = getCurrentProjectId();
-                const submissions = [];
-                
-                // 獲取 Site Diary 數據 (加入 project 檢查)
-                const diaryData = JSON.parse(localStorage.getItem('siteDiaryData') || '[]');
-                diaryData.forEach(d => {
-                    if (d.project === projectId && d.site && (d.site.toLowerCase().includes(siteName.toLowerCase()) || siteName.toLowerCase().includes(d.site.toLowerCase()))) {
-                        submissions.push({
-                            id: d.id,
-                            type: 'siteDiary',
-                            typeLabel: 'Site Diary',
-                            status: d.status,
-                            statusText: getStatusTextForType(d.status, 'siteDiary'),
-                            date: d.date,
-                            submittedBy: d.submittedBy || 'Unknown'
-                        });
-                    }
-                });
-                
-                // 獲取 Safety Inspection 數據 (加入 project 檢查)
-                const inspectionData = JSON.parse(localStorage.getItem('inspectionData') || '[]');
-                inspectionData.forEach(d => {
-                    if (d.project === projectId && d.site && (d.site.toLowerCase().includes(siteName.toLowerCase()) || siteName.toLowerCase().includes(d.site.toLowerCase()))) {
-                        submissions.push({
-                            id: d.id,
-                            type: 'safetyInspection',
-                            typeLabel: 'Safety Inspection',
-                            status: d.status,
-                            statusText: getStatusTextForType(d.status, 'safetyInspection'),
-                            date: d.date,
-                            submittedBy: d.inspector || 'Unknown'
-                        });
-                    }
-                });
-                
-                // 獲取 Labour Wage 數據 (加入 project 檢查)
-                const wageData = JSON.parse(localStorage.getItem('wageData') || '[]');
-                wageData.forEach(d => {
-                    if (d.project === projectId && d.site && (d.site.toLowerCase().includes(siteName.toLowerCase()) || siteName.toLowerCase().includes(d.site.toLowerCase()))) {
-                        submissions.push({
-                            id: d.id,
-                            type: 'labourWage',
-                            typeLabel: 'Labour Wage',
-                            status: d.status,
-                            statusText: getStatusTextForType(d.status, 'labourWage'),
-                            date: d.periodStart,
-                            submittedBy: d.submittedBy || 'Unknown'
-                        });
-                    }
-                });
-                
-                return submissions;
-            }
-
-            function getStatusTextForType(status, type) {
-                const map = {
-                    'siteDiary': { 'draft': 'Draft', 'submitted-wsg': 'Submitted to WSG', 'submitted-ig': 'Submitted to IG', 'closed': 'Closed', 'reopen': 'Reopen', 'cancelled': 'Cancelled' },
-                    'safetyInspection': { 'draft': 'Draft', 'submitted-wsg': 'Submitted to WSG', 'submitted-ig': 'Submitted to IG', 'closed': 'Closed', 'reopen': 'Reopen', 'cancelled': 'Cancelled' },
-                    'labourWage': { 'draft': 'Draft', 'submitted': 'Submitted', 'endorsed': 'Endorsed', 'cancelled': 'Cancelled', 'confirm': "Client's Representative", 'double-check': "Double Check" }
-                };
-                return (map[type] && map[type][status]) || status;
-            }
-
-            function getStatusClass(status) {
-                const s = status || '';
-                if (s.startsWith('submitted')) return 'status-submitted';
-                if (s === 'endorsed' || s === 'closed') return 'status-endorsed';
-                if (s === 'cancelled') return 'status-cancelled';
-                if (s === 'confirm') return 'status-confirm';
-                if (s === 'double-check' || s === 'reopen') return 'status-double-check';
-                return 'status-draft';
-            }
-
-            function openSubmissionsPanel(siteId) {
-                const site = siteData.find(s => s.id === siteId);
-                if (!site) return;
-                
-                currentSubmissionsSiteId = siteId;
-                document.getElementById('submissions-title').textContent = 'Submissions';
-                document.getElementById('submissions-subtitle').textContent = site.name;
-                
-                document.getElementById('submissions-panel').classList.add('show');
-                renderSubmissions();
-            }
-
-            function closeSubmissionsPanel() {
-                document.getElementById('submissions-panel').classList.remove('show');
-            }
-
-            function renderSubmissions() {
-                const site = siteData.find(s => s.id === currentSubmissionsSiteId);
-                if (!site) return;
-                
-                const allSubmissions = getSiteSubmissions(site.name);
-                const filtered = currentSubmissionTab === 'all' ? allSubmissions : allSubmissions.filter(s => s.type === currentSubmissionTab);
-                
-                const listEl = document.getElementById('submissions-list');
-                if (!listEl) return;
-                
-                if (filtered.length === 0) {
-                    listEl.innerHTML = `<div class="no-submissions"><i class="fas fa-inbox"></i><p>No ${currentSubmissionTab === 'all' ? '' : currentSubmissionTab + ' '}submissions for this site.</p></div>`;
-                    return;
-                }
-                
-                listEl.innerHTML = filtered.map(s => `
-                    <div class="submission-card" onclick="window._dwssViewSubmission('${s.type}', '${s.id}')">
-                        <div class="submission-card-header">
-                            <div>
-                                <div class="submission-card-title">${s.typeLabel}</div>
-                                <div class="submission-card-id">${s.id}</div>
-                            </div>
-                            <span class="status-badge ${getStatusClass(s.status)}">${s.statusText}</span>
-                        </div>
-                        <div class="submission-card-meta">
-                            <i class="fas fa-calendar"></i> ${s.date || 'N/A'}
-                            <i class="fas fa-user" style="margin-left:12px;"></i> ${s.submittedBy}
-                        </div>
-                    </div>
-                `).join('');
-            }
-
-            window._dwssViewSubmission = function(type, id) {
-                if (type === 'siteDiary') { sessionStorage.setItem('selectedSubmissionId', id); window.location.href = 'sitediary.html'; }
-                else if (type === 'safetyInspection') { sessionStorage.setItem('selectedSubmissionId', id); window.location.href = 'safetyinspect.html'; }
-                else if (type === 'labourWage') { sessionStorage.setItem('selectedSubmissionId', id); window.location.href = 'labourwage.html'; }
-            };
-
-            function bindSubmissionsEvents() {
-                document.getElementById('submissions-close').addEventListener('click', closeSubmissionsPanel);
-                document.querySelectorAll('.submission-tab').forEach(tab => {
-                    tab.addEventListener('click', function() {
-                        document.querySelectorAll('.submission-tab').forEach(t => t.classList.remove('active'));
-                        this.classList.add('active');
-                        currentSubmissionTab = this.dataset.type;
-                        renderSubmissions();
-                    });
-                });
-            }
             
-            // ==================== 初始化 ====================
             function initMap() {
                 map = L.map('site-map', { center: [22.35, 114.13], zoom: 11, zoomControl: true });
                 
-                // ★ 使用 OpenStreetMap 官方免費瓦片源（無需 API Key）
-                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012',
                     maxZoom: 19
                 }).addTo(map);
                 
@@ -1202,8 +942,11 @@
                 refreshAll();
                 setupSearch();
                 bindEvents();
-                bindSubmissionsEvents();
-                if (siteData.length > 0) { currentSiteId = siteData[0].id; selectSite(siteData[0].id, true); }
+                
+                if (siteData.length > 0) { 
+                    currentSiteId = siteData[0].id; 
+                    selectSite(siteData[0].id, true); 
+                }
             }
             
             if (document.readyState === 'loading') {
