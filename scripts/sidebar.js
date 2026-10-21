@@ -73,7 +73,6 @@ function loadSidebar() {
                         <span class="menu-text" data-i18n="safety.inspection">Safety Inspection</span>
                     </a>
                 </li>
-                <li style="display: none;">
                     <a href="sitelocations.html" id="menu-sitelocations">
                         <i class="fas fa-map-marked-alt"></i>
                         <span class="menu-text" data-i18n="site.locations">Site Locations</span>

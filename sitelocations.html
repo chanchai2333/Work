@@ -28,7 +28,7 @@
             display: flex; 
             gap: 16px; 
             position: relative; 
-            align-items: stretch; /* 讓子元素等高 */;
+            align-items: stretch;
         }
         .map-container { 
             flex: 1; 
@@ -168,8 +168,7 @@
             flex-shrink: 0;
             display: flex;
             flex-direction: column;
-            /* 限制最大高度 = 地圖高度 + 提示文字高度 */
-            max-height: 582px; /* 550px map + 32px hint */
+            max-height: 582px;
             border-radius: 8px;
             background: #fff;
             box-shadow: 0 1px 4px rgba(0,0,0,0.06);
@@ -185,154 +184,64 @@
             background: #fff;
             border-radius: 8px 8px 0 0;
         }
-        .site-list-header h2 {
-            margin: 0;
-            font-size: 16px;
-            color: #333;
-        }
-        .site-list-header .search-box {
-            display: flex;
-            align-items: center;
-            gap: 0;
-        }
+        .site-list-header h2 { margin: 0; font-size: 16px; color: #333; }
+        .site-list-header .search-box { display: flex; align-items: center; gap: 0; }
         .site-list-header .search-box input {
-            padding: 7px 10px;
-            border: 1.5px solid #ddd;
-            border-radius: 6px 0 0 6px;
-            font-size: 12px;
-            width: 150px;
-            outline: none;
+            padding: 7px 10px; border: 1.5px solid #ddd; border-radius: 6px 0 0 6px;
+            font-size: 12px; width: 150px; outline: none;
         }
-        .site-list-header .search-box input:focus {
-            border-color: #1a73e8;
-        }
+        .site-list-header .search-box input:focus { border-color: #1a73e8; }
         .site-list-header .search-box button {
-            padding: 7px 10px;
-            border: 1.5px solid #ddd;
-            border-left: none;
-            border-radius: 0 6px 6px 0;
-            background: #f5f5f5;
-            cursor: pointer;
-            color: #666;
-            font-size: 12px;
+            padding: 7px 10px; border: 1.5px solid #ddd; border-left: none;
+            border-radius: 0 6px 6px 0; background: #f5f5f5; cursor: pointer; color: #666; font-size: 12px;
         }
-        .site-list-header .search-box button:hover {
-            background: #e0e0e0;
-        }
+        .site-list-header .search-box button:hover { background: #e0e0e0; }
         
-        /* ★ 列表本體 - 可滾動 */
         .site-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 8px 12px;
-            /* 自定義滾動條 */
-            scrollbar-width: thin;
-            scrollbar-color: #c0c0c0 transparent;
+            flex: 1; overflow-y: auto; padding: 8px 12px;
+            scrollbar-width: thin; scrollbar-color: #c0c0c0 transparent;
         }
-        .site-list::-webkit-scrollbar {
-            width: 6px;
-        }
-        .site-list::-webkit-scrollbar-track {
-            background: transparent;
-            border-radius: 3px;
-        }
-        .site-list::-webkit-scrollbar-thumb {
-            background: #c0c0c0;
-            border-radius: 3px;
-        }
-        .site-list::-webkit-scrollbar-thumb:hover {
-            background: #999;
-        }
+        .site-list::-webkit-scrollbar { width: 6px; }
+        .site-list::-webkit-scrollbar-track { background: transparent; border-radius: 3px; }
+        .site-list::-webkit-scrollbar-thumb { background: #c0c0c0; border-radius: 3px; }
+        .site-list::-webkit-scrollbar-thumb:hover { background: #999; }
         
-        /* 列表項 */
         .site-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 12px;
-            border-radius: 8px;
-            margin-bottom: 4px;
-            cursor: pointer;
-            transition: background 0.15s;
-            position: relative;
+            display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+            border-radius: 8px; margin-bottom: 4px; cursor: pointer;
+            transition: background 0.15s; position: relative;
         }
-        .site-item:hover {
-            background: #f5f7fa;
-        }
-        .site-item.active {
-            background: #e8f0fe;
-            border: 1px solid #c5d9f5;
-        }
+        .site-item:hover { background: #f5f7fa; }
+        .site-item.active { background: #e8f0fe; border: 1px solid #c5d9f5; }
         .site-item .site-icon {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            background: #e8f0fe;
-            color: #1a73e8;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 15px;
-            flex-shrink: 0;
+            width: 38px; height: 38px; border-radius: 50%; background: #e8f0fe;
+            color: #1a73e8; display: flex; align-items: center; justify-content: center;
+            font-size: 15px; flex-shrink: 0;
         }
-        .site-item.active .site-icon {
-            background: #1a73e8;
-            color: #fff;
-        }
-        .site-item .site-info {
-            flex: 1;
-            min-width: 0;
-        }
+        .site-item.active .site-icon { background: #1a73e8; color: #fff; }
+        .site-item .site-info { flex: 1; min-width: 0; }
         .site-item .site-info h3 {
-            margin: 0 0 2px 0;
-            font-size: 13px;
-            color: #333;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            margin: 0 0 2px 0; font-size: 13px; color: #333;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-        .site-item .site-info p {
-            margin: 0;
-            font-size: 11px;
-            color: #999;
-        }
+        .site-item .site-info p { margin: 0; font-size: 11px; color: #999; }
         
-        /* 列表操作按鈕 */
-        .site-item-actions {
-            display: none;
-            gap: 4px;
-            flex-shrink: 0;
-        }
-        .site-item:hover .site-item-actions {
-            display: flex;
-        }
+        .site-item-actions { display: none; gap: 4px; flex-shrink: 0; }
+        .site-item:hover .site-item-actions { display: flex; }
         .site-item-actions button {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            border: none;
-            cursor: pointer;
-            font-size: 11px;
-            color: #fff;
-            transition: opacity 0.15s;
+            width: 28px; height: 28px; border-radius: 50%; border: none;
+            cursor: pointer; font-size: 11px; color: #fff; transition: opacity 0.15s;
         }
         .site-item-actions button:hover { opacity: 0.8; }
         .edit-btn-sm { background: #1a73e8; }
         .delete-btn-sm { background: #e53935; }
         
-        /* 列表底部資訊 */
         .site-list-footer {
-            padding: 8px 16px;
-            border-top: 1px solid #e8e8e8;
-            font-size: 11px;
-            color: #999;
-            text-align: center;
-            flex-shrink: 0;
-            background: #fff;
-            border-radius: 0 0 8px 8px;
+            padding: 8px 16px; border-top: 1px solid #e8e8e8;
+            font-size: 11px; color: #999; text-align: center;
+            flex-shrink: 0; background: #fff; border-radius: 0 0 8px 8px;
         }
         
-        /* ========== 按鈕 ========== */
         .add-site-btn {
             display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;
             background: #1a73e8; color: #fff; border: none; border-radius: 8px;
@@ -340,7 +249,6 @@
         }
         .add-site-btn:hover { background: #1557b0; }
         
-        /* ========== 統計卡片 ========== */
         .site-stats { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
         .stat-card {
             flex: 1; min-width: 130px; background: #fff; border-radius: 8px;
@@ -357,7 +265,6 @@
         .stat-value { font-size: 20px; font-weight: 700; color: #333; }
         .stat-label { font-size: 11px; color: #888; }
         
-        /* ========== 刪除對話框 ========== */
         .delete-dialog-overlay {
             display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0,0,0,0.5); z-index: 100000; align-items: center; justify-content: center;
@@ -375,89 +282,78 @@
             display: flex; justify-content: flex-end; gap: 8px;
         }
         
-        /* ========== 響應式 ========== */
         @media (max-width: 1000px) {
             .map-and-list { flex-direction: column; }
-            .site-list-container { 
-                width: 100%; 
-                max-height: 400px;
-            }
+            .site-list-container { width: 100%; max-height: 400px; }
             .site-panel { width: 100%; right: -100%; }
             #site-map { height: 350px; }
         }
-        /* ========== 提交記錄面板 ========== */
-.submissions-panel {
-    position: fixed; top: 0; right: -500px; width: 480px; height: 100vh;
-    background: #fff; box-shadow: -4px 0 24px rgba(0,0,0,0.18);
-    z-index: 9997; transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex; flex-direction: column; overflow: hidden;
-}
-.submissions-panel.show { right: 0; }
-.submissions-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 16px 22px; border-bottom: 1px solid #e8e8e8;
-    background: #fff; flex-shrink: 0;
-}
-.submissions-header h3 { margin: 0; font-size: 17px; color: #222; }
-.submissions-header .site-subtitle { font-size: 12px; color: #888; margin-top: 2px; }
-.submissions-body { flex: 1; overflow-y: auto; padding: 16px 22px; }
-
-.submission-tabs {
-    display: flex; gap: 4px; margin-bottom: 16px;
-    background: #f5f5f5; border-radius: 8px; padding: 4px;
-}
-.submission-tab {
-    flex: 1; padding: 8px 10px; border: none; border-radius: 6px;
-    cursor: pointer; font-size: 12px; font-weight: 500;
-    background: transparent; color: #666; transition: all 0.2s;
-}
-.submission-tab.active {
-    background: #1a73e8; color: #fff;
-    box-shadow: 0 2px 6px rgba(26,115,232,0.3);
-}
-.submission-tab:hover:not(.active) { background: #e0e0e0; }
-
-.submission-card {
-    background: #fafafa; border: 1px solid #e8e8e8; border-radius: 10px;
-    padding: 14px 16px; margin-bottom: 10px; cursor: pointer;
-    transition: all 0.2s;
-}
-.submission-card:hover {
-    background: #f0f7ff; border-color: #1a73e8;
-    box-shadow: 0 2px 8px rgba(26,115,232,0.1);
-    transform: translateY(-2px);
-}
-.submission-card-header {
-    display: flex; justify-content: space-between; align-items: flex-start;
-    margin-bottom: 8px;
-}
-.submission-card-title { font-size: 14px; font-weight: 600; color: #333; }
-.submission-card-id { font-size: 11px; color: #999; }
-.status-badge {
-    padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;
-    display: inline-block;
-}
-.status-draft { background: #f5f5f5; color: #888; }
-.status-submitted, .status-submitted-wsg, .status-submitted-ig { background: #e3f2fd; color: #1565c0; }
-.status-endorsed, .status-closed { background: #e8f5e9; color: #2e7d32; }
-.status-cancelled { background: #ffebee; color: #c62828; }
-.status-confirm { background: #f3e5f5; color: #7b1fa2; }
-.status-double-check, .status-reopen { background: #fff3e0; color: #e65100; }
-
-.submission-card-meta {
-    font-size: 12px; color: #888; margin-top: 6px;
-}
-.submission-card-meta i { margin-right: 4px; color: #999; }
-
-.no-submissions {
-    text-align: center; padding: 40px 20px; color: #999;
-}
-.no-submissions i { font-size: 48px; display: block; margin-bottom: 12px; color: #ccc; }
-
-
+        
+        .submissions-panel {
+            position: fixed; top: 0; right: -500px; width: 480px; height: 100vh;
+            background: #fff; box-shadow: -4px 0 24px rgba(0,0,0,0.18);
+            z-index: 9997; transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .submissions-panel.show { right: 0; }
+        .submissions-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 22px; border-bottom: 1px solid #e8e8e8;
+            background: #fff; flex-shrink: 0;
+        }
+        .submissions-header h3 { margin: 0; font-size: 17px; color: #222; }
+        .submissions-header .site-subtitle { font-size: 12px; color: #888; margin-top: 2px; }
+        .submissions-body { flex: 1; overflow-y: auto; padding: 16px 22px; }
+        
+        .submission-tabs {
+            display: flex; gap: 4px; margin-bottom: 16px;
+            background: #f5f5f5; border-radius: 8px; padding: 4px;
+        }
+        .submission-tab {
+            flex: 1; padding: 8px 10px; border: none; border-radius: 6px;
+            cursor: pointer; font-size: 12px; font-weight: 500;
+            background: transparent; color: #666; transition: all 0.2s;
+        }
+        .submission-tab.active {
+            background: #1a73e8; color: #fff;
+            box-shadow: 0 2px 6px rgba(26,115,232,0.3);
+        }
+        .submission-tab:hover:not(.active) { background: #e0e0e0; }
+        
+        .submission-card {
+            background: #fafafa; border: 1px solid #e8e8e8; border-radius: 10px;
+            padding: 14px 16px; margin-bottom: 10px; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .submission-card:hover {
+            background: #f0f7ff; border-color: #1a73e8;
+            box-shadow: 0 2px 8px rgba(26,115,232,0.1);
+            transform: translateY(-2px);
+        }
+        .submission-card-header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        .submission-card-title { font-size: 14px; font-weight: 600; color: #333; }
+        .submission-card-id { font-size: 11px; color: #999; }
+        .status-badge {
+            padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;
+            display: inline-block;
+        }
+        .status-draft { background: #f5f5f5; color: #888; }
+        .status-submitted, .status-submitted-wsg, .status-submitted-ig { background: #e3f2fd; color: #1565c0; }
+        .status-endorsed, .status-closed { background: #e8f5e9; color: #2e7d32; }
+        .status-cancelled { background: #ffebee; color: #c62828; }
+        .status-confirm { background: #f3e5f5; color: #7b1fa2; }
+        .status-double-check, .status-reopen { background: #fff3e0; color: #e65100; }
+        
+        .submission-card-meta { font-size: 12px; color: #888; margin-top: 6px; }
+        .submission-card-meta i { margin-right: 4px; color: #999; }
+        
+        .no-submissions { text-align: center; padding: 40px 20px; color: #999; }
+        .no-submissions i { font-size: 48px; display: block; margin-bottom: 12px; color: #ccc; }
     </style>
 </head>
-
 
 <body>
     <script src="scripts/language.js"></script>
@@ -491,15 +387,15 @@
             <div class="site-stats">
                 <div class="stat-card">
                     <div class="stat-icon blue"><i class="fas fa-map-pin"></i></div>
-                    <div><div class="stat-value" id="stat-total">5</div><div class="stat-label">Total Sites</div></div>
+                    <div><div class="stat-value" id="stat-total">0</div><div class="stat-label">Total Sites</div></div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
-                    <div><div class="stat-value" id="stat-active">3</div><div class="stat-label">Active</div></div>
+                    <div><div class="stat-value" id="stat-active">0</div><div class="stat-label">Active</div></div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon orange"><i class="fas fa-exclamation-triangle"></i></div>
-                    <div><div class="stat-value" id="stat-attention">1</div><div class="stat-label">Need Attention</div></div>
+                    <div><div class="stat-value" id="stat-attention">0</div><div class="stat-label">Need Attention</div></div>
                 </div>
             </div>
             
@@ -516,7 +412,6 @@
                     </div>
                 </div>
                 
-                <!-- ★ 列表容器 - 可滾動 -->
                 <div class="site-list-container">
                     <div class="site-list-header">
                         <h2>Site List</h2>
@@ -527,7 +422,7 @@
                     </div>
                     <div class="site-list" id="site-list"></div>
                     <div class="site-list-footer" id="site-list-footer">
-                        Showing <span id="list-count">5</span> site(s)
+                        Showing <span id="list-count">0</span> site(s)
                     </div>
                 </div>
             </div>
@@ -618,24 +513,24 @@
     </div>
 
     <!-- 提交記錄面板 -->
-<div class="submissions-panel" id="submissions-panel">
-    <div class="submissions-header">
-        <div>
-            <h3 id="submissions-title">Submissions</h3>
-            <div class="site-subtitle" id="submissions-subtitle"></div>
+    <div class="submissions-panel" id="submissions-panel">
+        <div class="submissions-header">
+            <div>
+                <h3 id="submissions-title">Submissions</h3>
+                <div class="site-subtitle" id="submissions-subtitle"></div>
+            </div>
+            <button class="panel-close" id="submissions-close">&times;</button>
         </div>
-        <button class="panel-close" id="submissions-close">&times;</button>
-    </div>
-    <div class="submissions-body" id="submissions-body">
-        <div class="submission-tabs">
-            <button class="submission-tab active" data-type="all">All</button>
-            <button class="submission-tab" data-type="siteDiary">Site Diary</button>
-            <button class="submission-tab" data-type="safetyInspection">Safety</button>
-            <button class="submission-tab" data-type="labourWage">Labour</button>
+        <div class="submissions-body" id="submissions-body">
+            <div class="submission-tabs">
+                <button class="submission-tab active" data-type="all">All</button>
+                <button class="submission-tab" data-type="siteDiary">Site Diary</button>
+                <button class="submission-tab" data-type="safetyInspection">Safety</button>
+                <button class="submission-tab" data-type="labourWage">Labour</button>
+            </div>
+            <div id="submissions-list"></div>
         </div>
-        <div id="submissions-list"></div>
     </div>
-</div>
 
     <!-- 刪除對話框 -->
     <div class="delete-dialog-overlay" id="delete-dialog-overlay">
@@ -659,74 +554,76 @@
         (function() {
             const STORAGE_KEY = 'dwss_site_data_v9';
             
-            const defaultSiteData = [
-    {
-        id: 1,
-        name: 'Stonecutters Island Sewage Treatment Works',
-        category: 'Treatment Plant',
-        icon: 'fa-water',
-        lat: 22.3477,
-        lng: 114.1358,
-        lastUpdated: '15-Aug-25',
-        status: 'active',
-        description: 'Major sewage treatment facility serving Kowloon and Hong Kong Island. Phase 2 expansion in progress.',
-        contact: 'Mr. Chan Tai Man',
-        progress: 78
-    },
-    {
-        id: 2,
-        name: 'Mong Kok Water Main Replacement',
-        category: 'Pipeline',
-        icon: 'fa-road',
-        lat: 22.3193,
-        lng: 114.1694,
-        lastUpdated: '14-Aug-25',
-        status: 'in-progress',
-        description: 'Replacement of aging water mains along Nathan Road. Night work to minimize traffic disruption.',
-        contact: 'Mr. Lee Kwok Wai',
-        progress: 45
-    },
-    {
-        id: 3,
-        name: 'Kowloon Reservoir Maintenance',
-        category: 'Reservoir',
-        icon: 'fa-tint',
-        lat: 22.3556,
-        lng: 114.1497,
-        lastUpdated: '13-Aug-25',
-        status: 'active',
-        description: 'Routine maintenance and structural inspection of Kowloon Reservoir dam and overflow systems.',
-        contact: 'Ms. Wong Siu Ling',
-        progress: 92
-    },
-    {
-        id: 4,
-        name: 'Pok Fu Lam Service Reservoir',
-        category: 'Distribution',
-        icon: 'fa-network-wired',
-        lat: 22.2660,
-        lng: 114.1383,
-        lastUpdated: '12-Aug-25',
-        status: 'active',
-        description: 'Fresh water service reservoir supplying Western District. Valve and pipeline upgrades ongoing.',
-        contact: 'Mr. Ho Cheuk Yin',
-        progress: 60
-    },
-    {
-        id: 5,
-        name: 'Sheung Shui Pumping Station Upgrade',
-        category: 'Pump Station',
-        icon: 'fa-gas-pump',
-        lat: 22.5013,
-        lng: 114.1281,
-        lastUpdated: '11-Aug-25',
-        status: 'attention',
-        description: 'High-pressure pumping station serving northern New Territories. Equipment replacement required.',
-        contact: 'Ms. Cheung Mei Ling',
-        progress: 33
-    }
-];
+            // 獲取當前項目
+            function getCurrentProjectId() {
+                return sessionStorage.getItem('currentProjectId') || 'DE/2026/05';
+            }
+            const CURRENT_PROJECT = getCurrentProjectId();
             
+            // 預設資料（按項目分類）
+            const DEFAULT_PROJECT_DATA = {
+                'DE/2026/05': [
+                    { id: 1, name: 'Stonecutters Island Sewage Treatment Works', category: 'Treatment Plant', icon: 'fa-water', lat: 22.3477, lng: 114.1358, lastUpdated: '15-Aug-25', status: 'active', description: 'Major sewage treatment facility serving Kowloon and Hong Kong Island. Phase 2 expansion in progress.', contact: 'Mr. Chan Tai Man', progress: 78 },
+                    { id: 2, name: 'Mong Kok Water Main Replacement', category: 'Pipeline', icon: 'fa-road', lat: 22.3193, lng: 114.1694, lastUpdated: '14-Aug-25', status: 'in-progress', description: 'Replacement of aging water mains along Nathan Road. Night work to minimize traffic disruption.', contact: 'Mr. Lee Kwok Wai', progress: 45 },
+                    { id: 3, name: 'Kowloon Reservoir Maintenance', category: 'Reservoir', icon: 'fa-tint', lat: 22.3556, lng: 114.1497, lastUpdated: '13-Aug-25', status: 'active', description: 'Routine maintenance and structural inspection of Kowloon Reservoir dam and overflow systems.', contact: 'Ms. Wong Siu Ling', progress: 92 }
+                ],
+                'DE/2025/02': [
+                    { id: 4, name: 'Pok Fu Lam Service Reservoir', category: 'Distribution', icon: 'fa-network-wired', lat: 22.2660, lng: 114.1383, lastUpdated: '12-Aug-25', status: 'active', description: 'Fresh water service reservoir supplying Western District. Valve and pipeline upgrades ongoing.', contact: 'Mr. Ho Cheuk Yin', progress: 60 },
+                    { id: 5, name: 'Sheung Shui Pumping Station Upgrade', category: 'Pump Station', icon: 'fa-gas-pump', lat: 22.5013, lng: 114.1281, lastUpdated: '11-Aug-25', status: 'attention', description: 'High-pressure pumping station serving northern New Territories. Equipment replacement required.', contact: 'Ms. Cheung Mei Ling', progress: 33 }
+                ],
+                'DE/2025/09': [
+                    { id: 6, name: 'Tai Po Treatment Works Phase 2', category: 'Treatment Plant', icon: 'fa-water', lat: 22.4500, lng: 114.1700, lastUpdated: '10-Aug-25', status: 'active', description: 'Expansion of Tai Po treatment works.', contact: 'Mr. Lam', progress: 15 },
+                    { id: 7, name: 'Sha Tin Water Main Extension', category: 'Pipeline', icon: 'fa-road', lat: 22.3800, lng: 114.1900, lastUpdated: '09-Aug-25', status: 'in-progress', description: 'New water main laying in Sha Tin area.', contact: 'Ms. Lee', progress: 20 }
+                ]
+            };
+
+            // 載入當前項目的資料
+            function loadSiteData() {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                let allData = [];
+                
+                if (stored) {
+                    try { allData = JSON.parse(stored); } catch(e) {}
+                } else {
+                    // 第一次載入，將預設資料寫入 localStorage
+                    Object.keys(DEFAULT_PROJECT_DATA).forEach(pid => {
+                        DEFAULT_PROJECT_DATA[pid].forEach(site => {
+                            site.project = pid;
+                            allData.push(site);
+                        });
+                    });
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
+                }
+                
+                // 過濾出當前項目
+                return allData.filter(s => s.project === CURRENT_PROJECT);
+            }
+            
+            // 儲存資料（更新當前項目，保留其他項目的資料）
+            function saveSiteData() {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                let allData = [];
+                if (stored) { try { allData = JSON.parse(stored); } catch(e) {} }
+                
+                // 移除當前項目的舊資料
+                allData = allData.filter(s => s.project !== CURRENT_PROJECT);
+                
+                // 將目前的 siteData 加上 project 寫回
+                siteData.forEach(s => { s.project = CURRENT_PROJECT; });
+                allData = allData.concat(siteData);
+                
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
+            }
+            
+            // 取得下一個全局唯一的 ID
+            function getNextId() {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                let allData = [];
+                if (stored) { try { allData = JSON.parse(stored); } catch(e) {} }
+                if (allData.length === 0) return 1;
+                return Math.max(...allData.map(s => s.id)) + 1;
+            }
+
             function getIconForCategory(cat) {
                 const map = {
                     'Treatment Plant': 'fa-water', 'Pipeline': 'fa-road',
@@ -735,18 +632,7 @@
                 };
                 return map[cat] || 'fa-map-pin';
             }
-            
-            function loadSiteData() {
-                const stored = localStorage.getItem(STORAGE_KEY);
-                if (stored) { try { return JSON.parse(stored); } catch(e) {} }
-                return JSON.parse(JSON.stringify(defaultSiteData));
-            }
-            
-            function saveSiteData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(siteData)); }
-            function getNextId() {
-                if (siteData.length === 0) return 1;
-                return Math.max(...siteData.map(s => s.id)) + 1;
-            }
+
             function formatDate() {
                 const now = new Date();
                 const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -808,21 +694,20 @@
             }
             
             function selectSite(siteId, flyTo) {
-    const site = siteData.find(s => s.id === siteId);
-    if (!site) return;
-    currentSiteId = siteId;
-    document.querySelectorAll('.site-item').forEach(el => {
-        el.classList.toggle('active', parseInt(el.dataset.id) === siteId);
-    });
-    updateAllMarkerIcons();
-    if (flyTo && markers[siteId]) {
-        map.flyTo([site.lat, site.lng], 15, { duration: 0.8 });
-    }
-    if (markers[siteId]) markers[siteId].openPopup();
-    
-    // ★ 打開提交記錄面板
-    openSubmissionsPanel(siteId);
-}
+                const site = siteData.find(s => s.id === siteId);
+                if (!site) return;
+                currentSiteId = siteId;
+                document.querySelectorAll('.site-item').forEach(el => {
+                    el.classList.toggle('active', parseInt(el.dataset.id) === siteId);
+                });
+                updateAllMarkerIcons();
+                if (flyTo && markers[siteId]) {
+                    map.flyTo([site.lat, site.lng], 15, { duration: 0.8 });
+                }
+                if (markers[siteId]) markers[siteId].openPopup();
+                
+                openSubmissionsPanel(siteId);
+            }
             
             // ==================== 全局函數 ====================
             window._dwssEditSite = function(siteId) {
@@ -839,7 +724,7 @@
             function renderSiteList() {
                 siteListContainer.innerHTML = '';
                 if (siteData.length === 0) {
-                    siteListContainer.innerHTML = '<div style="text-align:center;padding:40px;color:#999;"><i class="fas fa-map-pin" style="font-size:40px;display:block;margin-bottom:12px;"></i>No sites registered yet.</div>';
+                    siteListContainer.innerHTML = '<div style="text-align:center;padding:40px;color:#999;"><i class="fas fa-map-pin" style="font-size:40px;display:block;margin-bottom:12px;"></i>No sites registered for this project.</div>';
                 } else {
                     siteData.forEach(site => {
                         const el = document.createElement('div');
@@ -861,7 +746,6 @@
                         siteListContainer.appendChild(el);
                     });
                 }
-                // 更新底部計數
                 if (listCount) listCount.textContent = siteData.length;
             }
             
@@ -1157,189 +1041,159 @@
             }
 
             // ==================== 提交記錄功能 ====================
-let currentSubmissionsSiteId = null;
-let currentSubmissionTab = 'all';
+            let currentSubmissionsSiteId = null;
+            let currentSubmissionTab = 'all';
 
-function getSiteSubmissions(siteName) {
-    const submissions = [];
-    
-    // 獲取 Site Diary 數據
-    const diaryData = JSON.parse(localStorage.getItem('siteDiaryData') || '[]');
-    diaryData.forEach(d => {
-        if (d.site && d.site.toLowerCase().includes(siteName.toLowerCase()) ||
-            siteName.toLowerCase().includes(d.site?.toLowerCase())) {
-            submissions.push({
-                id: d.id,
-                type: 'siteDiary',
-                typeLabel: 'Site Diary',
-                status: d.status,
-                statusText: getStatusTextForType(d.status, 'siteDiary'),
-                date: d.date,
-                submittedBy: d.submittedBy || 'Unknown'
-            });
-        }
-    });
-    
-    // 獲取 Safety Inspection 數據
-    const inspectionData = JSON.parse(localStorage.getItem('inspectionData') || '[]');
-    inspectionData.forEach(d => {
-        if (d.site && d.site.toLowerCase().includes(siteName.toLowerCase()) ||
-            siteName.toLowerCase().includes(d.site?.toLowerCase())) {
-            submissions.push({
-                id: d.id,
-                type: 'safetyInspection',
-                typeLabel: 'Safety Inspection',
-                status: d.status,
-                statusText: getStatusTextForType(d.status, 'safetyInspection'),
-                date: d.date,
-                submittedBy: d.inspector || 'Unknown'
-            });
-        }
-    });
-    
-    // 獲取 Labour Wage 數據
-    const wageData = JSON.parse(localStorage.getItem('wageData') || '[]');
-    wageData.forEach(d => {
-        if (d.site && d.site.toLowerCase().includes(siteName.toLowerCase()) ||
-            siteName.toLowerCase().includes(d.site?.toLowerCase())) {
-            submissions.push({
-                id: d.id,
-                type: 'labourWage',
-                typeLabel: 'Labour Wage',
-                status: d.status,
-                statusText: getStatusTextForType(d.status, 'labourWage'),
-                date: d.periodStart,
-                submittedBy: d.submittedBy || 'Unknown'
-            });
-        }
-    });
-    
-    return submissions;
-}
+            function getSiteSubmissions(siteName) {
+                const projectId = getCurrentProjectId();
+                const submissions = [];
+                
+                // 獲取 Site Diary 數據 (加入 project 檢查)
+                const diaryData = JSON.parse(localStorage.getItem('siteDiaryData') || '[]');
+                diaryData.forEach(d => {
+                    if (d.project === projectId && d.site && (d.site.toLowerCase().includes(siteName.toLowerCase()) || siteName.toLowerCase().includes(d.site.toLowerCase()))) {
+                        submissions.push({
+                            id: d.id,
+                            type: 'siteDiary',
+                            typeLabel: 'Site Diary',
+                            status: d.status,
+                            statusText: getStatusTextForType(d.status, 'siteDiary'),
+                            date: d.date,
+                            submittedBy: d.submittedBy || 'Unknown'
+                        });
+                    }
+                });
+                
+                // 獲取 Safety Inspection 數據 (加入 project 檢查)
+                const inspectionData = JSON.parse(localStorage.getItem('inspectionData') || '[]');
+                inspectionData.forEach(d => {
+                    if (d.project === projectId && d.site && (d.site.toLowerCase().includes(siteName.toLowerCase()) || siteName.toLowerCase().includes(d.site.toLowerCase()))) {
+                        submissions.push({
+                            id: d.id,
+                            type: 'safetyInspection',
+                            typeLabel: 'Safety Inspection',
+                            status: d.status,
+                            statusText: getStatusTextForType(d.status, 'safetyInspection'),
+                            date: d.date,
+                            submittedBy: d.inspector || 'Unknown'
+                        });
+                    }
+                });
+                
+                // 獲取 Labour Wage 數據 (加入 project 檢查)
+                const wageData = JSON.parse(localStorage.getItem('wageData') || '[]');
+                wageData.forEach(d => {
+                    if (d.project === projectId && d.site && (d.site.toLowerCase().includes(siteName.toLowerCase()) || siteName.toLowerCase().includes(d.site.toLowerCase()))) {
+                        submissions.push({
+                            id: d.id,
+                            type: 'labourWage',
+                            typeLabel: 'Labour Wage',
+                            status: d.status,
+                            statusText: getStatusTextForType(d.status, 'labourWage'),
+                            date: d.periodStart,
+                            submittedBy: d.submittedBy || 'Unknown'
+                        });
+                    }
+                });
+                
+                return submissions;
+            }
 
-function getStatusTextForType(status, type) {
-    const map = {
-        'siteDiary': {
-            'draft': 'Draft', 'submitted-wsg': 'Submitted to WSG',
-            'submitted-ig': 'Submitted to IG', 'closed': 'Closed',
-            'reopen': 'Reopen', 'cancelled': 'Cancelled'
-        },
-        'safetyInspection': {
-            'draft': 'Draft', 'submitted-wsg': 'Submitted to WSG',
-            'submitted-ig': 'Submitted to IG', 'closed': 'Closed',
-            'reopen': 'Reopen', 'cancelled': 'Cancelled'
-        },
-        'labourWage': {
-            'draft': 'Draft', 'submitted': 'Submitted',
-            'endorsed': 'Endorsed', 'cancelled': 'Cancelled',
-            'confirm': "Client's Site Representative to Confirm",
-            'double-check': "Contractor's Agent Double Check"
-        }
-    };
-    return (map[type] && map[type][status]) || status;
-}
+            function getStatusTextForType(status, type) {
+                const map = {
+                    'siteDiary': { 'draft': 'Draft', 'submitted-wsg': 'Submitted to WSG', 'submitted-ig': 'Submitted to IG', 'closed': 'Closed', 'reopen': 'Reopen', 'cancelled': 'Cancelled' },
+                    'safetyInspection': { 'draft': 'Draft', 'submitted-wsg': 'Submitted to WSG', 'submitted-ig': 'Submitted to IG', 'closed': 'Closed', 'reopen': 'Reopen', 'cancelled': 'Cancelled' },
+                    'labourWage': { 'draft': 'Draft', 'submitted': 'Submitted', 'endorsed': 'Endorsed', 'cancelled': 'Cancelled', 'confirm': "Client's Representative", 'double-check': "Double Check" }
+                };
+                return (map[type] && map[type][status]) || status;
+            }
 
-function getStatusClass(status) {
-    const s = status || '';
-    if (s.startsWith('submitted')) return 'status-submitted';
-    if (s === 'endorsed' || s === 'closed') return 'status-endorsed';
-    if (s === 'cancelled') return 'status-cancelled';
-    if (s === 'confirm') return 'status-confirm';
-    if (s === 'double-check' || s === 'reopen') return 'status-double-check';
-    return 'status-draft';
-}
+            function getStatusClass(status) {
+                const s = status || '';
+                if (s.startsWith('submitted')) return 'status-submitted';
+                if (s === 'endorsed' || s === 'closed') return 'status-endorsed';
+                if (s === 'cancelled') return 'status-cancelled';
+                if (s === 'confirm') return 'status-confirm';
+                if (s === 'double-check' || s === 'reopen') return 'status-double-check';
+                return 'status-draft';
+            }
 
-function openSubmissionsPanel(siteId) {
-    const site = siteData.find(s => s.id === siteId);
-    if (!site) return;
-    
-    currentSubmissionsSiteId = siteId;
-    document.getElementById('submissions-title').textContent = 'Submissions';
-    document.getElementById('submissions-subtitle').textContent = site.name;
-    
-    document.getElementById('submissions-panel').classList.add('show');
-    renderSubmissions();
-}
+            function openSubmissionsPanel(siteId) {
+                const site = siteData.find(s => s.id === siteId);
+                if (!site) return;
+                
+                currentSubmissionsSiteId = siteId;
+                document.getElementById('submissions-title').textContent = 'Submissions';
+                document.getElementById('submissions-subtitle').textContent = site.name;
+                
+                document.getElementById('submissions-panel').classList.add('show');
+                renderSubmissions();
+            }
 
-function closeSubmissionsPanel() {
-    document.getElementById('submissions-panel').classList.remove('show');
-}
+            function closeSubmissionsPanel() {
+                document.getElementById('submissions-panel').classList.remove('show');
+            }
 
-function renderSubmissions() {
-    const site = siteData.find(s => s.id === currentSubmissionsSiteId);
-    if (!site) return;
-    
-    const allSubmissions = getSiteSubmissions(site.name);
-    const filtered = currentSubmissionTab === 'all' 
-        ? allSubmissions 
-        : allSubmissions.filter(s => s.type === currentSubmissionTab);
-    
-    const listEl = document.getElementById('submissions-list');
-    if (!listEl) return;
-    
-    if (filtered.length === 0) {
-        listEl.innerHTML = `
-            <div class="no-submissions">
-                <i class="fas fa-inbox"></i>
-                <p>No ${currentSubmissionTab === 'all' ? '' : currentSubmissionTab + ' '}submissions for this site.</p>
-            </div>`;
-        return;
-    }
-    
-    listEl.innerHTML = filtered.map(s => `
-        <div class="submission-card" onclick="window._dwssViewSubmission('${s.type}', '${s.id}')">
-            <div class="submission-card-header">
-                <div>
-                    <div class="submission-card-title">${s.typeLabel}</div>
-                    <div class="submission-card-id">${s.id}</div>
-                </div>
-                <span class="status-badge ${getStatusClass(s.status)}">${s.statusText}</span>
-            </div>
-            <div class="submission-card-meta">
-                <i class="fas fa-calendar"></i> ${s.date || 'N/A'}
-                <i class="fas fa-user" style="margin-left:12px;"></i> ${s.submittedBy}
-            </div>
-        </div>
-    `).join('');
-}
+            function renderSubmissions() {
+                const site = siteData.find(s => s.id === currentSubmissionsSiteId);
+                if (!site) return;
+                
+                const allSubmissions = getSiteSubmissions(site.name);
+                const filtered = currentSubmissionTab === 'all' ? allSubmissions : allSubmissions.filter(s => s.type === currentSubmissionTab);
+                
+                const listEl = document.getElementById('submissions-list');
+                if (!listEl) return;
+                
+                if (filtered.length === 0) {
+                    listEl.innerHTML = `<div class="no-submissions"><i class="fas fa-inbox"></i><p>No ${currentSubmissionTab === 'all' ? '' : currentSubmissionTab + ' '}submissions for this site.</p></div>`;
+                    return;
+                }
+                
+                listEl.innerHTML = filtered.map(s => `
+                    <div class="submission-card" onclick="window._dwssViewSubmission('${s.type}', '${s.id}')">
+                        <div class="submission-card-header">
+                            <div>
+                                <div class="submission-card-title">${s.typeLabel}</div>
+                                <div class="submission-card-id">${s.id}</div>
+                            </div>
+                            <span class="status-badge ${getStatusClass(s.status)}">${s.statusText}</span>
+                        </div>
+                        <div class="submission-card-meta">
+                            <i class="fas fa-calendar"></i> ${s.date || 'N/A'}
+                            <i class="fas fa-user" style="margin-left:12px;"></i> ${s.submittedBy}
+                        </div>
+                    </div>
+                `).join('');
+            }
 
-window._dwssViewSubmission = function(type, id) {
-    // 根據類型跳轉到對應頁面
-    if (type === 'siteDiary') {
-        sessionStorage.setItem('selectedSubmissionId', id);
-        window.location.href = 'sitediary.html';
-    } else if (type === 'safetyInspection') {
-        sessionStorage.setItem('selectedSubmissionId', id);
-        window.location.href = 'safetyinspect.html';
-    } else if (type === 'labourWage') {
-        sessionStorage.setItem('selectedSubmissionId', id);
-        window.location.href = 'labourwage.html';
-    }
-};
+            window._dwssViewSubmission = function(type, id) {
+                if (type === 'siteDiary') { sessionStorage.setItem('selectedSubmissionId', id); window.location.href = 'sitediary.html'; }
+                else if (type === 'safetyInspection') { sessionStorage.setItem('selectedSubmissionId', id); window.location.href = 'safetyinspect.html'; }
+                else if (type === 'labourWage') { sessionStorage.setItem('selectedSubmissionId', id); window.location.href = 'labourwage.html'; }
+            };
 
-// 綁定提交面板事件
-function bindSubmissionsEvents() {
-    document.getElementById('submissions-close').addEventListener('click', closeSubmissionsPanel);
-    
-    document.querySelectorAll('.submission-tab').forEach(tab => {
-        tab.addEventListener('click', function() {
-            document.querySelectorAll('.submission-tab').forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
-            currentSubmissionTab = this.dataset.type;
-            renderSubmissions();
-        });
-    });
-}
+            function bindSubmissionsEvents() {
+                document.getElementById('submissions-close').addEventListener('click', closeSubmissionsPanel);
+                document.querySelectorAll('.submission-tab').forEach(tab => {
+                    tab.addEventListener('click', function() {
+                        document.querySelectorAll('.submission-tab').forEach(t => t.classList.remove('active'));
+                        this.classList.add('active');
+                        currentSubmissionTab = this.dataset.type;
+                        renderSubmissions();
+                    });
+                });
+            }
             
             // ==================== 初始化 ====================
             function initMap() {
-                map = L.map('site-map', { 
-                    center: [22.35, 114.13], zoom: 11, zoomControl: true 
-                });
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap',
+                map = L.map('site-map', { center: [22.35, 114.13], zoom: 11, zoomControl: true });
+                
+                // ★ 使用 OpenStreetMap 官方免費瓦片源（無需 API Key）
+                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                     maxZoom: 19
                 }).addTo(map);
+                
                 map.whenReady(() => setupMapClick());
             }
             
@@ -1350,7 +1204,6 @@ function bindSubmissionsEvents() {
                 bindEvents();
                 bindSubmissionsEvents();
                 if (siteData.length > 0) { currentSiteId = siteData[0].id; selectSite(siteData[0].id, true); }
-                console.log('[DWSS] Ready. Site list is now scrollable.');
             }
             
             if (document.readyState === 'loading') {
@@ -1364,8 +1217,10 @@ function bindSubmissionsEvents() {
                 selectSiteById: (id) => selectSite(id, true),
                 openNewSiteForm: () => openPanel(null), refreshAll,
                 resetData: () => {
-                    if (confirm('Reset all site data to defaults?')) {
-                        siteData = JSON.parse(JSON.stringify(defaultSiteData));
+                    if (confirm('Reset all site data for this project to defaults?')) {
+                        const defaults = DEFAULT_PROJECT_DATA[CURRENT_PROJECT] || [];
+                        siteData = JSON.parse(JSON.stringify(defaults));
+                        siteData.forEach(s => s.project = CURRENT_PROJECT);
                         saveSiteData();
                         currentSiteId = siteData[0]?.id || null;
                         refreshAll();
