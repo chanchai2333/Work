@@ -108,24 +108,6 @@
     </style>
 </head>
 <body>
-    <!-- 侧边栏 -->
-    <div class="sidebar">
-        <div class="logo">
-            <img src="AEL Logo.png" alt="AEL Logo" class="logo-img" style="height: 45px; width: auto; object-fit: contain; margin-right: 8px;">
-            <h2>DWSS</h2>
-        </div>
-        <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
-        <ul class="menu">
-            <li><a href="index.html"><i class="fas fa-home"></i><span class="menu-text">Dashboard</span></a></li>
-            <li><a href="sitediary.html"><i class="fas fa-book"></i><span class="menu-text">Site Diary</span></a></li>
-            <li><a href="safetyinspect.html"><i class="fas fa-clipboard-check"></i><span class="menu-text">Safety Inspection</span></a></li>
-            <li><a href="sitelocations.html"><i class="fas fa-map-marked-alt"></i><span class="menu-text">Site Locations</span></a></li>
-            <li><a href="labourwage.html"><i class="fas fa-money-bill-wave"></i><span class="menu-text">Labour Wage</span></a></li>
-            <li><a href="settings.html"><i class="fas fa-cogs"></i><span class="menu-text">System Settings</span></a></li>
-            <li><a href="usermanagement.html"><i class="fas fa-user-circle"></i><span class="menu-text">User Management</span></a></li>
-        </ul>
-    </div>
-
     <!-- 主内容 -->
     <div class="main-content">
         <div class="header">
@@ -182,39 +164,13 @@
 
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
+    <script src="scripts/sidebar.js"></script>
     <script src="auth-check.js"></script>
+    <script src="scripts/user-display.js"></script>
     <script src="scripts/SafetyInspection-data.js"></script>
     <script src="scripts/safetyinspectdocument.js"></script>
 
     
-    <!-- 侧边栏状态持久化 -->
-    <script>
-        (function() {
-            function saveSidebarState() {
-                const sidebar = document.querySelector('.sidebar');
-                if (sidebar) localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed') ? 'true' : 'false');
-            }
-            function restoreSidebarState() {
-                const sidebar = document.querySelector('.sidebar');
-                if (sidebar) {
-                    const saved = localStorage.getItem('sidebarCollapsed');
-                    if (saved === 'true') sidebar.classList.add('collapsed');
-                    else if (saved === 'false') sidebar.classList.remove('collapsed');
-                }
-            }
-            function bindToggleEvent() {
-                const toggleBtn = document.querySelector('.toggle-btn');
-                if (toggleBtn) {
-                    toggleBtn.addEventListener('click', function() {
-                        setTimeout(saveSidebarState, 50);
-                    });
-                }
-            }
-            document.addEventListener('DOMContentLoaded', function() {
-                restoreSidebarState();
-                bindToggleEvent();
-            });
-        })();
     </script>
 </body>
 </html>

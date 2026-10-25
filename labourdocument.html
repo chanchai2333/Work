@@ -25,8 +25,8 @@
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { display: flex; min-height: 100vh; background-color: #f5f7fa; color: #333; }
-        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        body { min-height: 100vh; background-color: #f5f7fa; color: #333; }
+        .main-content { padding: 30px; overflow-y: auto; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #e0e6ed; }
         .header h1 { color: #2c3e50; font-size: 2rem; }
         .header-controls { display: flex; align-items: center; gap: 15px; }
@@ -181,23 +181,6 @@
     </style>
 </head>
 <body>
-    <div class="sidebar">
-        <div class="logo">
-            <img src="AEL Logo.png" alt="AEL Logo" class="logo-img" style="height: 45px; width: auto; object-fit: contain; margin-right: 8px;">
-            <h2>DWSS</h2>
-        </div>
-        <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
-        <ul class="menu">
-            <li><a href="index.html"><i class="fas fa-home"></i><span class="menu-text">Dashboard</span></a></li>
-            <li><a href="sitediary.html"><i class="fas fa-book"></i><span class="menu-text">Site Diary</span></a></li>
-            <li><a href="safetyinspect.html"><i class="fas fa-clipboard-check"></i><span class="menu-text">Safety Inspection</span></a></li>
-            <li><a href="sitelocations.html"><i class="fas fa-map-marked-alt"></i><span class="menu-text">Site Locations</span></a></li>
-            <li><a href="labourwage.html" class="active"><i class="fas fa-money-bill-wave"></i><span class="menu-text">Labour Wage</span></a></li>
-            <li><a href="settings.html"><i class="fas fa-cogs"></i><span class="menu-text">System Settings</span></a></li>
-            <li><a href="usermanagement.html"><i class="fas fa-user-circle"></i><span class="menu-text">User Management</span></a></li>
-        </ul>
-    </div>
-
     <div class="main-content">
         <div class="header">
             <h1>Labour Wage</h1>
@@ -280,7 +263,9 @@
 
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
+    <script src="scripts/sidebar.js"></script>
     <script src="scripts/auth-check.js"></script>
+    <script src="scripts/user-display.js"></script>
 
     <script>
     (function () {

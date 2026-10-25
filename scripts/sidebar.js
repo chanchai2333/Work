@@ -28,17 +28,82 @@ function loadSidebar() {
         });
     }
 
-    // 【新增】注入专用的 CSS 补丁，确保折叠时 Logo 能自动隐藏，不影响其他布局
-    if (!document.getElementById('sidebar-logo-patch')) {
-        const logoPatchStyle = document.createElement('style');
-        logoPatchStyle.id = 'sidebar-logo-patch';
-        logoPatchStyle.textContent = `
-            /* 侧边栏处于折叠状态时，隐藏整个 Logo 区域（图片和文字） */
+    // 【新增】注入专用的 CSS 补丁，彻底修复遮挡并允许底部横向滚动
+    if (!document.getElementById('sidebar-layout-patch')) {
+        const patchStyle = document.createElement('style');
+        patchStyle.id = 'sidebar-layout-patch';
+        patchStyle.textContent = `
+            /* 1. 側邊欄折疊時隱藏 Logo */
             .sidebar.collapsed .logo {
                 display: none !important;
             }
+
+            /* 2. 折疊時，把文字和箭頭「完全隱藏」，避免撐出寬度 */
+            .sidebar.collapsed .menu-text,
+            .sidebar.collapsed .submenu-arrow {
+                display: none !important;
+            }
+            /* 讓圖示在 70px 寬度內完美居中 */
+            .sidebar.collapsed .menu a {
+                justify-content: center !important;
+                padding: 12px 0 !important;
+            }
+
+            /* 3. 允許網頁整體底部出現橫向滾動條 */
+            html, body {
+                overflow-x: auto !important; 
+                display: block !important; 
+                min-height: 100vh;
+                margin: 0;
+                padding: 0;
+            }
+
+            /* 4. 固定側邊欄 (不限制 overflow，讓圓形切換按鈕能正常凸出) */
+            .sidebar {
+                position: fixed !important;
+                left: 0;
+                top: 0;
+                height: 100vh;
+                width: 260px;
+                transition: width 0.3s ease !important;
+                z-index: 1000 !important;
+                box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+                /* ★ 這裡不寫 overflow: hidden，保證按鈕不會被切 */
+            }
+            .sidebar.collapsed {
+                width: 70px;
+            }
+
+            /* 5. 只限制「選單內部」的內容不要撐破，防止側邊欄出現討厭的橫向滾動條 */
+            .sidebar .menu,
+            .sidebar .menu li,
+            .sidebar .menu a,
+            .sidebar .sidebar-footer {
+                width: 100% !important;
+                box-sizing: border-box !important;
+                overflow: hidden !important; /* 把選單裡溢出的內容裁掉，但不影響外面的按鈕 */
+            }
+
+            /* 6. 主內容區：留出左邊空間，並設定最小寬度，觸發底部滾動條 */
+            .main-content {
+                margin-left: 260px !important;
+                width: calc(100% - 260px) !important;
+                min-width: 1100px !important; 
+                min-height: 100vh;
+                box-sizing: border-box !important;
+                padding: 30px; 
+                transition: margin-left 0.3s ease, width 0.3s ease !important;
+                overflow-x: visible !important;
+            }
+
+            /* 7. 側邊欄收合時，主內容自動往左移 */
+            .sidebar.collapsed + .main-content,
+            .sidebar.collapsed ~ .main-content {
+                margin-left: 70px !important;
+                width: calc(100% - 70px) !important;
+            }
         `;
-        document.head.appendChild(logoPatchStyle);
+        document.head.appendChild(patchStyle);
     }
     
     // 侧边栏HTML - 已替换Logo图标为图片，其余保持原功能
@@ -144,8 +209,10 @@ function initializeSidebar() {
     // 应用保存的状态
     if (isCollapsed && sidebar) {
         sidebar.classList.add('collapsed');
-        updateMainContentLayout();
     }
+    
+    // ★ 關鍵修復：無論是否折疊，初始化時「一定」要調整主內容佈局，防止被遮擋！
+    updateMainContentLayout();
     
     // 设置主侧边栏切换按钮事件
     if (toggleBtn && sidebar) {
@@ -232,18 +299,22 @@ function updateMainContentLayout() {
         return;
     }
     
-    if (sidebar.classList.contains('collapsed')) {
-        mainContent.style.marginLeft = '70px';
-        mainContent.style.width = 'calc(100% - 70px)';
-    } else {
-        mainContent.style.marginLeft = '260px';
-        mainContent.style.width = 'calc(100% - 260px)';
-    }
-    
-    console.log('Main content layout updated:', {
-        collapsed: sidebar.classList.contains('collapsed'),
-        marginLeft: mainContent.style.marginLeft,
-        width: mainContent.style.width
+    // 使用 requestAnimationFrame 確保 DOM 渲染和 CSS 過渡一致
+    requestAnimationFrame(() => {
+        const isCollapsed = sidebar.classList.contains('collapsed');
+        const targetWidth = isCollapsed ? 70 : 260;
+        
+        // 強制覆蓋樣式，避免被其他 CSS 干擾
+        mainContent.style.setProperty('margin-left', targetWidth + 'px', 'important');
+        mainContent.style.setProperty('width', `calc(100% - ${targetWidth}px)`, 'important');
+        mainContent.style.setProperty('box-sizing', 'border-box', 'important');
+        mainContent.style.setProperty('transition', 'margin-left 0.3s ease, width 0.3s ease', 'important');
+        
+        console.log('Layout updated:', {
+            collapsed: isCollapsed,
+            width: targetWidth,
+            marginLeft: mainContent.style.marginLeft
+        });
     });
 }
 

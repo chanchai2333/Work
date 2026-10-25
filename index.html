@@ -834,6 +834,41 @@
         .main-content > footer {
             margin-top: 10px;     
         }
+
+                /* ============================================================ */
+        /* ★ 終極側邊欄防遮擋補丁 */
+        /* ============================================================ */
+        body {
+            overflow-x: hidden !important; /* 防止出現橫向滾動條 */
+        }
+
+        /* 強制主內容向右推開，並使用 border-box 讓 padding 不會撐破寬度 */
+        .main-content {
+            margin-left: 260px !important; /* 預設展開寬度 */
+            width: calc(100% - 260px) !important;
+            box-sizing: border-box !important;
+            transition: margin-left 0.3s ease, width 0.3s ease !important;
+        }
+
+        /* 當側邊欄收合時，主內容自動調整 */
+        .sidebar.collapsed + .main-content,
+        .sidebar.collapsed ~ .main-content,
+        body.sidebar-collapsed .main-content {
+            margin-left: 70px !important; /* 收合寬度 */
+            width: calc(100% - 70px) !important;
+        }
+
+        /* 確保側邊欄本身不會被壓縮，且層級最高 */
+        .sidebar {
+            flex-shrink: 0 !important;
+            z-index: 1000 !important;
+            width: 260px;
+            transition: width 0.3s ease !important;
+        }
+        .sidebar.collapsed {
+            width: 70px;
+        }
+
     </style>
 </head>
 <body>
