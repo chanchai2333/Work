@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var s = (item && item.status) || 'draft';
 
         if (s === 'draft') {
-            return isOverdue(item) ? 'overdue' : 'other';
+            return isOverdue(item) ? 'overdue' : 'open'; // 改這裡
         }
         if (s === 'submitted-wsg' || s === 'submitted-ig') {
             return 'pending';
@@ -306,8 +306,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (s === 'closed' || s === 'cancelled') {
             return 'closed';
         }
-        // reopen 歸類到 other
-        return 'other';
+        // reopen 歸類到 open
+        return 'open';
     }
 
     // ==================== 篩選器狀態 ====================
@@ -387,12 +387,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ==================== ★ 渲染表格（四分類）====================
     function renderTable() {
-        const CATEGORIES = ['overdue', 'pending', 'closed', 'other'];
+        const CATEGORIES = ['open', 'pending', 'overdue', 'closed'];
         const TBODY_IDS = {
-            overdue: 'overdue-table-body',
+            open:    'open-table-body',
             pending: 'pending-table-body',
-            closed:  'closed-table-body',
-            other:   'other-table-body'
+            overdue: 'overdue-table-body',
+            closed:  'closed-table-body'
         };
 
         CATEGORIES.forEach(function (key) {

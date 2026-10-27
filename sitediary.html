@@ -55,6 +55,31 @@
         .diary-category-section[data-category="closed"]  .table-title i { color: #27ae60; }
         .diary-category-section[data-category="other"]   .table-title i { color: #7f8c8d; }
 
+                /* ★ 分類折疊樣式 */
+        .diary-category-section .table-header {
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .diary-category-section .table-header .header-left {
+            flex: 1;
+        }
+        .diary-category-section .table-header .toggle-icon {
+            font-size: 1.2rem;
+            color: #94a3b8;
+            transition: transform 0.3s ease;
+            margin-top: 8px;
+            margin-left: 15px;
+        }
+        .diary-category-section.collapsed .table-header .toggle-icon {
+            transform: rotate(-90deg);
+        }
+        .diary-category-section.collapsed .table-container {
+            display: none !important;
+        }
+
         @media (max-width: 768px) {
             .action-btn { width: 100%; margin: 2px 0; }
             .status-change-select { width: 100%; margin: 2px 0; }
@@ -173,15 +198,18 @@
             <section class="content-section">
                 <div id="diary-tables-container">
 
-                    <!-- ===== Overdue Documents ===== -->
-                    <div class="diary-category-section" data-category="overdue">
+                    <!-- ===== 1. Open Documents (預設收起) ===== -->
+                    <div class="diary-category-section collapsed" data-category="open">
                         <div class="table-header">
-                            <h2 class="table-title">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                <span data-i18n="category.overdue">Overdue Documents</span>
-                                <span class="category-count" id="overdue-count">0</span>
-                            </h2>
-                            <p class="category-desc" data-i18n="category.overdue.desc">Draft documents older than 14 days</p>
+                            <div class="header-left">
+                                <h2 class="table-title">
+                                    <i class="fas fa-folder-open"></i>
+                                    <span data-i18n="category.open">Open Documents</span>
+                                    <span class="category-count" id="open-count">0</span>
+                                </h2>
+                                <p class="category-desc" data-i18n="category.open.desc">Drafts within 14 days, reopened, or in progress</p>
+                            </div>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="table-container">
                             <table class="diary-table">
@@ -197,21 +225,24 @@
                                         <th data-i18n="actions">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody id="overdue-table-body"></tbody>
+                                <tbody id="open-table-body"></tbody>
                             </table>
-                            <div id="overdue-no-results" class="no-results" style="display: none;">No overdue documents.</div>
+                            <div id="open-no-results" class="no-results" style="display: none;">No open documents.</div>
                         </div>
                     </div>
 
-                    <!-- ===== Pending Documents ===== -->
-                    <div class="diary-category-section" data-category="pending">
+                    <!-- ===== 2. Pending Documents (預設收起) ===== -->
+                    <div class="diary-category-section collapsed" data-category="pending">
                         <div class="table-header">
-                            <h2 class="table-title">
-                                <i class="fas fa-clock"></i>
-                                <span data-i18n="category.pending">Pending Documents</span>
-                                <span class="category-count" id="pending-count">0</span>
-                            </h2>
-                            <p class="category-desc" data-i18n="category.pending.desc">Submitted but not yet approved</p>
+                            <div class="header-left">
+                                <h2 class="table-title">
+                                    <i class="fas fa-clock"></i>
+                                    <span data-i18n="category.pending">Pending Documents</span>
+                                    <span class="category-count" id="pending-count">0</span>
+                                </h2>
+                                <p class="category-desc" data-i18n="category.pending.desc">Submitted but not yet approved</p>
+                            </div>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="table-container">
                             <table class="diary-table">
@@ -233,15 +264,51 @@
                         </div>
                     </div>
 
-                    <!-- ===== Closed Documents ===== -->
-                    <div class="diary-category-section" data-category="closed">
+                    <!-- ===== 3. Overdue Documents (預設收起) ===== -->
+                    <div class="diary-category-section collapsed" data-category="overdue">
                         <div class="table-header">
-                            <h2 class="table-title">
-                                <i class="fas fa-check-circle"></i>
-                                <span data-i18n="category.closed">Closed Documents</span>
-                                <span class="category-count" id="closed-count">0</span>
-                            </h2>
-                            <p class="category-desc" data-i18n="category.closed.desc">Completed, closed, or cancelled diaries</p>
+                            <div class="header-left">
+                                <h2 class="table-title">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span data-i18n="category.overdue">Overdue Documents</span>
+                                    <span class="category-count" id="overdue-count">0</span>
+                                </h2>
+                                <p class="category-desc" data-i18n="category.overdue.desc">Draft documents older than 14 days</p>
+                            </div>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
+                        </div>
+                        <div class="table-container">
+                            <table class="diary-table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="diary.id">Diary ID</th>
+                                        <th data-i18n="status">Status</th>
+                                        <th data-i18n="Approval status">Approval Status</th>
+                                        <th data-i18n="site">Site</th>
+                                        <th data-i18n="period">Period</th>
+                                        <th data-i18n="submitted.by">Submitted By</th>
+                                        <th data-i18n="document.type">Document Type</th>
+                                        <th data-i18n="actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="overdue-table-body"></tbody>
+                            </table>
+                            <div id="overdue-no-results" class="no-results" style="display: none;">No overdue documents.</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== 4. Closed Documents (預設收起) ===== -->
+                    <div class="diary-category-section collapsed" data-category="closed">
+                        <div class="table-header">
+                            <div class="header-left">
+                                <h2 class="table-title">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span data-i18n="category.closed">Closed Documents</span>
+                                    <span class="category-count" id="closed-count">0</span>
+                                </h2>
+                                <p class="category-desc" data-i18n="category.closed.desc">Completed, closed, or cancelled diaries</p>
+                            </div>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="table-container">
                             <table class="diary-table">
@@ -260,36 +327,6 @@
                                 <tbody id="closed-table-body"></tbody>
                             </table>
                             <div id="closed-no-results" class="no-results" style="display: none;">No closed documents.</div>
-                        </div>
-                    </div>
-
-                    <!-- ===== Other Documents (Draft within 14 days, Reopen) ===== -->
-                    <div class="diary-category-section" data-category="other">
-                        <div class="table-header">
-                            <h2 class="table-title">
-                                <i class="fas fa-folder"></i>
-                                <span data-i18n="category.other">Other Documents</span>
-                                <span class="category-count" id="other-count">0</span>
-                            </h2>
-                            <p class="category-desc" data-i18n="category.other.desc">Drafts within 14 days, reopened, or in progress</p>
-                        </div>
-                        <div class="table-container">
-                            <table class="diary-table">
-                                <thead>
-                                    <tr>
-                                        <th data-i18n="diary.id">Diary ID</th>
-                                        <th data-i18n="status">Status</th>
-                                        <th data-i18n="Approval status">Approval Status</th>
-                                        <th data-i18n="site">Site</th>
-                                        <th data-i18n="period">Period</th>
-                                        <th data-i18n="submitted.by">Submitted By</th>
-                                        <th data-i18n="document.type">Document Type</th>
-                                        <th data-i18n="actions">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="other-table-body"></tbody>
-                            </table>
-                            <div id="other-no-results" class="no-results" style="display: none;">No other documents.</div>
                         </div>
                     </div>
 
@@ -1041,6 +1078,25 @@
         </div>
     </div>
 </div>
+    <script>
+    (function () {
+        'use strict';
+        if (window.__diaryFoldBound) return;
+        window.__diaryFoldBound = true;
 
+        document.addEventListener('click', function(e) {
+            var header = e.target.closest('.diary-category-section .table-header');
+            if (header) {
+                // 避免點擊到 header 裡面的其他按鈕（如果未來有加的話）
+                if (e.target.closest('button') || e.target.closest('a')) return;
+                
+                var section = header.closest('.diary-category-section');
+                if (section) {
+                    section.classList.toggle('collapsed');
+                }
+            }
+        });
+    })();
+    </script>
 </body>
 </html>
