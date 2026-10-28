@@ -80,6 +80,33 @@
             display: none !important;
         }
 
+                /* ★ 分類搜尋框樣式 */
+        .diary-category-section .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center; /* 垂直置中，讓搜尋框和箭頭對齊 */
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .category-search {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            width: 220px;
+            transition: all 0.2s;
+            background: #fff;
+        }
+        .category-search:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52,152,219,0.2);
+        }
+
+
         @media (max-width: 768px) {
             .action-btn { width: 100%; margin: 2px 0; }
             .status-change-select { width: 100%; margin: 2px 0; }
@@ -196,9 +223,10 @@
             <!-- ★ 分類表格：Overdue / Pending / Closed / Other -->
             <!-- ============================================== -->
             <section class="content-section">
-                <div id="diary-tables-container">
 
-                    <!-- ===== 1. Open Documents (預設收起) ===== -->
+                            <div id="diary-tables-container">
+
+                    <!-- ===== 1. Open Documents ===== -->
                     <div class="diary-category-section collapsed" data-category="open">
                         <div class="table-header">
                             <div class="header-left">
@@ -209,7 +237,10 @@
                                 </h2>
                                 <p class="category-desc" data-i18n="category.open.desc">Drafts within 14 days, reopened, or in progress</p>
                             </div>
-                            <i class="fas fa-chevron-down toggle-icon"></i>
+                            <div class="header-right">
+                                <input type="text" class="category-search" data-category="open" placeholder="Search Open...">
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
                         </div>
                         <div class="table-container">
                             <table class="diary-table">
@@ -231,7 +262,7 @@
                         </div>
                     </div>
 
-                    <!-- ===== 2. Pending Documents (預設收起) ===== -->
+                    <!-- ===== 2. Pending Documents ===== -->
                     <div class="diary-category-section collapsed" data-category="pending">
                         <div class="table-header">
                             <div class="header-left">
@@ -242,7 +273,10 @@
                                 </h2>
                                 <p class="category-desc" data-i18n="category.pending.desc">Submitted but not yet approved</p>
                             </div>
-                            <i class="fas fa-chevron-down toggle-icon"></i>
+                            <div class="header-right">
+                                <input type="text" class="category-search" data-category="pending" placeholder="Search Pending...">
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
                         </div>
                         <div class="table-container">
                             <table class="diary-table">
@@ -264,7 +298,7 @@
                         </div>
                     </div>
 
-                    <!-- ===== 3. Overdue Documents (預設收起) ===== -->
+                    <!-- ===== 3. Overdue Documents ===== -->
                     <div class="diary-category-section collapsed" data-category="overdue">
                         <div class="table-header">
                             <div class="header-left">
@@ -275,7 +309,10 @@
                                 </h2>
                                 <p class="category-desc" data-i18n="category.overdue.desc">Draft documents older than 14 days</p>
                             </div>
-                            <i class="fas fa-chevron-down toggle-icon"></i>
+                            <div class="header-right">
+                                <input type="text" class="category-search" data-category="overdue" placeholder="Search Overdue...">
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
                         </div>
                         <div class="table-container">
                             <table class="diary-table">
@@ -297,7 +334,7 @@
                         </div>
                     </div>
 
-                    <!-- ===== 4. Closed Documents (預設收起) ===== -->
+                    <!-- ===== 4. Closed Documents ===== -->
                     <div class="diary-category-section collapsed" data-category="closed">
                         <div class="table-header">
                             <div class="header-left">
@@ -308,7 +345,10 @@
                                 </h2>
                                 <p class="category-desc" data-i18n="category.closed.desc">Completed, closed, or cancelled diaries</p>
                             </div>
-                            <i class="fas fa-chevron-down toggle-icon"></i>
+                            <div class="header-right">
+                                <input type="text" class="category-search" data-category="closed" placeholder="Search Closed...">
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
                         </div>
                         <div class="table-container">
                             <table class="diary-table">
@@ -331,6 +371,7 @@
                     </div>
 
                 </div>
+
             </section>
             
             <footer>
@@ -1081,21 +1122,66 @@
     <script>
     (function () {
         'use strict';
-        if (window.__diaryFoldBound) return;
-        window.__diaryFoldBound = true;
-
-        document.addEventListener('click', function(e) {
-            var header = e.target.closest('.diary-category-section .table-header');
-            if (header) {
-                // 避免點擊到 header 裡面的其他按鈕（如果未來有加的話）
-                if (e.target.closest('button') || e.target.closest('a')) return;
-                
-                var section = header.closest('.diary-category-section');
-                if (section) {
-                    section.classList.toggle('collapsed');
+        
+        // 1. 處理折疊與展開
+        if (!window.__diaryFoldBound) {
+            window.__diaryFoldBound = true;
+            document.addEventListener('click', function(e) {
+                var header = e.target.closest('.diary-category-section .table-header');
+                if (header) {
+                    // ★ 關鍵修正：如果點擊的是輸入框，不要觸發折疊
+                    if (e.target.closest('input') || e.target.closest('button') || e.target.closest('a')) {
+                        return;
+                    }
+                    
+                    var section = header.closest('.diary-category-section');
+                    if (section) {
+                        section.classList.toggle('collapsed');
+                    }
                 }
-            }
-        });
+            });
+        }
+
+        // 2. 處理表格搜尋 (事件委派)
+        if (!window.__diarySearchBound) {
+            window.__diarySearchBound = true;
+            
+            document.addEventListener('input', function(e) {
+                if (!e.target.classList.contains('category-search')) return;
+                
+                var category = e.target.getAttribute('data-category');
+                var query = e.target.value.toLowerCase().trim();
+                var tbody = document.getElementById(category + '-table-body');
+                if (!tbody) return;
+
+                var rows = tbody.querySelectorAll('tr');
+                var visibleCount = 0;
+
+                rows.forEach(function(row) {
+                    var text = row.textContent.toLowerCase();
+                    if (text.includes(query)) {
+                        row.style.display = ''; // 顯示
+                        visibleCount++;
+                    } else {
+                        row.style.display = 'none'; // 隱藏
+                    }
+                });
+
+                // 處理無結果提示文字
+                var noResEl = document.getElementById(category + '-no-results');
+                if (noResEl) {
+                    if (rows.length === 0) {
+                        noResEl.style.display = 'block';
+                        noResEl.textContent = 'No documents.';
+                    } else if (visibleCount === 0 && query !== '') {
+                        noResEl.style.display = 'block';
+                        noResEl.textContent = 'No matching documents found for "' + e.target.value + '".';
+                    } else {
+                        noResEl.style.display = 'none';
+                    }
+                }
+            });
+        }
     })();
     </script>
 </body>

@@ -447,6 +447,13 @@ document.addEventListener('DOMContentLoaded', function () {
         if (userCanChangeStatus) {
             bindStatusChangeEvents();
         }
+        
+        // ★ 新增：重新渲染表格後，重新觸發所有搜尋框的過濾邏輯
+        document.querySelectorAll('.category-search').forEach(function(input) {
+            if (input.value.trim() !== '') {
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        });
     }
 
     // ==================== 狀態更改事件 ====================
