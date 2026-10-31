@@ -1,0 +1,95 @@
+/* 筛选器样式 */
+.filter-group {
+    position: relative;
+    display: inline-block;
+    margin-right: 15px;
+}
+
+.filter-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 15px;
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    min-width: 150px;
+}
+
+.filter-toggle:hover {
+    background: #e9ecef;
+}
+
+.filter-options {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background: white;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.filter-option {
+    padding: 8px 15px;
+    cursor: pointer;
+}
+
+.filter-option:hover {
+    background: #f8f9fa;
+}
+
+.filter-option.active {
+    background: #007bff;
+    color: white;
+}
+
+/* 状态徽章样式 */
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.status-draft {
+    background: #ffc107;
+    color: #212529;
+}
+
+.status-reopen {
+    background: #17a2b8;
+    color: white;
+}
+
+.status-closed {
+    background: #28a745;
+    color: white;
+}
+
+.status-submitted-wsg {
+    background: #6f42c1;
+    color: white;
+}
+
+.status-submitted-ig {
+    background: #e83e8c;
+    color: white;
+}
+
+.status-cancelled {
+    background: #dc3545;
+    color: white;
+}
+
+/* 无结果消息 */
+.no-results {
+    text-align: center;
+    padding: 20px;
+    color: #6c757d;
+    font-style: italic;
+}

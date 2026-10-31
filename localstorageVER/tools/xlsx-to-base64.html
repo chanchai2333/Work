@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XLSX → Base64 JS 轉換工具</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+    body {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 30px 20px;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+    }
+    .container {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        width: 100%;
+        max-width: 900px;
+        padding: 40px;
+    }
+    h1 {
+        color: #1e293b;
+        font-size: 1.8rem;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    h1 i { color: #667eea; }
+    .subtitle {
+        color: #64748b;
+        font-size: 0.95rem;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    /* 拖放區 */
+    .drop-zone {
+        border: 3px dashed #cbd5e1;
+        border-radius: 12px;
+        padding: 50px 20px;
+        text-align: center;
+        cursor: pointer;
+        background: #f8fafc;
+        transition: all 0.25s ease;
+        margin-bottom: 24px;
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+        border-color: #667eea;
+        background: #eef2ff;
+        transform: translateY(-2px);
+    }
+    .drop-zone i.big-icon {
+        font-size: 3.5rem;
+        color: #94a3b8;
+        margin-bottom: 16px;
+        display: block;
+        transition: color 0.25s;
+    }
+    .drop-zone:hover i.big-icon, .drop-zone.dragover i.big-icon {
+        color: #667eea;
+    }
+    .drop-zone .main-text {
+        color: #334155;
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 6px;
+    }
+    .drop-zone .hint-text {
+        color: #94a3b8;
+        font-size: 0.85rem;
+    }
+    #file-input { display: none; }
+
+    /* 檔案資訊 */
+    .file-info {
+        background: #f0f9ff;
+        border-left: 4px solid #0284c7;
+        border-radius: 8px;
+        padding: 14px 18px;
+        margin-bottom: 20px;
+        display: none;
+        align-items: center;
+        gap: 12px;
+    }
+    .file-info.visible { display: flex; }
+    .file-info i { color: #0284c7; font-size: 1.3rem; }
+    .file-info .info-text { flex: 1; }
+    .file-info .info-text strong {
+        display: block;
+        color: #0c4a6e;
+        font-size: 0.95rem;
+        margin-bottom: 2px;
+    }
+    .file-info .info-text span {
+        color: #0369a1;
+        font-size: 0.82rem;
+    }
+
+    /* 設定區 */
+    .settings {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+    .field-group label {
+        display: block;
+        color: #334155;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+    .field-group input[type="text"] {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-family: 'Consolas', 'Monaco', monospace;
+        background: #f8fafc;
+        transition: 0.2s;
+    }
+    .field-group input[type="text"]:focus {
+        outline: none;
+        border-color: #667eea;
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(102,126,234,0.15);
+    }
+
+    /* 按鈕 */
+    .actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 24px;
+    }
+    .btn {
+        padding: 11px 22px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+        color: #fff;
+    }
+    .btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(0,0,0,0.15); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); }
+    .btn-success { background: linear-gradient(135deg, #10b981, #059669); }
+    .btn-info    { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
+    .btn-gray    { background: #64748b; }
+
+    /* 結果 */
+    .result-section { display: none; }
+    .result-section.visible { display: block; }
+    .result-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .result-header h3 {
+        color: #1e293b;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .stats {
+        color: #64748b;
+        font-size: 0.82rem;
+        display: flex;
+        gap: 14px;
+    }
+    .stats b { color: #334155; }
+    textarea {
+        width: 100%;
+        height: 220px;
+        padding: 14px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 0.8rem;
+        line-height: 1.5;
+        background: #f8fafc;
+        resize: vertical;
+        color: #334155;
+    }
+    textarea:focus {
+        outline: none;
+        border-color: #667eea;
+        background: #fff;
+    }
+
+    .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #10b981;
+        color: #fff;
+        padding: 12px 20px;
+        border-radius: 8px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        opacity: 0;
+        transform: translateY(-20px);
+        transition: all 0.3s;
+        z-index: 9999;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    .steps {
+        background: #fffbeb;
+        border-left: 4px solid #f59e0b;
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin-top: 24px;
+        font-size: 0.88rem;
+        color: #78350f;
+        line-height: 1.7;
+    }
+    .steps strong { color: #92400e; }
+    .steps code {
+        background: #fef3c7;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: 'Consolas', monospace;
+        font-size: 0.85em;
+    }
+
+    @media (max-width: 640px) {
+        .container { padding: 24px 18px; }
+        .settings { grid-template-columns: 1fr; }
+        h1 { font-size: 1.4rem; }
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1><i class="fas fa-file-excel"></i> XLSX → Base64 JS 轉換工具</h1>
+    <p class="subtitle">把 Excel 檔案（.xlsx / .xls）轉成可直接內嵌的 base64 JavaScript 檔案</p>
+
+    <div class="drop-zone" id="drop-zone">
+        <input type="file" id="file-input" accept=".xlsx,.xls">
+        <i class="fas fa-cloud-upload-alt big-icon"></i>
+        <div class="main-text">點擊或拖放 Excel 檔案到此處</div>
+        <div class="hint-text">支援 .xlsx / .xls（建議用 .xlsx）</div>
+    </div>
+
+    <div class="file-info" id="file-info">
+        <i class="fas fa-check-circle"></i>
+        <div class="info-text">
+            <strong id="file-name">-</strong>
+            <span id="file-meta">-</span>
+        </div>
+    </div>
+
+    <div class="settings">
+        <div class="field-group">
+            <label>輸出檔名（不含路徑）</label>
+            <input type="text" id="out-filename" value="GF527-2017-data.js">
+        </div>
+        <div class="field-group">
+            <label>JS 變數名稱</label>
+            <input type="text" id="out-varname" value="GF527_2017_BASE64">
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="btn btn-primary" id="convert-btn" disabled>
+            <i class="fas fa-magic"></i> 開始轉換
+        </button>
+        <button class="btn btn-success" id="download-btn" disabled>
+            <i class="fas fa-download"></i> 下載 .js
+        </button>
+        <button class="btn btn-info" id="copy-btn" disabled>
+            <i class="fas fa-copy"></i> 複製 Base64
+        </button>
+        <button class="btn btn-gray" id="reset-btn">
+            <i class="fas fa-redo"></i> 重置
+        </button>
+    </div>
+
+    <div class="result-section" id="result-section">
+        <div class="result-header">
+            <h3><i class="fas fa-code"></i> 產出結果</h3>
+            <div class="stats">
+                <span>原始：<b id="stat-original">-</b></span>
+                <span>Base64：<b id="stat-b64">-</b></span>
+            </div>
+        </div>
+        <textarea id="output" readonly placeholder="尚未轉換"></textarea>
+    </div>
+
+    <div class="steps">
+        <strong>使用步驟：</strong><br>
+        1. 選好檔案 → 點「開始轉換」<br>
+        2. 點「下載 .js」存到你的 <code>scripts/</code> 資料夾<br>
+        3. 在 HTML 加入 <code>&lt;script src="scripts/你的檔名.js"&gt;&lt;/script&gt;</code><br>
+        4. 在 JS 裡用 <code>window.變數名稱</code> 即可取用 base64
+    </div>
+</div>
+
+<div class="toast" id="toast"><i class="fas fa-check-circle"></i> <span id="toast-msg">完成</span></div>
+
+<script>
+(function () {
+    'use strict';
+
+    var dropZone    = document.getElementById('drop-zone');
+    var fileInput   = document.getElementById('file-input');
+    var fileInfo    = document.getElementById('file-info');
+    var fileNameEl  = document.getElementById('file-name');
+    var fileMetaEl  = document.getElementById('file-meta');
+    var convertBtn  = document.getElementById('convert-btn');
+    var downloadBtn = document.getElementById('download-btn');
+    var copyBtn     = document.getElementById('copy-btn');
+    var resetBtn    = document.getElementById('reset-btn');
+    var outFilename = document.getElementById('out-filename');
+    var outVarName  = document.getElementById('out-varname');
+    var resultSec   = document.getElementById('result-section');
+    var outputEl    = document.getElementById('output');
+    var statOrig    = document.getElementById('stat-original');
+    var statB64     = document.getElementById('stat-b64');
+    var toast       = document.getElementById('toast');
+    var toastMsg    = document.getElementById('toast-msg');
+
+    var currentFile = null;
+    var currentBase64 = '';
+    var currentJsContent = '';
+
+    /* ===== Toast ===== */
+    var toastTimer = null;
+    function showToast(msg, isError) {
+        toastMsg.textContent = msg;
+        toast.style.background = isError ? '#ef4444' : '#10b981';
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () {
+            toast.classList.remove('show');
+        }, 2200);
+    }
+
+    /* ===== 檔案資訊 ===== */
+    function humanSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+    }
+
+    function setFile(file) {
+        if (!file) return;
+        var name = file.name.toLowerCase();
+        if (!/\.(xlsx|xls)$/i.test(name)) {
+            showToast('只接受 .xlsx / .xls 檔案', true);
+            return;
+        }
+        currentFile = file;
+        fileNameEl.textContent = file.name;
+        fileMetaEl.textContent = humanSize(file.size) + ' • ' +
+            (name.endsWith('.xlsx') ? 'Excel 2007+' : 'Excel 97-2003');
+        fileInfo.classList.add('visible');
+
+        /* 自動建議檔名 / 變數名 */
+        var baseName = file.name.replace(/\.(xlsx|xls)$/i, '');
+        outFilename.value = baseName + '-data.js';
+        outVarName.value  = baseName.replace(/[^A-Za-z0-9]+/g, '_').toUpperCase() + '_BASE64';
+
+        convertBtn.disabled = false;
+        downloadBtn.disabled = true;
+        copyBtn.disabled = true;
+        resultSec.classList.remove('visible');
+        currentBase64 = '';
+        currentJsContent = '';
+    }
+
+    /* ===== 拖放事件 ===== */
+    dropZone.addEventListener('click', function () { fileInput.click(); });
+    fileInput.addEventListener('change', function () {
+        if (fileInput.files && fileInput.files[0]) setFile(fileInput.files[0]);
+    });
+    ['dragenter', 'dragover'].forEach(function (ev) {
+        dropZone.addEventListener(ev, function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.add('dragover');
+        });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+        dropZone.addEventListener(ev, function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('dragover');
+        });
+    });
+    dropZone.addEventListener('drop', function (e) {
+        var dt = e.dataTransfer;
+        if (dt && dt.files && dt.files[0]) setFile(dt.files[0]);
+    });
+
+    /* ===== 讀檔 → ArrayBuffer ===== */
+    function readFileAsArrayBuffer(file) {
+        return new Promise(function (resolve, reject) {
+            var fr = new FileReader();
+            fr.onload = function () { resolve(fr.result); };
+            fr.onerror = function () { reject(fr.error || new Error('讀取檔案失敗')); };
+            fr.readAsArrayBuffer(file);
+        });
+    }
+
+    /* ===== ArrayBuffer → base64（分塊避免爆字串） ===== */
+    function arrayBufferToBase64(buf) {
+        var bytes = new Uint8Array(buf);
+        var CHUNK = 0x8000;
+        var binary = '';
+        for (var i = 0; i < bytes.length; i += CHUNK) {
+            var sub = bytes.subarray(i, i + CHUNK);
+            binary += String.fromCharCode.apply(null, sub);
+        }
+        return btoa(binary);
+    }
+
+    /* ===== 轉換主流程 ===== */
+    convertBtn.addEventListener('click', function () {
+        if (!currentFile) { showToast('請先選擇檔案', true); return; }
+
+        convertBtn.disabled = true;
+        var origHtml = convertBtn.innerHTML;
+        convertBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 轉換中...';
+
+        /* 讓 UI 有時間更新 */
+        setTimeout(function () {
+            readFileAsArrayBuffer(currentFile).then(function (buf) {
+                var base64 = arrayBufferToBase64(buf);
+                currentBase64 = base64;
+
+                /* 包成 JS */
+                var varName = (outVarName.value || 'TEMPLATE_BASE64').trim();
+                var jsContent =
+                    '/**\n' +
+                    ' * ' + outFilename.value + '\n' +
+                    ' * 自動生成：' + new Date().toISOString() + '\n' +
+                    ' * 來源：' + currentFile.name + '\n' +
+                    ' */\n' +
+                    'window.' + varName + ' = "' + base64 + '";\n';
+                currentJsContent = jsContent;
+
+                /* 更新 UI */
+                outputEl.value = jsContent;
+                statOrig.textContent = humanSize(currentFile.size);
+                statB64.textContent = (base64.length / 1024).toFixed(1) + ' KB';
+                resultSec.classList.add('visible');
+
+                downloadBtn.disabled = false;
+                copyBtn.disabled = false;
+                convertBtn.disabled = false;
+                convertBtn.innerHTML = origHtml;
+
+                showToast('轉換完成！');
+            }).catch(function (err) {
+                console.error('[Convert] 失敗:', err);
+                showToast('轉換失敗：' + (err.message || err), true);
+                convertBtn.disabled = false;
+                convertBtn.innerHTML = origHtml;
+            });
+        }, 50);
+    });
+
+    /* ===== 下載 .js ===== */
+    downloadBtn.addEventListener('click', function () {
+        if (!currentJsContent) { showToast('請先轉換', true); return; }
+        var blob = new Blob([currentJsContent], { type: 'application/javascript;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = (outFilename.value || 'template-data.js').trim();
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        showToast('已下載 ' + a.download);
+    });
+
+    /* ===== 複製 Base64 ===== */
+    copyBtn.addEventListener('click', function () {
+        if (!currentBase64) { showToast('請先轉換', true); return; }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(currentBase64)
+                .then(function () { showToast('已複製 Base64 到剪貼簿'); })
+                .catch(function () { fallbackCopy(currentBase64); });
+        } else {
+            fallbackCopy(currentBase64);
+        }
+    });
+
+    function fallbackCopy(text) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+            document.execCommand('copy');
+            showToast('已複製 Base64 到剪貼簿');
+        } catch (e) {
+            showToast('複製失敗，請手動選取', true);
+        } finally {
+            document.body.removeChild(ta);
+        }
+    }
+
+    /* ===== 重置 ===== */
+    resetBtn.addEventListener('click', function () {
+        currentFile = null;
+        currentBase64 = '';
+        currentJsContent = '';
+        fileInput.value = '';
+        fileInfo.classList.remove('visible');
+        resultSec.classList.remove('visible');
+        outputEl.value = '';
+        convertBtn.disabled = true;
+        downloadBtn.disabled = true;
+        copyBtn.disabled = true;
+        showToast('已重置');
+    });
+
+})();
+</script>
+</body>
+</html>

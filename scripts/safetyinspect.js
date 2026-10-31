@@ -101,15 +101,23 @@ document.addEventListener("DOMContentLoaded", function() {
                 saveData();
             }
         } else {
-            console.log('[SafetyInspect] ✓ 首次載入，建立 3 個項目的預設資料');
-            inspectionData = getAllDefaultRecords();
-            saveData();
+            var cloud = window.DWSS_Storage && window.DWSS_Storage.isCloud && window.DWSS_Storage.isCloud();
+            if (cloud) {
+                console.log('[SafetyInspect] Cloud mode, no records yet');
+                inspectionData = [];
+            } else {
+                console.log('[SafetyInspect] ✓ 首次載入，建立 3 個項目的預設資料');
+                inspectionData = getAllDefaultRecords();
+                saveData();
+            }
         }
     }
 
     function saveData() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(inspectionData));
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(inspectionData));
+        if (window.DWSS_Storage && typeof window.DWSS_Storage.flush === 'function') {
+            window.DWSS_Storage.flush(STORAGE_KEY);
+        }
     }
 
     // ★ 項目過濾輔助函數
@@ -262,15 +270,17 @@ document.addEventListener("DOMContentLoaded", function() {
     function updateStats(dataToUse) {
         const totalEl = document.getElementById('total-inspections-count');
         const monthEl = document.getElementById('month-count');
-        const data = dataToUse || inspectionData;
+        const data = dataToUse || getProjectData();
 
         if (totalEl) totalEl.textContent = data.length;
         if (monthEl) {
-            const currentMonth = new Date().getMonth() + 1;
-            const monthCount = data.filter(item => {
-                const isoDate = formatDate(item.date);
-                const dateObj = new Date(isoDate);
-                return dateObj.getMonth() + 1 === currentMonth;
+            const now = new Date();
+            const monthCount = data.filter(function (item) {
+                var d = null;
+                if (item.date) d = new Date(formatDate(item.date));
+                if ((!d || isNaN(d.getTime())) && item.createdAt) d = new Date(item.createdAt);
+                if (!d || isNaN(d.getTime())) return false;
+                return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
             }).length;
             monthEl.textContent = monthCount;
         }
@@ -336,13 +346,7 @@ document.addEventListener("DOMContentLoaded", function() {
             if (el) el.innerHTML = '';
         });
 
-        const projectFilteredData = inspectionData.filter(function(item) {
-            if (!item) return false;
-            var currentPid = getCurrentProjectId();
-            if (!currentPid) return true;
-            if (!item.project) return true;
-            return item.project === currentPid;
-        });
+        const projectFilteredData = getProjectData();
 
         const filtered = projectFilteredData.filter(item => {
             if (currentFilters.site !== "all") {
@@ -490,8 +494,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 pdfData: doc.pdfData || null,
                 annotations: doc.annotations || []
             };
-            sessionStorage.setItem('currentDocument', JSON.stringify(fullDoc));
-            window.location.href = 'safetyinspectdocument.html';
+            window.location.href = 'safetyinspectdocument.html?id=' + encodeURIComponent(doc.id);
         }
 
         if (editBtn) {
@@ -503,21 +506,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 return;
             }
 
-            sessionStorage.setItem('editDocument', JSON.stringify({
-                id: doc.id,
-                status: doc.status,
-                statusText: getStatusText(doc.status),
-                site: doc.site,
-                date: formatDisplayDate(doc.date),
-                inspector: doc.inspector,
-                submittedBy: doc.inspector,
-                type: 'Safety Inspection',
-                project: doc.project || null,
-                pdfData: doc.pdfData || '',
-                annotations: doc.annotations || [],
-                approvalStatus: doc.approvalStatus || 'pending'
-            }));
-            window.location.href = 'editsafetypdf.html';
+            window.location.href = 'editsafetypdf.html?id=' + encodeURIComponent(doc.id);
         }
 
         if (deleteBtn) {
@@ -642,7 +631,12 @@ document.addEventListener("DOMContentLoaded", function() {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
 
-                const id = document.getElementById('input-inspect-id').value.trim();
+                let id = document.getElementById('input-inspect-id').value.trim();
+                if (inspectionData.some(function (r) { return String(r.id) === String(id); })) {
+                    id = generateNextSafetyId();
+                    var idBox = document.getElementById('input-inspect-id');
+                    if (idBox) idBox.value = id;
+                }
                 const status = document.getElementById('input-inspect-status').value;
                 const site = document.getElementById('input-inspect-site').value.trim();
                 const date = document.getElementById('input-inspect-date').value;
@@ -680,12 +674,30 @@ document.addEventListener("DOMContentLoaded", function() {
                 };
                 inspectionData.unshift(newInspection);
                 saveData();
+                var saved = false;
+                try {
+                    var res = await fetch('/api/record?collection=inspection&id=' + encodeURIComponent(id), {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newInspection)
+                    });
+                    saved = res.ok;
+                } catch (err) {
+                    saved = false;
+                }
+                if (!saved && window.DWSS_Storage && typeof window.DWSS_Storage.flush === 'function') {
+                    saved = await window.DWSS_Storage.flush(STORAGE_KEY);
+                }
                 renderInspectionTable();
                 updateStats();
                 modal.style.display = 'none';
                 form.reset();
                 const hint = document.getElementById('submit-only-hint');
                 if (hint) hint.remove();
+                if (!saved) {
+                    alert('Inspection was not saved to the database. Please try again.');
+                    return;
+                }
                 alert('New inspection added successfully!');
             });
         }
@@ -704,8 +716,29 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     // ---------- 初始化 ----------
-    function init() {
-        loadData();
+    async function loadFromDatabase() {
+        try {
+            const res = await fetch('/api/records/inspection/list', { cache: 'no-store' });
+            if (!res.ok) return;
+            const list = await res.json();
+            if (Array.isArray(list)) {
+                inspectionData = list;
+                window.__dwssSafetyRecords = list;
+                try {
+                    var snap = JSON.parse(sessionStorage.getItem('dwss_page_counts') || '{}');
+                    snap.safety = String(getProjectData().length);
+                    snap.safetyFiltered = true;
+                    sessionStorage.setItem('dwss_page_counts', JSON.stringify(snap));
+                } catch (e) {}
+            }
+        } catch (e) {
+            console.warn('[SafetyInspect] Could not load from database', e);
+        }
+    }
+
+    async function init() {
+        await loadFromDatabase();
+        if (!inspectionData.length) loadData();
         renderInspectionTable();
         setupFilterEvents();
         setupAddInspectionModal();

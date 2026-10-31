@@ -1,0 +1,17 @@
+{
+  "name": "dwss-server",
+  "version": "1.0.0",
+  "description": "AEL DWSS - static frontend + optional MariaDB backend for cloud",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "mysql2": "^3.11.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

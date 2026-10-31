@@ -153,7 +153,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function saveData() {
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(wageData));
         localStorage.setItem(STORAGE_KEY, JSON.stringify(wageData));
         localStorage.setItem('labourWageData', JSON.stringify(wageData));
     }
@@ -305,13 +304,7 @@ document.addEventListener("DOMContentLoaded", function () {
             if (el) el.innerHTML = '';
         });
 
-        var projectFilteredData = wageData.filter(function(item) {
-            if (!item) return false;
-            var currentPid = getCurrentProjectId();
-            if (!currentPid) return true;
-            if (!item.project) return true;
-            return item.project === currentPid;
-        });
+        var projectFilteredData = getProjectData();
 
         var filtered = projectFilteredData.filter(function(item) {
             if (currentFilters.type !== "all" && item.type !== currentFilters.type) return false;
@@ -478,7 +471,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     
     function updateStats(dataToUse) {
-        var projectData = dataToUse || wageData;
+        var projectData = dataToUse || getProjectData();
 
         var totalEl = document.getElementById('total-records-count');
         if (totalEl) totalEl.textContent = projectData.length;
@@ -486,18 +479,39 @@ document.addEventListener("DOMContentLoaded", function () {
         var monthEl = document.getElementById('month-count');
         if (monthEl) {
             var now = new Date();
-            var currMonth = now.getMonth(), currYear = now.getFullYear();
-            var monthCount = 0;
-            projectData.forEach(function(r) {
-                if (r.periodStart) {
-                    try {
-                        var d = new Date(r.periodStart);
-                        if (d.getMonth() === currMonth && d.getFullYear() === currYear) monthCount++;
-                    } catch(e) {}
-                }
-            });
+            var monthCount = projectData.filter(function (r) {
+                return wageInCurrentMonth(r, now);
+            }).length;
             monthEl.textContent = monthCount;
         }
+    }
+
+    function wageInCurrentMonth(item, now) {
+        var d = wageDate(item);
+        if (!d) return false;
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    }
+
+    function wageDate(item) {
+        if (!item) return null;
+        if (item.periodStart) {
+            var s = new Date(item.periodStart);
+            if (!isNaN(s.getTime())) return s;
+        }
+        if (item.createdAt) {
+            var c = new Date(item.createdAt);
+            if (!isNaN(c.getTime())) return c;
+        }
+        var text = String(item.period || '').split(' to ')[0].trim();
+        var dmy = text.match(/^(\d{2})-([A-Za-z]{3})-(\d{4})$/);
+        if (dmy) {
+            var months = { Jan:0, Feb:1, Mar:2, Apr:3, May:4, Jun:5, Jul:6, Aug:7, Sep:8, Oct:9, Nov:10, Dec:11 };
+            if (months[dmy[2]] != null) return new Date(+dmy[3], months[dmy[2]], +dmy[1]);
+        }
+        var iso = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (iso) return new Date(+iso[1], +iso[2] - 1, +iso[3]);
+        var parsed = new Date(text);
+        return isNaN(parsed.getTime()) ? null : parsed;
     }
 
     // ==================== 操作按鈕（事件委派）====================
@@ -516,9 +530,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 return;
             }
 
-            sessionStorage.setItem('currentWageRecord', JSON.stringify(record));
-            sessionStorage.setItem('viewDocument', JSON.stringify(record));
-            window.location.href = 'labourdocument.html';
+            window.location.href = 'labourdocument.html?id=' + encodeURIComponent(record.id);
         }
 
         if (editBtn) {
@@ -531,8 +543,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 return;
             }
 
-            sessionStorage.setItem('currentWageRecord', JSON.stringify(record));
-            window.location.href = 'editlabour.html';
+            window.location.href = 'editlabour.html?id=' + encodeURIComponent(record.id);
         }
 
         if (deleteBtn) {
@@ -649,7 +660,11 @@ document.addEventListener("DOMContentLoaded", function () {
                     : generateNextLabourWageId();
 
                 if (wageData.some(function(r) { return String(r.id) === String(newId); })) {
-                    alert('Document ID 已存在，請使用其他 ID。');
+                    newId = generateNextLabourWageId();
+                    if (docIdInput) docIdInput.value = newId;
+                }
+                if (wageData.some(function(r) { return String(r.id) === String(newId); })) {
+                    alert('Document ID already exists. Please use another ID.');
                     return;
                 }
 
@@ -686,10 +701,27 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 wageData.push(newWage);
                 saveData();
+                var saved = false;
+                try {
+                    var res = await fetch('/api/record?collection=wage&id=' + encodeURIComponent(newId), {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newWage)
+                    });
+                    saved = res.ok;
+                } catch (err) {
+                    saved = false;
+                }
+                if (!saved && window.DWSS_Storage && typeof window.DWSS_Storage.flush === 'function') {
+                    saved = await window.DWSS_Storage.flush(STORAGE_KEY);
+                }
                 renderWageTable();
-
                 modal.style.display = 'none';
                 addForm.reset();
+                if (!saved) {
+                    alert('Wage record was not saved to the database. Please try again.');
+                    return;
+                }
                 alert('Wage record added successfully!\n\nNew ID: ' + newId);
             });
         }
@@ -707,9 +739,30 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ==================== 初始化 ====================
-    function init() {
+    async function loadFromDatabase() {
+        try {
+            const res = await fetch('/api/records/wage/list', { cache: 'no-store' });
+            if (!res.ok) return;
+            const list = await res.json();
+            if (!Array.isArray(list)) return;
+            wageData = list;
+            window.__dwssWageRecords = list;
+            try {
+                var snap = JSON.parse(sessionStorage.getItem('dwss_page_counts') || '{}');
+                snap.wage = String(getProjectData().length);
+                snap.wageFiltered = true;
+                sessionStorage.setItem('dwss_page_counts', JSON.stringify(snap));
+            } catch (e) {}
+            renderWageTable();
+        } catch (e) {
+            console.warn('[LabourWage] Could not load from database', e);
+        }
+    }
+
+    async function init() {
         if (typeof LanguageConfig !== 'undefined') LanguageConfig.init();
-        initWageData();
+        await loadFromDatabase();
+        if (!wageData.length) initWageData();
         setupFilterEvents();
         setupAddWageModal();
         syncGlobalDate();

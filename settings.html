@@ -1,6 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html style="visibility:hidden" lang="en">
 <head>
+<script>
+(function () {
+  try {
+    var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+    if (s && s.isLoggedIn) { document.documentElement.style.visibility = 'visible'; return; }
+  } catch (e) {}
+  document.documentElement.style.visibility = 'hidden';
+  window.location.replace('login.html');
+})();
+</script>
+
+    <script src="scripts/cloud-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>System Settings - AEL DWSS System</title>
@@ -28,7 +40,7 @@
                         <span id="current-date">September 17, 2025</span>
                     </div>
                     <button class="user-btn">
-                        <i class="fas fa-user"></i> <span data-i18n="user.name"></span>
+                        <i class="fas fa-user"></i> <span class="header-username"></span>
                     </button>
                 </div>
             </div>

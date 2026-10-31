@@ -1,6 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html style="visibility:hidden" lang="en">
 <head>
+<script>
+(function () {
+  try {
+    var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+    if (s && s.isLoggedIn) { document.documentElement.style.visibility = 'visible'; return; }
+  } catch (e) {}
+  document.documentElement.style.visibility = 'hidden';
+  window.location.replace('login.html');
+})();
+</script>
+
+    <script src="scripts/cloud-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AEL DWSS - Edit Site Diary (DSD)</title>
@@ -10,8 +22,8 @@
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { min-height: 100vh; background-color: #f5f7fa; color: #333; }
-        .main-content { padding: 30px; overflow-y: auto; }
+        body { display: flex; min-height: 100vh; background-color: #f5f7fa; color: #333; }
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #e0e6ed; }
         .header h1 { color: #2c3e50; font-size: 2rem; }
         .header-controls { display: flex; align-items: center; gap: 15px; }
@@ -299,6 +311,22 @@
     </style>
 </head>
 <body>
+    <div class="sidebar">
+        <div class="logo">
+            <img src="AEL Logo.png" alt="AEL Logo" class="logo-img" style="height: 45px; width: auto; object-fit: contain; margin-right: 8px;">
+            <h2>DWSS</h2>
+        </div>
+        <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
+        <ul class="menu">
+            <li><a href="index.html"><i class="fas fa-home"></i><span class="menu-text">Dashboard</span></a></li>
+            <li><a href="sitediary.html" class="active"><i class="fas fa-book"></i><span class="menu-text">Site Diary</span></a></li>
+            <li><a href="safetyinspect.html"><i class="fas fa-clipboard-check"></i><span class="menu-text">Safety Inspection</span></a></li>
+            <li><a href="sitelocations.html" id="menu-sitelocations"><i class="fas fa-map-marked-alt"></i><span class="menu-text" data-i18n="site.locations">Site Locations</span></a></li>
+            <li><a href="labourwage.html"><i class="fas fa-money-bill-wave"></i><span class="menu-text">Labour Wage</span></a></li>
+            <li><a href="settings.html"><i class="fas fa-cogs"></i><span class="menu-text">System Settings</span></a></li>
+            <li><a href="usermanagement.html"><i class="fas fa-user-circle"></i><span class="menu-text">User Management</span></a></li>
+        </ul>
+    </div>
 
     <div class="main-content">
         <div class="header">
@@ -306,7 +334,7 @@
             <div class="header-controls">
                 <div class="user-date-row">
                     <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
-                    <button class="user-btn"><i class="fas fa-user"></i> John Doe</button>
+                    <button class="user-btn"><i class="fas fa-user"></i> <span>User</span></button>
                 </div>
             </div>
         </div>
@@ -389,9 +417,24 @@
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
     <script src="scripts/auth-check.js"></script>
-    <script src="scripts/sidebar.js"></script>
-    <script src="scripts/user-display.js"></script>
 
+    <script>
+    (function() {
+        function saveSidebarState() {
+            var sb = document.querySelector('.sidebar');
+            if (sb) localStorage.setItem('sidebarCollapsed', sb.classList.contains('collapsed') ? 'true' : 'false');
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            var sb = document.querySelector('.sidebar');
+            if (sb && localStorage.getItem('sidebarCollapsed') === 'true') sb.classList.add('collapsed');
+            var tb = document.querySelector('.toggle-btn');
+            if (tb) tb.addEventListener('click', function() { setTimeout(saveSidebarState, 50); });
+            var ds = document.querySelector('.date-display span');
+            var sd = sessionStorage.getItem('globalDate');
+            if (sd && ds) ds.textContent = sd;
+            else if (ds) ds.textContent = new Date().toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'});
+        });
+    })();
     </script>
 
     <script>
@@ -764,31 +807,54 @@
         var periodEndDate = null;
 
         function getCurrentDocObject() {
-            var sources = ['editDocument', 'currentDiaryRecord', 'currentRecord'];
-            for (var i = 0; i < sources.length; i++) {
-                var raw = sessionStorage.getItem(sources[i]);
-                if (!raw) continue;
-                try {
-                    var d = JSON.parse(raw);
-                    if (d && d.id) return d;
-                } catch (e) {}
-            }
+            if (window.__dwssDiaryDoc && window.__dwssDiaryDoc.id) return window.__dwssDiaryDoc;
+            var params = new URLSearchParams(location.search);
+            var id = params.get('id');
+            if (id && currentDocObj && String(currentDocObj.id) === String(id)) return currentDocObj;
             return null;
         }
         function getDocId() {
-            var doc = getCurrentDocObject();
-            return doc ? doc.id : 'default';
+            var params = new URLSearchParams(location.search);
+            return params.get('id') || (getCurrentDocObject() ? getCurrentDocObject().id : 'default');
         }
         function storageKey() { return FORM_KEY_PREFIX + currentDocId; }
         function loadAllFormData() {
-            try {
-                var raw = sessionStorage.getItem(storageKey());
-                return raw ? JSON.parse(raw) : {};
-            } catch (e) { return {}; }
+            var doc = getCurrentDocObject();
+            if (doc && doc.formData && typeof doc.formData === 'object') return doc.formData;
+            return {};
         }
         function persistFormData() {
-            try { sessionStorage.setItem(storageKey(), JSON.stringify(allFormData)); }
-            catch (e) { console.error('[DSD] Failed to save form data', e); }
+            var doc = getCurrentDocObject();
+            if (!doc || !doc.id) return;
+            doc.formData = allFormData;
+            window.__dwssDiaryDoc = doc;
+            window.__dwssFormData = allFormData;
+            fetch('/api/record?collection=siteDiary&id=' + encodeURIComponent(doc.id), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(doc)
+            }).then(function (res) { return res.ok ? res.json() : null; })
+              .then(function (body) {
+                if (body && body.version) {
+                    doc._version = body.version;
+                    window.__dwssDiaryDoc = doc;
+                }
+              })
+              .catch(function (e) { console.error('[DSD] Failed to save form data', e); });
+        }
+        function applySavedFields() {
+            document.querySelectorAll('.pdf-field').forEach(function (el) {
+                var pageNum = el.dataset.page;
+                var fieldId = el.dataset.fieldId;
+                if (!pageNum || !fieldId || !allFormData[pageNum]) return;
+                if (!allFormData[pageNum].hasOwnProperty(fieldId)) return;
+                var value = allFormData[pageNum][fieldId];
+                if (el.classList.contains('signature-cell')) {
+                    renderSignatureCellContent(el, value);
+                } else if (el.value !== value) {
+                    el.value = value || '';
+                }
+            });
         }
 
         function pad2(n) { return (n < 10 ? '0' : '') + n; }
@@ -910,6 +976,7 @@
             input.type = 'text';
             input.className = 'pdf-field' + (extraClass ? ' ' + extraClass : '');
             input.dataset.fieldId = fieldId;
+            input.dataset.page = pageNum;
             input.value = value || '';
             input.autocomplete = 'off';
             if (placeholder) input.placeholder = placeholder;
@@ -922,6 +989,7 @@
             var ta = document.createElement('textarea');
             ta.className = 'pdf-field' + (extraClass ? ' ' + extraClass : '');
             ta.dataset.fieldId = fieldId;
+            ta.dataset.page = pageNum;
             ta.value = value || '';
             ta.spellcheck = false;
             if (placeholder) ta.placeholder = placeholder;
@@ -1137,6 +1205,7 @@
             var sel = document.createElement('select');
             sel.className = 'pdf-field';
             sel.dataset.fieldId = fieldId;
+            sel.dataset.page = pageNum;
             WEATHER_OPTIONS.forEach(function (o) {
                 var opt = document.createElement('option');
                 opt.value = o.v;
@@ -1289,6 +1358,15 @@
         }
 
         function init() {
+            var params = new URLSearchParams(location.search);
+            var id = params.get('id');
+            var ready = (window.__dwssDiaryDoc && window.__dwssDiaryDoc.id)
+                ? Promise.resolve(window.__dwssDiaryDoc)
+                : fetch('/api/record?collection=siteDiary&id=' + encodeURIComponent(id || ''), { cache: 'no-store' })
+                    .then(function (res) { return res.ok ? res.json() : null; })
+                    .then(function (doc) { if (doc && doc.id) window.__dwssDiaryDoc = doc; return doc; })
+                    .catch(function () { return null; });
+            ready.then(function () {
             currentDocObj = getCurrentDocObject();
             currentDocId = getDocId();
             periodStartDate = parsePeriodStart();
@@ -1324,12 +1402,14 @@
             var interval = setInterval(function () {
                 var pdfPage = pageWrapper.querySelector('.pdf-page');
                 if (pdfPage && !pdfPage.querySelector('.pdf-form-overlay')) injectFormFields(pdfPage);
+                applySavedFields();
                 hookSaveButton();
             }, 800);
             setTimeout(function () { clearInterval(interval); }, 60000);
 
             hookSaveButton();
-            console.log('[DSD Form] Overlay v21 (Contract No. 自動帶入). Doc:', currentDocId);
+            console.log('[DSD Form] Overlay loads form data from the record. Doc:', currentDocId);
+            });
         }
 
         if (document.readyState === 'loading') {
@@ -1342,6 +1422,7 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        if (window.DWSS_Auth) DWSS_Auth.updateHeaderUser();
         setTimeout(function() {
             var backBtn = document.getElementById('back-btn');
             if (backBtn) backBtn.addEventListener('click', function() { window.location.href = 'sitediary.html'; });
@@ -1381,22 +1462,24 @@
 
     /* ---------- 從 sessionStorage 讀當前文檔 ---------- */
     function readCurrentDoc() {
-        var sources = [
-            'editDocument',
-            'currentInspectionRecord',
-            'currentDiaryRecord',
-            'currentWageRecord',
-            'currentRecord'
-        ];
-        for (var i = 0; i < sources.length; i++) {
-            var raw = sessionStorage.getItem(sources[i]);
-            if (!raw) continue;
-            try {
-                var d = JSON.parse(raw);
-                if (d && typeof d === 'object' && d.id) return d;
-            } catch (e) {}
-        }
+        if (window.__dwssDiaryDoc && window.__dwssDiaryDoc.id) return window.__dwssDiaryDoc;
         return null;
+    }
+
+    function checkOnLoad() {
+        var params = new URLSearchParams(location.search);
+        var id = params.get('id');
+        var ready = readCurrentDoc()
+            ? Promise.resolve(readCurrentDoc())
+            : (id
+                ? fetch('/api/records/siteDiary/' + encodeURIComponent(id), { cache: 'no-store' })
+                    .then(function (res) { return res.ok ? res.json() : null; })
+                    .then(function (doc) { if (doc && doc.id) window.__dwssDiaryDoc = doc; return doc; })
+                    .catch(function () { return null; })
+                : Promise.resolve(null));
+        ready.then(function (doc) {
+            if (doc && isLocked(doc)) applyLock(doc);
+        });
     }
 
     /* ---------- 注入鎖定樣式（只注一次） ---------- */
@@ -1491,19 +1574,6 @@
         console.log('[DocLock] 🔒 文檔已鎖定，狀態 =',
                     (doc && (doc.approvalStatus || doc.status)) || 'submitted',
                     doc && doc.submittedDate ? '| submittedDate=' + doc.submittedDate : '');
-    }
-
-    /* ---------- 初次載入檢查 ---------- */
-    function checkOnLoad() {
-        var doc = readCurrentDoc();
-        if (doc && isLocked(doc)) {
-            applyLock(doc);
-        } else if (doc) {
-            console.log('[DocLock] 未鎖定（草稿狀態）|',
-                        'status =', doc.status,
-                        '| approvalStatus =', doc.approvalStatus,
-                        '| submittedDate =', doc.submittedDate || '(none)');
-        }
     }
 
     /* ---------- 監聽 Submit 按鈕 ---------- */
@@ -1741,10 +1811,25 @@
         return null;
     }
 
-    function verifyPassword(pwd) {
-        var user = findCurrentUser();
-        if (!user) return false;
-        return String(user.password) === String(pwd);
+    async function verifyPassword(pwd) {
+        var session = {};
+        try { session = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch (e) {}
+        var username = session.userEmail || session.userName || '';
+        if (!username) return false;
+        try {
+            var res = await fetch('/api/auth/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: username,
+                    password: pwd,
+                    projectId: sessionStorage.getItem('currentProjectId') || ''
+                })
+            });
+            return res.ok;
+        } catch (e) {
+            return false;
+        }
     }
 
     function openModal(btn) {
@@ -1796,15 +1881,17 @@
         pendingBtn = null;
     }
 
-    function tryConfirm() {
+    async function tryConfirm() {
         var pwd = inputEl.value;
         if (!pwd) {
             errorEl.textContent = 'Please enter your password.';
             errorEl.classList.add('visible');
             return;
         }
-
-        if (!verifyPassword(pwd)) {
+        confirmBtn.disabled = true;
+        var ok = await verifyPassword(pwd);
+        confirmBtn.disabled = false;
+        if (!ok) {
             errorEl.textContent = '❌ Incorrect password. Please try again.';
             errorEl.classList.add('visible');
             inputEl.value = '';

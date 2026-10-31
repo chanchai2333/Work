@@ -12,7 +12,7 @@ var DWSS_Auth = {
         if (sessionData) {
             try { return JSON.parse(sessionData); } catch (e) { /* ignore */ }
         }
-        var localData = localStorage.getItem('current_user');
+        var localData = sessionStorage.getItem('current_user') || localStorage.getItem('current_user');
         if (localData) {
             try { return JSON.parse(localData); } catch (e) { /* ignore */ }
         }
@@ -81,9 +81,21 @@ var DWSS_Auth = {
     },
 
     logout: function() {
-        sessionStorage.clear();
-        localStorage.removeItem('current_user');
-        window.location.href = 'login.html';
+        var token = '';
+        try { token = (JSON.parse(sessionStorage.getItem('dwss_session') || '{}')).sessionToken || ''; } catch (e) {}
+        var done = function () {
+            sessionStorage.clear();
+            sessionStorage.removeItem('current_user');
+            localStorage.removeItem('current_user');
+            window.location.href = 'login.html';
+        };
+        if (!token) { done(); return; }
+        fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-session-token': token },
+            body: JSON.stringify({ sessionToken: token }),
+            keepalive: true
+        }).then(done).catch(done);
     },
 
     requireAuth: function() {
@@ -218,7 +230,12 @@ var DWSS_Auth = {
 
         var displayName = user.userName || user.name || user.email || 'User';
 
-        document.querySelectorAll('.user-btn span').forEach(function(span) {
+        document.querySelectorAll('.user-btn').forEach(function(btn) {
+            var span = btn.querySelector('span');
+            if (!span) {
+                span = document.createElement('span');
+                btn.appendChild(span);
+            }
             span.textContent = displayName;
         });
 
@@ -397,9 +414,87 @@ if (document.readyState === 'loading') {
     initHeaderUser();
 }
 
+(function installSessionGuard() {
+    if (window.__dwssSessionGuard) return;
+    window.__dwssSessionGuard = true;
+
+    function currentToken() {
+        try {
+            return (JSON.parse(sessionStorage.getItem('dwss_session') || '{}')).sessionToken || '';
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function forceToLogin(message) {
+        if (window.__dwssLoggingOut) return;
+        window.__dwssLoggingOut = true;
+        try { sessionStorage.clear(); } catch (e) {}
+        try { sessionStorage.removeItem('dwss_session'); } catch (e) {}
+        try { sessionStorage.removeItem('isLoggedIn'); } catch (e) {}
+        try { sessionStorage.removeItem('loggedUser'); } catch (e) {}
+        alert(message || 'You have been logged out because this account signed in from another browser or computer.\n\nPlease log in again.');
+        window.location.href = 'login.html';
+    }
+
+    // Attach the session token to every same-origin API call
+    var originalFetch = window.fetch.bind(window);
+    window.fetch = function (input, init) {
+        init = init || {};
+        var url = (typeof input === 'string') ? input : (input && input.url) || '';
+        if (url.indexOf('/api/') === 0 || url.indexOf(location.origin + '/api/') === 0) {
+            var token = currentToken();
+            if (token) {
+                var headers = new Headers(init.headers || (input && input.headers) || {});
+                if (!headers.has('x-session-token')) headers.set('x-session-token', token);
+                init.headers = headers;
+            }
+        }
+        return originalFetch(input, init).then(function (res) {
+            if (res && (res.status === 401) && url.indexOf('/api/') !== -1 && url.indexOf('/api/auth/login') === -1) {
+                res.clone().json().then(function (body) {
+                    var msg = (body && body.message) || 'You have been logged out because this account signed in from another browser or computer.';
+                    forceToLogin(msg + '\n\nPlease log in again.');
+                }).catch(function () {
+                    forceToLogin();
+                });
+            }
+            return res;
+        });
+    };
+
+    function heartbeat() {
+        if (window.location.pathname.indexOf('login.html') !== -1) return;
+        var token = currentToken();
+        if (!token) return;
+        originalFetch('/api/auth/heartbeat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-session-token': token },
+            body: JSON.stringify({ sessionToken: token })
+        }).then(function (res) {
+            if (res.status === 401) {
+                return res.json().catch(function () { return {}; }).then(function (body) {
+                    forceToLogin((body && body.message) || 'You have been logged out because this account signed in from another browser or computer.\n\nPlease log in again.');
+                });
+            }
+        }).catch(function () {});
+    }
+
+    // Check soon, then every 15 seconds so a forced logout is noticed quickly
+    setTimeout(heartbeat, 2000);
+    setInterval(heartbeat, 15000);
+})();
+
 // 登入檢查（不 throw，讓頁面其他邏輯仍可執行）
 if (!window.location.pathname.includes('login.html')) {
     if (window.DWSS_Auth && !window.DWSS_Auth.isLoggedIn()) {
         console.warn('[DWSS_Auth] User not logged in');
     }
 }
+
+document.addEventListener('languageChanged', function () {
+    try { if (window.DWSS_Auth) window.DWSS_Auth.updateHeaderUser(); } catch (e) {}
+});
+setTimeout(function () {
+    try { if (window.DWSS_Auth) window.DWSS_Auth.updateHeaderUser(); } catch (e) {}
+}, 300);

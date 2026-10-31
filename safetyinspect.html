@@ -1,6 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html style="visibility:hidden" lang="en">
 <head>
+<script>
+(function () {
+  try {
+    var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+    if (s && s.isLoggedIn) { document.documentElement.style.visibility = 'visible'; return; }
+  } catch (e) {}
+  document.documentElement.style.visibility = 'hidden';
+  window.location.replace('login.html');
+})();
+</script>
+
+    <script src="scripts/cloud-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n="platform">AEL DWSS - Safety Inspection</title>
@@ -88,7 +100,7 @@
                     </div>
                     <button class="user-btn">
                         <i class="fas fa-user"></i>
-                        <span data-i18n="user.name"></span>
+                        <span class="header-username"></span>
                     </button>
                 </div>
             </div>
@@ -107,11 +119,18 @@
                 <div class="diary-stats">
                     <div class="stat-card">
                         <div class="label" data-i18n="total.inspections">Total Inspections</div>
-                        <div class="value" id="total-inspections-count">0</div>
+                        <div class="value" id="total-inspections-count">…</div>
                     </div>
                     <div class="stat-card">
                         <div class="label" data-i18n="this.month">This Month</div>
-                        <div class="value" id="month-count">0</div>
+                        <div class="value" id="month-count">…</div>
+                    </div>
+                    <script>
+                    try {
+                        var c = JSON.parse(sessionStorage.getItem('dwss_page_counts') || '{}');
+                        if (c.safetyFiltered && c.safety) document.getElementById('total-inspections-count').textContent = c.safety;
+                    } catch (e) {}
+                    </script>
                     </div>
                 </div>
                 <section class="filters-section">
@@ -422,6 +441,24 @@
                 });
             } catch (e) { /* ignore */ }
 
+            if (Array.isArray(window.__dwssSafetyRecords)) {
+                window.__dwssSafetyRecords.forEach(function (item) {
+                    if (item && item.id != null) {
+                        var idStr = String(item.id);
+                        if (idStr.indexOf(ID_PREFIX) === 0 && !seen[idStr]) {
+                            seen[idStr] = true;
+                            ids.push(idStr);
+                        }
+                    }
+                });
+            }
+            document.querySelectorAll('td').forEach(function (cell) {
+                var txt = (cell.textContent || '').replace(/\s+/g, '');
+                if (txt.indexOf(ID_PREFIX) === 0 && !seen[txt]) {
+                    seen[txt] = true;
+                    ids.push(txt);
+                }
+            });
             return ids;
         }
 
@@ -700,7 +737,19 @@
         var modal = document.getElementById('history-modal');
         var content = document.getElementById('history-content');
         if (!modal || !content) return;
+        content.innerHTML = '<div style="padding:20px;text-align:center;color:#64748b;">Loading history...</div>';
+        modal.style.display = 'flex';
 
+        fetch('/api/record?collection=inspection&id=' + encodeURIComponent(diaryId), { cache: 'no-store' })
+            .then(function (res) { return res.ok ? res.json() : null; })
+            .then(function (full) {
+                if (full && full.id) record = full;
+                renderHistory(record, content);
+            })
+            .catch(function () { renderHistory(record, content); });
+    }
+
+    function renderHistory(record, content) {
         var history = Array.isArray(record.statusHistory) ? record.statusHistory : [];
 
         var html = '';
@@ -760,7 +809,6 @@
         }
 
         content.innerHTML = html;
-        modal.style.display = 'flex';
     }
 
     function closeHistory() {

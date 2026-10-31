@@ -1,6 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html style="visibility:hidden" lang="en">
 <head>
+<script>
+(function () {
+  try {
+    var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+    if (s && s.isLoggedIn) { document.documentElement.style.visibility = 'visible'; return; }
+  } catch (e) {}
+  document.documentElement.style.visibility = 'hidden';
+  window.location.replace('login.html');
+})();
+</script>
+
+    <script src="scripts/cloud-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AEL DWSS - Site Diary Document</title>
@@ -17,8 +29,8 @@
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { min-height: 100vh; background-color: #f5f7fa; color: #333; }
-        .main-content { padding: 30px; overflow-y: auto; }
+        body { display: flex; min-height: 100vh; background-color: #f5f7fa; color: #333; }
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #e0e6ed; }
         .header h1 { color: #2c3e50; font-size: 2rem; }
         .header-controls { display: flex; align-items: center; gap: 15px; }
@@ -181,13 +193,30 @@
     </style>
 </head>
 <body>
+    <div class="sidebar">
+        <div class="logo">
+            <img src="AEL Logo.png" alt="AEL Logo" class="logo-img" style="height: 45px; width: auto; object-fit: contain; margin-right: 8px;">
+            <h2>DWSS</h2>
+        </div>
+        <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
+        <ul class="menu">
+            <li><a href="index.html"><i class="fas fa-home"></i><span class="menu-text">Dashboard</span></a></li>
+            <li><a href="sitediary.html" class="active"><i class="fas fa-book"></i><span class="menu-text">Site Diary</span></a></li>
+            <li><a href="safetyinspect.html"><i class="fas fa-clipboard-check"></i><span class="menu-text">Safety Inspection</span></a></li>
+            <li><a href="sitelocations.html" id="menu-sitelocations"><i class="fas fa-map-marked-alt"></i><span class="menu-text" data-i18n="site.locations">Site Locations</span></a></li>
+            <li><a href="labourwage.html"><i class="fas fa-money-bill-wave"></i><span class="menu-text">Labour Wage</span></a></li>
+            <li><a href="settings.html"><i class="fas fa-cogs"></i><span class="menu-text">System Settings</span></a></li>
+            <li><a href="usermanagement.html"><i class="fas fa-user-circle"></i><span class="menu-text">User Management</span></a></li>
+        </ul>
+    </div>
+
     <div class="main-content">
         <div class="header">
             <h1>Site Diary</h1>
             <div class="header-controls">
                 <div class="user-date-row">
                     <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
-                    <button class="user-btn"><i class="fas fa-user"></i><span>John Doe</span></button>
+                    <button class="user-btn"><i class="fas fa-user"></i> <span>User</span></button>
                 </div>
             </div>
         </div>
@@ -246,9 +275,8 @@
     </div>
 
     <script src="scripts/language.js"></script>
+    <script src="scripts/auth-check.js"></script>
     <script src="scripts/app.js"></script>
-    <script src="scripts/sidebar.js"></script>
-    <script src="scripts/user-display.js"></script>
     <script src="scripts/dsd-template-data.js"></script>
 
     <script>
@@ -337,23 +365,25 @@
         var periodStartDate = null;
         var periodEndDate = null;
 
-        function getCurrentDocObject() {
-            var sources = ['viewDocument', 'editDocument', 'currentDiaryRecord', 'currentRecord'];
-            for (var i = 0; i < sources.length; i++) {
-                var raw = sessionStorage.getItem(sources[i]);
-                if (!raw) continue;
+        async function getCurrentDocObject() {
+            var params = new URLSearchParams(location.search);
+            var id = params.get('id');
+            if (id) {
                 try {
-                    var d = JSON.parse(raw);
-                    if (d && d.id) return d;
+                    var res = await fetch('/api/record?collection=siteDiary&id=' + encodeURIComponent(id), { cache: 'no-store' });
+                    if (res.ok) {
+                        var doc = await res.json();
+                        if (doc && doc.id) return doc;
+                    }
                 } catch (e) {}
             }
             return null;
         }
         function loadAllFormData() {
-            try {
-                var raw = sessionStorage.getItem('dsd_formdata_' + currentDocId);
-                return raw ? JSON.parse(raw) : {};
-            } catch (e) { return {}; }
+            if (currentDocObj && currentDocObj.formData && typeof currentDocObj.formData === 'object') {
+                return currentDocObj.formData;
+            }
+            return {};
         }
 
         function pad2(n) { return (n < 10 ? '0' : '') + n; }
@@ -1027,6 +1057,38 @@
             });
         }
 
+        function setupRecordNavigation() {
+            var prev = document.getElementById('prev-record');
+            var next = document.getElementById('next-record');
+            var input = document.getElementById('record-input');
+            var totalEl = document.getElementById('total-records');
+            fetch('/api/records/siteDiary/list', { cache: 'no-store' })
+                .then(function (res) { return res.ok ? res.json() : []; })
+                .then(function (list) {
+                    var projectId = sessionStorage.getItem('currentProjectId') || '';
+                    var records = (Array.isArray(list) ? list : []).filter(function (r) {
+                        return r && r.id && (!projectId || r.project === projectId || String(r.id).indexOf(projectId.replace(/\//g, '-')) !== -1);
+                    });
+                    records.sort(function (a, b) { return String(a.id).localeCompare(String(b.id)); });
+                    var index = 0;
+                    for (var i = 0; i < records.length; i++) {
+                        if (String(records[i].id) === String(currentDocId)) { index = i; break; }
+                    }
+                    if (totalEl) totalEl.textContent = String(records.length || 1);
+                    if (input) input.value = String(index + 1);
+                    function go(n) {
+                        if (!records.length) return;
+                        var nextIndex = Math.max(0, Math.min(records.length - 1, n));
+                        if (String(records[nextIndex].id) === String(currentDocId)) return;
+                        window.location.href = 'sitediarydocument.html?id=' + encodeURIComponent(records[nextIndex].id);
+                    }
+                    if (prev) prev.addEventListener('click', function () { go(index - 1); });
+                    if (next) next.addEventListener('click', function () { go(index + 1); });
+                    if (input) input.addEventListener('change', function () { go((parseInt(input.value, 10) || 1) - 1); });
+                })
+                .catch(function () {});
+        }
+
         function setupDateDisplay() {
             var ds = document.querySelector('.date-display span');
             var sd = sessionStorage.getItem('globalDate');
@@ -1034,12 +1096,13 @@
             else if (ds) ds.textContent = new Date().toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'});
         }
 
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', async function () {
             try {
                 setupSidebar();
                 setupDateDisplay();
+                if (window.DWSS_Auth) DWSS_Auth.updateHeaderUser();
 
-                currentDocObj = getCurrentDocObject();
+                currentDocObj = await getCurrentDocObject();
                 if (!currentDocObj) {
                     loadingEl.classList.remove('visible');
                     errorEl.style.display = 'block';
@@ -1073,6 +1136,7 @@
                     loadingEl.classList.remove('visible');
                     renderPage(1);
                     setupNavigation();
+                    setupRecordNavigation();
                     setupDownload();
                     setupPrint();
                     setupBack();

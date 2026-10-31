@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEL DWSS - Labour Wage</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles/main.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+    <!-- ★ 內嵌 GF527-2017 PDF base64 ★ -->
+    <script src="scripts/GF527_2017-data.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { min-height: 100vh; background-color: #f5f7fa; color: #333; }
+        .main-content { padding: 30px; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #e0e6ed; }
+        .header h1 { color: #2c3e50; font-size: 2rem; }
+        .header-controls { display: flex; align-items: center; gap: 15px; }
+        .date-display { background: #eef2f6; padding: 8px 15px; border-radius: 8px; font-size: 16px; font-weight: 500; color: #308fee; }
+        .date-display i { margin-right: 8px; }
+        .user-date-row { display: flex; align-items: center; gap: 16px; }
+        .user-btn { background: #2563eb; color: #fff; border: none; border-radius: 20px; padding: 10px 20px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+
+        .document-page { background: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .document-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eaeaea; flex-wrap: wrap; gap: 15px; }
+        .doc-title-section { flex: 1; min-width: 300px; }
+        .document-header h2 { font-size: 1.6rem; color: #2c3e50; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .doc-status { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; }
+        .status-draft { background: rgba(149,165,166,0.2); color: #848f90; }
+        .status-submitted { background: rgba(52,152,219,0.2); color: #2980b9; }
+        .status-approved { background: rgba(46,204,113,0.2); color: #27ae60; }
+        .status-rejected { background: rgba(231,76,60,0.2); color: #c0392b; }
+        .status-pending { background: rgba(243,156,18,0.2); color: #d35400; }
+        .status-cancelled { background: rgba(231,76,60,0.2); color: #c0392b; }
+
+        .document-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; transition: all 0.3s ease; white-space: nowrap; color: #fff; text-decoration: none; }
+        .btn:hover { transform: translateY(-2px); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
+        .btn-primary { background: #3498db; } .btn-primary:hover { background: #2980b9; }
+        .btn-save { background: #2ecc71; } .btn-save:hover { background: #27ae60; }
+        .btn-cancel { background: #e74c3c; } .btn-cancel:hover { background: #c0392b; }
+        .btn-submit { background: #28a745; } .btn-submit:hover { background: #218838; }
+
+        .document-meta { background: #f8f9fa; border-radius: 12px; padding: 20px 30px; margin: 20px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+        .meta-item { display: flex; flex-direction: column; }
+        .meta-label { font-weight: 600; color: #2c3e50; margin-bottom: 5px; font-size: 0.85rem; }
+        .meta-value { color: #555; font-size: 0.95rem; font-weight: 500; padding: 8px 12px; border-radius: 6px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+        .pdf-editor-container { display: flex; flex-direction: column; gap: 12px; }
+        .pdf-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #f1f5f9; padding: 10px 12px; border-radius: 6px; }
+        .nav-btn { background: #3498db; color: #fff; border: none; border-radius: 4px; padding: 8px 14px; cursor: pointer; font-size: 14px; }
+        .nav-btn:hover { background: #2980b9; }
+        .nav-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .page-info { font-size: 14px; font-weight: 600; color: #334155; padding: 0 4px; display: flex; align-items: center; gap: 6px; }
+        .page-input { width: 60px; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 14px; font-weight: 700; color: #1e40af; text-align: center; background: #fff; }
+        .page-input:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 2px rgba(52,152,219,0.25); background: #f0f9ff; }
+        .page-input::-webkit-inner-spin-button, .page-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .page-input { -moz-appearance: textfield; }
+        .page-input-hint { font-size: 11px; color: #94a3b8; font-style: italic; margin-left: 4px; }
+
+        /* ★ 縮放控制樣式 */
+        .zoom-separator { display: inline-block; width: 1px; height: 26px; background: #cbd5e1; margin: 0 6px; vertical-align: middle; }
+        .zoom-level {
+            font-size: 13px; font-weight: 700; color: #1e40af;
+            min-width: 52px; text-align: center; display: inline-block;
+            padding: 4px 6px; background: #fff; border-radius: 4px;
+            border: 1px solid #cbd5e1;
+        }
+        .zoom-btn { padding: 8px 12px; min-width: 40px; }
+
+        /* ★ 容器：改 text-align:center + overflow:auto（縮放後左側不會被裁） */
+        .pdf-canvas-container {
+            position: relative;
+            background: #e0e0e0;
+            border-radius: 8px;
+            padding: 24px;
+            overflow: auto;
+            min-height: 500px;
+            text-align: center;
+        }
+        #page-wrapper { display: inline-block; text-align: left; }
+
+        .pdf-page { position: relative; display: block; box-shadow: 0 4px 12px rgba(0,0,0,0.2); background: #fff; border: 3px solid transparent; overflow: hidden; margin: 0 auto; }
+        .pdf-page.active-page { border-color: #3498db; }
+        .pdf-bg { display: block; width: 100%; height: 100%; pointer-events: none; user-select: none; }
+
+        .loading-indicator { display: none; justify-content: center; align-items: center; gap: 10px; padding: 40px; color: #2563eb; font-weight: 600; background: #eff6ff; border-radius: 8px; }
+        .loading-indicator.visible { display: flex; }
+
+        /* 先全部套用 7px，並加上縮放比例 */
+        .pdf-form-overlay .pdf-field[data-field-id^="g17_"] { font-size: calc(7px * var(--pdf-zoom-scale, 1)) !important; }
+        .pdf-form-overlay .pdf-field[data-field-id^="gf_"]  { font-size: calc(7px * var(--pdf-zoom-scale, 1)) !important; }  
+
+        /* 再針對特定 ID 覆蓋回原本的字體大小，同樣加上縮放比例 */
+        .pdf-form-overlay .pdf-field[data-field-id="g17_01"] { font-size: calc(11px * var(--pdf-zoom-scale, 1)) !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_02"] { font-size: calc(11px * var(--pdf-zoom-scale, 1)) !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_05"] { font-size: calc(11px * var(--pdf-zoom-scale, 1)) !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_06"] { font-size: calc(11px * var(--pdf-zoom-scale, 1)) !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_07"] { font-size: calc(11px * var(--pdf-zoom-scale, 1)) !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_08"] { font-size: calc(11px * var(--pdf-zoom-scale, 1)) !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_03"] { font-size: calc(8px * var(--pdf-zoom-scale, 1)) !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_04"] { font-size: calc(8px * var(--pdf-zoom-scale, 1)) !important; }
+
+
+        /* ★ 表單覆蓋層 */
+        .pdf-form-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 30;
+            pointer-events: none;
+        }
+        .pdf-form-overlay .pdf-field {
+            position: absolute;
+            border: 1px solid rgba(52, 152, 219, 0.3);
+            background: rgba(255, 255, 255, 0.15);
+            outline: none;
+            font-family: Arial, sans-serif;
+            color: #0a1a5c;
+            font-size: calc(11px * var(--pdf-zoom-scale, 1));
+            padding: 1px 3px;
+            box-sizing: border-box;
+            pointer-events: auto;
+            line-height: 1.2;
+            resize: none;
+            overflow: hidden;
+            transition: background 0.12s ease, box-shadow 0.12s ease;
+        }
+        .pdf-form-overlay .pdf-field:hover {
+            background: rgba(52, 152, 219, 0.15);
+            box-shadow: inset 0 0 0 1px #3498db;
+        }
+        .pdf-form-overlay .pdf-field:focus {
+            background: rgba(255, 251, 234, 0.95);
+            box-shadow: inset 0 0 0 2px #3498db;
+            z-index: 2;
+            overflow: auto;
+        }
+
+        footer { text-align: center; padding: 30px 0 20px; color: #7f8c8d; border-top: 1px solid #e0e6ed; margin-top: 30px; }
+        @media (max-width: 768px) { .main-content { padding: 15px; } .document-page { padding: 20px; } }
+        .sidebar.collapsed .logo { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>Labour Wage</h1>
+            <div class="header-controls">
+                <div class="user-date-row">
+                    <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
+                    <button class="user-btn"><i class="fas fa-user"></i> John Doe</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="document-page">
+            <div class="document-header">
+                <div class="doc-title-section">
+                    <h2><i class="fas fa-file-alt"></i> <span id="docTitle">Labour Wage Document</span> <span class="doc-status status-draft" id="docStatus">Draft</span></h2>
+                </div>
+                <div class="document-actions">
+                    <button class="btn btn-submit" id="submit-btn"><i class="fas fa-paper-plane"></i> Submit</button>
+                    <button class="btn" id="approve-btn" style="display:none; background:#27ae60;"><i class="fas fa-check-circle"></i> Approve</button>
+                    <button class="btn btn-cancel" id="reject-btn" style="display:none; background:#c0392b;"><i class="fas fa-times-circle"></i> Reject</button>
+
+                    <button class="btn btn-save" id="save-btn"><i class="fas fa-save"></i> Save Changes</button>
+                    <button class="btn btn-cancel" id="cancel-btn"><i class="fas fa-times"></i> Cancel</button>
+                    <button class="btn btn-primary" id="back-btn"><i class="fas fa-arrow-left"></i> Back</button>
+                </div>
+            </div>
+
+            <div class="document-meta">
+                <div class="meta-item"><span class="meta-label">Document ID:</span><span class="meta-value" id="docId">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Document Type:</span><span class="meta-value" id="docType">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Site:</span><span class="meta-value" id="docSite">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Period:</span><span class="meta-value" id="docPeriod">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Submitted By:</span><span class="meta-value" id="docAuthor">N/A</span></div>
+            </div>
+
+            <div class="pdf-editor-container">
+                <div class="pdf-controls" id="pdf-controls">
+                    <button class="nav-btn" id="prev-page" title="上一頁"><i class="fas fa-chevron-left"></i></button>
+                    <span class="page-info">
+                        Page
+                        <input type="number" id="page-input" class="page-input" min="1" value="1" title="輸入頁碼後按 Enter 跳頁">
+                        of <span id="total-pages">1</span>
+                        <span class="page-input-hint">(按 Enter 跳頁)</span>
+                    </span>
+                    <span id="current-page" style="display:none;">1</span>
+                    <button class="nav-btn" id="next-page" title="下一頁"><i class="fas fa-chevron-right"></i></button>
+
+                    <!-- ★ 縮放控制 -->
+                    <span class="zoom-separator"></span>
+                    <button class="nav-btn zoom-btn" id="zoom-out-btn" title="縮小"><i class="fas fa-search-minus"></i></button>
+                    <span class="zoom-level" id="zoom-level">100%</span>
+                    <button class="nav-btn zoom-btn" id="zoom-in-btn" title="放大"><i class="fas fa-search-plus"></i></button>
+                    <button class="nav-btn zoom-btn" id="zoom-reset-btn" title="重設 100%"><i class="fas fa-compress"></i></button>
+                </div>
+
+                <div class="pdf-canvas-container" id="pdf-container">
+                    <div class="loading-indicator visible" id="loading-indicator">
+                        <i class="fas fa-spinner fa-spin"></i> Loading template...
+                    </div>
+                    <div id="page-wrapper"></div>
+                </div>
+            </div>
+
+            <footer>
+                <p>&copy; 2025 AEL DWSS System. All rights reserved.</p>
+                <p>AEL DWSS Platform</p>
+            </footer>
+        </div>
+    </div>
+
+    <script src="scripts/language.js"></script>
+    <script src="scripts/app.js"></script>
+    <script src="scripts/auth-check.js"></script>
+    <script src="scripts/sidebar.js"></script>
+    <script src="scripts/user-display.js"></script>
+
+    <script>
+    (function() {
+        'use strict';
+        function syncWageRecordToEditDocument() {
+            var wageRecord = sessionStorage.getItem('currentWageRecord');
+            if (!wageRecord) {
+                console.warn('[editlabour] ✗ 找不到 currentWageRecord');
+                return null;
+            }
+            try {
+                var rec = JSON.parse(wageRecord);
+                if (!rec || !rec.id) return null;
+                if (!rec.site && rec.siteName) rec.site = rec.siteName;
+                if (!rec.submittedBy && rec.author) rec.submittedBy = rec.author;
+                if (!rec.typeText && rec.type) {
+                    if (rec.type === 'GF527A') rec.typeText = 'GF527A - Return on Construction Site Employment';
+                    else if (rec.type === 'GF527-2003') rec.typeText = 'GF527 (2003) - Labour Wage';
+                    else if (rec.type === 'GF527-2017') rec.typeText = 'GF527 (2017) - Labour Wage';
+                }
+                sessionStorage.setItem('editDocument', JSON.stringify(rec));
+                sessionStorage.setItem('currentRecord', JSON.stringify(rec));
+                console.log('[editlabour] ✓ 已同步 currentWageRecord → editDocument:', rec.id);
+                return rec;
+            } catch (e) {
+                console.error('[editlabour] 同步失敗:', e);
+                return null;
+            }
+        }
+        syncWageRecordToEditDocument();
+    })();
+    </script>
+
+    <script src="scripts/GF527A-data.js"></script>
+    <!-- ★ 內嵌 GF527-2003 PDF base64 ★ -->
+    <script src="scripts/GF527_2003-data.js"></script>
+    <script src="scripts/editlabour.js"></script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+            var backBtn = document.getElementById('back-btn');
+            if (backBtn) backBtn.addEventListener('click', function() { window.location.href = 'labourwage.html'; });
+        }, 500);
+    });
+    </script>
+<!-- ============================================================ -->
+<!-- ★ 文檔鎖定：Submit 後禁止編輯（三個編輯頁通用）v2             -->
+<!-- ============================================================ -->
+<script>
+(function () {
+    'use strict';
+    if (window.__docLockPatchInstalled) return;
+    window.__docLockPatchInstalled = true;
+
+    /* ---------- 判斷文檔是否已提交/鎖定 ----------
+       規則：
+         1. 有 submittedDate → 一定鎖（DSD / LabourWage 提交時會寫入）
+         2. approvalStatus 是 approved / rejected / cancelled → 鎖
+         3. status 不是 draft → 鎖（Safety Inspection 提交後 status = submitted-wsg）
+         4. 其他（含新建時 approvalStatus='pending' 但無 submittedDate）→ 不鎖
+    */
+    function isLocked(doc) {
+        if (!doc) return false;
+
+        var s = doc.status || 'draft';
+        var a = doc.approvalStatus || 'pending';
+
+        // ★ 允許 draft 和 reopen 可以編輯
+        if (s === 'draft' || s === 'reopen') return false;
+        if (a === 'rejected') return false;
+
+        // 其他情況（submitted-ig, closed, cancelled, approved）鎖定
+        return true;
+    }
+
+    /* ---------- 從 sessionStorage 讀當前文檔 ---------- */
+    function readCurrentDoc() {
+        var sources = [
+            'editDocument',
+            'currentInspectionRecord',
+            'currentDiaryRecord',
+            'currentWageRecord',
+            'currentRecord'
+        ];
+        for (var i = 0; i < sources.length; i++) {
+            var raw = sessionStorage.getItem(sources[i]);
+            if (!raw) continue;
+            try {
+                var d = JSON.parse(raw);
+                if (d && typeof d === 'object' && d.id) return d;
+            } catch (e) {}
+        }
+        return null;
+    }
+
+    /* ---------- 注入鎖定樣式（只注一次） ---------- */
+    function injectLockStyle() {
+        if (document.getElementById('document-lock-style')) return;
+        var style = document.createElement('style');
+        style.id = 'document-lock-style';
+        style.textContent = [
+            '.document-locked #draw-canvas,',
+            '.document-locked #pdf-canvas,',
+            '.document-locked .pdf-form-overlay,',
+            '.document-locked .safety-form-overlay,',
+            '.document-locked .text-annotation,',
+            '.document-locked .tick-mark {',
+            '  pointer-events: none !important;',
+            '}',
+
+            '.document-locked .pdf-field,',
+            '.document-locked .pdf-checkbox,',
+            '.document-locked .pdf-sign,',
+            '.document-locked .pdf-image,',
+            '.document-locked .pdf-signature-cell,',
+            '.document-locked .signature-cell {',
+            '  pointer-events: none !important;',
+            '  opacity: 0.85;',
+            '}',
+
+            '.document-locked .tool-btn,',
+            '.document-locked #undo-btn,',
+            '.document-locked #delete-selected-btn,',
+            '.document-locked #lock-btn,',
+            '.document-locked #save-btn,',
+            '.document-locked #cancel-btn,',
+            '.document-locked #submit-btn {',
+            '  display: none !important;',
+            '}',
+
+            '.document-lock-badge {',
+            '  display: inline-flex; align-items: center; gap: 6px;',
+            '  background: #fef3c7; color: #92400e;',
+            '  padding: 6px 14px; border-radius: 20px;',
+            '  font-weight: 600; font-size: 0.85rem;',
+            '  margin-left: 12px;',
+            '  box-shadow: 0 1px 3px rgba(0,0,0,0.05);',
+            '}'
+        ].join('\n');
+        document.head.appendChild(style);
+    }
+
+    /* ---------- 套用鎖定 ---------- */
+    function applyLock(doc) {
+        if (document.body.classList.contains('document-locked')) return;
+
+        injectLockStyle();
+        document.body.classList.add('document-locked');
+
+        if (!document.querySelector('.document-lock-badge')) {
+            var target =
+                document.querySelector('.doc-title-section h2') ||
+                document.querySelector('.document-header h2') ||
+                document.querySelector('.document-header');
+
+            if (target) {
+                var badge = document.createElement('span');
+                badge.className = 'document-lock-badge';
+                badge.innerHTML = '<i class="fas fa-lock"></i> Read-only (submitted)';
+                target.appendChild(badge);
+            }
+        }
+
+        document.querySelectorAll('input, textarea, select').forEach(function (el) {
+            el.disabled = true;
+        });
+
+        var obs = new MutationObserver(function (mutations) {
+            mutations.forEach(function (m) {
+                m.addedNodes.forEach(function (n) {
+                    if (n.nodeType !== 1) return;
+                    if (n.matches && n.matches('input, textarea, select')) {
+                        n.disabled = true;
+                    }
+                    if (n.querySelectorAll) {
+                        n.querySelectorAll('input, textarea, select').forEach(function (el) {
+                            el.disabled = true;
+                        });
+                    }
+                });
+            });
+        });
+        obs.observe(document.body, { childList: true, subtree: true });
+
+        console.log('[DocLock] 🔒 文檔已鎖定，狀態 =',
+                    (doc && (doc.approvalStatus || doc.status)) || 'submitted',
+                    doc && doc.submittedDate ? '| submittedDate=' + doc.submittedDate : '');
+    }
+
+    /* ---------- 初次載入檢查 ---------- */
+    function checkOnLoad() {
+        var doc = readCurrentDoc();
+        if (doc && isLocked(doc)) {
+            applyLock(doc);
+        } else if (doc) {
+            console.log('[DocLock] 未鎖定（草稿狀態）|',
+                        'status =', doc.status,
+                        '| approvalStatus =', doc.approvalStatus,
+                        '| submittedDate =', doc.submittedDate || '(none)');
+        }
+    }
+
+    /* ---------- 監聽 Submit 按鈕 ---------- */
+    document.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('#submit-btn') : null;
+        if (!btn) return;
+
+        setTimeout(function () {
+            var doc = readCurrentDoc();
+            if (doc && isLocked(doc)) applyLock(doc);
+        }, 400);
+
+        setTimeout(function () {
+            var doc = readCurrentDoc();
+            if (doc && isLocked(doc)) applyLock(doc);
+        }, 2000);
+    }, false);
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', checkOnLoad);
+    } else {
+        checkOnLoad();
+    }
+
+    setTimeout(checkOnLoad, 1200);
+    setTimeout(checkOnLoad, 2500);
+})();
+</script>
+<!-- ============================================================ -->
+<!-- ★ 文檔鎖定：Submit 後禁止編輯（三個編輯頁通用）v2             -->
+<!-- ============================================================ -->
+<script>
+(function () {
+    'use strict';
+    if (window.__docLockPatchInstalled) return;
+    window.__docLockPatchInstalled = true;
+
+    function isLocked(doc) {
+        if (!doc) return false;
+
+        var s = doc.status || 'draft';
+        var a = doc.approvalStatus || 'pending';
+
+        // ★ 允許 draft 和 reopen 可以編輯；如果被 reject 也是 draft，當然可以編輯
+        if (s === 'draft' || s === 'reopen') return false;
+        if (a === 'rejected') return false;
+
+        // 其他情況（submitted-ig, closed, cancelled, approved）鎖定
+        return true;
+    }
+
+    function readCurrentDoc() {
+        var sources = [
+            'editDocument',
+            'currentInspectionRecord',
+            'currentDiaryRecord',
+            'currentWageRecord',
+            'currentRecord'
+        ];
+        for (var i = 0; i < sources.length; i++) {
+            var raw = sessionStorage.getItem(sources[i]);
+            if (!raw) continue;
+            try {
+                var d = JSON.parse(raw);
+                if (d && typeof d === 'object' && d.id) return d;
+            } catch (e) {}
+        }
+        return null;
+    }
+
+    function injectLockStyle() {
+        if (document.getElementById('document-lock-style')) return;
+        var style = document.createElement('style');
+        style.id = 'document-lock-style';
+        style.textContent = [
+            '.document-locked #draw-canvas,',
+            '.document-locked #pdf-canvas,',
+            '.document-locked .pdf-form-overlay,',
+            '.document-locked .safety-form-overlay,',
+            '.document-locked .text-annotation,',
+            '.document-locked .tick-mark {',
+            '  pointer-events: none !important;',
+            '}',
+
+            '.document-locked .pdf-field,',
+            '.document-locked .pdf-checkbox,',
+            '.document-locked .pdf-sign,',
+            '.document-locked .pdf-image,',
+            '.document-locked .pdf-signature-cell,',
+            '.document-locked .signature-cell {',
+            '  pointer-events: none !important;',
+            '  opacity: 0.85;',
+            '}',
+
+            '.document-locked .tool-btn,',
+            '.document-locked #undo-btn,',
+            '.document-locked #delete-selected-btn,',
+            '.document-locked #lock-btn,',
+            '.document-locked #save-btn,',
+            '.document-locked #cancel-btn,',
+            '.document-locked #submit-btn {',
+            '  display: none !important;',
+            '}',
+
+            '.document-lock-badge {',
+            '  display: inline-flex; align-items: center; gap: 6px;',
+            '  background: #fef3c7; color: #92400e;',
+            '  padding: 6px 14px; border-radius: 20px;',
+            '  font-weight: 600; font-size: 0.85rem;',
+            '  margin-left: 12px;',
+            '  box-shadow: 0 1px 3px rgba(0,0,0,0.05);',
+            '}'
+        ].join('\n');
+        document.head.appendChild(style);
+    }
+
+    function applyLock(doc) {
+        if (document.body.classList.contains('document-locked')) return;
+
+        injectLockStyle();
+        document.body.classList.add('document-locked');
+
+        if (!document.querySelector('.document-lock-badge')) {
+            var target =
+                document.querySelector('.doc-title-section h2') ||
+                document.querySelector('.document-header h2') ||
+                document.querySelector('.document-header');
+
+            if (target) {
+                var badge = document.createElement('span');
+                badge.className = 'document-lock-badge';
+                badge.innerHTML = '<i class="fas fa-lock"></i> Read-only (submitted)';
+                target.appendChild(badge);
+            }
+        }
+
+        document.querySelectorAll('input, textarea, select').forEach(function (el) {
+            el.disabled = true;
+        });
+
+        var obs = new MutationObserver(function (mutations) {
+            mutations.forEach(function (m) {
+                m.addedNodes.forEach(function (n) {
+                    if (n.nodeType !== 1) return;
+                    if (n.matches && n.matches('input, textarea, select')) {
+                        n.disabled = true;
+                    }
+                    if (n.querySelectorAll) {
+                        n.querySelectorAll('input, textarea, select').forEach(function (el) {
+                            el.disabled = true;
+                        });
+                    }
+                });
+            });
+        });
+        obs.observe(document.body, { childList: true, subtree: true });
+    }
+
+    function checkOnLoad() {
+        var doc = readCurrentDoc();
+        if (doc && isLocked(doc)) {
+            applyLock(doc);
+        }
+    }
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('#submit-btn') : null;
+        if (!btn) return;
+
+        setTimeout(function () {
+            var doc = readCurrentDoc();
+            if (doc && isLocked(doc)) applyLock(doc);
+        }, 400);
+
+        setTimeout(function () {
+            var doc = readCurrentDoc();
+            if (doc && isLocked(doc)) applyLock(doc);
+        }, 2000);
+    }, false);
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', checkOnLoad);
+    } else {
+        checkOnLoad();
+    }
+
+    setTimeout(checkOnLoad, 1200);
+    setTimeout(checkOnLoad, 2500);
+})();
+</script>
+
+<!-- ============================================================ -->
+<!-- ★ Submit / Approve / Reject 需密碼驗證                       -->
+<!-- ============================================================ -->
+<script>
+(function () {
+    'use strict';
+    if (window.__actionPasswordPatchInstalled) return;
+    window.__actionPasswordPatchInstalled = true;
+
+    var ACTION_BUTTONS = {
+        'submit-btn':  { label: 'Submit'  },
+        'approve-btn': { label: 'Approve' },
+        'reject-btn':  { label: 'Reject'  }
+    };
+
+    function injectStyle() {
+        if (document.getElementById('action-pwd-style')) return;
+        var style = document.createElement('style');
+        style.id = 'action-pwd-style';
+        style.textContent = [
+            '.action-pwd-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(2px); z-index: 999999; display: none; justify-content: center; align-items: center; }',
+            '.action-pwd-overlay.visible { display: flex; }',
+            '.action-pwd-modal { background: #fff; border-radius: 12px; width: 420px; max-width: 92vw; box-shadow: 0 20px 60px rgba(0,0,0,0.35); overflow: hidden; animation: actionPwdSlide 0.18s ease-out; }',
+            '@keyframes actionPwdSlide { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }',
+            '.action-pwd-header { padding: 14px 20px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }',
+            '.action-pwd-header h3 { color: #1e293b; font-size: 1.05rem; font-weight: 600; display: flex; align-items: center; gap: 8px; margin: 0; }',
+            '.action-pwd-body { padding: 20px; }',
+            '.action-pwd-desc { font-size: 0.9rem; color: #475569; margin-bottom: 14px; line-height: 1.5; }',
+            '.action-pwd-desc strong { color: #1e40af; }',
+            '.action-pwd-input-wrap { position: relative; }',
+            '.action-pwd-input { width: 100%; padding: 10px 40px 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; font-family: inherit; outline: none; transition: border-color 0.15s, box-shadow 0.15s; pointer-events: auto !important; }',
+            '.action-pwd-input:focus { border-color: #3498db; box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15); }',
+            '.action-pwd-toggle { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: transparent; border: none; cursor: pointer; color: #94a3b8; padding: 4px 6px; font-size: 0.95rem; }',
+            '.action-pwd-toggle:hover { color: #475569; }',
+            '.action-pwd-error { color: #dc2626; font-size: 0.82rem; margin-top: 8px; min-height: 1.1em; display: none; }',
+            '.action-pwd-error.visible { display: block; }',
+            '.action-pwd-footer { padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 8px; }',
+            '.action-pwd-btn { padding: 8px 18px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; }',
+            '.action-pwd-btn:hover { transform: translateY(-1px); }',
+            '.action-pwd-btn-cancel { background: #e2e8f0; color: #334155; }',
+            '.action-pwd-btn-cancel:hover { background: #cbd5e1; }',
+            '.action-pwd-btn-confirm { background: #10b981; color: #fff; }',
+            '.action-pwd-btn-confirm:hover { background: #059669; }',
+            '.action-pwd-btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }',
+            'body.document-locked #action-pwd-overlay input { pointer-events: auto !important; opacity: 1 !important; }'
+        ].join('\n');
+        document.head.appendChild(style);
+    }
+
+    var modalEl, inputEl, errorEl, confirmBtn, cancelBtn, toggleBtn, descEl;
+    var pendingBtn = null;
+    var bypass = false;
+
+    function ensureModal() {
+        if (modalEl) return;
+        injectStyle();
+
+        modalEl = document.createElement('div');
+        modalEl.className = 'action-pwd-overlay';
+        modalEl.id = 'action-pwd-overlay';
+        modalEl.setAttribute('data-lock-exempt', 'true');
+        modalEl.innerHTML =
+            '<div class="action-pwd-modal">' +
+                '<div class="action-pwd-header">' +
+                    '<h3><i class="fas fa-lock"></i> Confirm Password</h3>' +
+                    '<button class="action-pwd-btn-cancel" id="action-pwd-close" style="background:transparent;color:#64748b;font-size:1.4rem;padding:0 6px;line-height:1;">&times;</button>' +
+                '</div>' +
+                '<div class="action-pwd-body">' +
+                    '<div class="action-pwd-desc" id="action-pwd-desc">Please enter your password to continue.</div>' +
+                    '<div class="action-pwd-input-wrap">' +
+                        '<input type="password" class="action-pwd-input" id="action-pwd-input" placeholder="Password" autocomplete="off" data-lock-exempt="true">' +
+                        '<button type="button" class="action-pwd-toggle" id="action-pwd-toggle" title="Show/Hide" data-lock-exempt="true"><i class="fas fa-eye"></i></button>' +
+                    '</div>' +
+                    '<div class="action-pwd-error" id="action-pwd-error"></div>' +
+                '</div>' +
+                '<div class="action-pwd-footer">' +
+                    '<button class="action-pwd-btn action-pwd-btn-cancel" id="action-pwd-cancel" data-lock-exempt="true"><i class="fas fa-times"></i> Cancel</button>' +
+                    '<button class="action-pwd-btn action-pwd-btn-confirm" id="action-pwd-confirm" data-lock-exempt="true"><i class="fas fa-check"></i> Confirm</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(modalEl);
+
+        inputEl    = document.getElementById('action-pwd-input');
+        errorEl    = document.getElementById('action-pwd-error');
+        confirmBtn = document.getElementById('action-pwd-confirm');
+        cancelBtn  = document.getElementById('action-pwd-cancel');
+        toggleBtn  = document.getElementById('action-pwd-toggle');
+        descEl     = document.getElementById('action-pwd-desc');
+
+        var inputGuardObs = new MutationObserver(function () {
+            if (inputEl.disabled) inputEl.disabled = false;
+            if (inputEl.readOnly) inputEl.readOnly = false;
+        });
+        inputGuardObs.observe(inputEl, { attributes: true, attributeFilter: ['disabled', 'readonly'] });
+
+        var modalGuardObs = new MutationObserver(function () {
+            modalEl.querySelectorAll('input, textarea, select, button').forEach(function (el) {
+                if (el.disabled) el.disabled = false;
+            });
+        });
+        modalGuardObs.observe(modalEl, { subtree: true, attributes: true, attributeFilter: ['disabled'] });
+
+        cancelBtn.addEventListener('click', closeModal);
+        document.getElementById('action-pwd-close').addEventListener('click', closeModal);
+
+        toggleBtn.addEventListener('click', function () {
+            var t = inputEl.type === 'password' ? 'text' : 'password';
+            inputEl.type = t;
+            var icon = toggleBtn.querySelector('i');
+            if (icon) { icon.classList.toggle('fa-eye'); icon.classList.toggle('fa-eye-slash'); }
+        });
+
+        confirmBtn.addEventListener('click', tryConfirm);
+        inputEl.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); tryConfirm(); }
+            else if (e.key === 'Escape') { e.preventDefault(); closeModal(); }
+        });
+
+        modalEl.addEventListener('click', function (e) {
+            if (e.target === modalEl) closeModal();
+        });
+    }
+
+    function getSession() {
+        try { return JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch (e) { return {}; }
+    }
+
+    function findCurrentUser() {
+        var s = getSession();
+        var users = [];
+        try { users = JSON.parse(localStorage.getItem('dwss_users_db') || '[]'); } catch (e) {}
+        if (!Array.isArray(users)) return null;
+
+        if (s.userId != null) {
+            for (var i = 0; i < users.length; i++) {
+                if (String(users[i].id) === String(s.userId)) return users[i];
+            }
+        }
+        if (s.userEmail) {
+            for (var j = 0; j < users.length; j++) {
+                if (users[j].email && users[j].email.toLowerCase() === String(s.userEmail).toLowerCase()) return users[j];
+            }
+        }
+        return null;
+    }
+
+    function verifyPassword(pwd) {
+        var user = findCurrentUser();
+        if (!user) return false;
+        return String(user.password) === String(pwd);
+    }
+
+    function openModal(btn) {
+        ensureModal();
+        pendingBtn = btn;
+
+        inputEl.disabled = false;
+        inputEl.readOnly = false;
+        inputEl.style.pointerEvents = 'auto';
+        inputEl.style.opacity = '1';
+        confirmBtn.disabled = false;
+        cancelBtn.disabled = false;
+
+        var btnId = btn.id;
+        var info = ACTION_BUTTONS[btnId] || { label: 'Action' };
+        descEl.innerHTML = 'Please enter your password to confirm the <strong>' + info.label + '</strong> action.';
+
+        inputEl.value = '';
+        inputEl.type = 'password';
+        errorEl.classList.remove('visible');
+        errorEl.textContent = '';
+        var icon = toggleBtn.querySelector('i');
+        if (icon) { icon.classList.add('fa-eye'); icon.classList.remove('fa-eye-slash'); }
+
+        modalEl.classList.add('visible');
+        document.body.style.overflow = 'hidden';
+
+        setTimeout(function () {
+            inputEl.disabled = false;
+            inputEl.readOnly = false;
+            try { inputEl.focus(); } catch (e) {}
+        }, 30);
+        setTimeout(function () {
+            inputEl.disabled = false;
+            inputEl.readOnly = false;
+        }, 150);
+    }
+
+    function closeModal() {
+        if (!modalEl) return;
+        modalEl.classList.remove('visible');
+        document.body.style.overflow = '';
+        inputEl.value = '';
+        errorEl.classList.remove('visible');
+        errorEl.textContent = '';
+        pendingBtn = null;
+    }
+
+    function tryConfirm() {
+        var pwd = inputEl.value;
+        if (!pwd) {
+            errorEl.textContent = 'Please enter your password.';
+            errorEl.classList.add('visible');
+            return;
+        }
+
+        if (!verifyPassword(pwd)) {
+            errorEl.textContent = '❌ Incorrect password. Please try again.';
+            errorEl.classList.add('visible');
+            inputEl.value = '';
+            try { inputEl.focus(); } catch (e) {}
+            return;
+        }
+
+        var btn = pendingBtn;
+
+        modalEl.classList.remove('visible');
+        document.body.style.overflow = '';
+        inputEl.value = '';
+        errorEl.classList.remove('visible');
+        pendingBtn = null;
+
+        if (!btn) return;
+
+        bypass = true;
+        try { btn.click(); }
+        finally { setTimeout(function () { bypass = false; }, 80); }
+    }
+
+    document.addEventListener('click', function (e) {
+        if (bypass) return;
+
+        var btn = e.target && e.target.closest
+            ? e.target.closest('#submit-btn, #approve-btn, #reject-btn')
+            : null;
+        if (!btn) return;
+
+        if (btn.disabled) return;
+        var st = window.getComputedStyle(btn);
+        if (st.display === 'none' || st.visibility === 'hidden') return;
+
+        e.stopImmediatePropagation();
+        e.preventDefault();
+
+        openModal(btn);
+    }, true);
+})();
+</script>
+</body>
+</html>

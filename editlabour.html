@@ -1,6 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html style="visibility:hidden" lang="en">
 <head>
+<script>
+(function () {
+  try {
+    var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+    if (s && s.isLoggedIn) { document.documentElement.style.visibility = 'visible'; return; }
+  } catch (e) {}
+  document.documentElement.style.visibility = 'hidden';
+  window.location.replace('login.html');
+})();
+</script>
+
+    <script src="scripts/cloud-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AEL DWSS - Labour Wage</title>
@@ -13,8 +25,8 @@
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { min-height: 100vh; background-color: #f5f7fa; color: #333; }
-        .main-content { padding: 30px; overflow-y: auto; }
+        body { display: flex; min-height: 100vh; background-color: #f5f7fa; color: #333; }
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #e0e6ed; }
         .header h1 { color: #2c3e50; font-size: 2rem; }
         .header-controls { display: flex; align-items: center; gap: 15px; }
@@ -90,19 +102,19 @@
         .loading-indicator { display: none; justify-content: center; align-items: center; gap: 10px; padding: 40px; color: #2563eb; font-weight: 600; background: #eff6ff; border-radius: 8px; }
         .loading-indicator.visible { display: flex; }
 
-        /* 先全部套用 7px，並加上縮放比例 */
-        .pdf-form-overlay .pdf-field[data-field-id^="g17_"] { font-size: calc(7px * var(--pdf-zoom-scale, 1)) !important; }
-        .pdf-form-overlay .pdf-field[data-field-id^="gf_"]  { font-size: calc(7px * var(--pdf-zoom-scale, 1)) !important; }  
+                /* 先全部套用 6px */
+        .pdf-form-overlay .pdf-field[data-field-id^="g17_"] { font-size: 7px !important; }
+        .pdf-form-overlay .pdf-field[data-field-id^="gf_"]  { font-size: 7px !important; }  
 
-        /* 再針對特定 ID 覆蓋回原本的字體大小，同樣加上縮放比例 */
-        .pdf-form-overlay .pdf-field[data-field-id="g17_01"] { font-size: calc(11px * var(--pdf-zoom-scale, 1)) !important; }
-        .pdf-form-overlay .pdf-field[data-field-id="g17_02"] { font-size: calc(11px * var(--pdf-zoom-scale, 1)) !important; }
-        .pdf-form-overlay .pdf-field[data-field-id="g17_05"] { font-size: calc(11px * var(--pdf-zoom-scale, 1)) !important; }
-        .pdf-form-overlay .pdf-field[data-field-id="g17_06"] { font-size: calc(11px * var(--pdf-zoom-scale, 1)) !important; }
-        .pdf-form-overlay .pdf-field[data-field-id="g17_07"] { font-size: calc(11px * var(--pdf-zoom-scale, 1)) !important; }
-        .pdf-form-overlay .pdf-field[data-field-id="g17_08"] { font-size: calc(11px * var(--pdf-zoom-scale, 1)) !important; }
-        .pdf-form-overlay .pdf-field[data-field-id="g17_03"] { font-size: calc(8px * var(--pdf-zoom-scale, 1)) !important; }
-        .pdf-form-overlay .pdf-field[data-field-id="g17_04"] { font-size: calc(8px * var(--pdf-zoom-scale, 1)) !important; }
+        /* 再針對 01~116 覆蓋回你原本的字體大小 */
+        .pdf-form-overlay .pdf-field[data-field-id="g17_01"] { font-size: 11px !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_02"] { font-size: 11px !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_05"] { font-size: 11px !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_06"] { font-size: 11px !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_07"] { font-size: 11px !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_08"] { font-size: 11px !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_03"] { font-size: 8px !important; }
+        .pdf-form-overlay .pdf-field[data-field-id="g17_04"] { font-size: 8px !important; }
 
 
         /* ★ 表單覆蓋層 */
@@ -120,7 +132,7 @@
             outline: none;
             font-family: Arial, sans-serif;
             color: #0a1a5c;
-            font-size: calc(11px * var(--pdf-zoom-scale, 1));
+            font-size: 11px;
             padding: 1px 3px;
             box-sizing: border-box;
             pointer-events: auto;
@@ -146,6 +158,22 @@
     </style>
 </head>
 <body>
+    <div class="sidebar">
+        <div class="logo">
+            <img src="AEL Logo.png" alt="AEL Logo" class="logo-img" style="height: 45px; width: auto; object-fit: contain; margin-right: 8px;">
+            <h2>DWSS</h2>
+        </div>
+        <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
+        <ul class="menu">
+            <li><a href="index.html"><i class="fas fa-home"></i><span class="menu-text">Dashboard</span></a></li>
+            <li><a href="sitediary.html"><i class="fas fa-book"></i><span class="menu-text">Site Diary</span></a></li>
+            <li><a href="safetyinspect.html"><i class="fas fa-clipboard-check"></i><span class="menu-text">Safety Inspection</span></a></li>
+            <li><a href="sitelocations.html" id="menu-sitelocations"><i class="fas fa-map-marked-alt"></i><span class="menu-text" data-i18n="site.locations">Site Locations</span></a></li>
+            <li><a href="labourwage.html" class="active"><i class="fas fa-money-bill-wave"></i><span class="menu-text">Labour Wage</span></a></li>
+            <li><a href="settings.html"><i class="fas fa-cogs"></i><span class="menu-text">System Settings</span></a></li>
+            <li><a href="usermanagement.html"><i class="fas fa-user-circle"></i><span class="menu-text">User Management</span></a></li>
+        </ul>
+    </div>
 
     <div class="main-content">
         <div class="header">
@@ -153,7 +181,7 @@
             <div class="header-controls">
                 <div class="user-date-row">
                     <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
-                    <button class="user-btn"><i class="fas fa-user"></i> John Doe</button>
+                    <button class="user-btn"><i class="fas fa-user"></i> <span>User</span></button>
                 </div>
             </div>
         </div>
@@ -220,36 +248,21 @@
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
     <script src="scripts/auth-check.js"></script>
-    <script src="scripts/sidebar.js"></script>
-    <script src="scripts/user-display.js"></script>
 
     <script>
     (function() {
         'use strict';
         function syncWageRecordToEditDocument() {
-            var wageRecord = sessionStorage.getItem('currentWageRecord');
-            if (!wageRecord) {
-                console.warn('[editlabour] ✗ 找不到 currentWageRecord');
-                return null;
-            }
-            try {
-                var rec = JSON.parse(wageRecord);
-                if (!rec || !rec.id) return null;
-                if (!rec.site && rec.siteName) rec.site = rec.siteName;
-                if (!rec.submittedBy && rec.author) rec.submittedBy = rec.author;
-                if (!rec.typeText && rec.type) {
-                    if (rec.type === 'GF527A') rec.typeText = 'GF527A - Return on Construction Site Employment';
-                    else if (rec.type === 'GF527-2003') rec.typeText = 'GF527 (2003) - Labour Wage';
-                    else if (rec.type === 'GF527-2017') rec.typeText = 'GF527 (2017) - Labour Wage';
-                }
-                sessionStorage.setItem('editDocument', JSON.stringify(rec));
-                sessionStorage.setItem('currentRecord', JSON.stringify(rec));
-                console.log('[editlabour] ✓ 已同步 currentWageRecord → editDocument:', rec.id);
-                return rec;
-            } catch (e) {
-                console.error('[editlabour] 同步失敗:', e);
-                return null;
-            }
+            var params = new URLSearchParams(location.search);
+            var id = params.get('id');
+            if (!id) return null;
+            fetch('/api/records/labourWage/' + encodeURIComponent(id), { cache: 'no-store' })
+                .then(function (res) { return res.ok ? res.json() : fetch('/api/records/wage/' + encodeURIComponent(id), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }); })
+                .then(function (rec) {
+                    if (!rec || !rec.id) return;
+                    window.__dwssWageDoc = rec;
+                });
+            return null;
         }
         syncWageRecordToEditDocument();
     })();
@@ -262,6 +275,7 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        if (window.DWSS_Auth) DWSS_Auth.updateHeaderUser();
         setTimeout(function() {
             var backBtn = document.getElementById('back-btn');
             if (backBtn) backBtn.addEventListener('click', function() { window.location.href = 'labourwage.html'; });
@@ -287,19 +301,23 @@
     function isLocked(doc) {
         if (!doc) return false;
 
-        var s = doc.status || 'draft';
-        var a = doc.approvalStatus || 'pending';
+        var s = String(doc.status || 'draft').toLowerCase();
+        var a = String(doc.approvalStatus || 'pending').toLowerCase();
 
-        // ★ 允許 draft 和 reopen 可以編輯
-        if (s === 'draft' || s === 'reopen') return false;
-        if (a === 'rejected') return false;
+        // Draft and reopened records are always editable, even if a
+        // leftover submittedDate is present.
+        if (s === 'draft' || s === 'reopen' || s === '' || a === 'rejected') return false;
 
-        // 其他情況（submitted-ig, closed, cancelled, approved）鎖定
-        return true;
+        // Lock only after a real submission
+        if (s === 'submitted' || s === 'submitted-ig' || s === 'closed' ||
+            s === 'cancelled' || a === 'approved') return true;
+
+        return !!doc.submittedDate;
     }
 
     /* ---------- 從 sessionStorage 讀當前文檔 ---------- */
     function readCurrentDoc() {
+        if (window.__dwssWageDoc && window.__dwssWageDoc.id) return window.__dwssWageDoc;
         var sources = [
             'editDocument',
             'currentInspectionRecord',
@@ -415,14 +433,34 @@
     /* ---------- 初次載入檢查 ---------- */
     function checkOnLoad() {
         var doc = readCurrentDoc();
-        if (doc && isLocked(doc)) {
-            applyLock(doc);
-        } else if (doc) {
-            console.log('[DocLock] 未鎖定（草稿狀態）|',
-                        'status =', doc.status,
-                        '| approvalStatus =', doc.approvalStatus,
-                        '| submittedDate =', doc.submittedDate || '(none)');
-        }
+        var params = new URLSearchParams(location.search);
+        var id = params.get('id');
+        var ready = doc
+            ? Promise.resolve(doc)
+            : (id
+                ? fetch('/api/records/wage/' + encodeURIComponent(id), { cache: 'no-store' })
+                    .then(function (res) { return res.ok ? res.json() : null; })
+                    .then(function (d) {
+                        if (d && d.id) window.__dwssWageDoc = d;
+                        return d;
+                    })
+                    .catch(function () { return null; })
+                : Promise.resolve(null));
+        ready.then(function (d) {
+            if (d && isLocked(d)) {
+                applyLock(d);
+            } else {
+                document.body.classList.remove('document-locked');
+                var badge = document.querySelector('.document-lock-badge');
+                if (badge) badge.remove();
+                if (d) {
+                    console.log('[DocLock] 未鎖定（草稿狀態）|',
+                                'status =', d.status,
+                                '| approvalStatus =', d.approvalStatus,
+                                '| submittedDate =', d.submittedDate || '(none)');
+                }
+            }
+        });
     }
 
     /* ---------- 監聽 Submit 按鈕 ---------- */
@@ -463,33 +501,17 @@
     function isLocked(doc) {
         if (!doc) return false;
 
-        var s = doc.status || 'draft';
-        var a = doc.approvalStatus || 'pending';
+        var s = String(doc.status || 'draft').toLowerCase();
+        var a = String(doc.approvalStatus || 'pending').toLowerCase();
 
-        // ★ 允許 draft 和 reopen 可以編輯；如果被 reject 也是 draft，當然可以編輯
-        if (s === 'draft' || s === 'reopen') return false;
-        if (a === 'rejected') return false;
-
-        // 其他情況（submitted-ig, closed, cancelled, approved）鎖定
-        return true;
+        if (s === 'draft' || s === 'reopen' || s === '' || a === 'rejected') return false;
+        if (s === 'submitted' || s === 'submitted-ig' || s === 'closed' ||
+            s === 'cancelled' || a === 'approved') return true;
+        return !!doc.submittedDate;
     }
 
     function readCurrentDoc() {
-        var sources = [
-            'editDocument',
-            'currentInspectionRecord',
-            'currentDiaryRecord',
-            'currentWageRecord',
-            'currentRecord'
-        ];
-        for (var i = 0; i < sources.length; i++) {
-            var raw = sessionStorage.getItem(sources[i]);
-            if (!raw) continue;
-            try {
-                var d = JSON.parse(raw);
-                if (d && typeof d === 'object' && d.id) return d;
-            } catch (e) {}
-        }
+        if (window.__dwssWageDoc && window.__dwssWageDoc.id) return window.__dwssWageDoc;
         return null;
     }
 
@@ -582,10 +604,19 @@
     }
 
     function checkOnLoad() {
-        var doc = readCurrentDoc();
-        if (doc && isLocked(doc)) {
-            applyLock(doc);
-        }
+        var params = new URLSearchParams(location.search);
+        var id = params.get('id');
+        var ready = readCurrentDoc()
+            ? Promise.resolve(readCurrentDoc())
+            : (id
+                ? fetch('/api/records/wage/' + encodeURIComponent(id), { cache: 'no-store' })
+                    .then(function (res) { return res.ok ? res.json() : null; })
+                    .then(function (doc) { if (doc && doc.id) window.__dwssWageDoc = doc; return doc; })
+                    .catch(function () { return null; })
+                : Promise.resolve(null));
+        ready.then(function (doc) {
+            if (doc && isLocked(doc)) applyLock(doc);
+        });
     }
 
     document.addEventListener('click', function (e) {
@@ -760,10 +791,25 @@
         return null;
     }
 
-    function verifyPassword(pwd) {
-        var user = findCurrentUser();
-        if (!user) return false;
-        return String(user.password) === String(pwd);
+    async function verifyPassword(pwd) {
+        var session = {};
+        try { session = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch (e) {}
+        var username = session.userEmail || session.userName || '';
+        if (!username) return false;
+        try {
+            var res = await fetch('/api/auth/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: username,
+                    password: pwd,
+                    projectId: sessionStorage.getItem('currentProjectId') || ''
+                })
+            });
+            return res.ok;
+        } catch (e) {
+            return false;
+        }
     }
 
     function openModal(btn) {
@@ -812,15 +858,17 @@
         pendingBtn = null;
     }
 
-    function tryConfirm() {
+    async function tryConfirm() {
         var pwd = inputEl.value;
         if (!pwd) {
             errorEl.textContent = 'Please enter your password.';
             errorEl.classList.add('visible');
             return;
         }
-
-        if (!verifyPassword(pwd)) {
+        confirmBtn.disabled = true;
+        var ok = await verifyPassword(pwd);
+        confirmBtn.disabled = false;
+        if (!ok) {
             errorEl.textContent = '❌ Incorrect password. Please try again.';
             errorEl.classList.add('visible');
             inputEl.value = '';

@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="site.diary">AEL DWSS - Site Diary</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .status-change-select { padding: 6px 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 0.85rem; cursor: pointer; background: white; min-width: 120px; vertical-align: middle; }
+        .status-change-select:hover { border-color: #3498db; }
+        .status-change-select:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 2px rgba(52,152,219,0.2); }
+        .permission-lock-hint { font-size: 0.7rem; color: #e74c3c; display: inline-block; margin-left: 8px; white-space: nowrap; }
+        .action-btn { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem; min-width: 36px; min-height: 36px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin: 2px; vertical-align: middle; }
+        .view-btn { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
+        .view-btn:hover { background: linear-gradient(135deg, #2980b9, #2471a3); transform: translateY(-2px); }
+        .edit-btn { background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; }
+        .edit-btn:hover { background: linear-gradient(135deg, #27ae60, #219653); transform: translateY(-2px); }
+        .delete-btn { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; }
+        .delete-btn:hover { background: linear-gradient(135deg, #c0392b, #e74c3c); transform: translateY(-2px); }
+        .status-badge { padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; display: inline-block; text-align: center; white-space: nowrap; }
+        .status-draft { background: rgba(149,165,166,0.2); color: #848f90; }
+        .status-submitted-wsg { background: rgba(52,152,219,0.2); color: #2980b9; }
+        .status-submitted-ig { background: rgba(46,204,113,0.2); color: #27ae60; }
+        .status-closed { background: rgba(39,174,96,0.2); color: #1e8449; }
+        .status-reopen { background: rgba(243,156,18,0.2); color: #d35400; }
+        .status-cancelled { background: rgba(231,76,60,0.2); color: #c0392b; }
+        .status-approved { background: rgba(46,204,113,0.2); color: #27ae60; }
+        .status-rejected { background: rgba(231,76,60,0.2); color: #c0392b; }
+        .status-pending { background: rgba(243,156,18,0.2); color: #d35400; }
+
+        .period-inputs { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        .period-inputs input[type="date"] { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; font-size: 0.9rem; min-width: 0; }
+        .period-inputs input[type="date"]:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 2px rgba(52,152,219,0.15); }
+        .period-inputs .period-sep { color: #64748b; font-weight: 700; flex: 0 0 auto; user-select: none; }
+
+        /* ====== ★ 分類區塊樣式 ====== */
+        .diary-category-section { margin-bottom: 28px; }
+        .diary-category-section:last-child { margin-bottom: 0; }
+        .diary-category-section .table-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .category-count {
+            display: inline-block; min-width: 26px; text-align: center;
+            padding: 2px 10px; border-radius: 12px;
+            font-size: 0.8rem; font-weight: 700;
+            background: #e0e7ff; color: #3730a3;
+        }
+        .diary-category-section[data-category="overdue"] .category-count { background: #fee2e2; color: #991b1b; }
+        .diary-category-section[data-category="pending"] .category-count { background: #fef3c7; color: #92400e; }
+        .diary-category-section[data-category="closed"]  .category-count { background: #d1fae5; color: #065f46; }
+        .diary-category-section[data-category="other"]   .category-count { background: #e5e7eb; color: #374151; }
+
+        .category-desc { color: #64748b; font-size: 0.82rem; margin: 4px 0 12px 0; }
+        .diary-category-section[data-category="overdue"] .table-title i { color: #e74c3c; }
+        .diary-category-section[data-category="pending"] .table-title i { color: #f39c12; }
+        .diary-category-section[data-category="closed"]  .table-title i { color: #27ae60; }
+        .diary-category-section[data-category="other"]   .table-title i { color: #7f8c8d; }
+
+                /* ★ 分類折疊樣式 */
+        .diary-category-section .table-header {
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .diary-category-section .table-header .header-left {
+            flex: 1;
+        }
+        .diary-category-section .table-header .toggle-icon {
+            font-size: 1.2rem;
+            color: #94a3b8;
+            transition: transform 0.3s ease;
+            margin-top: 8px;
+            margin-left: 15px;
+        }
+        .diary-category-section.collapsed .table-header .toggle-icon {
+            transform: rotate(-90deg);
+        }
+        .diary-category-section.collapsed .table-container {
+            display: none !important;
+        }
+
+                /* ★ 分類搜尋框樣式 */
+        .diary-category-section .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center; /* 垂直置中，讓搜尋框和箭頭對齊 */
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .category-search {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            width: 220px;
+            transition: all 0.2s;
+            background: #fff;
+        }
+        .category-search:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52,152,219,0.2);
+        }
+
+
+        @media (max-width: 768px) {
+            .action-btn { width: 100%; margin: 2px 0; }
+            .status-change-select { width: 100%; margin: 2px 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="modal" id="add-diary-modal" style="display:none;">
+        <div class="modal-content">
+            <h3 data-i18n="add.new.diary">Add New Diary</h3>
+            <form id="add-diary-form" enctype="multipart/form-data">
+                <label data-i18n="diary.id">Diary ID</label>
+                <input type="text" id="input-diary-id" required>
+                <label data-i18n="status">Status</label>
+                <select id="input-status" required>
+                    <option value="draft" data-i18n="status.draft">Draft</option>
+                    <option value="submitted-wsg" data-i18n="status.submitted.wsg">Submitted to WSG</option>
+                    <option value="submitted-ig" data-i18n="status.submitted.ig">Submitted to IG</option>
+                    <option value="closed" data-i18n="status.closed">Closed</option>
+                    <option value="reopen" data-i18n="status.reopen">Reopen</option>
+                    <option value="cancelled" data-i18n="status.cancelled">Cancelled</option>
+                </select>
+                <label data-i18n="site">Site</label>
+                <input type="text" id="input-site" required>
+
+                <label data-i18n="period">Period</label>
+                <div class="period-inputs">
+                    <input type="date" id="input-date-start" required>
+                    <span class="period-sep">~</span>
+                    <input type="date" id="input-date-end" required>
+                </div>
+
+                <label data-i18n="submitted.by">Submitted By</label>
+                <input type="text" id="input-submitted-by" required>
+                <label data-i18n="document.type">Document Type</label>
+                <select id="input-type" required>
+                    <option value="Contractor Documents" data-i18n="document.type.contractor">Contractor Documents</option>
+                    <option value="Sub Contractor Documents" data-i18n="document.type.subcontractor">Sub Contractor Documents</option>
+                </select>
+                <label for="input-pdf">Upload PDF (optional)</label>
+                <input type="file" id="input-pdf" accept=".pdf">
+                <div class="modal-actions">
+                    <button type="submit" class="btn" data-i18n="save">Save</button>
+                    <button type="button" class="btn" id="cancel-add-diary" data-i18n="cancel">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <div class="header">
+            <h1 data-i18n="site.diary">Site Diary</h1>
+            <div class="header-controls">
+                <div class="user-date-row">
+                    <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date">September 17, 2025</span></div>
+                    <button class="user-btn"><i class="fas fa-user"></i> <span data-i18n="user.name"></span></button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="search-buttons">
+            <div class="nav-buttons">
+                <button id="add-diary-btn"><i class="fas fa-plus"></i> <span data-i18n="add.new.diary">Add New Diary</span></button>
+            </div>
+        </div>
+        
+        <div class="site-diary-page">
+            <h2><i class="fas fa-book"></i> <span data-i18n="site.diary.management">Site Diary Management</span></h2>
+            
+            <div class="diary-controls-row">
+                <div class="diary-stats">
+                    <div class="stat-card"><div class="label" data-i18n="total.documents">Total Documents</div><div class="value" id="total-documents-count">0</div></div>
+                    <div class="stat-card"><div class="label" data-i18n="this.month">This Month</div><div class="value" id="month-count">0</div></div>
+                </div>
+                
+                <section class="filters-section">
+                    <div class="filter-group" id="site-filter-group">
+                        <div class="filter-toggle"><span data-i18n="all.sites">All Sites</span><i class="fas fa-chevron-down"></i></div>
+                        <div class="filter-options">
+                            <div class="filter-option active" data-filter="site" data-value="all" data-i18n="all.sites">All Sites</div>
+                            <div class="filter-option" data-filter="site" data-value="treatment" data-i18n="site.treatment">Treatment Plant</div>
+                            <div class="filter-option" data-filter="site" data-value="pipeline" data-i18n="site.pipeline">Pipeline</div>
+                            <div class="filter-option" data-filter="site" data-value="reservoir" data-i18n="site.reservoir">Reservoir</div>
+                            <div class="filter-option" data-filter="site" data-value="distribution" data-i18n="site.distribution">Distribution</div>
+                            <div class="filter-option" data-filter="site" data-value="pump" data-i18n="site.pump">Pump Station</div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group" id="status-filter-group">
+                        <div class="filter-toggle"><span data-i18n="all.statuses">All Statuses</span><i class="fas fa-chevron-down"></i></div>
+                        <div class="filter-options">
+                            <div class="filter-option active" data-filter="status" data-value="all" data-i18n="all.statuses">All Statuses</div>
+                            <div class="filter-option" data-filter="status" data-value="draft" data-i18n="status.draft">Draft</div>
+                            <div class="filter-option" data-filter="status" data-value="submitted-wsg" data-i18n="status.submitted.wsg">Submitted to WSG</div>
+                            <div class="filter-option" data-filter="status" data-value="submitted-ig" data-i18n="status.submitted.ig">Submitted to IG</div>
+                            <div class="filter-option" data-filter="status" data-value="closed" data-i18n="status.closed">Closed</div>
+                            <div class="filter-option" data-filter="status" data-value="reopen" data-i18n="status.reopen">Reopen</div>
+                            <div class="filter-option" data-filter="status" data-value="cancelled" data-i18n="status.cancelled">Cancelled</div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group" id="type-filter-group">
+                        <div class="filter-toggle"><span data-i18n="all.document.types">All Document Types</span><i class="fas fa-chevron-down"></i></div>
+                        <div class="filter-options">
+                            <div class="filter-option active" data-filter="type" data-value="all" data-i18n="all.document.types">All Document Types</div>
+                            <div class="filter-option" data-filter="type" data-value="Sub Contractor Documents" data-i18n="document.type.subcontractor">Sub Contractor Documents</div>
+                            <div class="filter-option" data-filter="type" data-value="Contractor Documents" data-i18n="document.type.contractor">Contractor Documents</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- ★ 分類表格：Overdue / Pending / Closed / Other -->
+            <!-- ============================================== -->
+            <section class="content-section">
+
+                            <div id="diary-tables-container">
+
+                    <!-- ===== 1. Open Documents ===== -->
+                    <div class="diary-category-section collapsed" data-category="open">
+                        <div class="table-header">
+                            <div class="header-left">
+                                <h2 class="table-title">
+                                    <i class="fas fa-folder-open"></i>
+                                    <span data-i18n="category.open">Open Documents</span>
+                                    <span class="category-count" id="open-count">0</span>
+                                </h2>
+                                <p class="category-desc" data-i18n="category.open.desc">Drafts within 14 days, reopened, or in progress</p>
+                            </div>
+                            <div class="header-right">
+                                <input type="text" class="category-search" data-category="open" placeholder="Search Open...">
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="diary-table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="diary.id">Diary ID</th>
+                                        <th data-i18n="status">Status</th>
+                                        <th data-i18n="Approval status">Approval Status</th>
+                                        <th data-i18n="site">Site</th>
+                                        <th data-i18n="period">Period</th>
+                                        <th data-i18n="submitted.by">Submitted By</th>
+                                        <th data-i18n="document.type">Document Type</th>
+                                        <th data-i18n="actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="open-table-body"></tbody>
+                            </table>
+                            <div id="open-no-results" class="no-results" style="display: none;">No open documents.</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== 2. Pending Documents ===== -->
+                    <div class="diary-category-section collapsed" data-category="pending">
+                        <div class="table-header">
+                            <div class="header-left">
+                                <h2 class="table-title">
+                                    <i class="fas fa-clock"></i>
+                                    <span data-i18n="category.pending">Pending Documents</span>
+                                    <span class="category-count" id="pending-count">0</span>
+                                </h2>
+                                <p class="category-desc" data-i18n="category.pending.desc">Submitted but not yet approved</p>
+                            </div>
+                            <div class="header-right">
+                                <input type="text" class="category-search" data-category="pending" placeholder="Search Pending...">
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="diary-table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="diary.id">Diary ID</th>
+                                        <th data-i18n="status">Status</th>
+                                        <th data-i18n="Approval status">Approval Status</th>
+                                        <th data-i18n="site">Site</th>
+                                        <th data-i18n="period">Period</th>
+                                        <th data-i18n="submitted.by">Submitted By</th>
+                                        <th data-i18n="document.type">Document Type</th>
+                                        <th data-i18n="actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pending-table-body"></tbody>
+                            </table>
+                            <div id="pending-no-results" class="no-results" style="display: none;">No pending documents.</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== 3. Overdue Documents ===== -->
+                    <div class="diary-category-section collapsed" data-category="overdue">
+                        <div class="table-header">
+                            <div class="header-left">
+                                <h2 class="table-title">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span data-i18n="category.overdue">Overdue Documents</span>
+                                    <span class="category-count" id="overdue-count">0</span>
+                                </h2>
+                                <p class="category-desc" data-i18n="category.overdue.desc">Draft documents older than 14 days</p>
+                            </div>
+                            <div class="header-right">
+                                <input type="text" class="category-search" data-category="overdue" placeholder="Search Overdue...">
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="diary-table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="diary.id">Diary ID</th>
+                                        <th data-i18n="status">Status</th>
+                                        <th data-i18n="Approval status">Approval Status</th>
+                                        <th data-i18n="site">Site</th>
+                                        <th data-i18n="period">Period</th>
+                                        <th data-i18n="submitted.by">Submitted By</th>
+                                        <th data-i18n="document.type">Document Type</th>
+                                        <th data-i18n="actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="overdue-table-body"></tbody>
+                            </table>
+                            <div id="overdue-no-results" class="no-results" style="display: none;">No overdue documents.</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== 4. Closed Documents ===== -->
+                    <div class="diary-category-section collapsed" data-category="closed">
+                        <div class="table-header">
+                            <div class="header-left">
+                                <h2 class="table-title">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span data-i18n="category.closed">Closed Documents</span>
+                                    <span class="category-count" id="closed-count">0</span>
+                                </h2>
+                                <p class="category-desc" data-i18n="category.closed.desc">Completed, closed, or cancelled diaries</p>
+                            </div>
+                            <div class="header-right">
+                                <input type="text" class="category-search" data-category="closed" placeholder="Search Closed...">
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="diary-table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="diary.id">Diary ID</th>
+                                        <th data-i18n="status">Status</th>
+                                        <th data-i18n="Approval status">Approval Status</th>
+                                        <th data-i18n="site">Site</th>
+                                        <th data-i18n="period">Period</th>
+                                        <th data-i18n="submitted.by">Submitted By</th>
+                                        <th data-i18n="document.type">Document Type</th>
+                                        <th data-i18n="actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="closed-table-body"></tbody>
+                            </table>
+                            <div id="closed-no-results" class="no-results" style="display: none;">No closed documents.</div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </section>
+            
+            <footer>
+                <p data-i18n="copyright">&copy; 2025 AEL DWSS System. All rights reserved.</p>
+                <p data-i18n="platform">AEL DWSS Platform</p>
+            </footer>
+        </div>
+    </div>
+
+    <script src="scripts/permissions.js"></script>
+    <script src="scripts/language.js"></script>
+    <script src="scripts/app.js"></script>
+    <script src="scripts/auth-check.js"></script>
+
+    <!-- ============================================================ -->
+    <!-- ★★★ getContractCode — 提供給 sitediary.js 使用                -->
+    <!-- ============================================================ -->
+    <script>
+    (function () {
+        'use strict';
+        if (window.getContractCode) return;
+
+        window.getContractCode = function () {
+            var pid = sessionStorage.getItem('currentProjectId');
+
+            if (!pid) {
+                try {
+                    var u = JSON.parse(localStorage.getItem('current_user') || '{}');
+                    if (u && Array.isArray(u.projectIds) && u.projectIds.length > 0) {
+                        pid = u.projectIds[0];
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            if (!pid) {
+                try {
+                    var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+                    if (s && Array.isArray(s.projectIds) && s.projectIds.length > 0) {
+                        pid = s.projectIds[0];
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            if (!pid) pid = 'DE/2026/05';
+
+            return String(pid).replace(/\//g, '-');
+        };
+
+        console.log('[SiteDiary] ✓ getContractCode ready, currentProjectId =',
+                    sessionStorage.getItem('currentProjectId') || '(fallback)',
+                    '→ contractCode =',
+                    window.getContractCode());
+    })();
+    </script>
+
+    <script src="scripts/sitediary.js"></script>
+    <script src="scripts/sidebar.js"></script>
+
+    <!-- ============================================================ -->
+    <!-- ★★★ Diary ID 自動遞增修正                                    -->
+    <!-- ============================================================ -->
+    <script>
+    (function () {
+        'use strict';
+        if (window.__dsdIdAutoIncrementBound) return;
+        window.__dsdIdAutoIncrementBound = true;
+
+        var PRIMARY_KEY = 'siteDiaryData';
+        var ID_SUFFIX = 'A';
+        var ID_PAD    = 6;
+
+        function loadAll() {
+            try {
+                var raw = localStorage.getItem(PRIMARY_KEY);
+                if (!raw) return [];
+                var d = JSON.parse(raw);
+                return Array.isArray(d) ? d : [];
+            } catch (e) { return []; }
+        }
+
+        window.computeNextDiaryId = function () {
+            var contractCode = window.getContractCode();
+            var prefix = 'SD/' + contractCode + '/';
+            var escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            var re = new RegExp('^' + escaped + '(\\d+)[A-Za-z]?$');
+
+            var list = loadAll();
+            var maxNum = 0;
+            list.forEach(function (item) {
+                if (!item || item.id == null) return;
+                var m = String(item.id).match(re);
+                if (m) {
+                    var n = parseInt(m[1], 10);
+                    if (!isNaN(n) && n > maxNum) maxNum = n;
+                }
+            });
+
+            var next = maxNum + 1;
+            var nextStr = String(next);
+            while (nextStr.length < ID_PAD) nextStr = '0' + nextStr;
+            var newId = prefix + nextStr + ID_SUFFIX;
+
+            console.log('[SiteDiary] ✓ Diary ID 生成:', newId,
+                        '(現有最大尾號 =', maxNum, ', prefix =', prefix, ')');
+            return newId;
+        };
+
+        document.addEventListener('click', function (e) {
+            var btn = e.target && e.target.closest ? e.target.closest('#add-diary-btn') : null;
+            if (!btn) return;
+
+            setTimeout(function () {
+                var modal = document.getElementById('add-diary-modal');
+                if (!modal || modal.style.display === 'none') return;
+
+                var idInput = document.getElementById('input-diary-id');
+                if (!idInput) return;
+
+                var correctId = window.computeNextDiaryId();
+                idInput.value = correctId;
+
+                if (!idInput.__dsdIdLocked) {
+                    idInput.__dsdIdLocked = true;
+                    var lockValue = correctId;
+                    var obs = new MutationObserver(function () {
+                        if (idInput.value !== lockValue) {
+                            if (idInput.__dsdUserEdited) {
+                                obs.disconnect();
+                                return;
+                            }
+                            idInput.value = lockValue;
+                        }
+                    });
+                    obs.observe(idInput, { attributes: true, attributeFilter: ['value'] });
+
+                    idInput.addEventListener('input', function () {
+                        idInput.__dsdUserEdited = true;
+                        lockValue = idInput.value;
+                    });
+
+                    var modalObs = new MutationObserver(function () {
+                        if (modal.style.display === 'none') {
+                            idInput.__dsdIdLocked = false;
+                            idInput.__dsdUserEdited = false;
+                            obs.disconnect();
+                            modalObs.disconnect();
+                        }
+                    });
+                    modalObs.observe(modal, { attributes: true, attributeFilter: ['style'] });
+                }
+            }, 100);
+        }, false);
+    })();
+    </script>
+
+    <!-- ============================================================ -->
+    <!-- ★ Save 修正（Period 版本）                                    -->
+    <!-- ============================================================ -->
+    <script>
+    (function () {
+        'use strict';
+        if (window.__diaryFormFixBound3) return;
+        window.__diaryFormFixBound3 = true;
+
+        var PRIMARY_KEY = 'siteDiaryData';
+
+        function loadRecords() {
+            var raw = localStorage.getItem(PRIMARY_KEY);
+            if (!raw) return [];
+            try {
+                var d = JSON.parse(raw);
+                return Array.isArray(d) ? d : [];
+            } catch (e) { return []; }
+        }
+
+        function saveRecord(record) {
+            var list = loadRecords();
+            var idx = list.findIndex(function (r) { return String(r.id) === String(record.id); });
+            if (idx !== -1) list[idx] = record;
+            else list.push(record);
+            localStorage.setItem(PRIMARY_KEY, JSON.stringify(list));
+        }
+
+        function getValue(id) {
+            var el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function fmtDate(yyyymmdd) {
+            if (!yyyymmdd) return '';
+            var parts = yyyymmdd.split('-');
+            if (parts.length !== 3) return yyyymmdd;
+            return parts[2] + '/' + parts[1] + '/' + parts[0];
+        }
+
+        function handleSubmit(e) {
+            var form = e.target;
+            if (!form || form.id !== 'add-diary-form') return;
+
+            e.preventDefault();
+            e.stopImmediatePropagation();
+
+            var id = getValue('input-diary-id');
+            var status = getValue('input-status') || 'draft';
+            var site = getValue('input-site');
+            var startDate = getValue('input-date-start');
+            var endDate = getValue('input-date-end');
+            var submittedBy = getValue('input-submitted-by');
+            var type = getValue('input-type');
+            var pdfInput = document.getElementById('input-pdf');
+            var pdfFile = pdfInput && pdfInput.files ? pdfInput.files[0] : null;
+
+            if (!id) { alert('❌ Please enter Diary ID.'); return; }
+            if (!site) { alert('❌ Please enter Site.'); return; }
+            if (!startDate) { alert('❌ Please select Period start date.'); return; }
+            if (!endDate) { alert('❌ Please select Period end date.'); return; }
+            if (startDate > endDate) {
+                alert('❌ Period start date must be earlier than or equal to end date.');
+                return;
+            }
+            if (!submittedBy) { alert('❌ Please enter Submitted By.'); return; }
+            if (!type) { alert('❌ Please select Document Type.'); return; }
+
+            var existing = loadRecords();
+            if (existing.some(function (r) { return String(r.id) === String(id); })) {
+                alert('❌ Diary ID "' + id + '" already exists.');
+                return;
+            }
+
+            var periodStr = fmtDate(startDate) + ' ~ ' + fmtDate(endDate);
+            var projectId = sessionStorage.getItem('currentProjectId') || null;
+            
+            var approvalStatus = 'pending';
+            if (status === 'cancelled') {
+                approvalStatus = 'cancelled';
+            }
+
+            var record = {
+                id: id,
+                status: status,
+                approvalStatus: approvalStatus,
+                site: site,
+                date: periodStr,
+                startDate: startDate,
+                endDate: endDate,
+                period: periodStr,
+                submittedBy: submittedBy,
+                type: type,
+                project: projectId,
+                annotations: [],
+                statusHistory: [],
+                totalPages: 10,
+                usesTemplate: true,
+                createdAt: new Date().toISOString()
+            };
+
+            var finish = function () {
+                try {
+                    saveRecord(record);
+                } catch (err) {
+                    console.error('[SiteDiary] Save failed:', err);
+                    alert('❌ Failed to save.');
+                    return;
+                }
+                var modal = document.getElementById('add-diary-modal');
+                if (modal) modal.style.display = 'none';
+                window.location.reload();
+            };
+
+            if (pdfFile) {
+                var reader = new FileReader();
+                reader.onload = function (ev) {
+                    try {
+                        var dataUrl = ev.target.result || '';
+                        var base64 = dataUrl.indexOf(',') !== -1 ? dataUrl.split(',')[1] : dataUrl;
+                        record.pdfData = base64;
+                        record.usesTemplate = false;
+                        finish();
+                    } catch (err) {
+                        alert('❌ Failed to read PDF.');
+                    }
+                };
+                reader.onerror = function () { alert('❌ Failed to read PDF.'); };
+                reader.readAsDataURL(pdfFile);
+            } else {
+                finish();
+            }
+        }
+
+        document.addEventListener('submit', handleSubmit, true);
+    })();
+    </script>
+
+    <!-- ============================================================ -->
+    <!-- ★ Site Diary → editdsdsitediary.html 導向                     -->
+    <!-- ============================================================ -->
+    <script>
+    (function () {
+        'use strict';
+        if (window.__dsdEditRedirectBound3) return;
+        window.__dsdEditRedirectBound3 = true;
+
+        var PRIMARY_KEY = 'siteDiaryData';
+
+        function findDiaryRecord(diaryId) {
+            if (!diaryId) return null;
+            var raw = localStorage.getItem(PRIMARY_KEY);
+            if (!raw) return null;
+            try {
+                var data = JSON.parse(raw);
+                if (!Array.isArray(data)) return null;
+                return data.find(function (d) { return String(d.id) === String(diaryId); }) || null;
+            } catch (e) { return null; }
+        }
+
+        function buildFallbackRecord(row, diaryId) {
+            var cells = row.cells || [];
+            var txt = function (i) { return cells[i] ? cells[i].textContent.trim() : ''; };
+            var raw = txt(1).toLowerCase();
+            var statusKey = 'draft';
+            if (raw.indexOf('wsg') !== -1) statusKey = 'submitted-wsg';
+            else if (raw.indexOf('ig') !== -1) statusKey = 'submitted-ig';
+            else if (raw.indexOf('closed') !== -1) statusKey = 'closed';
+            else if (raw.indexOf('reopen') !== -1) statusKey = 'reopen';
+            else if (raw.indexOf('cancelled') !== -1) statusKey = 'cancelled';
+            else if (raw.indexOf('submitted') !== -1) statusKey = 'submitted';
+
+            return {
+                id: diaryId, status: statusKey,
+                site: txt(3), date: txt(4), submittedBy: txt(5), type: txt(6),
+                annotations: [], statusHistory: [], totalPages: 10, usesTemplate: true
+            };
+        }
+
+        function resolveDiaryId(row, btn) {
+            if (btn && btn.dataset && btn.dataset.id) return btn.dataset.id;
+            if (btn && btn.getAttribute) {
+                var did = btn.getAttribute('data-diary-id');
+                if (did) return did;
+            }
+            if (row) {
+                if (row.dataset && row.dataset.id) return row.dataset.id;
+                if (row.dataset && row.dataset.diaryId) return row.dataset.diaryId;
+                var fc = row.cells && row.cells[0];
+                if (fc) {
+                    var t = fc.textContent.trim();
+                    if (t) return t;
+                }
+            }
+            return null;
+        }
+
+        function handleEditClick(e) {
+            var target = e.target;
+            var editBtn = target && target.closest ? target.closest('.edit-btn') : null;
+            if (!editBtn) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            var row = editBtn.closest('tr');
+            var diaryId = resolveDiaryId(row, editBtn);
+            if (!diaryId) {
+                console.warn('[DSD] Cannot resolve Diary ID');
+                return;
+            }
+
+            var record = findDiaryRecord(diaryId) || buildFallbackRecord(row, diaryId);
+            if (!Array.isArray(record.annotations)) record.annotations = [];
+            if (!record.totalPages) record.totalPages = 10;
+
+            try {
+                sessionStorage.setItem('editDocument', JSON.stringify(record));
+                sessionStorage.setItem('currentDiaryRecord', JSON.stringify(record));
+                sessionStorage.setItem('currentRecord', JSON.stringify(record));
+            } catch (err) {
+                console.error('[DSD] sessionStorage write failed:', err);
+            }
+
+            window.location.href = 'editdsdsitediary.html';
+        }
+
+        function bind() {
+            document.addEventListener('click', handleEditClick, true);
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bind);
+        } else {
+            bind();
+        }
+    })();
+    </script>
+
+    <!-- ============================================================ -->
+    <!-- ★ 表格按日期倒序排列（支援多個分類表格）                     -->
+    <!-- ============================================================ -->
+    <script>
+    (function () {
+        'use strict';
+        if (window.__diarySortBound) return;
+        window.__diarySortBound = true;
+
+        var PRIMARY_KEY = 'siteDiaryData';
+        var _sorting = false;
+        var _sortTimer = null;
+
+        function loadRecords() {
+            try {
+                var raw = localStorage.getItem(PRIMARY_KEY);
+                if (!raw) return [];
+                var d = JSON.parse(raw);
+                return Array.isArray(d) ? d : [];
+            } catch (e) { return []; }
+        }
+
+        function getSortKey(record) {
+            if (!record) return '';
+            if (record.startDate) return record.startDate;
+            if (record.date) {
+                var d = record.date;
+                var m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                if (m) return d;
+                var m2 = d.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                if (m2) return m2[3] + '-' + m2[2] + '-' + m2[1];
+                var m3 = d.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+                if (m3) return m3[3] + '-' + m3[2] + '-' + m3[1];
+            }
+            if (record.createdAt) return record.createdAt;
+            return '';
+        }
+
+        function sortTableByDate() {
+            if (_sorting) return;
+
+            var tbodies = document.querySelectorAll('#diary-tables-container .diary-table tbody');
+            if (!tbodies.length) return;
+
+            var records = loadRecords();
+            var map = {};
+            records.forEach(function (r) {
+                if (r && r.id != null) map[String(r.id)] = r;
+            });
+
+            _sorting = true;
+            try {
+                tbodies.forEach(function (tbody) {
+                    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+                    if (rows.length < 2) return;
+
+                    var sortedRows = rows.slice().sort(function (a, b) {
+                        var idA = a.cells && a.cells[0] ? a.cells[0].textContent.trim() : '';
+                        var idB = b.cells && b.cells[0] ? b.cells[0].textContent.trim() : '';
+                        var keyA = getSortKey(map[idA]);
+                        var keyB = getSortKey(map[idB]);
+                        if (keyA < keyB) return 1;
+                        if (keyA > keyB) return -1;
+                        return 0;
+                    });
+
+                    var same = true;
+                    for (var i = 0; i < rows.length; i++) {
+                        if (rows[i] !== sortedRows[i]) { same = false; break; }
+                    }
+                    if (same) return;
+
+                    var frag = document.createDocumentFragment();
+                    sortedRows.forEach(function (row) { frag.appendChild(row); });
+                    tbody.appendChild(frag);
+                });
+            } catch (e) {
+                console.error('[Sort] Failed to sort:', e);
+            }
+            _sorting = false;
+        }
+
+        function scheduleSort() {
+            if (_sortTimer) clearTimeout(_sortTimer);
+            _sortTimer = setTimeout(sortTableByDate, 100);
+        }
+
+        function bindSort() {
+            var container = document.getElementById('diary-tables-container');
+            if (!container) { setTimeout(bindSort, 300); return; }
+
+            var observer = new MutationObserver(function () {
+                if (_sorting) return;
+                scheduleSort();
+            });
+            observer.observe(container, { childList: true, subtree: true });
+
+            scheduleSort();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bindSort);
+        } else {
+            bindSort();
+        }
+    })();
+    </script>
+
+    <script>
+        (function() {
+            function saveSidebarState() {
+                const sidebar = document.querySelector('.sidebar');
+                if (sidebar) localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed') ? 'true' : 'false');
+            }
+            function restoreSidebarState() {
+                const sidebar = document.querySelector('.sidebar');
+                if (sidebar) {
+                    const savedState = localStorage.getItem('sidebarCollapsed');
+                    if (savedState === 'true') sidebar.classList.add('collapsed');
+                    else if (savedState === 'false') sidebar.classList.remove('collapsed');
+                }
+            }
+            function bindToggleEvent() {
+                const toggleBtn = document.querySelector('.toggle-btn');
+                if (toggleBtn) {
+                    toggleBtn.removeEventListener('click', saveSidebarState);
+                    toggleBtn.addEventListener('click', () => setTimeout(saveSidebarState, 50));
+                }
+            }
+            document.addEventListener('DOMContentLoaded', () => {
+                restoreSidebarState();
+                bindToggleEvent();
+            });
+        })();
+    </script>
+<!-- ============================================================ -->
+<!-- ★ Status Change History 補丁 (支援多個分類表格)               -->
+<!-- ============================================================ -->
+<script>
+(function () {
+    'use strict';
+    if (window.__diaryHistoryBound) return;
+    window.__diaryHistoryBound = true;
+
+    var PRIMARY_KEY = 'siteDiaryData';
+
+    function loadRecords() {
+        try {
+            var raw = localStorage.getItem(PRIMARY_KEY);
+            if (!raw) return [];
+            var d = JSON.parse(raw);
+            return Array.isArray(d) ? d : [];
+        } catch (e) { return []; }
+    }
+
+    function fmtDateTime(iso) {
+        if (!iso) return '—';
+        try {
+            var d = new Date(iso);
+            if (isNaN(d.getTime())) return iso;
+            var yy = d.getFullYear();
+            var mm = String(d.getMonth() + 1).padStart(2, '0');
+            var dd = String(d.getDate()).padStart(2, '0');
+            var hh = String(d.getHours()).padStart(2, '0');
+            var mi = String(d.getMinutes()).padStart(2, '0');
+            return yy + '-' + mm + '-' + dd + ' ' + hh + ':' + mi;
+        } catch (e) { return iso; }
+    }
+
+    function escapeHtml(s) {
+        if (s == null) return '';
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function statusLabel(s) {
+        var map = {
+            'draft': 'Draft',
+            'submitted-wsg': 'Submitted to WSG',
+            'submitted-ig': 'Submitted to IG',
+            'closed': 'Closed',
+            'reopen': 'Reopen',
+            'cancelled': 'Cancelled',
+            'approved': 'Approved',
+            'rejected': 'Rejected',
+            'pending': 'Pending Approval',
+            'endorsed': 'Endorsed',
+            'submitted': 'Submitted'
+        };
+        return map[s] || s || '—';
+    }
+
+    function showHistory(diaryId) {
+        var records = loadRecords();
+        var record = null;
+        for (var i = 0; i < records.length; i++) {
+            if (String(records[i].id) === String(diaryId)) { record = records[i]; break; }
+        }
+        if (!record) { alert('Record not found.'); return; }
+
+        var modal = document.getElementById('history-modal');
+        var content = document.getElementById('history-content');
+        if (!modal || !content) return;
+
+        var history = Array.isArray(record.statusHistory) ? record.statusHistory : [];
+
+        var html = '';
+        html += '<div style="margin-bottom: 16px; padding: 12px 16px; background: #f8fafc; border-radius: 8px;">';
+        html += '<div style="font-size: 0.8rem; color: #64748b; margin-bottom: 4px;">Document ID</div>';
+        html += '<div style="font-weight: 700; color: #1e40af;">' + escapeHtml(record.id) + '</div>';
+        html += '</div>';
+
+        if (history.length === 0) {
+            html += '<div style="padding: 30px; text-align: center; color: #94a3b8; font-style: italic;">';
+            html += '<i class="fas fa-inbox" style="font-size: 28px; display: block; margin-bottom: 10px;"></i>';
+            html += 'No status change history yet.';
+            html += '</div>';
+            html += '<div style="margin-top: 12px; padding: 10px 14px; background: #eff6ff; border-radius: 6px; font-size: 0.85rem; color: #1e40af;">';
+            html += '<strong>Current status:</strong> ' + escapeHtml(statusLabel(record.status));
+            html += '</div>';
+        } else {
+            html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9rem; table-layout: auto;">';
+            html += '<thead><tr style="background: #f1f5f9;">';
+            html += '<th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0; white-space: nowrap;">Date / Time</th>';
+            html += '<th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0; white-space: nowrap;">From Status</th>';
+            html += '<th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0; white-space: nowrap;">To Status</th>';
+            html += '<th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0; white-space: nowrap;">Approval Status</th>';
+            html += '<th style="padding: 10px 12px; text-align: left; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0; white-space: nowrap;">Changed By</th>';
+            html += '</tr></thead><tbody>';
+
+            history.slice().reverse().forEach(function (h) {
+                var fa = h.fromApproval || '';
+                var ta = h.toApproval || '';
+
+                var approvalCell = '';
+                if (fa || ta) {
+                    var faLabel = fa ? statusLabel(fa) : '—';
+                    var taLabel = ta ? statusLabel(ta) : '—';
+                    if (fa === ta) {
+                        approvalCell = '<span style="color:#94a3b8;">' + escapeHtml(faLabel) + '</span>';
+                    } else {
+                        approvalCell =
+                            escapeHtml(faLabel) +
+                            ' <i class="fas fa-arrow-right" style="font-size:10px;color:#cbd5e1;margin:0 2px;"></i> ' +
+                            '<strong style="color:#8e44ad;">' + escapeHtml(taLabel) + '</strong>';
+                    }
+                } else {
+                    approvalCell = '<span style="color:#cbd5e1;">—</span>';
+                }
+
+                html += '<tr>';
+                html += '<td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; white-space: nowrap;">' + escapeHtml(fmtDateTime(h.changedAt)) + '</td>';
+                html += '<td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; white-space: nowrap;">' + escapeHtml(statusLabel(h.from)) + '</td>';
+                html += '<td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; white-space: nowrap; color: #2980b9; font-weight: 600;">' + escapeHtml(statusLabel(h.to)) + '</td>';
+                html += '<td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; white-space: nowrap;">' + approvalCell + '</td>';
+                html += '<td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; white-space: nowrap;">' + escapeHtml(h.changedBy || '—') + '</td>';
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+        }
+
+        content.innerHTML = html;
+        modal.style.display = 'flex';
+    }
+
+    function closeHistory() {
+        var modal = document.getElementById('history-modal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('.history-btn') : null;
+        if (btn) {
+            e.preventDefault();
+            e.stopPropagation();
+            showHistory(btn.dataset.id);
+            return;
+        }
+        if (e.target && e.target.id === 'close-history-modal') {
+            closeHistory();
+            return;
+        }
+        var modal = document.getElementById('history-modal');
+        if (modal && e.target === modal) closeHistory();
+    });
+
+    function injectHistoryButtons() {
+        var tbodies = document.querySelectorAll('#diary-tables-container .diary-table tbody');
+        if (!tbodies.length) { setTimeout(injectHistoryButtons, 500); return; }
+
+        tbodies.forEach(function (tbody) {
+            var rows = tbody.querySelectorAll('tr');
+            for (var i = 0; i < rows.length; i++) {
+                var row = rows[i];
+                var firstCell = row.cells && row.cells[0];
+                if (!firstCell) continue;
+                var diaryId = firstCell.textContent.trim();
+                if (!diaryId) continue;
+
+                var actionCell = row.cells[row.cells.length - 1];
+                if (!actionCell) continue;
+                if (actionCell.querySelector('.history-btn')) continue;
+
+                var btn = document.createElement('button');
+                btn.className = 'action-btn history-btn';
+                btn.dataset.id = diaryId;
+                btn.title = 'View status change history';
+                btn.innerHTML = '<i class="fas fa-history"></i>';
+                btn.style.cssText =
+                    'background: linear-gradient(135deg, #8e44ad, #732d91); color: white;';
+
+                actionCell.appendChild(btn);
+            }
+        });
+    }
+
+    function bindObserver() {
+        var container = document.getElementById('diary-tables-container');
+        if (!container) { setTimeout(bindObserver, 500); return; }
+
+        var obs = new MutationObserver(function () {
+            injectHistoryButtons();
+        });
+        obs.observe(container, { childList: true, subtree: true });
+
+        injectHistoryButtons();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+            setTimeout(bindObserver, 500);
+        });
+    } else {
+        setTimeout(bindObserver, 500);
+    }
+})();
+</script>
+<!-- ============================================================ -->
+<!-- ★ Status Change History Modal                                -->
+<!-- ============================================================ -->
+<div class="modal" id="history-modal" style="display:none;">
+    <div class="modal-content" style="max-width: 780px;">
+        <h3><i class="fas fa-history"></i> Status Change History</h3>
+        <div id="history-content" style="margin: 16px 0;"></div>
+        <div class="modal-actions">
+            <button type="button" class="btn" id="close-history-modal">Close</button>
+        </div>
+    </div>
+</div>
+    <script>
+    (function () {
+        'use strict';
+        
+        // 1. 處理折疊與展開
+        if (!window.__diaryFoldBound) {
+            window.__diaryFoldBound = true;
+            document.addEventListener('click', function(e) {
+                var header = e.target.closest('.diary-category-section .table-header');
+                if (header) {
+                    // ★ 關鍵修正：如果點擊的是輸入框，不要觸發折疊
+                    if (e.target.closest('input') || e.target.closest('button') || e.target.closest('a')) {
+                        return;
+                    }
+                    
+                    var section = header.closest('.diary-category-section');
+                    if (section) {
+                        section.classList.toggle('collapsed');
+                    }
+                }
+            });
+        }
+
+        // 2. 處理表格搜尋 (事件委派)
+        if (!window.__diarySearchBound) {
+            window.__diarySearchBound = true;
+            
+            document.addEventListener('input', function(e) {
+                if (!e.target.classList.contains('category-search')) return;
+                
+                var category = e.target.getAttribute('data-category');
+                var query = e.target.value.toLowerCase().trim();
+                var tbody = document.getElementById(category + '-table-body');
+                if (!tbody) return;
+
+                var rows = tbody.querySelectorAll('tr');
+                var visibleCount = 0;
+
+                rows.forEach(function(row) {
+                    var text = row.textContent.toLowerCase();
+                    if (text.includes(query)) {
+                        row.style.display = ''; // 顯示
+                        visibleCount++;
+                    } else {
+                        row.style.display = 'none'; // 隱藏
+                    }
+                });
+
+                // 處理無結果提示文字
+                var noResEl = document.getElementById(category + '-no-results');
+                if (noResEl) {
+                    if (rows.length === 0) {
+                        noResEl.style.display = 'block';
+                        noResEl.textContent = 'No documents.';
+                    } else if (visibleCount === 0 && query !== '') {
+                        noResEl.style.display = 'block';
+                        noResEl.textContent = 'No matching documents found for "' + e.target.value + '".';
+                    } else {
+                        noResEl.style.display = 'none';
+                    }
+                }
+            });
+        }
+    })();
+    </script>
+</body>
+</html>

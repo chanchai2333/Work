@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="platform">AEL DWSS - Edit Safety Inspection</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/editpdf.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="scripts/theme-config.js"></script>
+    <style>
+        .pdf-canvas-container {
+            position: relative;
+            overflow: auto;
+            background: #e0e0e0;
+            border-radius: 8px;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        #pdf-canvas {
+            display: block;
+            margin: 0 !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            border: none;
+            padding: 0;
+            background: white;
+            z-index: 1;
+        }
+        #draw-canvas {
+            display: block;
+            margin: 0 !important;
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: auto;
+            cursor: crosshair;
+            border: none;
+            padding: 0;
+            z-index: 15;
+        }
+        .tool-btn.active {
+            background: #2ecc71;
+            color: white;
+            border-color: #27ae60;
+        }
+        .text-annotation {
+            position: absolute;
+            cursor: move;
+            min-width: 20px;
+            min-height: 20px;
+            padding: 2px 6px;
+            background: transparent;
+            border: 1px solid transparent;
+            font-family: Arial, sans-serif;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            outline: none;
+            z-index: 25;
+            user-select: none;
+            box-sizing: border-box;
+        }
+        .text-annotation:hover {
+            border: 1px dashed #3498db;
+        }
+        .text-annotation.editing {
+            border: 2px solid #3498db;
+            background: rgba(255,255,255,0.95);
+            cursor: text;
+            z-index: 30;
+        }
+        .text-annotation.locked {
+            cursor: default;
+            border: 1px solid transparent !important;
+            background: transparent !important;
+        }
+        .text-annotation .delete-btn {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 18px;
+            height: 18px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 12px;
+            line-height: 18px;
+            text-align: center;
+            cursor: pointer;
+            display: none;
+        }
+        .text-annotation:hover .delete-btn {
+            display: block;
+        }
+        .text-annotation.locked .delete-btn {
+            display: none !important;
+        }
+        .text-annotation .delete-btn:hover {
+            background: #c0392b;
+        }
+        .lock-btn {
+            background: #9b59b6 !important;
+        }
+        .lock-btn:hover {
+            background: #8e44ad !important;
+        }
+        .lock-btn.unlock {
+            background: #27ae60 !important;
+        }
+        .lock-btn.unlock:hover {
+            background: #2ecc71 !important;
+        }
+        .btn-submit {
+            background: #28a745 !important;
+            color: white !important;
+        }
+        .btn-submit:hover {
+            background: #218838 !important;
+        }
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .btn-approve { background: #27ae60; color: white; }
+        .btn-reject { background: #c0392b; color: white; }
+
+        .pdf-controls .zoom-controls {
+            display: none !important;
+        }
+
+        .sidebar.collapsed .logo {
+            display: none !important;
+        }
+
+        .page-info {
+            font-size: 14px;
+            font-weight: 600;
+            color: #334155;
+            padding: 0 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .page-input {
+            width: 60px;
+            padding: 6px 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #1e40af;
+            text-align: center;
+            background: #fff;
+            transition: 0.15s;
+        }
+        .page-input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52,152,219,0.25);
+            background: #f0f9ff;
+        }
+        .page-input::-webkit-inner-spin-button,
+        .page-input::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .page-input { -moz-appearance: textfield; }
+        .page-input-hint {
+            font-size: 11px;
+            color: #94a3b8;
+            font-style: italic;
+            margin-left: 4px;
+        }
+
+        .safety-signature-modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(2px);
+            z-index: 99999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .safety-signature-modal-overlay.visible { display: flex; }
+
+        .safety-signature-modal {
+            background: #fff;
+            border-radius: 12px;
+            width: 960px;
+            max-width: 95vw;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: safetySigSlideIn 0.2s ease-out;
+        }
+        @keyframes safetySigSlideIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to   { transform: scale(1);    opacity: 1; }
+        }
+
+        .safety-signature-modal-header {
+            padding: 14px 20px;
+            background: #f1f5f9;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .safety-signature-modal-header h3 {
+            color: #1e293b;
+            font-size: 1.05rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .safety-signature-modal-close {
+            background: transparent;
+            border: none;
+            font-size: 1.6rem;
+            cursor: pointer;
+            color: #64748b;
+            line-height: 1;
+            padding: 0 6px;
+            transition: color 0.15s;
+        }
+        .safety-signature-modal-close:hover { color: #e74c3c; }
+
+        .safety-signature-modal-body {
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .safety-signature-canvas-wrapper {
+            position: relative;
+            background: #fff;
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #safety-signature-canvas {
+            display: block;
+            width: 100%;
+            height: 300px;
+            cursor: crosshair;
+            touch-action: none;
+            background: #fff;
+        }
+        .safety-signature-canvas-hint {
+            position: absolute;
+            bottom: 8px;
+            right: 12px;
+            font-size: 11px;
+            color: #cbd5e1;
+            pointer-events: none;
+            font-style: italic;
+        }
+
+        .safety-signature-modal-footer {
+            padding: 12px 20px;
+            background: #fff;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .safety-sig-footer-right { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        .safety-sig-btn {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .safety-sig-btn:hover { transform: translateY(-1px); }
+        .safety-sig-btn-clear  { background: #f1f5f9; color: #475569; }
+        .safety-sig-btn-clear:hover  { background: #e2e8f0; }
+        .safety-sig-btn-cancel { background: #94a3b8; color: #fff; }
+        .safety-sig-btn-cancel:hover { background: #64748b; }
+        .safety-sig-btn-save   { background: #10b981; color: #fff; }
+        .safety-sig-btn-save:hover   { background: #059669; }
+        /* 加入在 <style> 內 */
+        .status-draft { background: rgba(149,165,166,0.2); color: #848f90; }
+        .status-submitted-ig { background: rgba(52,152,219,0.2); color: #2980b9; }
+        .status-closed { background: rgba(39,174,96,0.2); color: #1e8449; }
+        .status-reopen { background: rgba(243,156,18,0.2); color: #d35400; }
+        .status-cancelled { background: rgba(231,76,60,0.2); color: #c0392b; }
+    </style>
+</head>
+<body>
+    <div class="main-content">
+        <div class="header">
+            <h1 data-i18n="safety.inspection">Safety Inspection</h1>
+            <div class="header-controls">
+                <div class="user-date-row">
+                    <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
+                    <button class="user-btn"><i class="fas fa-user"></i><span data-i18n="user.name">John Doe</span></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="edit-pdf-page">
+            <div class="document-header">
+                <h2><i class="fas fa-file-pdf"></i><span id="docTitle">Edit Safety Inspection</span></h2>
+                <div class="document-actions">
+                    <button class="btn btn-submit" id="submit-btn"><i class="fas fa-paper-plane"></i> Submit</button>
+
+                    <button class="btn btn-approve" id="approve-btn">
+                        <i class="fas fa-check-circle"></i> Approve
+                    </button>
+                    <button class="btn btn-reject" id="reject-btn">
+                        <i class="fas fa-times-circle"></i> Reject
+                    </button>
+
+                    <button class="btn" id="save-btn"><i class="fas fa-save"></i> Save Changes</button>
+                    <button class="btn" id="cancel-btn"><i class="fas fa-times"></i> Cancel</button>
+                    <button class="btn" id="back-btn"><i class="fas fa-arrow-left"></i> Back</button>
+                </div>
+            </div>
+
+            <div class="document-meta">
+                <div class="meta-item"><span class="meta-label">Inspection ID:</span><span class="meta-value" id="docId">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Site:</span><span class="meta-value" id="docSite">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Date:</span><span class="meta-value" id="docDate">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Status:</span><span class="meta-value" id="docStatusDisplay">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Inspector:</span><span class="meta-value" id="docInspector">N/A</span></div>
+            </div>
+
+            <div class="pdf-editor-container">
+                <div class="pdf-controls">
+                    <button class="nav-btn" id="prev-page" title="上一頁"><i class="fas fa-chevron-left"></i></button>
+                    <span class="page-info">
+                        Page
+                        <input type="number" id="page-input" class="page-input" min="1" value="1" title="輸入頁碼後按 Enter 跳頁">
+                        of <span id="total-pages">1</span>
+                        <span class="page-input-hint"></span>
+                    </span>
+                    <span id="current-page" style="display:none;">1</span>
+                    <button class="nav-btn" id="next-page" title="下一頁"><i class="fas fa-chevron-right"></i></button>
+                </div>
+
+                <div class="pdf-canvas-container" id="pdf-container">
+                    <canvas id="pdf-canvas"></canvas>
+                    <canvas id="draw-canvas" class="draw-layer"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="safety-signature-modal-overlay" id="safety-signature-modal-overlay">
+        <div class="safety-signature-modal">
+            <div class="safety-signature-modal-header">
+                <h3><i class="fas fa-signature"></i> 手寫簽名</h3>
+                <button class="safety-signature-modal-close" id="safety-signature-close-btn" title="關閉">&times;</button>
+            </div>
+            <div class="safety-signature-modal-body">
+                <div class="safety-signature-canvas-wrapper">
+                    <canvas id="safety-signature-canvas" width="900" height="300"></canvas>
+                    <div class="safety-signature-canvas-hint">在此簽名（滑鼠或觸控筆）</div>
+                </div>
+            </div>
+            <div class="safety-signature-modal-footer">
+                <button class="safety-sig-btn safety-sig-btn-clear" id="safety-signature-clear-btn">
+                    <i class="fas fa-eraser"></i> 清除
+                </button>
+                <div class="safety-sig-footer-right">
+                    <button class="safety-sig-btn safety-sig-btn-cancel" id="safety-signature-cancel-btn">
+                        <i class="fas fa-times"></i> 取消
+                    </button>
+                    <button class="safety-sig-btn safety-sig-btn-save" id="safety-signature-save-btn">
+                        <i class="fas fa-check"></i> 儲存
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="scripts/language.js"></script>
+    <script src="scripts/app.js"></script>
+    <script src="scripts/sidebar.js"></script>
+    <script src="scripts/auth-check.js"></script>
+    <script src="scripts/user-display.js"></script>
+    <script src="scripts/SafetyInspection-data.js"></script>
+    <script src="scripts/editsafetypdf.js"></script>
+
+    </script>
+<!-- ============================================================ -->
+<!-- ★ 文檔鎖定：Submit 後禁止編輯（三個編輯頁通用）v2             -->
+<!-- ============================================================ -->
+<script>
+(function () {
+    'use strict';
+    if (window.__docLockPatchInstalled) return;
+    window.__docLockPatchInstalled = true;
+
+    function isLocked(doc) {
+        if (!doc) return false;
+        if (doc.submittedDate) return true;
+        var a = doc.approvalStatus;
+        if (a === 'approved' || a === 'rejected' || a === 'cancelled') return true;
+        var s = doc.status;
+        if (s && s !== 'draft' && s !== 'reopen') return true;
+        return false;
+    }
+
+    function readCurrentDoc() {
+        var sources = [
+            'editDocument',
+            'currentInspectionRecord',
+            'currentDiaryRecord',
+            'currentWageRecord',
+            'currentRecord'
+        ];
+        for (var i = 0; i < sources.length; i++) {
+            var raw = sessionStorage.getItem(sources[i]);
+            if (!raw) continue;
+            try {
+                var d = JSON.parse(raw);
+                if (d && typeof d === 'object' && d.id) return d;
+            } catch (e) {}
+        }
+        return null;
+    }
+
+    function injectLockStyle() {
+        if (document.getElementById('document-lock-style')) return;
+        var style = document.createElement('style');
+        style.id = 'document-lock-style';
+        style.textContent = [
+            '.document-locked #draw-canvas,',
+            '.document-locked #pdf-canvas,',
+            '.document-locked .pdf-form-overlay,',
+            '.document-locked .safety-form-overlay,',
+            '.document-locked .text-annotation,',
+            '.document-locked .tick-mark {',
+            '  pointer-events: none !important;',
+            '}',
+
+            '.document-locked .pdf-field,',
+            '.document-locked .pdf-checkbox,',
+            '.document-locked .pdf-sign,',
+            '.document-locked .pdf-image,',
+            '.document-locked .pdf-signature-cell,',
+            '.document-locked .signature-cell {',
+            '  pointer-events: none !important;',
+            '  opacity: 0.85;',
+            '}',
+
+            '.document-locked .tool-btn,',
+            '.document-locked #undo-btn,',
+            '.document-locked #delete-selected-btn,',
+            '.document-locked #lock-btn,',
+            '.document-locked #save-btn,',
+            '.document-locked #cancel-btn,',
+            '.document-locked #submit-btn {',
+            '  display: none !important;',
+            '}',
+
+            '.document-lock-badge {',
+            '  display: inline-flex; align-items: center; gap: 6px;',
+            '  background: #fef3c7; color: #92400e;',
+            '  padding: 6px 14px; border-radius: 20px;',
+            '  font-weight: 600; font-size: 0.85rem;',
+            '  margin-left: 12px;',
+            '  box-shadow: 0 1px 3px rgba(0,0,0,0.05);',
+            '}'
+        ].join('\n');
+        document.head.appendChild(style);
+    }
+
+    function applyLock(doc) {
+        if (document.body.classList.contains('document-locked')) return;
+        injectLockStyle();
+        document.body.classList.add('document-locked');
+
+        if (!document.querySelector('.document-lock-badge')) {
+            var target =
+                document.querySelector('.doc-title-section h2') ||
+                document.querySelector('.document-header h2') ||
+                document.querySelector('.document-header');
+
+            if (target) {
+                var badge = document.createElement('span');
+                badge.className = 'document-lock-badge';
+                badge.innerHTML = '<i class="fas fa-lock"></i> Read-only (submitted)';
+                target.appendChild(badge);
+            }
+        }
+
+        document.querySelectorAll('input, textarea, select').forEach(function (el) {
+            el.disabled = true;
+        });
+
+        var obs = new MutationObserver(function (mutations) {
+            mutations.forEach(function (m) {
+                m.addedNodes.forEach(function (n) {
+                    if (n.nodeType !== 1) return;
+                    if (n.matches && n.matches('input, textarea, select')) {
+                        n.disabled = true;
+                    }
+                    if (n.querySelectorAll) {
+                        n.querySelectorAll('input, textarea, select').forEach(function (el) {
+                            el.disabled = true;
+                        });
+                    }
+                });
+            });
+        });
+        obs.observe(document.body, { childList: true, subtree: true });
+    }
+
+    function checkOnLoad() {
+        var doc = readCurrentDoc();
+        if (doc && isLocked(doc)) {
+            applyLock(doc);
+        }
+    }
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('#submit-btn') : null;
+        if (!btn) return;
+
+        setTimeout(function () {
+            var doc = readCurrentDoc();
+            if (doc && isLocked(doc)) applyLock(doc);
+        }, 400);
+
+        setTimeout(function () {
+            var doc = readCurrentDoc();
+            if (doc && isLocked(doc)) applyLock(doc);
+        }, 2000);
+    }, false);
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', checkOnLoad);
+    } else {
+        checkOnLoad();
+    }
+
+    setTimeout(checkOnLoad, 1200);
+    setTimeout(checkOnLoad, 2500);
+})();
+</script>
+<!-- ============================================================ -->
+<!-- ★ Submit / Approve / Reject 需密碼驗證 (v2 - 修復 disabled)   -->
+<!-- ============================================================ -->
+<script>
+(function () {
+    'use strict';
+    if (window.__actionPasswordPatchInstalled) return;
+    window.__actionPasswordPatchInstalled = true;
+
+    var ACTION_BUTTONS = {
+        'submit-btn':  { label: 'Submit'  },
+        'approve-btn': { label: 'Approve' },
+        'reject-btn':  { label: 'Reject'  }
+    };
+
+    function injectStyle() {
+        if (document.getElementById('action-pwd-style')) return;
+        var style = document.createElement('style');
+        style.id = 'action-pwd-style';
+        style.textContent = [
+            '.action-pwd-overlay {',
+            '  position: fixed; top: 0; left: 0; width: 100%; height: 100%;',
+            '  background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(2px);',
+            '  z-index: 999999; display: none; justify-content: center; align-items: center;',
+            '}',
+            '.action-pwd-overlay.visible { display: flex; }',
+            '.action-pwd-modal {',
+            '  background: #fff; border-radius: 12px; width: 420px; max-width: 92vw;',
+            '  box-shadow: 0 20px 60px rgba(0,0,0,0.35); overflow: hidden;',
+            '  animation: actionPwdSlide 0.18s ease-out;',
+            '}',
+            '@keyframes actionPwdSlide {',
+            '  from { transform: scale(0.95); opacity: 0; }',
+            '  to   { transform: scale(1);    opacity: 1; }',
+            '}',
+            '.action-pwd-header {',
+            '  padding: 14px 20px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0;',
+            '  display: flex; justify-content: space-between; align-items: center;',
+            '}',
+            '.action-pwd-header h3 {',
+            '  color: #1e293b; font-size: 1.05rem; font-weight: 600;',
+            '  display: flex; align-items: center; gap: 8px; margin: 0;',
+            '}',
+            '.action-pwd-body { padding: 20px; }',
+            '.action-pwd-desc {',
+            '  font-size: 0.9rem; color: #475569; margin-bottom: 14px; line-height: 1.5;',
+            '}',
+            '.action-pwd-desc strong { color: #1e40af; }',
+            '.action-pwd-input-wrap { position: relative; }',
+            '.action-pwd-input {',
+            '  width: 100%; padding: 10px 40px 10px 12px;',
+            '  border: 1px solid #cbd5e1; border-radius: 8px;',
+            '  font-size: 0.95rem; font-family: inherit; outline: none;',
+            '  transition: border-color 0.15s, box-shadow 0.15s;',
+            '  pointer-events: auto !important;',
+            '}',
+            '.action-pwd-input:focus {',
+            '  border-color: #3498db;',
+            '  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);',
+            '}',
+            '.action-pwd-toggle {',
+            '  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);',
+            '  background: transparent; border: none; cursor: pointer;',
+            '  color: #94a3b8; padding: 4px 6px; font-size: 0.95rem;',
+            '}',
+            '.action-pwd-toggle:hover { color: #475569; }',
+            '.action-pwd-error {',
+            '  color: #dc2626; font-size: 0.82rem; margin-top: 8px;',
+            '  min-height: 1.1em; display: none;',
+            '}',
+            '.action-pwd-error.visible { display: block; }',
+            '.action-pwd-footer {',
+            '  padding: 12px 20px; background: #f8fafc;',
+            '  border-top: 1px solid #e2e8f0;',
+            '  display: flex; justify-content: flex-end; gap: 8px;',
+            '}',
+            '.action-pwd-btn {',
+            '  padding: 8px 18px; border: none; border-radius: 6px;',
+            '  font-weight: 600; cursor: pointer; font-size: 0.9rem;',
+            '  display: inline-flex; align-items: center; gap: 6px;',
+            '  transition: all 0.2s;',
+            '}',
+            '.action-pwd-btn:hover { transform: translateY(-1px); }',
+            '.action-pwd-btn-cancel { background: #e2e8f0; color: #334155; }',
+            '.action-pwd-btn-cancel:hover { background: #cbd5e1; }',
+            '.action-pwd-btn-confirm { background: #10b981; color: #fff; }',
+            '.action-pwd-btn-confirm:hover { background: #059669; }',
+            '.action-pwd-btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }',
+            'body.document-locked #action-pwd-overlay input {',
+            '  pointer-events: auto !important;',
+            '  opacity: 1 !important;',
+            '}'
+        ].join('\n');
+        document.head.appendChild(style);
+    }
+
+    var modalEl, inputEl, errorEl, confirmBtn, cancelBtn, toggleBtn, descEl;
+    var pendingBtn = null;
+    var bypass = false;
+
+    function ensureModal() {
+        if (modalEl) return;
+        injectStyle();
+
+        modalEl = document.createElement('div');
+        modalEl.className = 'action-pwd-overlay';
+        modalEl.id = 'action-pwd-overlay';
+        modalEl.setAttribute('data-lock-exempt', 'true');   
+        modalEl.innerHTML =
+            '<div class="action-pwd-modal">' +
+                '<div class="action-pwd-header">' +
+                    '<h3><i class="fas fa-lock"></i> Confirm Password</h3>' +
+                    '<button class="action-pwd-btn-cancel" id="action-pwd-close" style="background:transparent;color:#64748b;font-size:1.4rem;padding:0 6px;line-height:1;">&times;</button>' +
+                '</div>' +
+                '<div class="action-pwd-body">' +
+                    '<div class="action-pwd-desc" id="action-pwd-desc">Please enter your password to continue.</div>' +
+                    '<div class="action-pwd-input-wrap">' +
+                        '<input type="password" class="action-pwd-input" id="action-pwd-input" placeholder="Password" autocomplete="off" data-lock-exempt="true">' +
+                        '<button type="button" class="action-pwd-toggle" id="action-pwd-toggle" title="Show/Hide" data-lock-exempt="true"><i class="fas fa-eye"></i></button>' +
+                    '</div>' +
+                    '<div class="action-pwd-error" id="action-pwd-error"></div>' +
+                '</div>' +
+                '<div class="action-pwd-footer">' +
+                    '<button class="action-pwd-btn action-pwd-btn-cancel" id="action-pwd-cancel" data-lock-exempt="true"><i class="fas fa-times"></i> Cancel</button>' +
+                    '<button class="action-pwd-btn action-pwd-btn-confirm" id="action-pwd-confirm" data-lock-exempt="true"><i class="fas fa-check"></i> Confirm</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(modalEl);
+
+        inputEl    = document.getElementById('action-pwd-input');
+        errorEl    = document.getElementById('action-pwd-error');
+        confirmBtn = document.getElementById('action-pwd-confirm');
+        cancelBtn  = document.getElementById('action-pwd-cancel');
+        toggleBtn  = document.getElementById('action-pwd-toggle');
+        descEl     = document.getElementById('action-pwd-desc');
+
+        var inputGuardObs = new MutationObserver(function () {
+            if (inputEl.disabled) inputEl.disabled = false;
+            if (inputEl.readOnly) inputEl.readOnly = false;
+        });
+        inputGuardObs.observe(inputEl, {
+            attributes: true,
+            attributeFilter: ['disabled', 'readonly']
+        });
+
+        var modalGuardObs = new MutationObserver(function () {
+            modalEl.querySelectorAll('input, textarea, select, button').forEach(function (el) {
+                if (el.disabled) el.disabled = false;
+            });
+        });
+        modalGuardObs.observe(modalEl, {
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['disabled']
+        });
+
+        cancelBtn.addEventListener('click', closeModal);
+        document.getElementById('action-pwd-close').addEventListener('click', closeModal);
+
+        toggleBtn.addEventListener('click', function () {
+            var t = inputEl.type === 'password' ? 'text' : 'password';
+            inputEl.type = t;
+            var icon = toggleBtn.querySelector('i');
+            if (icon) {
+                icon.classList.toggle('fa-eye');
+                icon.classList.toggle('fa-eye-slash');
+            }
+        });
+
+        confirmBtn.addEventListener('click', tryConfirm);
+        inputEl.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); tryConfirm(); }
+            else if (e.key === 'Escape') { e.preventDefault(); closeModal(); }
+        });
+
+        modalEl.addEventListener('click', function (e) {
+            if (e.target === modalEl) closeModal();
+        });
+    }
+
+    function getSession() {
+        try { return JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); }
+        catch (e) { return {}; }
+    }
+
+    function findCurrentUser() {
+        var s = getSession();
+        var users = [];
+        try { users = JSON.parse(localStorage.getItem('dwss_users_db') || '[]'); } catch (e) {}
+        if (!Array.isArray(users)) return null;
+
+        if (s.userId != null) {
+            for (var i = 0; i < users.length; i++) {
+                if (String(users[i].id) === String(s.userId)) return users[i];
+            }
+        }
+        if (s.userEmail) {
+            for (var j = 0; j < users.length; j++) {
+                if (users[j].email && users[j].email.toLowerCase() === String(s.userEmail).toLowerCase()) {
+                    return users[j];
+                }
+            }
+        }
+        return null;
+    }
+
+    function verifyPassword(pwd) {
+        var user = findCurrentUser();
+        if (!user) return false;
+        return String(user.password) === String(pwd);
+    }
+
+    function openModal(btn) {
+        ensureModal();
+        pendingBtn = btn;
+
+        inputEl.disabled = false;
+        inputEl.readOnly = false;
+        inputEl.style.pointerEvents = 'auto';
+        inputEl.style.opacity = '1';
+        confirmBtn.disabled = false;
+        cancelBtn.disabled = false;
+
+        var btnId = btn.id;
+        var info = ACTION_BUTTONS[btnId] || { label: 'Action' };
+        descEl.innerHTML = 'Please enter your password to confirm the <strong>' +
+                           info.label + '</strong> action.';
+
+        inputEl.value = '';
+        inputEl.type = 'password';
+        errorEl.classList.remove('visible');
+        errorEl.textContent = '';
+        var icon = toggleBtn.querySelector('i');
+        if (icon) { icon.classList.add('fa-eye'); icon.classList.remove('fa-eye-slash'); }
+
+        modalEl.classList.add('visible');
+        document.body.style.overflow = 'hidden';
+
+        setTimeout(function () {
+            inputEl.disabled = false;
+            inputEl.readOnly = false;
+            try { inputEl.focus(); } catch (e) {}
+        }, 30);
+        setTimeout(function () {
+            inputEl.disabled = false;
+            inputEl.readOnly = false;
+        }, 150);
+    }
+
+    function closeModal() {
+        if (!modalEl) return;
+        modalEl.classList.remove('visible');
+        document.body.style.overflow = '';
+        inputEl.value = '';
+        errorEl.classList.remove('visible');
+        errorEl.textContent = '';
+        pendingBtn = null;
+    }
+
+    function tryConfirm() {
+        var pwd = inputEl.value;
+        if (!pwd) {
+            errorEl.textContent = 'Please enter your password.';
+            errorEl.classList.add('visible');
+            return;
+        }
+
+        if (!verifyPassword(pwd)) {
+            errorEl.textContent = '❌ Incorrect password. Please try again.';
+            errorEl.classList.add('visible');
+            inputEl.value = '';
+            try { inputEl.focus(); } catch (e) {}
+            return;
+        }
+
+        var btn = pendingBtn;
+
+        modalEl.classList.remove('visible');
+        document.body.style.overflow = '';
+        inputEl.value = '';
+        errorEl.classList.remove('visible');
+        pendingBtn = null;
+
+        if (!btn) return;
+
+        bypass = true;
+        try { btn.click(); }
+        finally { setTimeout(function () { bypass = false; }, 80); }
+    }
+
+    document.addEventListener('click', function (e) {
+        if (bypass) return;
+
+        var btn = e.target && e.target.closest
+            ? e.target.closest('#submit-btn, #approve-btn, #reject-btn')
+            : null;
+        if (!btn) return;
+
+        if (btn.disabled) return;
+        var st = window.getComputedStyle(btn);
+        if (st.display === 'none' || st.visibility === 'hidden') return;
+
+        e.stopImmediatePropagation();
+        e.preventDefault();
+
+        openModal(btn);
+    }, true);
+
+    console.log('[ActionPwd] ✓ 已啟用（v2）— Submit / Approve / Reject 需密碼驗證');
+})();
+</script>
+</body>
+</html>

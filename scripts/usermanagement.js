@@ -194,6 +194,30 @@
         ],
 
         currentFilters: { organization: 'all', role: 'all', status: 'all', sort: 'name-asc' },
+
+        onlineKeys: {},
+        isUserOnline: function (user) {
+            if (!user) return false;
+            var keys = this.onlineKeys || {};
+            var id = String(user.id || '').toLowerCase();
+            var name = String(user.username || '').toLowerCase();
+            return !!(keys[id] || keys[name]);
+        },
+        loadOnlineStatus: function () {
+            var self = this;
+            return fetch('/api/auth/online', { cache: 'no-store' })
+                .then(function (res) { return res.ok ? res.json() : { online: [] }; })
+                .then(function (body) {
+                    var map = {};
+                    (body.online || []).forEach(function (s) {
+                        if (s.id) map[String(s.id).toLowerCase()] = true;
+                        if (s.username) map[String(s.username).toLowerCase()] = true;
+                    });
+                    self.onlineKeys = map;
+                })
+                .catch(function () { self.onlineKeys = self.onlineKeys || {}; });
+        },
+
         currentPage: 1,
         itemsPerPage: 10,
         selectedGroupIds: new Set(),
@@ -203,6 +227,11 @@
         // ============================================================
         init: function () {
             this.loadFromStorage();
+            var self = this;
+            this.loadOnlineStatus().then(function () {
+                self.renderUserTable();
+                self.updateUserStats();
+            });
             this.renderUserTable();
             this.setupFilterEvents();
             this.setupActionButtons();
@@ -278,8 +307,9 @@
                 var orgFullName = org ? org.fullName : '—';
                 var orgColor = org ? org.color : '#94a3b8';
 
-                var statusText = user.status === 'online' ? 'Online' : 'Offline';
-                var statusClass = 'status-' + user.status;
+                var isOnline = self.isUserOnline(user);
+                var statusText = isOnline ? 'Online' : 'Offline';
+                var statusClass = isOnline ? 'status-online' : 'status-offline';
 
                 var projectsHtml = '';
                 if (user.projectIds && user.projectIds.length > 0) {
@@ -351,7 +381,7 @@
 
         updateUserStats: function () {
             var total = this.users.length;
-            var online = this.users.filter(function (u) { return u.status === 'online'; }).length;
+            var online = this.users.filter(function (u) { return this.isUserOnline(u); }.bind(this)).length;
             var fullAccess = this.users.filter(function (u) {
                 return u.role === 'admin' || u.role === 'ig' || u.role === 'wsg';
             }).length;
@@ -724,7 +754,12 @@
 
             var refreshBtn = document.querySelector('.refresh-btn');
             if (refreshBtn) {
-                refreshBtn.addEventListener('click', function () { self.renderUserTable(); });
+                refreshBtn.addEventListener('click', function () {
+                    self.loadOnlineStatus().then(function () {
+                        self.renderUserTable();
+                        self.updateUserStats();
+                    });
+                });
             }
 
             var addForm = document.getElementById('add-user-form');

@@ -199,49 +199,20 @@
         return map[status] || status || 'Draft';
     }
 
-    function loadDocumentData() {
-        var sources = ['editDocument', 'currentInspectionRecord', 'currentRecord'];
+    async function loadDocumentData() {
+        var params = new URLSearchParams(location.search);
+        var id = params.get('id');
         var doc = null;
-        for (var i = 0; i < sources.length; i++) {
-            var raw = sessionStorage.getItem(sources[i]);
-            if (!raw) continue;
+        if (id) {
             try {
-                var d = JSON.parse(raw);
-                if (d && typeof d === 'object' && d.id) { doc = d; break; }
+                var res = await fetch('/api/records/inspection/' + encodeURIComponent(id), { cache: 'no-store' });
+                if (res.ok) doc = await res.json();
             } catch (e) {}
         }
-        if (!doc) return null;
-
-        // 舊資料相容
+        if (!doc || !doc.id) return null;
         if (doc.status === 'submitted-wsg') doc.status = 'submitted';
-
-        try {
-            var stored = localStorage.getItem('inspectionData');
-            if (stored) {
-                var list = JSON.parse(stored);
-                if (Array.isArray(list)) {
-                    var full = null;
-                    for (var k = 0; k < list.length; k++) {
-                        if (String(list[k].id) === String(doc.id)) { full = list[k]; break; }
-                    }
-                    if (full) {
-                        if (full.status === 'submitted-wsg') full.status = 'submitted';
-                        var merged = Object.assign({}, full);
-                        Object.keys(doc).forEach(function (key) {
-                            if (doc[key] !== undefined && doc[key] !== null) {
-                                merged[key] = doc[key];
-                            }
-                        });
-                        if (!merged.safetyFormData && full.safetyFormData) {
-                            merged.safetyFormData = full.safetyFormData;
-                        }
-                        doc = merged;
-                    }
-                }
-            }
-        } catch (e) { console.warn('[SafetyEdit] merge from localStorage failed', e); }
-
         currentDoc = doc;
+        window.__dwssSafetyDoc = doc;
         doc.submittedBy = doc.inspector || doc.submittedBy || 'N/A';
 
         var idEl = document.getElementById('docId');
@@ -2171,10 +2142,10 @@
     }
 
     // ---------- 初始化 ----------
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
         syncGlobalDate();
         initSafetySignModal();
-        const doc = loadDocumentData();
+        const doc = await loadDocumentData();
         if (!doc) { showError('No document data available.'); return; }
 
         let pdfSrc = doc.pdfData ? 'data:application/pdf;base64,' + doc.pdfData : (doc.pdfUrl || null);

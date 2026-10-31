@@ -1,6 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html style="visibility:hidden" lang="en">
 <head>
+<script>
+(function () {
+  try {
+    var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+    if (s && s.isLoggedIn) { document.documentElement.style.visibility = 'visible'; return; }
+  } catch (e) {}
+  document.documentElement.style.visibility = 'hidden';
+  window.location.replace('login.html');
+})();
+</script>
+
+    <script src="scripts/cloud-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AEL DWSS - Labour Wage Document</title>
@@ -25,8 +37,8 @@
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { min-height: 100vh; background-color: #f5f7fa; color: #333; }
-        .main-content { padding: 30px; overflow-y: auto; }
+        body { display: flex; min-height: 100vh; background-color: #f5f7fa; color: #333; }
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #e0e6ed; }
         .header h1 { color: #2c3e50; font-size: 2rem; }
         .header-controls { display: flex; align-items: center; gap: 15px; }
@@ -181,13 +193,30 @@
     </style>
 </head>
 <body>
+    <div class="sidebar">
+        <div class="logo">
+            <img src="AEL Logo.png" alt="AEL Logo" class="logo-img" style="height: 45px; width: auto; object-fit: contain; margin-right: 8px;">
+            <h2>DWSS</h2>
+        </div>
+        <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
+        <ul class="menu">
+            <li><a href="index.html"><i class="fas fa-home"></i><span class="menu-text">Dashboard</span></a></li>
+            <li><a href="sitediary.html"><i class="fas fa-book"></i><span class="menu-text">Site Diary</span></a></li>
+            <li><a href="safetyinspect.html"><i class="fas fa-clipboard-check"></i><span class="menu-text">Safety Inspection</span></a></li>
+            <li><a href="sitelocations.html" id="menu-sitelocations"><i class="fas fa-map-marked-alt"></i><span class="menu-text" data-i18n="site.locations">Site Locations</span></a></li>
+            <li><a href="labourwage.html" class="active"><i class="fas fa-money-bill-wave"></i><span class="menu-text">Labour Wage</span></a></li>
+            <li><a href="settings.html"><i class="fas fa-cogs"></i><span class="menu-text">System Settings</span></a></li>
+            <li><a href="usermanagement.html"><i class="fas fa-user-circle"></i><span class="menu-text">User Management</span></a></li>
+        </ul>
+    </div>
+
     <div class="main-content">
         <div class="header">
             <h1>Labour Wage</h1>
             <div class="header-controls">
                 <div class="user-date-row">
                     <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
-                    <button class="user-btn"><i class="fas fa-user"></i> John Doe</button>
+                    <button class="user-btn"><i class="fas fa-user"></i> <span>User</span></button>
                 </div>
             </div>
         </div>
@@ -230,6 +259,7 @@
 
             <div class="pdf-editor-container">
                 <div class="pdf-controls" id="pdf-controls" style="display:none;">
+                    <span id="page-nav" style="display:none; align-items:center; gap:10px;">
                     <button class="nav-btn" id="prev-page"><i class="fas fa-chevron-left"></i></button>
                     <span class="page-info">
                         Page
@@ -263,9 +293,7 @@
 
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
-    <script src="scripts/sidebar.js"></script>
     <script src="scripts/auth-check.js"></script>
-    <script src="scripts/user-display.js"></script>
 
     <script>
     (function () {
@@ -345,37 +373,29 @@
         }
 
         function getCurrentDoc() {
-            var sources = ['currentWageRecord', 'viewDocument', 'editDocument', 'currentRecord'];
-            for (var i = 0; i < sources.length; i++) {
-                var raw = sessionStorage.getItem(sources[i]);
-                if (!raw) continue;
-                try {
-                    var d = JSON.parse(raw);
-                    if (d && d.id) return d;
-                } catch (e) {}
-            }
             return null;
         }
 
         function findRecordById(id) {
             if (!id) return null;
-            var sources = [
-                { storage: sessionStorage, key: 'wageData' },
-                { storage: localStorage,  key: 'wageData' },
-                { storage: localStorage,  key: 'labourWageData' }
-            ];
-            for (var i = 0; i < sources.length; i++) {
-                try {
-                    var raw = sources[i].storage.getItem(sources[i].key);
-                    if (!raw) continue;
-                    var arr = JSON.parse(raw);
-                    if (!Array.isArray(arr)) continue;
-                    for (var j = 0; j < arr.length; j++) {
-                        if (arr[j] && String(arr[j].id) === String(id)) return arr[j];
-                    }
-                } catch (e) {}
-            }
+            if (window.__dwssWageDoc && String(window.__dwssWageDoc.id) === String(id)) return window.__dwssWageDoc;
             return null;
+        }
+
+        function loadWageFromServer(id) {
+            if (!id) return Promise.resolve(null);
+            return fetch('/api/records/labourWage/' + encodeURIComponent(id), { cache: 'no-store' })
+                .then(function (res) { return res.ok ? res.json() : null; })
+                .then(function (doc) {
+                    if (doc && doc.id) return doc;
+                    return fetch('/api/records/wage/' + encodeURIComponent(id), { cache: 'no-store' })
+                        .then(function (res) { return res.ok ? res.json() : null; });
+                })
+                .then(function (doc) {
+                    if (doc && doc.id) window.__dwssWageDoc = doc;
+                    return doc;
+                })
+                .catch(function () { return null; });
         }
 
         function getFormData() {
@@ -384,13 +404,6 @@
             if (currentDoc.formData && typeof currentDoc.formData === 'object' && Object.keys(currentDoc.formData).length > 0) {
                 return currentDoc.formData;
             }
-            try {
-                var raw1 = sessionStorage.getItem('labour_formdata_' + id);
-                if (raw1) {
-                    var d1 = JSON.parse(raw1);
-                    if (d1 && typeof d1 === 'object' && Object.keys(d1).length > 0) return d1;
-                }
-            } catch (e) {}
             var rec = findRecordById(id);
             if (rec && rec.formData && typeof rec.formData === 'object' && Object.keys(rec.formData).length > 0) {
                 return rec.formData;
@@ -1014,6 +1027,36 @@
             if (nextBtn) nextBtn.disabled = (activePageNum >= totalVirtualPages);
         }
 
+        function setupRecordNavigation() {
+            var params = new URLSearchParams(location.search);
+            var id = params.get('id') || (currentDoc && currentDoc.id);
+            fetch('/api/records/wage/list', { cache: 'no-store' })
+                .then(function (res) { return res.ok ? res.json() : []; })
+                .then(function (list) {
+                    var projectId = sessionStorage.getItem('currentProjectId') || '';
+                    var records = (Array.isArray(list) ? list : []).filter(function (r) {
+                        return r && r.id && (!projectId || r.project === projectId || String(r.id).indexOf(projectId.replace(/\//g, '-')) !== -1);
+                    });
+                    records.sort(function (a, b) { return String(a.id).localeCompare(String(b.id)); });
+                    var index = 0;
+                    for (var i = 0; i < records.length; i++) if (String(records[i].id) === String(id)) index = i;
+                    var cur = document.getElementById('record-current');
+                    var total = document.getElementById('record-total');
+                    if (cur) cur.textContent = String(index + 1);
+                    if (total) total.textContent = String(records.length || 1);
+                    function go(n) {
+                        if (!records.length) return;
+                        var next = Math.max(0, Math.min(records.length - 1, n));
+                        if (String(records[next].id) === String(id)) return;
+                        window.location.href = 'labourdocument.html?id=' + encodeURIComponent(records[next].id);
+                    }
+                    var prev = document.getElementById('prev-record');
+                    var next = document.getElementById('next-record');
+                    if (prev) prev.addEventListener('click', function () { go(index - 1); });
+                    if (next) next.addEventListener('click', function () { go(index + 1); });
+                });
+        }
+
         function setupNavigation() {
             if (prevBtn) prevBtn.addEventListener('click', function () {
                 if (activePageNum > 1) renderPage(activePageNum - 1);
@@ -1380,12 +1423,15 @@
         }
 
         document.addEventListener('DOMContentLoaded', async function () {
+            if (window.DWSS_Auth) DWSS_Auth.updateHeaderUser();
             try {
                 syncGlobalDate();
                 setupSidebar();
                 setupDownloadMenu();
 
-                var doc = getCurrentDoc();
+                var params = new URLSearchParams(location.search);
+                var doc = await loadWageFromServer(params.get('id'));
+                if (!doc) doc = getCurrentDoc();
                 if (!doc) { showError('找不到文件資料。請從 Labour Wage 列表重新點 View 進入。'); return; }
                 currentDoc = doc;
                 console.log('[LabourDoc] ===== 載入 ===== id=' + doc.id + ' type=' + doc.type);
@@ -1408,6 +1454,7 @@
                 pdfControls.style.display = 'flex';
                 requestAnimationFrame(function () { renderPage(1); });
                 setupNavigation();
+                setupRecordNavigation();
 
                 var printBtn = document.getElementById('print-pdf-btn');
                 if (printBtn) printBtn.addEventListener('click', printPdf);

@@ -1,0 +1,1853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEL DWSS - Edit Site Diary (DSD)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles/main.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { min-height: 100vh; background-color: #f5f7fa; color: #333; }
+        .main-content { padding: 30px; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #e0e6ed; }
+        .header h1 { color: #2c3e50; font-size: 2rem; }
+        .header-controls { display: flex; align-items: center; gap: 15px; }
+        .date-display { background: #eef2f6; padding: 8px 15px; border-radius: 8px; font-size: 16px; font-weight: 500; color: #308fee; }
+        .date-display i { margin-right: 8px; }
+        .user-date-row { display: flex; align-items: center; gap: 16px; }
+        .user-btn { background: #2563eb; color: #fff; border: none; border-radius: 20px; padding: 10px 20px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+
+        .document-page { background: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .document-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eaeaea; flex-wrap: wrap; gap: 15px; }
+        .doc-title-section { flex: 1; min-width: 300px; }
+        .document-header h2 { font-size: 1.6rem; color: #2c3e50; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .doc-status { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; }
+        .status-draft { background: rgba(149,165,166,0.2); color: #848f90; }
+        .status-submitted { background: rgba(52, 219, 119, 0.2); color: #2980b9; }
+        .status-approved { background: rgba(46,204,113,0.2); color: #27ae60; }
+        .status-rejected { background: rgba(231,76,60,0.2); color: #c0392b; }
+        .status-pending { background: rgba(243,156,18,0.2); color: #d35400; }
+        .status-cancelled { background: rgba(231,76,60,0.2); color: #c0392b; }
+
+        .document-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; transition: all 0.3s ease; white-space: nowrap; color: #fff; text-decoration: none; }
+        .btn:hover { transform: translateY(-2px); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
+        .btn-primary { background: #3498db; } .btn-primary:hover { background: #2980b9; }
+        .btn-save { background: #2ecc71; } .btn-save:hover { background: #27ae60; }
+        .btn-cancel { background: #e74c3c; } .btn-cancel:hover { background: #c0392b; }
+        .btn-submit { background: #28a745; } .btn-submit:hover { background: #218838; }
+        .btn-approve { background: #27ae60; } .btn-reject { background: #c0392b; }
+        .btn-warning { background: #f39c12; }
+
+        .document-meta { background: #f8f9fa; border-radius: 12px; padding: 20px 30px; margin: 20px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+        .meta-item { display: flex; flex-direction: column; }
+        .meta-label { font-weight: 600; color: #2c3e50; margin-bottom: 5px; font-size: 0.85rem; }
+        .meta-value { color: #555; font-size: 0.95rem; font-weight: 500; padding: 8px 12px; border-radius: 6px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+        .pdf-editor-container { display: flex; flex-direction: column; gap: 12px; }
+        .pdf-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #f1f5f9; padding: 10px 12px; border-radius: 6px; }
+        .nav-btn { background: #3498db; color: #fff; border: none; border-radius: 4px; padding: 8px 14px; cursor: pointer; font-size: 14px; }
+        .nav-btn:hover { background: #2980b9; }
+        .nav-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .page-info { font-size: 14px; font-weight: 600; color: #334155; padding: 0 4px; display: flex; align-items: center; gap: 6px; }
+        .page-input { width: 60px; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 14px; font-weight: 700; color: #1e40af; text-align: center; background: #fff; transition: 0.15s; }
+        .page-input:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 2px rgba(52,152,219,0.25); background: #f0f9ff; }
+        .page-input::-webkit-inner-spin-button, .page-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .page-input { -moz-appearance: textfield; }
+        .page-input-hint { font-size: 11px; color: #94a3b8; font-style: italic; margin-left: 4px; }
+
+        .add-pages-btn { background: #10b981; color: #fff; border: none; border-radius: 4px; padding: 8px 14px; cursor: pointer; font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+        .add-pages-btn:hover { background: #059669; }
+
+        .pdf-canvas-container { position: relative; background: #e0e0e0; border-radius: 8px; padding: 24px; display: flex; justify-content: center; align-items: flex-start; overflow: auto; min-height: 500px; }
+        .pdf-page { position: relative; display: block; box-shadow: 0 4px 12px rgba(0,0,0,0.2); background: #fff; border: 3px solid transparent; overflow: hidden; }
+        .pdf-page.active-page { border-color: #3498db; }
+        .pdf-bg { display: block; width: 100%; height: 100%; pointer-events: none; user-select: none; }
+
+        .loading-indicator { display: none; justify-content: center; align-items: center; gap: 10px; padding: 40px; color: #2563eb; font-weight: 600; background: #eff6ff; border-radius: 8px; }
+        .loading-indicator.visible { display: flex; }
+
+        footer { text-align: center; padding: 30px 0 20px; color: #7f8c8d; border-top: 1px solid #e0e6ed; margin-top: 30px; }
+        @media (max-width: 768px) { .main-content { padding: 15px; } .document-page { padding: 20px; } }
+        .sidebar.collapsed .logo { display: none !important; }
+
+        .pdf-form-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 30;
+            pointer-events: none;
+        }
+        .pdf-form-overlay .pdf-field {
+            position: absolute;
+            border: none;
+            background: transparent;
+            outline: none;
+            font-family: 'Times New Roman', 'SimSun', 'Songti SC', serif;
+            color: #0a1a5c;
+            font-size: 11px;
+            padding: 1px 3px;
+            box-sizing: border-box;
+            pointer-events: auto;
+            line-height: 1.2;
+            resize: none;
+            overflow: hidden;
+            transition: background 0.12s ease, box-shadow 0.12s ease;
+        }
+        .pdf-form-overlay .pdf-field:hover {
+            background: rgba(52, 152, 219, 0.07);
+            box-shadow: inset 0 0 0 1px rgba(52, 152, 219, 0.35);
+        }
+        .pdf-form-overlay .pdf-field:focus {
+            background: rgba(255, 251, 234, 0.95);
+            box-shadow: inset 0 0 0 2px #3498db;
+            z-index: 2;
+            overflow: auto;
+        }
+        .pdf-form-overlay textarea.pdf-field { overflow-y: auto; }
+        .pdf-form-overlay textarea.pdf-field::-webkit-scrollbar { width: 5px; }
+        .pdf-form-overlay textarea.pdf-field::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .pdf-form-overlay select.pdf-field {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            cursor: pointer;
+            text-align: center;
+            padding: 0 2px;
+            color: #0a1a5c;
+        }
+        .pdf-form-overlay select.pdf-field::-ms-expand { display: none; }
+        .pdf-form-overlay input.pdf-date-field {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 10.5px;
+            text-align: center;
+            padding: 0 2px;
+        }
+
+        .pdf-form-overlay .pdf-field.worker-detail {
+            z-index: 5;
+            font-size: 6.5px;
+            padding: 1px 2px;
+            text-align: center;
+            line-height: 1.1;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 2px;
+            overflow: hidden;
+            word-break: break-all;
+            color: #0a1a5c;
+        }
+        .pdf-form-overlay .pdf-field.worker-detail:hover {
+            background: rgba(52, 152, 219, 0.12);
+            box-shadow: inset 0 0 0 1px #3498db;
+        }
+        .pdf-form-overlay .pdf-field.worker-detail:focus {
+            background: rgba(255, 251, 234, 0.98);
+            box-shadow: inset 0 0 0 2px #3498db;
+        }
+
+        .pdf-form-overlay .pdf-field.signature-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            overflow: hidden;
+            padding: 2px;
+            z-index: 5;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 2px;
+        }
+        .pdf-form-overlay .pdf-field.signature-cell:hover {
+            background: rgba(52, 152, 219, 0.12);
+            box-shadow: inset 0 0 0 1px #3498db;
+        }
+        .pdf-form-overlay .pdf-field.signature-cell .signature-img {
+            max-width: 100%;
+            max-height: 100%;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+            display: block;
+            transform: scale(1.15);
+        }
+        .pdf-form-overlay .pdf-field.signature-cell .signature-placeholder {
+            font-size: 9px;
+            color: #cbd5e1;
+            font-style: italic;
+            user-select: none;
+            pointer-events: none;
+        }
+
+        .signature-modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(2px);
+            z-index: 99999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .signature-modal-overlay.visible { display: flex; }
+        .signature-modal {
+            background: #fff;
+            border-radius: 12px;
+            width: 960px;
+            max-width: 95vw;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: sigSlideIn 0.2s ease-out;
+        }
+        @keyframes sigSlideIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .signature-modal-header {
+            padding: 14px 20px;
+            background: #f1f5f9;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .signature-modal-header h3 {
+            color: #1e293b;
+            font-size: 1.05rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .signature-modal-close {
+            background: transparent;
+            border: none;
+            font-size: 1.6rem;
+            cursor: pointer;
+            color: #64748b;
+            line-height: 1;
+            padding: 0 6px;
+            transition: color 0.15s;
+        }
+        .signature-modal-close:hover { color: #e74c3c; }
+        .signature-modal-body {
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .signature-canvas-wrapper {
+            position: relative;
+            background: #fff;
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #signature-canvas {
+            display: block;
+            width: 100%;
+            height: 300px;
+            cursor: crosshair;
+            touch-action: none;
+            background: #fff;
+        }
+        .signature-canvas-hint {
+            position: absolute;
+            bottom: 8px;
+            right: 12px;
+            font-size: 11px;
+            color: #cbd5e1;
+            pointer-events: none;
+            font-style: italic;
+        }
+        .signature-modal-footer {
+            padding: 12px 20px;
+            background: #fff;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .sig-footer-right { display: flex; gap: 8px; flex-wrap: wrap; }
+        .sig-btn {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .sig-btn:hover { transform: translateY(-1px); }
+        .sig-btn-clear { background: #f1f5f9; color: #475569; }
+        .sig-btn-clear:hover { background: #e2e8f0; }
+        .sig-btn-cancel { background: #94a3b8; color: #fff; }
+        .sig-btn-cancel:hover { background: #64748b; }
+        .sig-btn-default { background: #f59e0b; color: #fff; }
+        .sig-btn-default:hover { background: #d97706; }
+        .sig-btn-save { background: #10b981; color: #fff; }
+        .sig-btn-save:hover { background: #059669; }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>Edit Site Diary (DSD)</h1>
+            <div class="header-controls">
+                <div class="user-date-row">
+                    <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
+                    <button class="user-btn"><i class="fas fa-user"></i> John Doe</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="document-page">
+            <div class="document-header">
+                <div class="doc-title-section">
+                    <h2><i class="fas fa-file-alt"></i> <span id="docTitle">Site Diary Document</span> <span class="doc-status status-draft" id="docStatus">Draft</span></h2>
+                </div>
+                <div class="document-actions">
+                    <button class="btn btn-submit" id="submit-btn"><i class="fas fa-paper-plane"></i> Submit</button>
+                    <button class="btn btn-approve" id="approve-btn" style="display:none;"><i class="fas fa-check-circle"></i> Approve</button>
+                    <button class="btn btn-reject" id="reject-btn" style="display:none;"><i class="fas fa-times-circle"></i> Reject</button>
+                    <button class="btn btn-save" id="save-btn"><i class="fas fa-save"></i> Save Changes</button>
+                    <button class="btn btn-cancel" id="cancel-btn"><i class="fas fa-times"></i> Cancel</button>
+                    <button class="btn btn-primary" id="back-btn"><i class="fas fa-arrow-left"></i> Back</button>
+                </div>
+            </div>
+
+            <div class="document-meta">
+                <div class="meta-item"><span class="meta-label">Document ID:</span><span class="meta-value" id="docId">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Document Type:</span><span class="meta-value" id="docType">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Site:</span><span class="meta-value" id="docSite">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Period:</span><span class="meta-value" id="docPeriod">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Submitted By:</span><span class="meta-value" id="docAuthor">N/A</span></div>
+            </div>
+
+            <div class="pdf-editor-container">
+                <div class="pdf-controls">
+                    <button class="nav-btn" id="prev-page" title="上一頁"><i class="fas fa-chevron-left"></i></button>
+                    <span class="page-info">
+                        Page
+                        <input type="number" id="page-input" class="page-input" min="1" value="1" title="輸入頁碼後按 Enter 跳頁">
+                        of <span id="total-pages">50</span>
+                        <span class="page-input-hint">(按 Enter 跳頁)</span>
+                    </span>
+                    <span id="current-page" style="display:none;">1</span>
+                    <button class="nav-btn" id="next-page" title="下一頁"><i class="fas fa-chevron-right"></i></button>
+                    <button class="add-pages-btn" id="add-pages-btn" title="新增 1 頁"><i class="fas fa-plus"></i> 1</button>
+                </div>
+
+                <div class="pdf-canvas-container" id="pdf-container">
+                    <div class="loading-indicator visible" id="loading-indicator">
+                        <i class="fas fa-spinner fa-spin"></i> Loading SiteDiaryDSD.pdf...
+                    </div>
+                    <div id="page-wrapper"></div>
+                </div>
+            </div>
+
+            <footer>
+                <p>&copy; 2025 AEL DWSS System. All rights reserved.</p>
+                <p>AEL DWSS Platform</p>
+            </footer>
+        </div>
+    </div>
+
+    <div class="signature-modal-overlay" id="signature-modal-overlay">
+        <div class="signature-modal">
+            <div class="signature-modal-header">
+                <h3><i class="fas fa-signature"></i> 手寫簽名</h3>
+                <button class="signature-modal-close" id="signature-close-btn" title="關閉">&times;</button>
+            </div>
+            <div class="signature-modal-body">
+                <div class="signature-canvas-wrapper">
+                    <canvas id="signature-canvas" width="900" height="300"></canvas>
+                    <div class="signature-canvas-hint">在此簽名（滑鼠或觸控筆）</div>
+                </div>
+            </div>
+            <div class="signature-modal-footer">
+                <button class="sig-btn sig-btn-clear" id="signature-clear-btn"><i class="fas fa-eraser"></i> 清除</button>
+                <div class="sig-footer-right">
+                    <button class="sig-btn sig-btn-cancel" id="signature-cancel-btn"><i class="fas fa-times"></i> 取消</button>
+                    <button class="sig-btn sig-btn-default" id="signature-default-btn" title="將此簽名填入全部 7 天"><i class="fas fa-copy"></i> 預設（7 天）</button>
+                    <button class="sig-btn sig-btn-save" id="signature-save-btn"><i class="fas fa-check"></i> 儲存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="scripts/language.js"></script>
+    <script src="scripts/app.js"></script>
+    <script src="scripts/auth-check.js"></script>
+    <script src="scripts/sidebar.js"></script>
+    <script src="scripts/user-display.js"></script>
+
+    </script>
+
+    <script>
+    (function() {
+        'use strict';
+        if (window.__dsdPageCountBound) return;
+        window.__dsdPageCountBound = true;
+
+        function parseDate(s) {
+            if (!s) return null;
+            s = String(s).trim();
+            var m;
+            m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (m) return new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
+            m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+            if (m) return new Date(parseInt(m[3],10), parseInt(m[2],10)-1, parseInt(m[1],10));
+            m = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+            if (m) return new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
+            return null;
+        }
+
+        function calculateTotalPages(doc) {
+            if (!doc) return 1;
+            var start = null, end = null;
+
+            if (doc.startDate) start = parseDate(doc.startDate);
+            if (doc.endDate) end = parseDate(doc.endDate);
+
+            if ((!start || !end) && doc.period) {
+                var parts = String(doc.period).split('~');
+                if (parts.length >= 2) {
+                    start = start || parseDate(parts[0]);
+                    end = end || parseDate(parts[1]);
+                }
+            }
+
+            if ((!start || !end) && doc.date) {
+                var p2 = String(doc.date).split('~');
+                if (p2.length >= 2) {
+                    start = start || parseDate(p2[0]);
+                    end = end || parseDate(p2[1]);
+                } else {
+                    var single = parseDate(doc.date);
+                    if (single) { start = single; end = single; }
+                }
+            }
+
+            if (!start || !end) return 1;
+            if (end < start) { var t = start; start = end; end = t; }
+
+            var days = Math.round((end - start) / 86400000) + 1;
+            if (days < 1) days = 1;
+
+            var pages = Math.ceil(days / 7);
+            if (pages < 1) pages = 1;
+            return pages;
+        }
+
+        function findMaxUsedPage(docId) {
+            var maxPage = 0;
+            try {
+                var raw = sessionStorage.getItem('dsd_formdata_' + docId);
+                if (raw) {
+                    var data = JSON.parse(raw);
+                    for (var k in data) {
+                        if (!data.hasOwnProperty(k)) continue;
+                        var pn = parseInt(k, 10);
+                        if (!isNaN(pn) && pn > maxPage) maxPage = pn;
+                    }
+                }
+            } catch (e) {}
+            return maxPage;
+        }
+
+        function updateTotalPages() {
+            var sources = ['editDocument', 'currentDiaryRecord', 'currentRecord'];
+            var doc = null;
+
+            for (var i = 0; i < sources.length; i++) {
+                var raw = sessionStorage.getItem(sources[i]);
+                if (!raw) continue;
+                try {
+                    var d = JSON.parse(raw);
+                    if (d && d.id) { doc = d; break; }
+                } catch (e) {}
+            }
+
+            if (!doc) { console.warn('[DSD Pages] No document found'); return; }
+
+            var pages = calculateTotalPages(doc);
+            var maxUsed = findMaxUsedPage(doc.id);
+            var savedTotalPages = parseInt(doc.totalPages, 10) || 0;
+            var finalPages = Math.max(pages, maxUsed, savedTotalPages, 1);
+
+            for (var j = 0; j < sources.length; j++) {
+                var raw2 = sessionStorage.getItem(sources[j]);
+                if (!raw2) continue;
+                try {
+                    var d2 = JSON.parse(raw2);
+                    if (d2 && d2.id && String(d2.id) === String(doc.id)) {
+                        d2.totalPages = finalPages;
+                        sessionStorage.setItem(sources[j], JSON.stringify(d2));
+                    }
+                } catch (e) {}
+            }
+
+            console.log('[DSD Pages] Period:', doc.period || doc.date || '(none)',
+                        '| Calculated:', pages, '| Max Used:', maxUsed, '| Final:', finalPages);
+
+            window.__dsdDesiredTotalPages = finalPages;
+        }
+
+        updateTotalPages();
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', updateTotalPages);
+        }
+    })();
+    </script>
+
+    <script src="scripts/dsd-template-data.js"></script>
+    <script src="scripts/editdsdsitediary.js"></script>
+
+    <script>
+    (function() {
+        'use strict';
+        if (window.__dsdPageCountFixBound) return;
+        window.__dsdPageCountFixBound = true;
+
+        function fixDisplay() {
+            var desired = window.__dsdDesiredTotalPages;
+            if (!desired || desired < 1) return;
+            var totalEl = document.getElementById('total-pages');
+            if (!totalEl) return;
+            var current = parseInt(totalEl.textContent, 10);
+            if (isNaN(current) || current === desired) return;
+            totalEl.textContent = desired;
+            console.log('[DSD Pages] Display corrected:', current, '→', desired);
+        }
+
+        function bindObserver() {
+            var totalEl = document.getElementById('total-pages');
+            if (!totalEl) { setTimeout(bindObserver, 300); return; }
+            setTimeout(fixDisplay, 1500);
+            setTimeout(fixDisplay, 3000);
+            var observer = new MutationObserver(function() { fixDisplay(); });
+            observer.observe(totalEl, { childList: true, characterData: true, subtree: true });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() { setTimeout(bindObserver, 500); });
+        } else {
+            setTimeout(bindObserver, 500);
+        }
+    })();
+    </script>
+
+    <script>
+    (function () {
+        'use strict';
+        if (window.__pageInputBound) return;
+        window.__pageInputBound = true;
+
+        function initPageInput() {
+            var pageInput = document.getElementById('page-input');
+            var currentPageEl = document.getElementById('current-page');
+            var totalPagesEl = document.getElementById('total-pages');
+            var prevBtn = document.getElementById('prev-page');
+            var nextBtn = document.getElementById('next-page');
+            if (!pageInput || !currentPageEl || !totalPagesEl || !prevBtn || !nextBtn) return;
+
+            function getCurrent() {
+                var v = parseInt(currentPageEl.textContent, 10);
+                return isNaN(v) ? 1 : v;
+            }
+            function getTotal() {
+                var v = parseInt(totalPagesEl.textContent, 10);
+                return isNaN(v) ? 1 : v;
+            }
+
+            function updateNavButtons() {
+                var cur = getCurrent();
+                var tot = getTotal();
+                prevBtn.disabled = (cur <= 1);
+                nextBtn.disabled = (cur >= tot);
+                prevBtn.style.opacity = prevBtn.disabled ? '0.5' : '1';
+                nextBtn.style.opacity = nextBtn.disabled ? '0.5' : '1';
+                prevBtn.style.cursor = prevBtn.disabled ? 'not-allowed' : 'pointer';
+                nextBtn.style.cursor = nextBtn.disabled ? 'not-allowed' : 'pointer';
+            }
+
+            function syncInputValue() {
+                if (document.activeElement !== pageInput) pageInput.value = getCurrent();
+                pageInput.max = getTotal();
+                updateNavButtons();
+            }
+
+            var observer = new MutationObserver(syncInputValue);
+            observer.observe(currentPageEl, { characterData: true, childList: true, subtree: true });
+            observer.observe(totalPagesEl, { characterData: true, childList: true, subtree: true });
+            syncInputValue();
+
+            function guardNext(e) {
+                if (getCurrent() >= getTotal()) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                }
+            }
+            function guardPrev(e) {
+                if (getCurrent() <= 1) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                }
+            }
+            nextBtn.addEventListener('click', guardNext, true);
+            prevBtn.addEventListener('click', guardPrev, true);
+
+            function jumpToPage(target) {
+                var current = getCurrent();
+                var total = getTotal();
+                if (isNaN(target) || target < 1 || target > total) {
+                    alert('請輸入 1 到 ' + total + ' 之間的頁碼');
+                    syncInputValue();
+                    return false;
+                }
+                if (target === current) { syncInputValue(); return true; }
+                var steps = Math.abs(target - current);
+                var btn = target > current ? nextBtn : prevBtn;
+                for (var i = 0; i < steps; i++) btn.click();
+                syncInputValue();
+                return true;
+            }
+
+            pageInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.keyCode === 13) {
+                    e.preventDefault();
+                    jumpToPage(parseInt(pageInput.value, 10));
+                    pageInput.blur();
+                } else if (e.key === 'Escape' || e.keyCode === 27) {
+                    e.preventDefault();
+                    syncInputValue();
+                    pageInput.blur();
+                }
+            });
+            pageInput.addEventListener('blur', syncInputValue);
+            pageInput.addEventListener('focus', function () { try { pageInput.select(); } catch (e) {} });
+
+            setInterval(updateNavButtons, 500);
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function () { setTimeout(initPageInput, 800); });
+        } else {
+            setTimeout(initPageInput, 800);
+        }
+    })();
+    </script>
+
+    <!-- ============================================================
+         ★ 表單覆蓋層 v21 — Contract No. 自動從登入 Project ID 帶入
+         ============================================================ -->
+    <script>
+    (function () {
+        'use strict';
+        if (window.__dsdFormOverlayInstalledV20) return;
+        window.__dsdFormOverlayInstalledV20 = true;
+
+        var HK_HOLIDAYS = {
+            '2025-01-01': '元旦',
+            '2025-01-29': '農曆年初一',
+            '2025-01-30': '農曆年初二',
+            '2025-01-31': '農曆年初三',
+            '2025-04-04': '清明節',
+            '2025-04-18': '耶穌受難節',
+            '2025-04-19': '耶穌受難節翌日',
+            '2025-04-21': '復活節星期一',
+            '2025-05-01': '勞動節',
+            '2025-05-05': '佛誕',
+            '2025-05-31': '端午節',
+            '2025-07-01': '香港特別行政區成立紀念日',
+            '2025-10-01': '國慶日',
+            '2025-10-07': '中秋節翌日',
+            '2025-10-29': '重陽節',
+            '2025-12-25': '聖誕節',
+            '2025-12-26': '聖誕節後第一個周日',
+
+            '2026-01-01': '元旦',
+            '2026-02-17': '農曆年初一',
+            '2026-02-18': '農曆年初二',
+            '2026-02-19': '農曆年初三',
+            '2026-04-03': '耶穌受難節',
+            '2026-04-04': '耶穌受難節翌日',
+            '2026-04-06': '清明節翌日',
+            '2026-04-07': '復活節星期一',
+            '2026-05-01': '勞動節',
+            '2026-05-19': '佛誕',
+            '2026-06-19': '端午節',
+            '2026-07-01': '香港特別行政區成立紀念日',
+            '2026-09-25': '中秋節',
+            '2026-09-26': '中秋節翌日',
+            '2026-10-01': '國慶日',
+            '2026-10-19': '重陽節',
+            '2026-12-25': '聖誕節',
+            '2026-12-26': '聖誕節後第一個周日',
+
+            '2027-01-01': '元旦',
+            '2027-02-06': '農曆年初一',
+            '2027-02-08': '農曆年初三',
+            '2027-02-09': '農曆年初四',
+            '2027-03-26': '耶穌受難節',
+            '2027-03-27': '耶穌受難節翌日',
+            '2027-03-29': '復活節星期一',
+            '2027-04-05': '清明節',
+            '2027-05-01': '勞動節',
+            '2027-05-13': '佛誕',
+            '2027-06-09': '端午節',
+            '2027-07-01': '香港特別行政區成立紀念日',
+            '2027-09-16': '中秋節翌日',
+            '2027-10-01': '國慶日',
+            '2027-10-08': '重陽節',
+            '2027-12-25': '聖誕節',
+            '2027-12-27': '聖誕節後第一個周日'
+        };
+
+        var FORM_LAYOUT = {
+            header: {
+                contractno:   { left: '56.00%', top: '6.3%',  width: '8.5%', height: '4%'    },
+                nameOfPlant:  { left: '12.71%', top: '11.3%',  width: '33.37%', height: '3%'    },
+                sorItem:      { left: '56.6%',  top: '12.6%',  width: '11.0%',  height: '4.0%'  },
+                ceNo:         { left: '81.0%',  top: '12.5%',  width: '13.5%',  height: '4.3%'  },
+                taskOrderNo:  { left: '12.6%',  top: '19.0%',  width: '14.5%',  height: '5.2%'  },
+                headerExtraA: { left: '26.37%', top: '19.71%', width: '41.68%', height: '5.21%' },
+                headerExtraB: { left: '75.30%', top: '18.54%', width: '19.35%', height: '5.37%' }
+            },
+            table: {
+                rowTops: [37.35, 44.33, 51.31, 58.29, 65.27, 73.50, 80.70],
+                rowHeight: 6.98,
+                columns: {
+                    date:          { left: '4.6%',   width: '7.6%'   },
+                    weather:       { left: '12.5%',  width: '5.5%'   },
+                    description:   { left: '18.58%', width: '17.34%' },
+                    instructions:  { left: '36.0%',  width: '14.5%'  },
+                    responses:     { left: '50.8%',  width: '11.4%'  },
+                    dsdSig:        { left: '62.5%',  width: '11.4%'  },
+                    contractorSig: { left: '74.2%',  width: '8.1%'   },
+                    remarks:       { left: '82.6%',  width: '11.5%'  }
+                },
+                workerDetail: {
+                    left: '31%',
+                    width: '5.0%',
+                    height: '4.8%',
+                    tops: ['40.5%', '47.5%', '54.5%', '61.5%', '68.5%', '76.7%', '83.9%']
+                }
+            }
+        };
+
+        var FIELD_DEFAULTS = {
+            description: '沒人開工',
+            instructions: '盡快開工',
+            responses: 'ok',
+            weather: '1'
+        };
+
+        var HOLIDAY_TEXT = '假期';
+
+        var FORM_KEY_PREFIX = 'dsd_formdata_';
+        var allFormData = {};
+        var currentDocId = 'default';
+        var currentDocObj = null;
+        var periodStartDate = null;
+        var periodEndDate = null;
+
+        function getCurrentDocObject() {
+            var sources = ['editDocument', 'currentDiaryRecord', 'currentRecord'];
+            for (var i = 0; i < sources.length; i++) {
+                var raw = sessionStorage.getItem(sources[i]);
+                if (!raw) continue;
+                try {
+                    var d = JSON.parse(raw);
+                    if (d && d.id) return d;
+                } catch (e) {}
+            }
+            return null;
+        }
+        function getDocId() {
+            var doc = getCurrentDocObject();
+            return doc ? doc.id : 'default';
+        }
+        function storageKey() { return FORM_KEY_PREFIX + currentDocId; }
+        function loadAllFormData() {
+            try {
+                var raw = sessionStorage.getItem(storageKey());
+                return raw ? JSON.parse(raw) : {};
+            } catch (e) { return {}; }
+        }
+        function persistFormData() {
+            try { sessionStorage.setItem(storageKey(), JSON.stringify(allFormData)); }
+            catch (e) { console.error('[DSD] Failed to save form data', e); }
+        }
+
+        function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+        function parseDateString(s) {
+            if (!s) return null;
+            s = String(s).trim();
+            var m;
+            m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (m) return new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
+            m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+            if (m) return new Date(parseInt(m[3],10), parseInt(m[2],10)-1, parseInt(m[1],10));
+            m = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+            if (m) return new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
+            return null;
+        }
+
+        function parsePeriodStart() {
+            if (!currentDocObj) return null;
+            if (currentDocObj.startDate) {
+                var d = parseDateString(currentDocObj.startDate);
+                if (d) return d;
+            }
+            if (currentDocObj.period) {
+                var parts = String(currentDocObj.period).split('~');
+                if (parts.length >= 1) {
+                    var d2 = parseDateString(parts[0]);
+                    if (d2) return d2;
+                }
+            }
+            if (currentDocObj.date) {
+                var parts2 = String(currentDocObj.date).split('~');
+                var d3 = parseDateString(parts2[0]);
+                if (d3) return d3;
+            }
+            return null;
+        }
+
+        function parsePeriodEnd() {
+            if (!currentDocObj) return null;
+            if (currentDocObj.endDate) {
+                var d = parseDateString(currentDocObj.endDate);
+                if (d) return d;
+            }
+            if (currentDocObj.period) {
+                var parts = String(currentDocObj.period).split('~');
+                if (parts.length >= 2) {
+                    var d2 = parseDateString(parts[1]);
+                    if (d2) return d2;
+                }
+            }
+            if (currentDocObj.date) {
+                var parts2 = String(currentDocObj.date).split('~');
+                if (parts2.length >= 2) {
+                    var d3 = parseDateString(parts2[1]);
+                    if (d3) return d3;
+                }
+            }
+            return null;
+        }
+
+        function getCellDate(pageNum, dayIndex) {
+            if (!periodStartDate) return null;
+            var startDow = periodStartDate.getDay();
+            var offsetToMonday = (startDow === 0) ? -6 : (1 - startDow);
+            var firstMonday = new Date(periodStartDate.getTime());
+            firstMonday.setDate(periodStartDate.getDate() + offsetToMonday);
+            var cellDate = new Date(firstMonday.getTime());
+            cellDate.setDate(firstMonday.getDate() + (pageNum - 1) * 7 + dayIndex);
+            return cellDate;
+        }
+
+        function isInPeriod(cellDate) {
+            if (!cellDate) return false;
+            if (periodStartDate && cellDate < periodStartDate) return false;
+            if (periodEndDate && cellDate > periodEndDate) return false;
+            return true;
+        }
+
+        function getHolidayName(cellDate) {
+            if (!cellDate) return '';
+            var key = cellDate.getFullYear() + '-' + pad2(cellDate.getMonth() + 1) + '-' + pad2(cellDate.getDate());
+            return HK_HOLIDAYS[key] || '';
+        }
+
+        function isHolidayCell(pageNum, dayIndex) {
+            var cellDate = getCellDate(pageNum, dayIndex);
+            if (!isInPeriod(cellDate)) return false;
+            return !!getHolidayName(cellDate);
+        }
+
+        function calcDateForCell(pageNum, dayIndex) {
+            var cellDate = getCellDate(pageNum, dayIndex);
+            if (!isInPeriod(cellDate)) return '';
+            var yy = cellDate.getFullYear() % 100;
+            return pad2(cellDate.getDate()) + '/' + pad2(cellDate.getMonth() + 1) + '/' + pad2(yy);
+        }
+
+        function applyPosition(el, pos) {
+            el.style.position = 'absolute';
+            el.style.left = pos.left;
+            if (pos.top !== undefined) el.style.top = (typeof pos.top === 'number') ? (pos.top + '%') : pos.top;
+            el.style.width = pos.width;
+            if (pos.height !== undefined) el.style.height = (typeof pos.height === 'number') ? (pos.height + '%') : pos.height;
+        }
+
+        function bindFieldEvents(el, pageNum, fieldId) {
+            function save() {
+                if (!allFormData[pageNum]) allFormData[pageNum] = {};
+                allFormData[pageNum][fieldId] = el.value;
+                persistFormData();
+            }
+            el.addEventListener('input', save);
+            el.addEventListener('change', save);
+        }
+
+        function createTextInput(fieldId, pos, value, pageNum, placeholder, extraClass) {
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'pdf-field' + (extraClass ? ' ' + extraClass : '');
+            input.dataset.fieldId = fieldId;
+            input.value = value || '';
+            input.autocomplete = 'off';
+            if (placeholder) input.placeholder = placeholder;
+            applyPosition(input, pos);
+            bindFieldEvents(input, pageNum, fieldId);
+            return input;
+        }
+
+        function createTextArea(fieldId, pos, value, pageNum, extraClass, placeholder) {
+            var ta = document.createElement('textarea');
+            ta.className = 'pdf-field' + (extraClass ? ' ' + extraClass : '');
+            ta.dataset.fieldId = fieldId;
+            ta.value = value || '';
+            ta.spellcheck = false;
+            if (placeholder) ta.placeholder = placeholder;
+            applyPosition(ta, pos);
+            bindFieldEvents(ta, pageNum, fieldId);
+            return ta;
+        }
+
+        function createSignatureCell(fieldId, pos, value, pageNum) {
+            var cell = document.createElement('div');
+            cell.className = 'pdf-field signature-cell';
+            cell.dataset.fieldId = fieldId;
+            cell.dataset.page = pageNum;
+            cell.title = '點擊以簽名';
+            applyPosition(cell, pos);
+            renderSignatureCellContent(cell, value);
+            cell.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+            cell.addEventListener('touchstart', function (e) { e.stopPropagation(); }, { passive: true });
+            cell.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                openSignatureModal(fieldId, pageNum);
+            });
+            return cell;
+        }
+
+        function renderSignatureCellContent(cell, value) {
+            cell.innerHTML = '';
+            if (value && typeof value === 'string' && value.indexOf('data:image') === 0) {
+                var img = document.createElement('img');
+                img.src = value;
+                img.className = 'signature-img';
+                img.alt = '簽名';
+                cell.appendChild(img);
+            } else {
+                var span = document.createElement('span');
+                span.className = 'signature-placeholder';
+                span.textContent = '點擊簽名';
+                cell.appendChild(span);
+            }
+        }
+
+        var sigModal = null, sigCanvas = null, sigCtx = null;
+        var sigTargetFieldId = null, sigTargetPage = null;
+        var sigIsDrawing = false, sigLastX = 0, sigLastY = 0, sigHasContent = false;
+
+        function initSignatureModal() {
+            sigModal = document.getElementById('signature-modal-overlay');
+            sigCanvas = document.getElementById('signature-canvas');
+            if (!sigModal || !sigCanvas) return;
+
+            sigCtx = sigCanvas.getContext('2d');
+            sigCtx.lineWidth = 7;
+            sigCtx.lineCap = 'round';
+            sigCtx.lineJoin = 'round';
+            sigCtx.strokeStyle = '#0a1a5c';
+
+            sigCanvas.addEventListener('mousedown', sigStart);
+            sigCanvas.addEventListener('mousemove', sigMove);
+            sigCanvas.addEventListener('mouseup', sigEnd);
+            sigCanvas.addEventListener('mouseleave', sigEnd);
+            sigCanvas.addEventListener('touchstart', sigStart, { passive: false });
+            sigCanvas.addEventListener('touchmove', sigMove, { passive: false });
+            sigCanvas.addEventListener('touchend', sigEnd, { passive: false });
+
+            document.getElementById('signature-close-btn').addEventListener('click', closeSignatureModal);
+            document.getElementById('signature-cancel-btn').addEventListener('click', closeSignatureModal);
+            document.getElementById('signature-clear-btn').addEventListener('click', clearSignatureCanvas);
+            document.getElementById('signature-save-btn').addEventListener('click', saveSignatureToCurrentRow);
+            document.getElementById('signature-default-btn').addEventListener('click', saveSignatureToAllRows);
+
+            sigModal.addEventListener('click', function (e) { if (e.target === sigModal) closeSignatureModal(); });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && sigModal && sigModal.classList.contains('visible')) closeSignatureModal();
+            });
+        }
+
+        function sigGetCoords(e) {
+            var rect = sigCanvas.getBoundingClientRect();
+            var cx, cy;
+            if (e.touches && e.touches.length > 0) { cx = e.touches[0].clientX; cy = e.touches[0].clientY; }
+            else { cx = e.clientX; cy = e.clientY; }
+            return {
+                x: (cx - rect.left) * (sigCanvas.width / rect.width),
+                y: (cy - rect.top) * (sigCanvas.height / rect.height)
+            };
+        }
+
+        function sigStart(e) {
+            e.preventDefault();
+            sigIsDrawing = true;
+            var p = sigGetCoords(e);
+            sigLastX = p.x; sigLastY = p.y;
+            sigCtx.beginPath();
+            sigCtx.moveTo(p.x, p.y);
+            sigCtx.lineTo(p.x + 0.1, p.y + 0.1);
+            sigCtx.stroke();
+            sigHasContent = true;
+        }
+        function sigMove(e) {
+            if (!sigIsDrawing) return;
+            e.preventDefault();
+            var p = sigGetCoords(e);
+            sigCtx.beginPath();
+            sigCtx.moveTo(sigLastX, sigLastY);
+            sigCtx.lineTo(p.x, p.y);
+            sigCtx.stroke();
+            sigLastX = p.x; sigLastY = p.y;
+        }
+        function sigEnd(e) {
+            if (!sigIsDrawing) return;
+            if (e && e.preventDefault) e.preventDefault();
+            sigIsDrawing = false;
+        }
+        function clearSignatureCanvas() {
+            if (!sigCtx) return;
+            sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+            sigHasContent = false;
+        }
+        function loadExistingSignature(base64) {
+            if (!base64 || typeof base64 !== 'string' || base64.indexOf('data:image') !== 0) {
+                clearSignatureCanvas(); return;
+            }
+            var img = new Image();
+            img.onload = function () {
+                sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+                var ratio = Math.min(sigCanvas.width / img.width, sigCanvas.height / img.height);
+                var w = img.width * ratio, h = img.height * ratio;
+                var x = (sigCanvas.width - w) / 2, y = (sigCanvas.height - h) / 2;
+                sigCtx.drawImage(img, x, y, w, h);
+                sigHasContent = true;
+            };
+            img.onerror = function () { clearSignatureCanvas(); };
+            img.src = base64;
+        }
+        function openSignatureModal(fieldId, pageNum) {
+            if (!sigModal) return;
+            sigTargetFieldId = fieldId;
+            sigTargetPage = pageNum;
+            var pageData = allFormData[pageNum] || {};
+            var existing = pageData[fieldId];
+            clearSignatureCanvas();
+            if (existing) loadExistingSignature(existing);
+            sigModal.classList.add('visible');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeSignatureModal() {
+            if (!sigModal) return;
+            sigModal.classList.remove('visible');
+            document.body.style.overflow = '';
+            clearSignatureCanvas();
+            sigTargetFieldId = null;
+            sigTargetPage = null;
+        }
+        function isCanvasBlank() {
+            if (!sigCanvas || !sigCtx) return true;
+            try {
+                var data = sigCtx.getImageData(0, 0, sigCanvas.width, sigCanvas.height).data;
+                for (var i = 0; i < data.length; i += 4) {
+                    if (data[i + 3] !== 0) return false;
+                }
+            } catch (e) { return false; }
+            return true;
+        }
+        function getSignatureBase64() {
+            if (!sigCanvas) return '';
+            if (isCanvasBlank()) return '';
+            return sigCanvas.toDataURL('image/png');
+        }
+        function saveSignatureToCurrentRow() {
+            if (!sigTargetFieldId || !sigTargetPage) { closeSignatureModal(); return; }
+            var base64 = getSignatureBase64();
+            if (!base64) {
+                if (!confirm('尚未簽名，是否清空此格簽名？')) return;
+                if (!allFormData[sigTargetPage]) allFormData[sigTargetPage] = {};
+                allFormData[sigTargetPage][sigTargetFieldId] = '';
+            } else {
+                if (!allFormData[sigTargetPage]) allFormData[sigTargetPage] = {};
+                allFormData[sigTargetPage][sigTargetFieldId] = base64;
+            }
+            persistFormData();
+            refreshSignatureCell(sigTargetPage, sigTargetFieldId);
+            closeSignatureModal();
+        }
+        function saveSignatureToAllRows() {
+            if (!sigTargetPage) { closeSignatureModal(); return; }
+            var base64 = getSignatureBase64();
+            if (!base64) {
+                if (!confirm('尚未簽名，是否清空全部 7 天簽名？')) return;
+                if (!allFormData[sigTargetPage]) allFormData[sigTargetPage] = {};
+                for (var d = 0; d < 7; d++) allFormData[sigTargetPage]['r' + d + '_contractorSig'] = '';
+            } else {
+                if (!allFormData[sigTargetPage]) allFormData[sigTargetPage] = {};
+                for (var d2 = 0; d2 < 7; d2++) allFormData[sigTargetPage]['r' + d2 + '_contractorSig'] = base64;
+            }
+            persistFormData();
+            for (var d3 = 0; d3 < 7; d3++) refreshSignatureCell(sigTargetPage, 'r' + d3 + '_contractorSig');
+            closeSignatureModal();
+        }
+        function refreshSignatureCell(pageNum, fieldId) {
+            var cell = document.querySelector('.signature-cell[data-field-id="' + fieldId + '"][data-page="' + pageNum + '"]');
+            if (!cell) return;
+            var pageData = allFormData[pageNum] || {};
+            renderSignatureCellContent(cell, pageData[fieldId]);
+        }
+
+        var WEATHER_OPTIONS = [
+            { v: '', t: '' }, { v: '1', t: '1' }, { v: '2', t: '2' },
+            { v: '3', t: '3' }, { v: 'TC', t: 'TC' }, { v: 'RA', t: 'RA' }, { v: 'TS', t: 'TS' }
+        ];
+
+        function createWeatherSelect(fieldId, pos, value, pageNum) {
+            var sel = document.createElement('select');
+            sel.className = 'pdf-field';
+            sel.dataset.fieldId = fieldId;
+            WEATHER_OPTIONS.forEach(function (o) {
+                var opt = document.createElement('option');
+                opt.value = o.v;
+                opt.textContent = o.t;
+                if (o.v === value) opt.selected = true;
+                sel.appendChild(opt);
+            });
+            applyPosition(sel, pos);
+            bindFieldEvents(sel, pageNum, fieldId);
+            return sel;
+        }
+
+        function injectFormFields(pdfPage) {
+            if (!pdfPage || pdfPage.querySelector('.pdf-form-overlay')) return;
+
+            var pageNum = parseInt(pdfPage.dataset.page, 10) || 1;
+            var pageData = allFormData[pageNum] || {};
+
+            var overlay = document.createElement('div');
+            overlay.className = 'pdf-form-overlay';
+            overlay.dataset.page = pageNum;
+
+            /* ★ Contract No. — 自動從登入時的 Project ID 帶入
+               優先順序：已存的值 → sessionStorage.currentProjectId → 空字串 */
+            var defaultContractNo = pageData.contractno
+                                 || sessionStorage.getItem('currentProjectId')
+                                 || '';
+            overlay.appendChild(createTextInput('contractno', FORM_LAYOUT.header.contractno, defaultContractNo, pageNum));
+
+            var defaultPlantName = pageData.nameOfPlant || (currentDocObj && currentDocObj.site) || '';
+            overlay.appendChild(createTextInput('nameOfPlant', FORM_LAYOUT.header.nameOfPlant, defaultPlantName, pageNum));
+            overlay.appendChild(createTextInput('sorItem',     FORM_LAYOUT.header.sorItem,     pageData.sorItem,     pageNum));
+            overlay.appendChild(createTextInput('ceNo',        FORM_LAYOUT.header.ceNo,        pageData.ceNo,        pageNum));
+            var defaultTaskOrderNo = pageData.taskOrderNo || (currentDocObj && currentDocObj.id) || '';
+            overlay.appendChild(createTextInput('taskOrderNo', FORM_LAYOUT.header.taskOrderNo, defaultTaskOrderNo, pageNum));
+            overlay.appendChild(createTextInput('headerExtraA', FORM_LAYOUT.header.headerExtraA, pageData.headerExtraA, pageNum));
+            overlay.appendChild(createTextInput('headerExtraB', FORM_LAYOUT.header.headerExtraB, pageData.headerExtraB, pageNum));
+
+            var cols = FORM_LAYOUT.table.columns;
+            var worker = FORM_LAYOUT.table.workerDetail;
+            var rowTops = FORM_LAYOUT.table.rowTops;
+            var rowH = FORM_LAYOUT.table.rowHeight;
+
+            for (var d = 0; d < 7; d++) {
+                var rowTopNum = rowTops[d];
+                var rowTopStr = rowTopNum + '%';
+
+                var isHoliday = isHolidayCell(pageNum, d);
+                var dateDefault = pageData['r' + d + '_date'] || calcDateForCell(pageNum, d);
+
+                /* Date */
+                overlay.appendChild(createTextInput('r' + d + '_date', {
+                    left: cols.date.left,
+                    top: (rowTopNum + rowH * 0.42) + '%',
+                    width: cols.date.width,
+                    height: (rowH * 0.5) + '%'
+                }, dateDefault, pageNum, 'dd/mm/yy'));
+
+                /* Weather */
+                overlay.appendChild(createWeatherSelect(
+                    'r' + d + '_weather',
+                    { left: cols.weather.left, top: rowTopStr, width: cols.weather.width, height: rowH + '%' },
+                    pageData['r' + d + '_weather'] || FIELD_DEFAULTS.weather, pageNum
+                ));
+
+                /* ★ Brief Description — 假期預設「假期」，否則「沒人開工」，兩者皆可編輯 */
+                var descDefault = pageData['r' + d + '_description'] || (isHoliday ? HOLIDAY_TEXT : FIELD_DEFAULTS.description);
+                overlay.appendChild(createTextArea(
+                    'r' + d + '_description',
+                    { left: cols.description.left, top: rowTopStr, width: cols.description.width, height: rowH + '%' },
+                    descDefault, pageNum
+                ));
+
+                /* Worker detail — 全部顯示，可編輯 */
+                overlay.appendChild(createTextArea(
+                    'r' + d + '_workerDetail',
+                    { left: worker.left, top: worker.tops[d], width: worker.width, height: worker.height },
+                    pageData['r' + d + '_workerDetail'], pageNum, 'worker-detail', '工人'
+                ));
+
+                /* ★ Instructions — 假期預設「假期」，否則「盡快開工」 */
+                var instrDefault = pageData['r' + d + '_instructions'] || (isHoliday ? HOLIDAY_TEXT : FIELD_DEFAULTS.instructions);
+                overlay.appendChild(createTextArea(
+                    'r' + d + '_instructions',
+                    { left: cols.instructions.left, top: rowTopStr, width: cols.instructions.width, height: rowH + '%' },
+                    instrDefault, pageNum
+                ));
+
+                /* ★ Responses — 假期預設「假期」，否則「ok」 */
+                var respDefault = pageData['r' + d + '_responses'] || (isHoliday ? HOLIDAY_TEXT : FIELD_DEFAULTS.responses);
+                overlay.appendChild(createTextArea(
+                    'r' + d + '_responses',
+                    { left: cols.responses.left, top: rowTopStr, width: cols.responses.width, height: rowH + '%' },
+                    respDefault, pageNum
+                ));
+
+                /* DSD 簽名 — 全部顯示 */
+                overlay.appendChild(createTextInput(
+                    'r' + d + '_dsdSig',
+                    { left: cols.dsdSig.left, top: rowTopStr, width: cols.dsdSig.width, height: rowH + '%' },
+                    pageData['r' + d + '_dsdSig'], pageNum
+                ));
+
+                /* 承建商簽名格 — 全部顯示 */
+                overlay.appendChild(createSignatureCell(
+                    'r' + d + '_contractorSig',
+                    { left: cols.contractorSig.left, top: rowTopStr, width: cols.contractorSig.width, height: rowH + '%' },
+                    pageData['r' + d + '_contractorSig'], pageNum
+                ));
+
+                /* Remarks — 全部顯示，可編輯 */
+                overlay.appendChild(createTextArea(
+                    'r' + d + '_remarks',
+                    { left: cols.remarks.left, top: rowTopStr, width: cols.remarks.width, height: rowH + '%' },
+                    pageData['r' + d + '_remarks'], pageNum
+                ));
+            }
+
+            pdfPage.appendChild(overlay);
+
+            /* ★ 渲染完成後，把 DOM 裡的預設值同步到 allFormData */
+            syncDomToFormData(pageNum, overlay);
+        }
+
+        /* ★ 將 DOM 顯示的所有值寫入 allFormData（僅在尚未有值時） */
+        function syncDomToFormData(pageNum, overlay) {
+            if (!allFormData[pageNum]) allFormData[pageNum] = {};
+            var fields = overlay.querySelectorAll('[data-field-id]');
+            fields.forEach(function (el) {
+                var id = el.dataset.fieldId;
+                if (!id) return;
+                /* 已有值就不覆蓋（避免蓋掉使用者輸入） */
+                if (allFormData[pageNum].hasOwnProperty(id)) return;
+
+                if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') {
+                    allFormData[pageNum][id] = el.value;
+                }
+            });
+            persistFormData();
+        }
+
+        function hookSaveButton() {
+            ['save-btn', 'submit-btn'].forEach(function (id) {
+                var btn = document.getElementById(id);
+                if (btn && !btn.dataset.formHookBound) {
+                    btn.dataset.formHookBound = '1';
+                    btn.addEventListener('click', persistFormData);
+                }
+            });
+        }
+
+        function init() {
+            currentDocObj = getCurrentDocObject();
+            currentDocId = getDocId();
+            periodStartDate = parsePeriodStart();
+            periodEndDate = parsePeriodEnd();
+            allFormData = loadAllFormData();
+
+            if (periodStartDate && periodEndDate) {
+                console.log('[DSD Form] Period:', periodStartDate.toDateString(), '~', periodEndDate.toDateString());
+            } else if (periodStartDate) {
+                console.log('[DSD Form] Period 起始日:', periodStartDate.toDateString(), '(無結束日)');
+            } else {
+                console.warn('[DSD Form] 無法解析 Period 起始日，日期不會自動填入');
+            }
+
+            /* ★ Contract No. 來源檢查（僅供 debug） */
+            var pid = sessionStorage.getItem('currentProjectId');
+            console.log('[DSD Form] currentProjectId =', pid || '(none)');
+
+            var pageWrapper = document.getElementById('page-wrapper');
+            if (!pageWrapper) return;
+
+            initSignatureModal();
+
+            var observer = new MutationObserver(function () {
+                var pdfPage = pageWrapper.querySelector('.pdf-page');
+                if (pdfPage) injectFormFields(pdfPage);
+            });
+            observer.observe(pageWrapper, { childList: true, subtree: true });
+
+            var existing = pageWrapper.querySelector('.pdf-page');
+            if (existing) injectFormFields(existing);
+
+            var interval = setInterval(function () {
+                var pdfPage = pageWrapper.querySelector('.pdf-page');
+                if (pdfPage && !pdfPage.querySelector('.pdf-form-overlay')) injectFormFields(pdfPage);
+                hookSaveButton();
+            }, 800);
+            setTimeout(function () { clearInterval(interval); }, 60000);
+
+            hookSaveButton();
+            console.log('[DSD Form] Overlay v21 (Contract No. 自動帶入). Doc:', currentDocId);
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function () { setTimeout(init, 1200); });
+        } else {
+            setTimeout(init, 1200);
+        }
+    })();
+    </script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+            var backBtn = document.getElementById('back-btn');
+            if (backBtn) backBtn.addEventListener('click', function() { window.location.href = 'sitediary.html'; });
+        }, 500);
+    });
+    </script>
+ <!-- ============================================================ -->
+<!-- ★ 文檔鎖定：Submit 後禁止編輯（三個編輯頁通用）v2             -->
+<!-- ============================================================ -->
+<script>
+(function () {
+    'use strict';
+    if (window.__docLockPatchInstalled) return;
+    window.__docLockPatchInstalled = true;
+
+    /* ---------- 判斷文檔是否已提交/鎖定 ----------
+       規則：
+         1. 有 submittedDate → 一定鎖（DSD / LabourWage 提交時會寫入）
+         2. approvalStatus 是 approved / rejected / cancelled → 鎖
+         3. status 不是 draft → 鎖（Safety Inspection 提交後 status = submitted-wsg）
+         4. 其他（含新建時 approvalStatus='pending' 但無 submittedDate）→ 不鎖
+    */
+    function isLocked(doc) {
+        if (!doc) return false;
+
+        var s = doc.status || 'draft';
+        var a = doc.approvalStatus || 'pending';
+
+        /* ★ draft / rejected / reopen 都可編輯 */
+        if (s === 'draft') return false;
+        if (s === 'reopen') return false;   // ★ 加上這行
+        if (a === 'rejected') return false;
+
+        /* 其他情況都鎖定（submitted-wsg / submitted-ig / closed / approved） */
+        return true;
+    }
+
+    /* ---------- 從 sessionStorage 讀當前文檔 ---------- */
+    function readCurrentDoc() {
+        var sources = [
+            'editDocument',
+            'currentInspectionRecord',
+            'currentDiaryRecord',
+            'currentWageRecord',
+            'currentRecord'
+        ];
+        for (var i = 0; i < sources.length; i++) {
+            var raw = sessionStorage.getItem(sources[i]);
+            if (!raw) continue;
+            try {
+                var d = JSON.parse(raw);
+                if (d && typeof d === 'object' && d.id) return d;
+            } catch (e) {}
+        }
+        return null;
+    }
+
+    /* ---------- 注入鎖定樣式（只注一次） ---------- */
+    function injectLockStyle() {
+        if (document.getElementById('document-lock-style')) return;
+        var style = document.createElement('style');
+        style.id = 'document-lock-style';
+        style.textContent = [
+            '.document-locked #draw-canvas,',
+            '.document-locked #pdf-canvas,',
+            '.document-locked .pdf-form-overlay,',
+            '.document-locked .safety-form-overlay,',
+            '.document-locked .text-annotation,',
+            '.document-locked .tick-mark {',
+            '  pointer-events: none !important;',
+            '}',
+
+            '.document-locked .pdf-field,',
+            '.document-locked .pdf-checkbox,',
+            '.document-locked .pdf-sign,',
+            '.document-locked .pdf-image,',
+            '.document-locked .pdf-signature-cell,',
+            '.document-locked .signature-cell {',
+            '  pointer-events: none !important;',
+            '  opacity: 0.85;',
+            '}',
+
+            '.document-locked .tool-btn,',
+            '.document-locked #undo-btn,',
+            '.document-locked #delete-selected-btn,',
+            '.document-locked #lock-btn,',
+            '.document-locked #save-btn,',
+            '.document-locked #cancel-btn,',
+            '.document-locked #submit-btn {',
+            '  display: none !important;',
+            '}',
+
+            '.document-lock-badge {',
+            '  display: inline-flex; align-items: center; gap: 6px;',
+            '  background: #fef3c7; color: #92400e;',
+            '  padding: 6px 14px; border-radius: 20px;',
+            '  font-weight: 600; font-size: 0.85rem;',
+            '  margin-left: 12px;',
+            '  box-shadow: 0 1px 3px rgba(0,0,0,0.05);',
+            '}'
+        ].join('\n');
+        document.head.appendChild(style);
+    }
+
+    /* ---------- 套用鎖定 ---------- */
+    function applyLock(doc) {
+        if (document.body.classList.contains('document-locked')) return;
+
+        injectLockStyle();
+        document.body.classList.add('document-locked');
+
+        if (!document.querySelector('.document-lock-badge')) {
+            var target =
+                document.querySelector('.doc-title-section h2') ||
+                document.querySelector('.document-header h2') ||
+                document.querySelector('.document-header');
+
+            if (target) {
+                var badge = document.createElement('span');
+                badge.className = 'document-lock-badge';
+                badge.innerHTML = '<i class="fas fa-lock"></i> Read-only (submitted)';
+                target.appendChild(badge);
+            }
+        }
+
+        document.querySelectorAll('input, textarea, select').forEach(function (el) {
+            el.disabled = true;
+        });
+
+        var obs = new MutationObserver(function (mutations) {
+            mutations.forEach(function (m) {
+                m.addedNodes.forEach(function (n) {
+                    if (n.nodeType !== 1) return;
+                    if (n.matches && n.matches('input, textarea, select')) {
+                        n.disabled = true;
+                    }
+                    if (n.querySelectorAll) {
+                        n.querySelectorAll('input, textarea, select').forEach(function (el) {
+                            el.disabled = true;
+                        });
+                    }
+                });
+            });
+        });
+        obs.observe(document.body, { childList: true, subtree: true });
+
+        console.log('[DocLock] 🔒 文檔已鎖定，狀態 =',
+                    (doc && (doc.approvalStatus || doc.status)) || 'submitted',
+                    doc && doc.submittedDate ? '| submittedDate=' + doc.submittedDate : '');
+    }
+
+    /* ---------- 初次載入檢查 ---------- */
+    function checkOnLoad() {
+        var doc = readCurrentDoc();
+        if (doc && isLocked(doc)) {
+            applyLock(doc);
+        } else if (doc) {
+            console.log('[DocLock] 未鎖定（草稿狀態）|',
+                        'status =', doc.status,
+                        '| approvalStatus =', doc.approvalStatus,
+                        '| submittedDate =', doc.submittedDate || '(none)');
+        }
+    }
+
+    /* ---------- 監聽 Submit 按鈕 ---------- */
+    document.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('#submit-btn') : null;
+        if (!btn) return;
+
+        setTimeout(function () {
+            var doc = readCurrentDoc();
+            if (doc && isLocked(doc)) applyLock(doc);
+        }, 400);
+
+        setTimeout(function () {
+            var doc = readCurrentDoc();
+            if (doc && isLocked(doc)) applyLock(doc);
+        }, 2000);
+    }, false);
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', checkOnLoad);
+    } else {
+        checkOnLoad();
+    }
+
+    setTimeout(checkOnLoad, 1200);
+    setTimeout(checkOnLoad, 2500);
+})();
+</script>
+<!-- ============================================================ -->
+<!-- ★ Submit / Approve / Reject 需密碼驗證 (v2 - 修復 disabled)   -->
+<!-- ============================================================ -->
+<script>
+(function () {
+    'use strict';
+    if (window.__actionPasswordPatchInstalled) return;
+    window.__actionPasswordPatchInstalled = true;
+
+    var ACTION_BUTTONS = {
+        'submit-btn':  { label: 'Submit'  },
+        'approve-btn': { label: 'Approve' },
+        'reject-btn':  { label: 'Reject'  }
+    };
+
+    function injectStyle() {
+        if (document.getElementById('action-pwd-style')) return;
+        var style = document.createElement('style');
+        style.id = 'action-pwd-style';
+        style.textContent = [
+            '.action-pwd-overlay {',
+            '  position: fixed; top: 0; left: 0; width: 100%; height: 100%;',
+            '  background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(2px);',
+            '  z-index: 999999; display: none; justify-content: center; align-items: center;',
+            '}',
+            '.action-pwd-overlay.visible { display: flex; }',
+            '.action-pwd-modal {',
+            '  background: #fff; border-radius: 12px; width: 420px; max-width: 92vw;',
+            '  box-shadow: 0 20px 60px rgba(0,0,0,0.35); overflow: hidden;',
+            '  animation: actionPwdSlide 0.18s ease-out;',
+            '}',
+            '@keyframes actionPwdSlide {',
+            '  from { transform: scale(0.95); opacity: 0; }',
+            '  to   { transform: scale(1);    opacity: 1; }',
+            '}',
+            '.action-pwd-header {',
+            '  padding: 14px 20px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0;',
+            '  display: flex; justify-content: space-between; align-items: center;',
+            '}',
+            '.action-pwd-header h3 {',
+            '  color: #1e293b; font-size: 1.05rem; font-weight: 600;',
+            '  display: flex; align-items: center; gap: 8px; margin: 0;',
+            '}',
+            '.action-pwd-body { padding: 20px; }',
+            '.action-pwd-desc {',
+            '  font-size: 0.9rem; color: #475569; margin-bottom: 14px; line-height: 1.5;',
+            '}',
+            '.action-pwd-desc strong { color: #1e40af; }',
+            '.action-pwd-input-wrap { position: relative; }',
+            '.action-pwd-input {',
+            '  width: 100%; padding: 10px 40px 10px 12px;',
+            '  border: 1px solid #cbd5e1; border-radius: 8px;',
+            '  font-size: 0.95rem; font-family: inherit; outline: none;',
+            '  transition: border-color 0.15s, box-shadow 0.15s;',
+            '  pointer-events: auto !important;',
+            '}',
+            '.action-pwd-input:focus {',
+            '  border-color: #3498db;',
+            '  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);',
+            '}',
+            '.action-pwd-toggle {',
+            '  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);',
+            '  background: transparent; border: none; cursor: pointer;',
+            '  color: #94a3b8; padding: 4px 6px; font-size: 0.95rem;',
+            '}',
+            '.action-pwd-toggle:hover { color: #475569; }',
+            '.action-pwd-error {',
+            '  color: #dc2626; font-size: 0.82rem; margin-top: 8px;',
+            '  min-height: 1.1em; display: none;',
+            '}',
+            '.action-pwd-error.visible { display: block; }',
+            '.action-pwd-footer {',
+            '  padding: 12px 20px; background: #f8fafc;',
+            '  border-top: 1px solid #e2e8f0;',
+            '  display: flex; justify-content: flex-end; gap: 8px;',
+            '}',
+            '.action-pwd-btn {',
+            '  padding: 8px 18px; border: none; border-radius: 6px;',
+            '  font-weight: 600; cursor: pointer; font-size: 0.9rem;',
+            '  display: inline-flex; align-items: center; gap: 6px;',
+            '  transition: all 0.2s;',
+            '}',
+            '.action-pwd-btn:hover { transform: translateY(-1px); }',
+            '.action-pwd-btn-cancel { background: #e2e8f0; color: #334155; }',
+            '.action-pwd-btn-cancel:hover { background: #cbd5e1; }',
+            '.action-pwd-btn-confirm { background: #10b981; color: #fff; }',
+            '.action-pwd-btn-confirm:hover { background: #059669; }',
+            '.action-pwd-btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }',
+            /* ★ 讓 document-locked 不要影響此 modal 內的輸入框 */
+            'body.document-locked #action-pwd-overlay input {',
+            '  pointer-events: auto !important;',
+            '  opacity: 1 !important;',
+            '}'
+        ].join('\n');
+        document.head.appendChild(style);
+    }
+
+    var modalEl, inputEl, errorEl, confirmBtn, cancelBtn, toggleBtn, descEl;
+    var pendingBtn = null;
+    var bypass = false;
+
+    function ensureModal() {
+        if (modalEl) return;
+        injectStyle();
+
+        modalEl = document.createElement('div');
+        modalEl.className = 'action-pwd-overlay';
+        modalEl.id = 'action-pwd-overlay';
+        modalEl.setAttribute('data-lock-exempt', 'true');   /* ★ 標記，供鎖定補丁識別 */
+        modalEl.innerHTML =
+            '<div class="action-pwd-modal">' +
+                '<div class="action-pwd-header">' +
+                    '<h3><i class="fas fa-lock"></i> Confirm Password</h3>' +
+                    '<button class="action-pwd-btn-cancel" id="action-pwd-close" style="background:transparent;color:#64748b;font-size:1.4rem;padding:0 6px;line-height:1;">&times;</button>' +
+                '</div>' +
+                '<div class="action-pwd-body">' +
+                    '<div class="action-pwd-desc" id="action-pwd-desc">Please enter your password to continue.</div>' +
+                    '<div class="action-pwd-input-wrap">' +
+                        '<input type="password" class="action-pwd-input" id="action-pwd-input" placeholder="Password" autocomplete="off" data-lock-exempt="true">' +
+                        '<button type="button" class="action-pwd-toggle" id="action-pwd-toggle" title="Show/Hide" data-lock-exempt="true"><i class="fas fa-eye"></i></button>' +
+                    '</div>' +
+                    '<div class="action-pwd-error" id="action-pwd-error"></div>' +
+                '</div>' +
+                '<div class="action-pwd-footer">' +
+                    '<button class="action-pwd-btn action-pwd-btn-cancel" id="action-pwd-cancel" data-lock-exempt="true"><i class="fas fa-times"></i> Cancel</button>' +
+                    '<button class="action-pwd-btn action-pwd-btn-confirm" id="action-pwd-confirm" data-lock-exempt="true"><i class="fas fa-check"></i> Confirm</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(modalEl);
+
+        inputEl    = document.getElementById('action-pwd-input');
+        errorEl    = document.getElementById('action-pwd-error');
+        confirmBtn = document.getElementById('action-pwd-confirm');
+        cancelBtn  = document.getElementById('action-pwd-cancel');
+        toggleBtn  = document.getElementById('action-pwd-toggle');
+        descEl     = document.getElementById('action-pwd-desc');
+
+        /* ★ 監聽 input 的 disabled 屬性變化：如果被外部補丁禁用，立即恢復 */
+        var inputGuardObs = new MutationObserver(function () {
+            if (inputEl.disabled) inputEl.disabled = false;
+            if (inputEl.readOnly) inputEl.readOnly = false;
+        });
+        inputGuardObs.observe(inputEl, {
+            attributes: true,
+            attributeFilter: ['disabled', 'readonly']
+        });
+
+        /* ★ 監聽 modal 整體，避免子元素被 disabled */
+        var modalGuardObs = new MutationObserver(function () {
+            modalEl.querySelectorAll('input, textarea, select, button').forEach(function (el) {
+                if (el.disabled) el.disabled = false;
+            });
+        });
+        modalGuardObs.observe(modalEl, {
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['disabled']
+        });
+
+        cancelBtn.addEventListener('click', closeModal);
+        document.getElementById('action-pwd-close').addEventListener('click', closeModal);
+
+        toggleBtn.addEventListener('click', function () {
+            var t = inputEl.type === 'password' ? 'text' : 'password';
+            inputEl.type = t;
+            var icon = toggleBtn.querySelector('i');
+            if (icon) {
+                icon.classList.toggle('fa-eye');
+                icon.classList.toggle('fa-eye-slash');
+            }
+        });
+
+        confirmBtn.addEventListener('click', tryConfirm);
+        inputEl.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); tryConfirm(); }
+            else if (e.key === 'Escape') { e.preventDefault(); closeModal(); }
+        });
+
+        modalEl.addEventListener('click', function (e) {
+            if (e.target === modalEl) closeModal();
+        });
+    }
+
+    function getSession() {
+        try { return JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); }
+        catch (e) { return {}; }
+    }
+
+    function findCurrentUser() {
+        var s = getSession();
+        var users = [];
+        try { users = JSON.parse(localStorage.getItem('dwss_users_db') || '[]'); } catch (e) {}
+        if (!Array.isArray(users)) return null;
+
+        if (s.userId != null) {
+            for (var i = 0; i < users.length; i++) {
+                if (String(users[i].id) === String(s.userId)) return users[i];
+            }
+        }
+        if (s.userEmail) {
+            for (var j = 0; j < users.length; j++) {
+                if (users[j].email && users[j].email.toLowerCase() === String(s.userEmail).toLowerCase()) {
+                    return users[j];
+                }
+            }
+        }
+        return null;
+    }
+
+    function verifyPassword(pwd) {
+        var user = findCurrentUser();
+        if (!user) return false;
+        return String(user.password) === String(pwd);
+    }
+
+    function openModal(btn) {
+        ensureModal();
+        pendingBtn = btn;
+
+        /* ★ 強制啟用 modal 內所有元素（避免被外部補丁禁用） */
+        inputEl.disabled = false;
+        inputEl.readOnly = false;
+        inputEl.style.pointerEvents = 'auto';
+        inputEl.style.opacity = '1';
+        confirmBtn.disabled = false;
+        cancelBtn.disabled = false;
+
+        var btnId = btn.id;
+        var info = ACTION_BUTTONS[btnId] || { label: 'Action' };
+        descEl.innerHTML = 'Please enter your password to confirm the <strong>' +
+                           info.label + '</strong> action.';
+
+        inputEl.value = '';
+        inputEl.type = 'password';
+        errorEl.classList.remove('visible');
+        errorEl.textContent = '';
+        var icon = toggleBtn.querySelector('i');
+        if (icon) { icon.classList.add('fa-eye'); icon.classList.remove('fa-eye-slash'); }
+
+        modalEl.classList.add('visible');
+        document.body.style.overflow = 'hidden';
+
+        /* ★ 延遲兩次再啟用一次（給其他 observer 一個時間窗口） */
+        setTimeout(function () {
+            inputEl.disabled = false;
+            inputEl.readOnly = false;
+            try { inputEl.focus(); } catch (e) {}
+        }, 30);
+        setTimeout(function () {
+            inputEl.disabled = false;
+            inputEl.readOnly = false;
+        }, 150);
+    }
+
+    function closeModal() {
+        if (!modalEl) return;
+        modalEl.classList.remove('visible');
+        document.body.style.overflow = '';
+        inputEl.value = '';
+        errorEl.classList.remove('visible');
+        errorEl.textContent = '';
+        pendingBtn = null;
+    }
+
+    function tryConfirm() {
+        var pwd = inputEl.value;
+        if (!pwd) {
+            errorEl.textContent = 'Please enter your password.';
+            errorEl.classList.add('visible');
+            return;
+        }
+
+        if (!verifyPassword(pwd)) {
+            errorEl.textContent = '❌ Incorrect password. Please try again.';
+            errorEl.classList.add('visible');
+            inputEl.value = '';
+            try { inputEl.focus(); } catch (e) {}
+            return;
+        }
+
+        var btn = pendingBtn;
+
+        modalEl.classList.remove('visible');
+        document.body.style.overflow = '';
+        inputEl.value = '';
+        errorEl.classList.remove('visible');
+        pendingBtn = null;
+
+        if (!btn) return;
+
+        bypass = true;
+        try { btn.click(); }
+        finally { setTimeout(function () { bypass = false; }, 80); }
+    }
+
+    /* ---------- 攔截 submit / approve / reject 按鈕（capture 階段）---------- */
+    document.addEventListener('click', function (e) {
+        if (bypass) return;
+
+        var btn = e.target && e.target.closest
+            ? e.target.closest('#submit-btn, #approve-btn, #reject-btn')
+            : null;
+        if (!btn) return;
+
+        if (btn.disabled) return;
+        var st = window.getComputedStyle(btn);
+        if (st.display === 'none' || st.visibility === 'hidden') return;
+
+        e.stopImmediatePropagation();
+        e.preventDefault();
+
+        openModal(btn);
+    }, true);
+
+    console.log('[ActionPwd] ✓ 已啟用（v2）— Submit / Approve / Reject 需密碼驗證');
+})();
+</script>
+</body>
+</html>

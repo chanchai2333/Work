@@ -1,6 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html style="visibility:hidden" lang="en">
 <head>
+<script>
+(function () {
+  try {
+    var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+    if (s && s.isLoggedIn) { document.documentElement.style.visibility = 'visible'; return; }
+  } catch (e) {}
+  document.documentElement.style.visibility = 'hidden';
+  window.location.replace('login.html');
+})();
+</script>
+
+    <script src="scripts/cloud-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n="platform">AEL DWSS - Labour Wage</title>
@@ -23,7 +35,7 @@
             <div class="header-controls">
                 <div class="user-date-row">
                     <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
-                    <button class="user-btn"><i class="fas fa-user"></i> <span data-i18n="user.name"></span></button>
+                    <button class="user-btn"><i class="fas fa-user"></i> <span class="header-username"></span></button>
                 </div>
             </div>
         </div>
@@ -39,8 +51,14 @@
             
             <div class="diary-controls-row">
                 <div class="diary-stats">
-                    <div class="stat-card"><div class="label">Total Records</div><div class="value" id="total-records-count">0</div></div>
-                    <div class="stat-card"><div class="label">This Month</div><div class="value" id="month-count">0</div></div>
+                    <div class="stat-card"><div class="label">Total Records</div><div class="value" id="total-records-count">…</div></div>
+                    <div class="stat-card"><div class="label">This Month</div><div class="value" id="month-count">…</div></div>
+                    <script>
+                    try {
+                        var c = JSON.parse(sessionStorage.getItem('dwss_page_counts') || '{}');
+                        if (c.wageFiltered && c.wage) document.getElementById('total-records-count').textContent = c.wage;
+                    } catch (e) {}
+                    </script>
                 </div>
                 
                 <section class="filters-section">
@@ -339,6 +357,24 @@
                 }
             } catch (e) { /* ignore */ }
 
+            if (Array.isArray(window.__dwssWageRecords)) {
+                window.__dwssWageRecords.forEach(function (item) {
+                    if (item && item.id != null) {
+                        var idStr = String(item.id);
+                        if (idStr.indexOf(ID_PREFIX) === 0 && !seen[idStr]) {
+                            seen[idStr] = true;
+                            ids.push(idStr);
+                        }
+                    }
+                });
+            }
+            document.querySelectorAll('td').forEach(function (cell) {
+                var txt = (cell.textContent || '').replace(/\s+/g, '');
+                if (txt.indexOf(ID_PREFIX) === 0 && !seen[txt]) {
+                    seen[txt] = true;
+                    ids.push(txt);
+                }
+            });
             return ids;
         }
 
@@ -550,7 +586,19 @@
             var modal = document.getElementById('history-modal');
             var content = document.getElementById('history-content');
             if (!modal || !content) return;
+            content.innerHTML = '<div style="padding:20px;text-align:center;color:#64748b;">Loading history...</div>';
+            modal.style.display = 'flex';
 
+            fetch('/api/record?collection=wage&id=' + encodeURIComponent(wageId), { cache: 'no-store' })
+                .then(function (res) { return res.ok ? res.json() : null; })
+                .then(function (full) {
+                    if (full && full.id) record = full;
+                    renderWageHistory(record, content);
+                })
+                .catch(function () { renderWageHistory(record, content); });
+        }
+
+        function renderWageHistory(record, content) {
             var history = Array.isArray(record.statusHistory) ? record.statusHistory : [];
             var html = '<div style="margin-bottom: 16px; padding: 12px 16px; background: #f8fafc; border-radius: 8px;"><div style="font-size: 0.8rem; color: #64748b; margin-bottom: 4px;">Document ID</div><div style="font-weight: 700; color: #1e40af;">' + escapeHtml(record.id) + '</div></div>';
 
@@ -567,7 +615,6 @@
                 html += '</tbody></table>';
             }
             content.innerHTML = html;
-            modal.style.display = 'flex';
         }
 
         function closeHistory() {

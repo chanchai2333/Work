@@ -1,6 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html style="visibility:hidden" lang="en">
 <head>
+<script>
+(function () {
+  try {
+    var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+    if (s && s.isLoggedIn) { document.documentElement.style.visibility = 'visible'; return; }
+  } catch (e) {}
+  document.documentElement.style.visibility = 'hidden';
+  window.location.replace('login.html');
+})();
+</script>
+
+    <script src="scripts/cloud-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n="dashboard">Dashboard - AEL DWSS</title>
@@ -834,41 +846,6 @@
         .main-content > footer {
             margin-top: 10px;     
         }
-
-                /* ============================================================ */
-        /* ★ 終極側邊欄防遮擋補丁 */
-        /* ============================================================ */
-        body {
-            overflow-x: hidden !important; /* 防止出現橫向滾動條 */
-        }
-
-        /* 強制主內容向右推開，並使用 border-box 讓 padding 不會撐破寬度 */
-        .main-content {
-            margin-left: 260px !important; /* 預設展開寬度 */
-            width: calc(100% - 260px) !important;
-            box-sizing: border-box !important;
-            transition: margin-left 0.3s ease, width 0.3s ease !important;
-        }
-
-        /* 當側邊欄收合時，主內容自動調整 */
-        .sidebar.collapsed + .main-content,
-        .sidebar.collapsed ~ .main-content,
-        body.sidebar-collapsed .main-content {
-            margin-left: 70px !important; /* 收合寬度 */
-            width: calc(100% - 70px) !important;
-        }
-
-        /* 確保側邊欄本身不會被壓縮，且層級最高 */
-        .sidebar {
-            flex-shrink: 0 !important;
-            z-index: 1000 !important;
-            width: 260px;
-            transition: width 0.3s ease !important;
-        }
-        .sidebar.collapsed {
-            width: 70px;
-        }
-
     </style>
 </head>
 <body>
@@ -885,7 +862,7 @@
                         <span id="current-date">September 17, 2025</span>
                     </div>
                     <button class="user-btn">
-                        <i class="fas fa-user"></i> <span data-i18n="user.name"></span>
+                        <i class="fas fa-user"></i> <span class="header-username"></span>
                     </button>
                 </div>
             </div>
@@ -1074,6 +1051,29 @@
                     </div>
                 </div>
             </div>
+            <script>
+            (function () {
+                function readSnap() {
+                    try { return JSON.parse(sessionStorage.getItem('dwss_dashboard_snap') || '{}'); }
+                    catch (e) { return {}; }
+                }
+                function paint() {
+                    var snap = readSnap();
+                    if (!snap.filtered) return;
+                    var map = {
+                        'diary-total': snap.diaryTotal,
+                        'inspection-total': snap.inspectionTotal,
+                        'wage-total': snap.wageTotal
+                    };
+                    Object.keys(map).forEach(function (id) {
+                        var el = document.getElementById(id);
+                        if (el && map[id] != null && map[id] !== '') el.textContent = map[id];
+                    });
+                }
+                if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paint);
+                else paint();
+            })();
+            </script>
 
             <div class="trend-charts">
                 <!-- Site Diary 趨勢圖 -->
@@ -1379,6 +1379,54 @@
          ============================================================ -->
     <script>
     (function() {
+        try {
+            var early = JSON.parse(sessionStorage.getItem('dwss_dashboard_snap') || '{}');
+            function earlyPaint(id, value) {
+                var el = document.getElementById(id);
+                if (el && value != null && value !== '') el.textContent = value;
+            }
+            function restoreSnap() {
+                earlyPaint('diary-total', early.diaryTotal);
+                earlyPaint('diary-closed', early.diaryClosed);
+                earlyPaint('diary-pending-close', early.diaryPending);
+                earlyPaint('diary-closed-percent', early.diaryPercent);
+                earlyPaint('diary-last-submitted', early.diaryLastSubmitted);
+                earlyPaint('diary-last-passed', early.diaryLastPassed);
+                earlyPaint('inspection-total', early.inspectionTotal);
+                earlyPaint('inspection-closed', early.inspectionClosed);
+                earlyPaint('inspection-pending-close', early.inspectionPending);
+                earlyPaint('inspection-closed-percent', early.inspectionPercent);
+                earlyPaint('wage-total', early.wageTotal);
+                earlyPaint('wage-closed', early.wageClosed);
+                earlyPaint('wage-pending-close', early.wagePending);
+                earlyPaint('wage-closed-percent', early.wagePercent);
+            }
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', restoreSnap);
+            else restoreSnap();
+        } catch (e) {}
+        function runDashboard() {
+        var lastSnap = {};
+        try { lastSnap = JSON.parse(sessionStorage.getItem('dwss_dashboard_snap') || '{}'); } catch (e) {}
+        function paint(id, value) {
+            var el = document.getElementById(id);
+            if (el && value != null && value !== '') el.textContent = value;
+        }
+        paint('diary-total', lastSnap.diaryTotal);
+        paint('safety-total', lastSnap.safetyTotal);
+        paint('wage-total', lastSnap.wageTotal);
+
+        function remember() {
+            var d = document.getElementById('diary-total');
+            var s = document.getElementById('safety-total');
+            var w = document.getElementById('wage-total');
+            var snap = {
+                diaryTotal: d ? d.textContent : lastSnap.diaryTotal,
+                safetyTotal: s ? s.textContent : lastSnap.safetyTotal,
+                wageTotal: w ? w.textContent : lastSnap.wageTotal
+            };
+            if (snap.diaryTotal === '0' && lastSnap.diaryTotal && lastSnap.diaryTotal !== '0') snap.diaryTotal = lastSnap.diaryTotal;
+            sessionStorage.setItem('dwss_dashboard_snap', JSON.stringify(snap));
+        }
 
         // ★ NEW: current project helper
         function getCurrentProjectId() {
@@ -1409,20 +1457,19 @@
         function filterByCurrentProject(records) {
             if (!Array.isArray(records)) return [];
             var pid = getCurrentProjectId();
-            if (!pid) return records; // no login → show all (or return [] if you prefer)
+            if (!pid) return [];
             return records.filter(function (r) {
                 if (!r) return false;
-                // Records without a project field → still include (legacy data)
-                if (!r.project) return true;
-                return String(r.project) === String(pid);
+                return String(r.project || '') === String(pid);
             });
         }
 
         // Keep the original getData helper
         function getData(key, defaultData) {
-            const stored = localStorage.getItem(key);
-            if (stored) {
-                try { return JSON.parse(stored); } catch(e) { return defaultData; }
+            if (window.__dwssDash && Array.isArray(window.__dwssDash[key])) return window.__dwssDash[key];
+            if (window.DWSS_Storage && typeof window.DWSS_Storage.getCache === 'function') {
+                var cached = window.DWSS_Storage.getCache(key);
+                if (Array.isArray(cached) && cached.length) return cached;
             }
             return defaultData;
         }
@@ -1883,6 +1930,102 @@
                 }
                 waitForWageChart();
             })();
+        }
+        function paintSummaryModule(prefix, mod, barId) {
+            if (!mod) return;
+            var set = function (id, val) {
+                var el = document.getElementById(id);
+                if (el) el.textContent = val;
+            };
+            set(prefix + '-total', mod.total);
+            set(prefix + '-closed', mod.closed);
+            set(prefix + '-pending-close', mod.pending);
+            set(prefix + '-closed-percent', mod.percent + '%');
+            set(prefix + '-last-submitted', mod.lastSubmitted || 'N/A');
+            set(prefix + '-last-passed', mod.lastPassed || 'N/A');
+            var bar = document.getElementById(barId);
+            if (bar) bar.style.setProperty('width', mod.percent + '%', 'important');
+        }
+
+        function paintSummaryChart(canvasId, yearSelectId, mod, color) {
+            if (!mod || typeof Chart === 'undefined') return;
+            var canvas = document.getElementById(canvasId);
+            var sel = document.getElementById(yearSelectId);
+            if (!canvas) return;
+            var years = (mod.years && mod.years.length) ? mod.years : [String(new Date().getFullYear())];
+            if (sel && !sel.dataset.summaryBound) {
+                sel.innerHTML = '';
+                years.forEach(function (y) {
+                    var opt = document.createElement('option');
+                    opt.value = y; opt.textContent = y;
+                    sel.appendChild(opt);
+                });
+                var current = String(new Date().getFullYear());
+                sel.value = years.indexOf(current) !== -1 ? current : years[years.length - 1];
+                sel.dataset.summaryBound = '1';
+                sel.addEventListener('change', function () {
+                    paintSummaryChart(canvasId, yearSelectId, mod, color);
+                });
+            }
+            var year = sel ? sel.value : years[years.length - 1];
+            var data = (mod.monthly && mod.monthly[year]) ? mod.monthly[year] : [0,0,0,0,0,0,0,0,0,0,0,0];
+            var existing = Chart.getChart(canvasId);
+            if (existing) existing.destroy();
+            new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+                    datasets: [{
+                        label: 'Submitted',
+                        data: data,
+                        borderColor: color,
+                        backgroundColor: color === '#e74c3c' ? 'rgba(231,76,60,0.1)' : (color === '#8e44ad' ? 'rgba(142,68,173,0.1)' : 'rgba(52,152,219,0.1)'),
+                        tension: 0.3,
+                        fill: true,
+                        pointBackgroundColor: color
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+            });
+        }
+
+        function loadDashboardSummary() {
+            var projectId = sessionStorage.getItem('currentProjectId') || '';
+            var url = '/api/dashboard/summary' + (projectId ? ('?projectId=' + encodeURIComponent(projectId)) : '');
+            fetch(url, { cache: 'no-store' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (summary) {
+                    if (!summary || !summary.diary) { runDashboard(); return; }
+                    paintSummaryModule('diary', summary.diary, 'diary-progress-bar');
+                    paintSummaryModule('inspection', summary.inspection, 'inspection-progress-bar');
+                    paintSummaryModule('wage', summary.wage, 'wage-progress-bar');
+                    paintSummaryChart('siteDiaryChart', 'diary-year-select', summary.diary, '#3498db');
+                    paintSummaryChart('safetyInspectionChart', 'inspection-year-select', summary.inspection, '#e74c3c');
+                    paintSummaryChart('labourWageChart', 'wage-year-select', summary.wage, '#8e44ad');
+                    try {
+                        sessionStorage.setItem('dwss_dashboard_snap', JSON.stringify({
+                            filtered: true,
+                            diaryTotal: summary.diary.total,
+                            diaryClosed: summary.diary.closed,
+                            diaryPending: summary.diary.pending,
+                            diaryPercent: summary.diary.percent + '%',
+                            diaryLastSubmitted: summary.diary.lastSubmitted,
+                            diaryLastPassed: summary.diary.lastPassed,
+                            inspectionTotal: summary.inspection.total,
+                            inspectionClosed: summary.inspection.closed,
+                            inspectionPending: summary.inspection.pending,
+                            inspectionPercent: summary.inspection.percent + '%',
+                            wageTotal: summary.wage.total,
+                            wageClosed: summary.wage.closed,
+                            wagePending: summary.wage.pending,
+                            wagePercent: summary.wage.percent + '%'
+                        }));
+                    } catch (e) {}
+                })
+                .catch(function () { runDashboard(); });
+        }
+
+        loadDashboardSummary();
         })();
 
         (function handleOverdueTrend() {
@@ -1890,25 +2033,23 @@
 
     // 讀取資料
     function loadAll() {
-        const aliases = {
-            siteDiaryData: ['siteDiaryData'],
-            inspectionData: ['inspectionData', 'safetyInspectionData'],
-            wageData: ['wageData', 'labourWageData']
-        };
-        const out = { diary: [], inspection: [], wage: [] };
-        Object.keys(aliases).forEach((k, idx) => {
-            for (const key of aliases[k]) {
-                const raw = localStorage.getItem(key);
-                if (!raw) continue;
-                try {
-                    const arr = JSON.parse(raw);
-                    if (Array.isArray(arr) && arr.length) {
-                        out[['diary','inspection','wage'][idx]] = arr;
-                        break;
-                    }
-                } catch(e) {}
-            }
-        });
+        function byProject(list) {
+            var pid = sessionStorage.getItem('currentProjectId');
+            if (!pid || !Array.isArray(list)) return [];
+            return list.filter(function (r) { return r && String(r.project || '') === String(pid); });
+        }
+        var out = { diary: [], inspection: [], wage: [] };
+        if (window.__dwssDash) {
+            out.diary = byProject(window.__dwssDash.siteDiaryData);
+            out.inspection = byProject(window.__dwssDash.inspectionData);
+            out.wage = byProject(window.__dwssDash.wageData);
+            return out;
+        }
+        if (window.DWSS_Storage && typeof window.DWSS_Storage.getCache === 'function') {
+            out.diary = byProject(window.DWSS_Storage.getCache('siteDiaryData'));
+            out.inspection = byProject(window.DWSS_Storage.getCache('inspectionData'));
+            out.wage = byProject(window.DWSS_Storage.getCache('wageData'));
+        }
         return out;
     }
 
@@ -2150,6 +2291,10 @@
 
     function waitForChart() {
         if (typeof Chart === 'undefined') { setTimeout(waitForChart, 200); return; }
+        if (window.DWSS_Storage && typeof window.DWSS_Storage.whenReady === 'function' && !window.__dwssDash) {
+            window.DWSS_Storage.whenReady(function () { setTimeout(waitForChart, 300); });
+            return;
+        }
         initOverdueYearSelector();
     }
     waitForChart();

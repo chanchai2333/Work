@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teams - AEL DWSS System</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- ============================================================ -->
+    <!-- Team Picker styles                                            -->
+    <!-- ============================================================ -->
+    <style>
+    .team-picker {
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #fff;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        max-height: 300px;
+        font-family: inherit;
+        font-size: 0.9rem;
+        box-sizing: border-box;
+    }
+    .team-picker * { box-sizing: border-box; }
+
+    .team-picker-header {
+        display: flex;
+        gap: 8px;
+        padding: 8px;
+        border-bottom: 1px solid #e5e7eb;
+        background: #f9fafb;
+        flex-shrink: 0;
+    }
+    .team-picker-header input[type="text"] {
+        flex: 1;
+        min-width: 0;
+        padding: 6px 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        outline: none;
+        transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .team-picker-header input[type="text"]:focus {
+        border-color: #3498db;
+        box-shadow: 0 0 0 2px rgba(52,152,219,0.15);
+    }
+    .team-picker-header button {
+        padding: 6px 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background: #fff;
+        cursor: pointer;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #4b5563;
+        transition: background 0.12s, border-color 0.12s;
+        white-space: nowrap;
+    }
+    .team-picker-header button:hover {
+        background: #f3f4f6;
+        border-color: #9ca3af;
+    }
+
+    .team-picker-list {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 6px;
+        min-height: 120px;
+    }
+    .team-picker-list::-webkit-scrollbar { width: 8px; }
+    .team-picker-list::-webkit-scrollbar-track { background: #f3f4f6; }
+    .team-picker-list::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    .team-picker-list::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    .team-picker-list label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.12s;
+        margin: 0;
+    }
+    .team-picker-list label:hover { background: #f0f9ff; }
+    .team-picker-list label.checked { background: #dbeafe; }
+    .team-picker-list input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        accent-color: #2563eb;
+        flex-shrink: 0;
+        margin: 0;
+    }
+    .team-picker-list .user-name {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: #1f2937;
+    }
+    .team-picker-list .user-role {
+        font-size: 0.72rem;
+        color: #6b7280;
+        background: #f3f4f6;
+        padding: 2px 8px;
+        border-radius: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+    .team-picker-list label.checked .user-role {
+        background: #bfdbfe;
+        color: #1e40af;
+    }
+    .team-picker-empty {
+        padding: 24px 12px;
+        text-align: center;
+        color: #9ca3af;
+        font-style: italic;
+        font-size: 0.85rem;
+    }
+    .team-picker-footer {
+        padding: 8px 12px;
+        border-top: 1px solid #e5e7eb;
+        background: #f9fafb;
+        font-size: 0.8rem;
+        color: #4b5563;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+    }
+    .team-picker-footer .team-picker-count {
+        font-weight: 600;
+        color: #2563eb;
+    }
+    .team-picker-footer .team-picker-hint {
+        font-size: 0.72rem;
+        color: #9ca3af;
+    }
+
+    /* Keep modal scrollable so nothing gets clipped */
+    #team-modal .modal-content {
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    #team-modal .form-group small {
+        display: block;
+        margin-top: 6px;
+        color: #6b7280;
+        font-size: 0.78rem;
+    }
+    </style>
+</head>
+<body>
+    <!-- 侧边栏将由 sidebar.js 动态插入 -->
+
+    <div class="main-content">
+        <div class="header">
+            <h1>Team Management</h1>
+            <div class="header-controls">
+                <div class="user-date-row">
+                    <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
+                    <button class="user-btn"><i class="fas fa-user"></i> <span data-i18n="user.name"></span></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="search-buttons">
+            <form id="search-form">
+                <input type="text" name="search" placeholder="Search teams by project name...">
+                <button type="submit">Search</button>
+            </form>
+            <div class="nav-buttons">
+                <button id="add-team-btn"><i class="fas fa-plus"></i> Add New Team</button>
+            </div>
+        </div>
+
+        <div class="user-management-page">
+            <h2><i class="fas fa-users"></i> Teams / Projects</h2>
+            <div class="user-stats">
+                <div class="stat-card"><div class="label">Total Teams</div><div class="value" id="total-teams-count">0</div></div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #2ecc71, #27ae60);"><div class="label">Active Teams</div><div class="value" id="active-teams-count">0</div></div>
+            </div>
+            <div class="content-section">
+                <div class="table-header">
+                    <div class="table-title"><i class="fas fa-list"></i> Team List</div>
+                    <div class="table-controls"><button class="action-btn refresh-btn"><i class="fas fa-sync-alt"></i> Refresh</button></div>
+                </div>
+                <div class="table-container">
+                    <table class="diary-table" id="teams-table">
+                        <thead>
+                            <tr>
+                                <th>Team ID</th>
+                                <th>Project Name</th>
+                                <th>Members</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teams-table-body"></tbody>
+                    </table>
+                    <div id="no-results-message" class="no-results" style="display: none;">
+                        <i class="fas fa-users-slash"></i>
+                        <h3>No teams found</h3>
+                        <p>Click "Add New Team" to create your first team.</p>
+                    </div>
+                </div>
+            </div>
+            <footer><p>© 2025 AEL DWSS System. All rights reserved.</p><p>AEL DWSS Platform</p></footer>
+        </div>
+    </div>
+
+    <!-- 添加/编辑团队模态框 -->
+    <div id="team-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3 id="modal-title"><i class="fas fa-users"></i> Add New Team</h3>
+            <form id="team-form">
+                <div class="form-group">
+                    <label for="team-name">Project Name <span style="color:red;">*</span></label>
+                    <input type="text" id="team-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Members</label>
+
+                    <!-- ============================================ -->
+                    <!-- Team picker (replaces <select multiple>)      -->
+                    <!-- ============================================ -->
+                    <div class="team-picker" id="team-members-picker">
+                        <div class="team-picker-header">
+                            <input type="text" id="team-members-search" placeholder="Search name...">
+                            <button type="button" id="team-members-select-all" title="Select all visible">
+                                <i class="fas fa-check-double"></i> All
+                            </button>
+                            <button type="button" id="team-members-clear-all" title="Clear selection">
+                                <i class="fas fa-times"></i> Clear
+                            </button>
+                        </div>
+                        <div class="team-picker-list" id="team-members-list"></div>
+                        <div class="team-picker-footer">
+                            <span><span class="team-picker-count" id="team-members-count">0</span> selected</span>
+                            <span class="team-picker-hint">Click any row to toggle</span>
+                        </div>
+                    </div>
+
+                    <small>No Ctrl/Shift needed — click each member to add or remove them.</small>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancel-team-btn">Cancel</button>
+                    <button type="submit" class="btn" id="save-team-btn">Save Team</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="scripts/permissions.js"></script>
+    <script src="scripts/language.js"></script>
+    <script src="scripts/app.js"></script>
+    <script src="scripts/sidebar.js"></script>
+    <script src="scripts/teams.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof DWSS_Permissions !== 'undefined' && DWSS_Permissions.updateHeaderUser) {
+                DWSS_Permissions.updateHeaderUser();
+            }
+            if (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.updateHeaderUser) {
+                DWSS_Auth.updateHeaderUser();
+            }
+        });
+    </script>
+
+    <!-- 侧边栏状态持久化 -->
+    <script>
+        (function() {
+            function saveSidebarState() {
+                const sidebar = document.querySelector('.sidebar');
+                if (sidebar) localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed') ? 'true' : 'false');
+            }
+            function restoreSidebarState() {
+                const sidebar = document.querySelector('.sidebar');
+                if (sidebar && localStorage.getItem('sidebarCollapsed') === 'true') sidebar.classList.add('collapsed');
+            }
+            function bindToggleEvent() {
+                const toggleBtn = document.querySelector('.toggle-btn');
+                if (toggleBtn) toggleBtn.addEventListener('click', () => setTimeout(saveSidebarState, 50));
+            }
+            document.addEventListener('DOMContentLoaded', () => { restoreSidebarState(); bindToggleEvent(); });
+        })();
+    </script>
+
+    <!-- 日期同步 -->
+    <script>
+        (function() {
+            const storedDate = sessionStorage.getItem('globalDate');
+            const dateSpan = document.querySelector('.date-display span');
+            if (storedDate && dateSpan) dateSpan.textContent = storedDate;
+            else if (dateSpan) dateSpan.textContent = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+        })();
+    </script>
+</body>
+</html>

@@ -504,67 +504,26 @@
         });
     }
 
-    function loadDocument() {
-        // ★ 嘗試從多個 sessionStorage key 讀取
-        let documentDataRaw = sessionStorage.getItem('currentDocument') || 
-                              sessionStorage.getItem('editDocument') || 
-                              sessionStorage.getItem('currentInspectionRecord');
-                              
-        // ★ 如果 sessionStorage 沒有資料，嘗試從 localStorage 中找最新的一筆
-        if (!documentDataRaw) {
-            try {
-                const storedList = localStorage.getItem('inspectionData');
-                if (storedList) {
-                    const list = JSON.parse(storedList);
-                    if (list.length > 0) {
-                        const urlParams = new URLSearchParams(window.location.search);
-                        const idParam = urlParams.get('id');
-                        let record = null;
-                        if (idParam) {
-                            record = list.find(d => String(d.id) === String(idParam));
-                        } else {
-                            record = list[list.length - 1];
-                        }
-                        if (record) {
-                            documentDataRaw = JSON.stringify(record);
-                        }
-                    }
-                }
-            } catch(e) {
-                console.warn('Fallback to localStorage failed', e);
-            }
-        }
-
-        if (!documentDataRaw) {
+    async function loadDocument() {
+        var params = new URLSearchParams(location.search);
+        var id = params.get('id');
+        if (!id) {
             loadingEl.style.display = 'none';
-            errorEl.textContent = 'No document data available. Please go back and select a record.';
+            errorEl.textContent = 'No document selected. Please go back and select a record.';
             errorEl.style.display = 'block';
             return;
         }
-
-        let documentData;
+        var documentData = null;
         try {
-            documentData = JSON.parse(documentDataRaw);
-        } catch (e) {
+            var res = await fetch('/api/records/inspection/' + encodeURIComponent(id), { cache: 'no-store' });
+            if (res.ok) documentData = await res.json();
+        } catch (e) {}
+        if (!documentData || !documentData.id) {
             loadingEl.style.display = 'none';
-            errorEl.textContent = 'Invalid document data.';
+            errorEl.textContent = 'Record not found in the database.';
             errorEl.style.display = 'block';
             return;
         }
-
-        // ★ 從 localStorage 補全最新資料
-        try {
-            const STORAGE_KEY = 'inspectionData';
-            const stored = localStorage.getItem(STORAGE_KEY);
-            if (stored) {
-                const inspectionData = JSON.parse(stored);
-                const fullDoc = inspectionData.find(d => String(d.id) === String(documentData.id));
-                if (fullDoc) {
-                    if (!documentData.safetyFormData && fullDoc.safetyFormData) documentData.safetyFormData = fullDoc.safetyFormData;
-                    if (!documentData.annotations && fullDoc.annotations) documentData.annotations = fullDoc.annotations;
-                }
-            }
-        } catch (e) { console.warn('Failed to merge from localStorage', e); }
 
         currentDocId = documentData.id;
         document.getElementById('docId').textContent = documentData.id || 'N/A';
@@ -580,7 +539,7 @@
         }
 
         // ★ 載入註解與表單資料
-        annotations = documentData.annotations || loadAnnotationsFromStorage(currentDocId);
+        annotations = documentData.annotations || [];
         safetyFormData = documentData.safetyFormData || null;
 
         let pdfSrc = documentData.pdfData || documentData.pdfUrl || null;

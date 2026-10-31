@@ -3950,7 +3950,7 @@
             '}' +
             '.pdf-form-overlay .pdf-checkbox:hover {background:rgba(52,152,219,0.15);box-shadow:inset 0 0 0 1px #3498db;}' +
             '.pdf-form-overlay .pdf-checkbox.checked {background:rgba(46,204,113,0.15);border-color:#27ae60;}' +
-            '.pdf-form-overlay .pdf-checkbox .tick {display:none;color:#0a1a5c;font-weight:bold;font-size: calc(0.9em * var(--pdf-zoom-scale, 1));}' +
+            '.pdf-form-overlay .pdf-checkbox .tick {display:none;color:#0a1a5c;font-weight:bold;font-size:0.9em;}' +
             '.pdf-form-overlay .pdf-checkbox.checked .tick {display:inline-block;}';
         document.head.appendChild(style);
     }
@@ -4471,22 +4471,16 @@ function refreshLabourSignatureCell(fieldId) {
     }
 
     /* ========== 讀取 sessionStorage 文件資料 ========== */
-    function loadDocumentData() {
-        var sources = ['editDocument', 'currentWageRecord', 'currentRecord'];
-        for (var i = 0; i < sources.length; i++) {
-            var raw = sessionStorage.getItem(sources[i]);
-            if (!raw || raw === 'null' || raw === 'undefined') continue;
-            try {
-                var d = JSON.parse(raw);
-                if (d && typeof d === 'object' && d.id) {
-                    console.log('[Labour] ✓ 讀取文件資料來源:', sources[i], '→ id:', d.id);
-                    return d;
-                }
-            } catch (e) {
-                console.warn('[Labour] 解析 ' + sources[i] + ' 失敗:', e);
-            }
-        }
-        console.warn('[Labour] ✗ 所有來源都找不到有效文件，將使用 fallback');
+    async function loadDocumentData() {
+        var params = new URLSearchParams(location.search);
+        var id = params.get('id');
+        if (!id) return null;
+        try {
+            var res = await fetch('/api/records/wage/' + encodeURIComponent(id), { cache: 'no-store' });
+            if (!res.ok) return null;
+            var d = await res.json();
+            if (d && d.id) return d;
+        } catch (e) {}
         return null;
     }
 
@@ -4756,9 +4750,6 @@ function refreshLabourSignatureCell(fieldId) {
         pageDiv.style.width  = displaySize.w + 'px';
         pageDiv.style.height = displaySize.h + 'px';
 
-        // ★ 加入這一行，讓 CSS 可以抓到當前的縮放比例
-        pageDiv.style.setProperty('--pdf-zoom-scale', zoomLevel);
-
         var img = document.createElement('img');
         img.src = imgData;
         img.className = 'pdf-bg';
@@ -4850,39 +4841,16 @@ function refreshLabourSignatureCell(fieldId) {
         captureFormDataFromDom();
         currentDoc.totalPages = totalVirtualPages;
         currentDoc.formData = formData;
-        try {
-            sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
-            sessionStorage.setItem('currentWageRecord', JSON.stringify(currentDoc));
-            sessionStorage.setItem('currentRecord', JSON.stringify(currentDoc));
-        } catch (e) {}
-        
-        // ★ 修正：同時更新 wageData 和 labourWageData，確保與列表頁同步
-        var keys = ['wageData', 'labourWageData'];
-        keys.forEach(function(key) {
-            var stored = localStorage.getItem(key);
-            var data = [];
-            if (stored) { try { var p = JSON.parse(stored); if (Array.isArray(p)) data = p; } catch (e) { data = []; } }
-            
-            // 如果該 key 還沒資料，嘗試從另一個 key 複製過來
-            if (data.length === 0 && key === 'wageData') {
-                try {
-                    var other = JSON.parse(localStorage.getItem('labourWageData') || '[]');
-                    if (Array.isArray(other)) data = other;
-                } catch (e) {}
-            }
-            
-            var idx = -1;
-            for (var i = 0; i < data.length; i++) {
-                if (String(data[i].id) === String(currentDoc.id)) { idx = i; break; }
-            }
-            try {
-                if (idx !== -1) data[idx] = currentDoc; 
-                else data.push(currentDoc);
-                localStorage.setItem(key, JSON.stringify(data));
-            } catch (e) {}
+        fetch('/api/records/wage/' + encodeURIComponent(currentDoc.id), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(currentDoc)
+        }).then(function (res) {
+            if (!res.ok) alert('Could not save to the database.');
+            else alert('✅ Changes saved successfully!');
+        }).catch(function () {
+            alert('Could not save to the database.');
         });
-
-        alert('✅ Changes saved successfully!');
     }
 
     function submitDocument() {
@@ -4916,6 +4884,7 @@ function refreshLabourSignatureCell(fieldId) {
         currentDoc.approvalStatus = newApproval;
         currentDoc.submittedDate = nowIso;
         currentDoc.submittedBy = userName;
+        window.__dwssWageDoc = currentDoc;
         
         updateDocumentInfo(currentDoc);
         saveChanges();
@@ -5068,7 +5037,7 @@ function refreshLabourSignatureCell(fieldId) {
     }
 
     /* ========== 初始化 ========== */
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', async function () {
         console.log('[Labour] ====== 初始化開始 ======');
         try {
             syncGlobalDate();
@@ -5076,12 +5045,13 @@ function refreshLabourSignatureCell(fieldId) {
             bindResizeListener();
             setupZoom();
 
-            var doc = loadDocumentData();
+            var doc = await loadDocumentData();
             if (!doc) {
                 console.warn('[Labour] 使用 fallback 文件（GF527A 預設）');
                 doc = buildFallbackDoc();
             }
             currentDoc = doc;
+            window.__dwssWageDoc = doc;
 
             if (!currentDoc.type) currentDoc.type = 'GF527A';
             if (!currentDoc.typeText) {

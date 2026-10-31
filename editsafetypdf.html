@@ -1,6 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html style="visibility:hidden" lang="en">
 <head>
+<script>
+(function () {
+  try {
+    var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+    if (s && s.isLoggedIn) { document.documentElement.style.visibility = 'visible'; return; }
+  } catch (e) {}
+  document.documentElement.style.visibility = 'hidden';
+  window.location.replace('login.html');
+})();
+</script>
+
+    <script src="scripts/cloud-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n="platform">AEL DWSS - Edit Safety Inspection</title>
@@ -301,13 +313,30 @@
     </style>
 </head>
 <body>
+    <div class="sidebar">
+        <div class="logo">
+            <img src="AEL Logo.png" alt="AEL Logo" class="logo-img" style="height: 45px; width: auto; object-fit: contain; margin-right: 8px;">
+            <h2>DWSS</h2>
+        </div>
+        <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
+        <ul class="menu">
+            <li><a href="index.html"><i class="fas fa-home"></i><span class="menu-text">Dashboard</span></a></li>
+            <li><a href="sitediary.html"><i class="fas fa-book"></i><span class="menu-text">Site Diary</span></a></li>
+            <li><a href="safetyinspect.html"><i class="fas fa-clipboard-check"></i><span class="menu-text">Safety Inspection</span></a></li>
+            <li><a href="sitelocations.html" id="menu-sitelocations"><i class="fas fa-map-marked-alt"></i><span class="menu-text" data-i18n="site.locations">Site Locations</span></a></li>
+            <li><a href="labourwage.html"><i class="fas fa-money-bill-wave"></i><span class="menu-text">Labour Wage</span></a></li>
+            <li><a href="settings.html"><i class="fas fa-cogs"></i><span class="menu-text">System Settings</span></a></li>
+            <li><a href="usermanagement.html"><i class="fas fa-user-circle"></i><span class="menu-text">User Management</span></a></li>
+        </ul>
+    </div>
+
     <div class="main-content">
         <div class="header">
             <h1 data-i18n="safety.inspection">Safety Inspection</h1>
             <div class="header-controls">
                 <div class="user-date-row">
                     <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
-                    <button class="user-btn"><i class="fas fa-user"></i><span data-i18n="user.name">John Doe</span></button>
+                    <button class="user-btn"><i class="fas fa-user"></i> <span>User</span></button>
                 </div>
             </div>
         </div>
@@ -390,12 +419,34 @@
 
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
-    <script src="scripts/sidebar.js"></script>
     <script src="scripts/auth-check.js"></script>
-    <script src="scripts/user-display.js"></script>
     <script src="scripts/SafetyInspection-data.js"></script>
     <script src="scripts/editsafetypdf.js"></script>
 
+    <script>
+        (function() {
+            function saveSidebarState() {
+                const sidebar = document.querySelector('.sidebar');
+                if (sidebar) localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed') ? 'true' : 'false');
+            }
+            function restoreSidebarState() {
+                const sidebar = document.querySelector('.sidebar');
+                if (sidebar && localStorage.getItem('sidebarCollapsed') === 'true') sidebar.classList.add('collapsed');
+            }
+            function bindToggleEvent() {
+                const toggleBtn = document.querySelector('.toggle-btn');
+                if (toggleBtn) toggleBtn.addEventListener('click', () => setTimeout(saveSidebarState, 50));
+            }
+            document.addEventListener('DOMContentLoaded', () => {
+                if (window.DWSS_Auth) DWSS_Auth.updateHeaderUser();
+                restoreSidebarState();
+                bindToggleEvent();
+                const storedDate = sessionStorage.getItem('globalDate');
+                const dateSpan = document.querySelector('.date-display span');
+                if (storedDate && dateSpan) dateSpan.textContent = storedDate;
+                else if (dateSpan) dateSpan.textContent = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+            });
+        })();
     </script>
 <!-- ============================================================ -->
 <!-- ★ 文檔鎖定：Submit 後禁止編輯（三個編輯頁通用）v2             -->
@@ -417,21 +468,7 @@
     }
 
     function readCurrentDoc() {
-        var sources = [
-            'editDocument',
-            'currentInspectionRecord',
-            'currentDiaryRecord',
-            'currentWageRecord',
-            'currentRecord'
-        ];
-        for (var i = 0; i < sources.length; i++) {
-            var raw = sessionStorage.getItem(sources[i]);
-            if (!raw) continue;
-            try {
-                var d = JSON.parse(raw);
-                if (d && typeof d === 'object' && d.id) return d;
-            } catch (e) {}
-        }
+        if (window.__dwssSafetyDoc && window.__dwssSafetyDoc.id) return window.__dwssSafetyDoc;
         return null;
     }
 
@@ -523,10 +560,19 @@
     }
 
     function checkOnLoad() {
-        var doc = readCurrentDoc();
-        if (doc && isLocked(doc)) {
-            applyLock(doc);
-        }
+        var params = new URLSearchParams(location.search);
+        var id = params.get('id');
+        var ready = readCurrentDoc()
+            ? Promise.resolve(readCurrentDoc())
+            : (id
+                ? fetch('/api/records/inspection/' + encodeURIComponent(id), { cache: 'no-store' })
+                    .then(function (res) { return res.ok ? res.json() : null; })
+                    .then(function (doc) { if (doc && doc.id) window.__dwssSafetyDoc = doc; return doc; })
+                    .catch(function () { return null; })
+                : Promise.resolve(null));
+        ready.then(function (doc) {
+            if (doc && isLocked(doc)) applyLock(doc);
+        });
     }
 
     document.addEventListener('click', function (e) {
@@ -760,10 +806,25 @@
         return null;
     }
 
-    function verifyPassword(pwd) {
-        var user = findCurrentUser();
-        if (!user) return false;
-        return String(user.password) === String(pwd);
+    async function verifyPassword(pwd) {
+        var session = {};
+        try { session = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch (e) {}
+        var username = session.userEmail || session.userName || '';
+        if (!username) return false;
+        try {
+            var res = await fetch('/api/auth/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: username,
+                    password: pwd,
+                    projectId: sessionStorage.getItem('currentProjectId') || ''
+                })
+            });
+            return res.ok;
+        } catch (e) {
+            return false;
+        }
     }
 
     function openModal(btn) {
@@ -813,15 +874,17 @@
         pendingBtn = null;
     }
 
-    function tryConfirm() {
+    async function tryConfirm() {
         var pwd = inputEl.value;
         if (!pwd) {
             errorEl.textContent = 'Please enter your password.';
             errorEl.classList.add('visible');
             return;
         }
-
-        if (!verifyPassword(pwd)) {
+        confirmBtn.disabled = true;
+        var ok = await verifyPassword(pwd);
+        confirmBtn.disabled = false;
+        if (!ok) {
             errorEl.textContent = '❌ Incorrect password. Please try again.';
             errorEl.classList.add('visible');
             inputEl.value = '';

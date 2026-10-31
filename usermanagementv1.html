@@ -392,8 +392,11 @@
 
         // 通用退出登录函数
         function performLogout() {
-            sessionStorage.removeItem('isLoggedIn');
-            sessionStorage.removeItem('loggedUser');
+            if (window.DWSS_Auth && typeof window.DWSS_Auth.logout === 'function') {
+                window.DWSS_Auth.logout();
+                return;
+            }
+            sessionStorage.clear();
             window.location.href = 'login.html';
         }
 

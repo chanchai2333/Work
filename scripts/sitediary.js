@@ -72,64 +72,67 @@ document.addEventListener('DOMContentLoaded', function () {
         if (stored) {
             try {
                 diaryData = JSON.parse(stored);
+                if (!Array.isArray(diaryData)) diaryData = [];
                 let migrated = 0;
                 diaryData.forEach(item => {
                     if (!item.hasOwnProperty('pdfData')) item.pdfData = null;
                     if (!item.hasOwnProperty('annotations')) item.annotations = [];
                     if (!item.hasOwnProperty('statusHistory')) item.statusHistory = [];
-                    
-                    // ★ 舊資料自動修復：確保 reopen 是 pending，cancelled 是 cancelled
-                    if (item.status === 'reopen') {
-                        item.approvalStatus = 'pending';
-                    } else if (item.status === 'cancelled') {
-                        item.approvalStatus = 'cancelled';
-                    } else if (!item.approvalStatus) {
-                        item.approvalStatus = 'pending';
-                    }
-
+                    if (item.status === 'reopen') item.approvalStatus = 'pending';
+                    else if (item.status === 'cancelled') item.approvalStatus = 'cancelled';
+                    else if (!item.approvalStatus) item.approvalStatus = 'pending';
                     if (!item.project) {
-                        if (item.id && item.id.indexOf('SD/DE-2025-02') === 0) {
-                            item.project = 'DE/2025/02';
-                        } else if (item.id && item.id.indexOf('SD/DE-2025-09') === 0) {
-                            item.project = 'DE/2025/09';
-                        } else if (item.id && item.id.indexOf('SD/DE-2026-05') === 0) {
-                            item.project = 'DE/2026/05';
-                        } else {
-                            item.project = getCurrentProjectId() || 'DE/2026/05';
-                        }
+                        if (item.id && item.id.indexOf('SD/DE-2025-02') === 0) item.project = 'DE/2025/02';
+                        else if (item.id && item.id.indexOf('SD/DE-2025-09') === 0) item.project = 'DE/2025/09';
+                        else if (item.id && item.id.indexOf('SD/DE-2026-05') === 0) item.project = 'DE/2026/05';
+                        else item.project = getCurrentProjectId() || 'DE/2026/05';
                         migrated++;
                     }
                 });
-                if (migrated > 0) {
-                    console.log('[SiteDiary] ✓ 已為 ' + migrated + ' 筆舊記錄補上 project');
-                }
-                saveData();
+                if (migrated > 0) saveData();
             } catch (e) {
-                console.error('[SiteDiary] 資料解析失敗，使用預設資料', e);
-                diaryData = getAllDefaultRecords();
-                saveData();
+                diaryData = [];
             }
         } else {
-            console.log('[SiteDiary] ✓ 首次載入，建立 3 個項目的預設資料');
-            diaryData = getAllDefaultRecords();
-            saveData();
+            diaryData = [];
+        }
+    }
+
+    async function loadFromDatabase() {
+        try {
+            const res = await fetch('/api/records/siteDiary/list', { cache: 'no-store' });
+            if (!res.ok) return;
+            const list = await res.json();
+            if (!Array.isArray(list)) return;
+            diaryData = list;
+            window.__dwssDiaryRecords = list;
+            try {
+                var snap = JSON.parse(sessionStorage.getItem('dwss_page_counts') || '{}');
+                snap.diary = String(getProjectData().length);
+                snap.diaryFiltered = true;
+                sessionStorage.setItem('dwss_page_counts', JSON.stringify(snap));
+            } catch (e) {}
+            if (window.DWSS_Storage && window.DWSS_Storage.isCloud && window.DWSS_Storage.isCloud()) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+            }
+            renderTable();
+        } catch (e) {
+            console.warn('[SiteDiary] Could not load from database', e);
         }
     }
 
     function saveData() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(diaryData));
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(diaryData));
+        if (window.DWSS_Storage && typeof window.DWSS_Storage.flush === 'function') {
+            window.DWSS_Storage.flush(STORAGE_KEY);
+        }
     }
 
     // ==================== ★ 項目過濾輔助函數 ====================
     function getProjectData() {
         const projectId = getCurrentProjectId();
 
-        if (!projectId) {
-            return diaryData.filter(function (item) {
-                return !item.project;
-            });
-        }
+        if (!projectId) return diaryData.slice();
 
         return diaryData.filter(function (item) {
             return item.project === projectId;
@@ -298,7 +301,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var s = (item && item.status) || 'draft';
 
         if (s === 'draft') {
-            return isOverdue(item) ? 'overdue' : 'open'; // 改這裡
+            return isOverdue(item) ? 'overdue' : 'other';
         }
         if (s === 'submitted-wsg' || s === 'submitted-ig') {
             return 'pending';
@@ -306,8 +309,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (s === 'closed' || s === 'cancelled') {
             return 'closed';
         }
-        // reopen 歸類到 open
-        return 'open';
+        // reopen 歸類到 other
+        return 'other';
     }
 
     // ==================== 篩選器狀態 ====================
@@ -322,18 +325,42 @@ document.addEventListener('DOMContentLoaded', function () {
         const totalEl = document.getElementById('total-documents-count');
         const monthEl = document.getElementById('month-count');
 
-        const data = dataToUse || diaryData;
+        const data = dataToUse || getProjectData();
 
         if (totalEl) totalEl.textContent = data.length;
         if (monthEl) {
-            const currentMonth = new Date().getMonth() + 1;
-            const monthCount = data.filter(item => {
-                const itemDate = new Date(item.date);
-                if (isNaN(itemDate.getTime())) return false;
-                return itemDate.getMonth() + 1 === currentMonth;
+            const now = new Date();
+            const monthCount = data.filter(function (item) {
+                return isInCurrentMonth(item, now);
             }).length;
             monthEl.textContent = monthCount;
         }
+    }
+
+    function isInCurrentMonth(item, now) {
+        var d = diaryDate(item);
+        if (!d) return false;
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    }
+
+    function diaryDate(item) {
+        if (!item) return null;
+        if (item.startDate) {
+            var s = new Date(item.startDate);
+            if (!isNaN(s.getTime())) return s;
+        }
+        if (item.createdAt) {
+            var c = new Date(item.createdAt);
+            if (!isNaN(c.getTime())) return c;
+        }
+        var raw = item.date || item.period || '';
+        var text = String(raw).split('~')[0].trim();
+        var iso = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (iso) return new Date(+iso[1], +iso[2] - 1, +iso[3]);
+        var dmy = text.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
+        if (dmy) return new Date(+dmy[3], +dmy[2] - 1, +dmy[1]);
+        var parsed = new Date(text);
+        return isNaN(parsed.getTime()) ? null : parsed;
     }
 
     // ==================== ★ 行渲染 (單列) ====================
@@ -387,12 +414,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ==================== ★ 渲染表格（四分類）====================
     function renderTable() {
-        const CATEGORIES = ['open', 'pending', 'overdue', 'closed'];
+        const CATEGORIES = ['overdue', 'pending', 'closed', 'other'];
         const TBODY_IDS = {
-            open:    'open-table-body',
-            pending: 'pending-table-body',
             overdue: 'overdue-table-body',
-            closed:  'closed-table-body'
+            pending: 'pending-table-body',
+            closed:  'closed-table-body',
+            other:   'other-table-body'
         };
 
         CATEGORIES.forEach(function (key) {
@@ -400,13 +427,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (el) el.innerHTML = '';
         });
 
-        const projectFilteredData = diaryData.filter(function (item) {
-            if (!item) return false;
-            var currentPid = getCurrentProjectId();
-            if (!currentPid) return true;
-            if (!item.project) return true;
-            return item.project === currentPid;
-        });
+        const projectFilteredData = getProjectData();
 
         const filtered = projectFilteredData.filter(item => {
             if (currentFilters.site !== "all") {
@@ -447,13 +468,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (userCanChangeStatus) {
             bindStatusChangeEvents();
         }
-        
-        // ★ 新增：重新渲染表格後，重新觸發所有搜尋框的過濾邏輯
-        document.querySelectorAll('.category-search').forEach(function(input) {
-            if (input.value.trim() !== '') {
-                input.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-        });
     }
 
     // ==================== 狀態更改事件 ====================
@@ -565,12 +579,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     annotations: record.annotations || []
                 };
 
-                sessionStorage.setItem('currentDocument',    JSON.stringify(payload));
-                sessionStorage.setItem('viewDocument',       JSON.stringify(payload));
-                sessionStorage.setItem('currentDiaryRecord', JSON.stringify(payload));
-                sessionStorage.setItem('currentRecord',      JSON.stringify(payload));
-
-                window.location.href = 'sitediarydocument.html';
+                window.location.href = 'sitediarydocument.html?id=' + encodeURIComponent(record.id);
             } else {
                 alert('Document not found');
             }
@@ -584,21 +593,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     alert('❌ This record does not belong to your current project.');
                     return;
                 }
-                sessionStorage.setItem('editDocument', JSON.stringify({
-                    id: record.id,
-                    status: record.status,
-                    statusText: getStatusText(record.status),
-                    site: record.site,
-                    date: formatDate(record.date),
-                    submittedBy: record.submittedBy,
-                    type: record.type,
-                    project: record.project || null,
-                    pdfUrl: record.pdfUrl || '',
-                    pdfData: record.pdfData || '',
-                    annotations: record.annotations || [],
-                    approvalStatus: record.approvalStatus || 'pending'
-                }));
-                window.location.href = 'editdiary.html';
+                window.location.href = 'editdiary.html?id=' + encodeURIComponent(record.id);
             } else {
                 alert('Document not found');
             }
@@ -734,15 +729,31 @@ document.addEventListener('DOMContentLoaded', function () {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
 
-                const id = document.getElementById('input-diary-id').value.trim();
+                let id = document.getElementById('input-diary-id').value.trim();
                 const status = document.getElementById('input-status').value;
                 const site = document.getElementById('input-site').value.trim();
-                const date = document.getElementById('input-date').value;
+                const startDate = (document.getElementById('input-date-start') || {}).value || '';
+                const endDate = (document.getElementById('input-date-end') || {}).value || '';
                 const submittedBy = document.getElementById('input-submitted-by').value.trim();
                 const type = document.getElementById('input-type').value;
 
+                if (!id) { alert('Please enter Diary ID.'); return; }
+                if (!site) { alert('Please enter Site.'); return; }
+                if (!startDate || !endDate) { alert('Please select the period.'); return; }
+                if (startDate > endDate) { alert('Period start must be on or before the end date.'); return; }
+                if (!submittedBy) { alert('Please enter Submitted By.'); return; }
+                if (diaryData.some(d => String(d.id) === String(id))) {
+                    id = generateNextDiaryId();
+                    var idInput = document.getElementById('input-diary-id');
+                    if (idInput) idInput.value = id;
+                }
+                if (diaryData.some(d => String(d.id) === String(id))) {
+                    alert('Diary ID "' + id + '" already exists.');
+                    return;
+                }
+
                 let pdfData = null;
-                const file = fileInput.files[0];
+                const file = fileInput && fileInput.files[0];
                 if (file) {
                     try {
                         pdfData = await readFileAsBase64(file);
@@ -753,32 +764,54 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 let initialApproval = 'pending';
-                if (status === 'cancelled') {
-                    initialApproval = 'cancelled';
-                }
+                if (status === 'cancelled') initialApproval = 'cancelled';
 
+                const periodStr = startDate.split('-').reverse().join('/') + ' ~ ' + endDate.split('-').reverse().join('/');
                 const newDiary = {
-                    id,
-                    status,
+                    id: id,
+                    status: status,
                     approvalStatus: initialApproval,
-                    site,
-                    date,
-                    submittedBy,
-                    type,
+                    site: site,
+                    date: periodStr,
+                    startDate: startDate,
+                    endDate: endDate,
+                    period: periodStr,
+                    submittedBy: submittedBy,
+                    type: type,
                     project: getCurrentProjectId(),
                     pdfData: pdfData,
                     annotations: [],
-                    statusHistory: []
+                    statusHistory: [],
+                    usesTemplate: !pdfData,
+                    createdAt: new Date().toISOString()
                 };
 
+                var saved = false;
+                var failText = '';
+                try {
+                    var res = await fetch('/api/record?collection=siteDiary&id=' + encodeURIComponent(id), {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newDiary)
+                    });
+                    saved = res.ok;
+                    if (!saved) failText = await res.text();
+                } catch (err) {
+                    saved = false;
+                    failText = err && err.message ? err.message : 'network error';
+                }
+                if (!saved) {
+                    alert('Diary was not saved to the database.\n' + failText);
+                    return;
+                }
                 diaryData.unshift(newDiary);
-                saveData();
+                window.__dwssDiaryRecords = diaryData;
                 renderTable();
                 modal.style.display = 'none';
                 form.reset();
                 const hint = document.getElementById('submit-only-hint');
                 if (hint) hint.remove();
-                alert('New diary added successfully!');
+                alert('New diary added successfully!\n\nNew ID: ' + id);
             });
         }
     }
@@ -795,8 +828,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ==================== 初始化 ====================
-    function init() {
-        loadData();
+    async function init() {
+        await loadFromDatabase();
+        if (!diaryData.length) loadData();
         renderTable();
         setupFilterEvents();
         setupAddDiaryModal();

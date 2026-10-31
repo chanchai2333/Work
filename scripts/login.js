@@ -1,5 +1,33 @@
 // login.js - DWSS 多用戶登錄系統 (with Project Selection)
 document.addEventListener('DOMContentLoaded', function() {
+    var form = document.getElementById('login-form');
+    var submitBtn = form ? form.querySelector('button[type="submit"]') : null;
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.dataset.label = submitBtn.innerHTML;
+        submitBtn.innerHTML = 'Loading accounts...';
+    }
+
+    function enableLogin() {
+        if (!submitBtn) return;
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = submitBtn.dataset.label || 'Sign In';
+    }
+
+    function start() {
+        initLoginPage();
+        enableLogin();
+    }
+
+    if (window.DWSS_Storage && typeof window.DWSS_Storage.whenReady === 'function') {
+        window.DWSS_Storage.whenReady(start);
+    } else {
+        start();
+    }
+    setTimeout(enableLogin, 3000);
+});
+
+function initLoginPage() {
 
     const form = document.getElementById('login-form');
     const errorDiv = document.getElementById('login-error');
@@ -12,8 +40,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ==================== 初始化用戶數據庫 ====================
     function initializeUserDatabase() {
-        // 如果已存在则跳过
-        if (localStorage.getItem('dwss_users_db')) return;
+        // Seed defaults if missing or empty (cloud mode may have stored [])
+        const existing = localStorage.getItem('dwss_users_db');
+        if (existing) {
+            try {
+                const parsed = JSON.parse(existing);
+                if (Array.isArray(parsed) && parsed.length > 0) return;
+            } catch (e) { /* corrupt → re-seed */ }
+        }
 
         const defaultUsers = [
             // ============ SYSTEM VENDOR (AEL) ============
@@ -204,6 +238,9 @@ document.addEventListener('DOMContentLoaded', function() {
         ];
 
         localStorage.setItem('dwss_users_db', JSON.stringify(defaultUsers));
+        if (window.DWSS_Storage && typeof window.DWSS_Storage.flush === 'function') {
+            window.DWSS_Storage.flush('dwss_users_db');
+        }
         console.log('[Login] ✓ 建立預設用戶資料庫（' + defaultUsers.length + ' 個用戶）');
     }
 
@@ -351,10 +388,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // 需要改密碼（首次登入 或 密碼已過期）
             if (pwdStatus.required) {
-                // 建立暫時 session，讓 change-password.html 可以讀到用戶
+                sessionStorage.setItem('password_change_user', JSON.stringify(user));
                 sessionStorage.setItem('dwss_session', JSON.stringify({
                     isLoggedIn: true,
                     userId: user.id,
+                    username: user.username,
                     userName: user.name,
                     userEmail: user.email,
                     userRole: user.role,
@@ -370,8 +408,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 }));
                 sessionStorage.setItem('currentProjectId', projectId);
 
-                console.log('[Login] ⚠️ 需要改密碼，跳轉到 change-password.html');
-                window.location.href = 'change-password.html';
+                console.log('[Login] Password change required, waiting for account list to be stored');
+                var go = function () { window.location.href = 'change-password.html'; };
+                if (window.DWSS_Storage && typeof window.DWSS_Storage.flush === 'function') {
+                    window.DWSS_Storage.flush('dwss_users_db').then(go).catch(go);
+                } else {
+                    go();
+                }
                 return 'PASSWORD_CHANGE_REQUIRED';
             }
 
@@ -411,7 +454,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // ★★★ 保存當前選中的項目 ★★★
         sessionStorage.setItem('currentProjectId', projectId);
 
-        localStorage.setItem('current_user', JSON.stringify({
+        sessionStorage.setItem('current_user', JSON.stringify({
             userId: user.id,
             userName: user.name,
             userRole: user.role,
@@ -425,6 +468,95 @@ document.addEventListener('DOMContentLoaded', function() {
         return true;
     }
 
+    function finishLogin(user, projectId) {
+        if (typeof DWSS_Lockout !== 'undefined') {
+            if (user.email) DWSS_Lockout.recordSuccessfulAttempt(user.email.toLowerCase());
+            if (user.username) DWSS_Lockout.recordSuccessfulAttempt(user.username.toLowerCase());
+        }
+        if (typeof DWSS_PasswordLifecycle !== 'undefined') {
+            var pwdStatus = DWSS_PasswordLifecycle.enforce(user);
+            if (pwdStatus.required) {
+                sessionStorage.setItem('dwss_session', JSON.stringify({
+                    isLoggedIn: true,
+                    userId: user.id,
+                    username: user.username,
+                    userName: user.name,
+                    userEmail: user.email,
+                    userRole: user.role,
+                    role: user.role,
+                    organization: user.organization,
+                    companyName: user.companyName,
+                    contractNo: user.contractNo,
+                    userDepartment: user.department,
+                    projectIds: user.projectIds,
+                    permissions: user.permissions,
+                    loginTime: new Date().toISOString(),
+                    pendingPasswordChange: true
+                }));
+                sessionStorage.setItem('currentProjectId', projectId);
+                window.location.href = 'change-password.html';
+                return;
+            }
+        }
+        sessionStorage.setItem('dwss_session', JSON.stringify({
+            isLoggedIn: true,
+            userId: user.id,
+            userName: user.name,
+            userEmail: user.email,
+            userRole: user.role,
+            role: user.role,
+            organization: user.organization,
+            companyName: user.companyName,
+            contractNo: user.contractNo,
+            userDepartment: user.department,
+            projectIds: user.projectIds,
+            permissions: user.permissions,
+            sessionToken: user.sessionToken || '',
+            loginTime: new Date().toISOString()
+        }));
+        sessionStorage.setItem('isLoggedIn', 'true');
+        sessionStorage.setItem('loggedUser', user.name);
+        sessionStorage.setItem('currentProjectId', projectId);
+        window.location.href = 'index.html';
+    }
+
+    async function loginAgainstDatabase(username, password, projectId, forceLogout) {
+        const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password, projectId, forceLogout: !!forceLogout })
+        });
+        const body = await res.json().catch(function () { return {}; });
+        if (body.error === 'no_database') {
+            showError('The server is not connected to the database. Start it with deploy\\start-windows.bat so the admin account is available.');
+            return;
+        }
+        if (res.status === 401) {
+            showError('Invalid username or password. For a fresh install use admin / admin123. If you already changed it on first login, use the new password.');
+            return;
+        }
+        if (res.status === 403 && body.error === 'disabled') {
+            showError('Account is disabled. Please contact administrator.');
+            return;
+        }
+        if (res.status === 403 && body.error === 'no_project_access') {
+            showError('You do not have access to project "' + projectId + '".');
+            return;
+        }
+        if (res.status === 409 && body.error === 'already_logged_in') {
+            var msg = body.message || 'This user is already logged in from another browser or computer.';
+            var ok = confirm(msg + '\n\nLog that session out and continue here?');
+            if (ok) return loginAgainstDatabase(username, password, projectId, true);
+            showError('Login cancelled. The existing session is still active.');
+            return;
+        }
+        if (!res.ok || !body.user) {
+            showError('Login failed. Please try again.');
+            return;
+        }
+        finishLogin(body.user, projectId);
+    }
+
     // ==================== 表單提交 ====================
     if (form) {
         form.addEventListener('submit', function(e) {
@@ -434,7 +566,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const password = passwordInput.value.trim();
             const projectId = document.getElementById('project').value;
 
-            // 清除旧 session
             sessionStorage.removeItem('dwss_session');
             sessionStorage.removeItem('isLoggedIn');
             sessionStorage.removeItem('loggedUser');
@@ -444,19 +575,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 showError('Please enter username and password');
                 return;
             }
-
             if (!projectId) {
                 showError('Please select a project');
                 return;
             }
 
-            const result = loginUser(username, password, projectId);
-
-            if (result === true) {
-                window.location.href = 'index.html';
-            } else if (result === 'PASSWORD_CHANGE_REQUIRED') {
-                // 已在 loginUser 内处理跳转
-            }
+            loginAgainstDatabase(username, password, projectId);
         });
     }
 
@@ -519,4 +643,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     updateLoginFooter();
-});
+}

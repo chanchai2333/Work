@@ -315,67 +315,47 @@ const ThemeConfig = {
     },
 
     // 更新语言
-    // 更新语言
     updateLanguage: function() {
         const lang = this.current.language;
         const texts = this.translations[lang];
         
         if (!texts) return;
         
-        // 如果是 settings.html 頁面，執行特定的替換
-        if (window.location.pathname.includes('settings.html') || window.location.pathname.endsWith('/')) {
-            document.title = 'System Settings - AEL DWSS System';
-            this.updateText('.main-content h1', texts['system.settings']);
-            this.updateText('.dashboard h2', texts['system.configuration']);
-            this.updateText('.dashboard p', texts['configure.preferences']);
-            this.updatePlaceholder('input[placeholder]', texts['search.placeholder']);
-            
-            // 更新显示设置卡片
-            this.updateText('.display-settings .card-title span', texts['display.settings']);
-            this.updateLabel('.display-settings', 'theme', texts['theme']);
-            this.updateLabel('.display-settings', 'language', texts['language']);
-            this.updateLabel('.display-settings', 'date-format', texts['date.format']);
-            this.updateLabel('.display-settings', 'results-per-page', texts['results.per.page']);
-            this.updateButtonText('.display-settings .btn-primary', texts['save.display.settings']);
-            this.updateButtonText('.display-settings .btn-secondary', texts['reset.to.default']);
-            this.updateText('.display-settings .card-badge', texts['active']);
-            
-            // 更新其他卡片
-            this.updateText('.pdf-upload .card-title span', texts['initial.pdf.upload']);
-            this.updateText('.pdf-upload .card-badge', texts['required']);
-            this.updateLabel('.pdf-upload', 'pdf-upload', texts['upload.new.pdf']);
-            this.updateText('.pdf-upload .upload-area p', texts['drag.drop.pdf']);
-            this.updateButtonText('.pdf-upload .btn-outline', texts['select.files']);
-            this.updateButtonText('.pdf-upload .btn-primary', texts['upload.process']);
-            this.updateButtonText('.pdf-upload .btn-secondary', texts['refresh.list']);
-            
-            this.updateText('.email-settings .card-title span', texts['email.settings']);
-            this.updateText('.email-settings .card-badge', texts['configured']);
-            
-            this.updateText('.download-settings .card-title span', texts['download.path.settings']);
-            this.updateText('.download-settings .card-badge', texts['needs.review']);
-        } else {
-            // ★ 其他頁面：動態根據 data-i18n 屬性替換文字
-            document.querySelectorAll('[data-i18n]').forEach(el => {
-                const key = el.getAttribute('data-i18n');
-                if (texts[key]) {
-                    el.textContent = texts[key];
-                }
-            });
-            
-            // 動態更新標題
-            const h1 = document.querySelector('.main-content h1');
-            if (h1) {
-                const key = h1.getAttribute('data-i18n');
-                if (key && texts[key]) {
-                    document.title = texts[key] + ' - AEL DWSS System';
-                } else {
-                    document.title = h1.textContent + ' - AEL DWSS System';
-                }
-            }
-        }
+        // 更新页面标题
+        document.title = 'System Settings - AEL DWSS System';
         
-        // 更新页脚 (所有頁面共用)
+        // 更新主标题和描述
+        this.updateText('.main-content h1', texts['system.settings']);
+        this.updateText('.dashboard h2', texts['system.configuration']);
+        this.updateText('.dashboard p', texts['configure.preferences']);
+        this.updatePlaceholder('input[placeholder]', texts['search.placeholder']);
+        
+        // 更新显示设置卡片
+        this.updateText('.display-settings .card-title span', texts['display.settings']);
+        this.updateLabel('.display-settings', 'theme', texts['theme']);
+        this.updateLabel('.display-settings', 'language', texts['language']);
+        this.updateLabel('.display-settings', 'date-format', texts['date.format']);
+        this.updateLabel('.display-settings', 'results-per-page', texts['results.per.page']);
+        this.updateButtonText('.display-settings .btn-primary', texts['save.display.settings']);
+        this.updateButtonText('.display-settings .btn-secondary', texts['reset.to.default']);
+        this.updateText('.display-settings .card-badge', texts['active']);
+        
+        // 更新其他卡片
+        this.updateText('.pdf-upload .card-title span', texts['initial.pdf.upload']);
+        this.updateText('.pdf-upload .card-badge', texts['required']);
+        this.updateLabel('.pdf-upload', 'pdf-upload', texts['upload.new.pdf']);
+        this.updateText('.pdf-upload .upload-area p', texts['drag.drop.pdf']);
+        this.updateButtonText('.pdf-upload .btn-outline', texts['select.files']);
+        this.updateButtonText('.pdf-upload .btn-primary', texts['upload.process']);
+        this.updateButtonText('.pdf-upload .btn-secondary', texts['refresh.list']);
+        
+        this.updateText('.email-settings .card-title span', texts['email.settings']);
+        this.updateText('.email-settings .card-badge', texts['configured']);
+        
+        this.updateText('.download-settings .card-title span', texts['download.path.settings']);
+        this.updateText('.download-settings .card-badge', texts['needs.review']);
+        
+        // 更新页脚
         this.updateText('footer p:first-child', texts['copyright']);
         this.updateText('footer p:last-child', texts['platform']);
     },

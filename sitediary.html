@@ -1,6 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html style="visibility:hidden" lang="en">
 <head>
+<script>
+(function () {
+  try {
+    var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+    if (s && s.isLoggedIn) { document.documentElement.style.visibility = 'visible'; return; }
+  } catch (e) {}
+  document.documentElement.style.visibility = 'hidden';
+  window.location.replace('login.html');
+})();
+</script>
+
+    <script src="scripts/cloud-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n="site.diary">AEL DWSS - Site Diary</title>
@@ -54,58 +66,6 @@
         .diary-category-section[data-category="pending"] .table-title i { color: #f39c12; }
         .diary-category-section[data-category="closed"]  .table-title i { color: #27ae60; }
         .diary-category-section[data-category="other"]   .table-title i { color: #7f8c8d; }
-
-                /* ★ 分類折疊樣式 */
-        .diary-category-section .table-header {
-            cursor: pointer;
-            user-select: none;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-        }
-        .diary-category-section .table-header .header-left {
-            flex: 1;
-        }
-        .diary-category-section .table-header .toggle-icon {
-            font-size: 1.2rem;
-            color: #94a3b8;
-            transition: transform 0.3s ease;
-            margin-top: 8px;
-            margin-left: 15px;
-        }
-        .diary-category-section.collapsed .table-header .toggle-icon {
-            transform: rotate(-90deg);
-        }
-        .diary-category-section.collapsed .table-container {
-            display: none !important;
-        }
-
-                /* ★ 分類搜尋框樣式 */
-        .diary-category-section .table-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center; /* 垂直置中，讓搜尋框和箭頭對齊 */
-        }
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        .category-search {
-            padding: 8px 12px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            width: 220px;
-            transition: all 0.2s;
-            background: #fff;
-        }
-        .category-search:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 2px rgba(52,152,219,0.2);
-        }
-
 
         @media (max-width: 768px) {
             .action-btn { width: 100%; margin: 2px 0; }
@@ -162,7 +122,7 @@
             <div class="header-controls">
                 <div class="user-date-row">
                     <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date">September 17, 2025</span></div>
-                    <button class="user-btn"><i class="fas fa-user"></i> <span data-i18n="user.name"></span></button>
+                    <button class="user-btn"><i class="fas fa-user"></i> <span class="header-username"></span></button>
                 </div>
             </div>
         </div>
@@ -178,8 +138,14 @@
             
             <div class="diary-controls-row">
                 <div class="diary-stats">
-                    <div class="stat-card"><div class="label" data-i18n="total.documents">Total Documents</div><div class="value" id="total-documents-count">0</div></div>
-                    <div class="stat-card"><div class="label" data-i18n="this.month">This Month</div><div class="value" id="month-count">0</div></div>
+                    <div class="stat-card"><div class="label" data-i18n="total.documents">Total Documents</div><div class="value" id="total-documents-count">…</div></div>
+                    <div class="stat-card"><div class="label" data-i18n="this.month">This Month</div><div class="value" id="month-count">…</div></div>
+                    <script>
+                    try {
+                        var c = JSON.parse(sessionStorage.getItem('dwss_page_counts') || '{}');
+                        if (c.diaryFiltered && c.diary) document.getElementById('total-documents-count').textContent = c.diary;
+                    } catch (e) {}
+                    </script>
                 </div>
                 
                 <section class="filters-section">
@@ -223,96 +189,17 @@
             <!-- ★ 分類表格：Overdue / Pending / Closed / Other -->
             <!-- ============================================== -->
             <section class="content-section">
+                <div id="diary-tables-container">
 
-                            <div id="diary-tables-container">
-
-                    <!-- ===== 1. Open Documents ===== -->
-                    <div class="diary-category-section collapsed" data-category="open">
+                    <!-- ===== Overdue Documents ===== -->
+                    <div class="diary-category-section" data-category="overdue">
                         <div class="table-header">
-                            <div class="header-left">
-                                <h2 class="table-title">
-                                    <i class="fas fa-folder-open"></i>
-                                    <span data-i18n="category.open">Open Documents</span>
-                                    <span class="category-count" id="open-count">0</span>
-                                </h2>
-                                <p class="category-desc" data-i18n="category.open.desc">Drafts within 14 days, reopened, or in progress</p>
-                            </div>
-                            <div class="header-right">
-                                <input type="text" class="category-search" data-category="open" placeholder="Search Open...">
-                                <i class="fas fa-chevron-down toggle-icon"></i>
-                            </div>
-                        </div>
-                        <div class="table-container">
-                            <table class="diary-table">
-                                <thead>
-                                    <tr>
-                                        <th data-i18n="diary.id">Diary ID</th>
-                                        <th data-i18n="status">Status</th>
-                                        <th data-i18n="Approval status">Approval Status</th>
-                                        <th data-i18n="site">Site</th>
-                                        <th data-i18n="period">Period</th>
-                                        <th data-i18n="submitted.by">Submitted By</th>
-                                        <th data-i18n="document.type">Document Type</th>
-                                        <th data-i18n="actions">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="open-table-body"></tbody>
-                            </table>
-                            <div id="open-no-results" class="no-results" style="display: none;">No open documents.</div>
-                        </div>
-                    </div>
-
-                    <!-- ===== 2. Pending Documents ===== -->
-                    <div class="diary-category-section collapsed" data-category="pending">
-                        <div class="table-header">
-                            <div class="header-left">
-                                <h2 class="table-title">
-                                    <i class="fas fa-clock"></i>
-                                    <span data-i18n="category.pending">Pending Documents</span>
-                                    <span class="category-count" id="pending-count">0</span>
-                                </h2>
-                                <p class="category-desc" data-i18n="category.pending.desc">Submitted but not yet approved</p>
-                            </div>
-                            <div class="header-right">
-                                <input type="text" class="category-search" data-category="pending" placeholder="Search Pending...">
-                                <i class="fas fa-chevron-down toggle-icon"></i>
-                            </div>
-                        </div>
-                        <div class="table-container">
-                            <table class="diary-table">
-                                <thead>
-                                    <tr>
-                                        <th data-i18n="diary.id">Diary ID</th>
-                                        <th data-i18n="status">Status</th>
-                                        <th data-i18n="Approval status">Approval Status</th>
-                                        <th data-i18n="site">Site</th>
-                                        <th data-i18n="period">Period</th>
-                                        <th data-i18n="submitted.by">Submitted By</th>
-                                        <th data-i18n="document.type">Document Type</th>
-                                        <th data-i18n="actions">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="pending-table-body"></tbody>
-                            </table>
-                            <div id="pending-no-results" class="no-results" style="display: none;">No pending documents.</div>
-                        </div>
-                    </div>
-
-                    <!-- ===== 3. Overdue Documents ===== -->
-                    <div class="diary-category-section collapsed" data-category="overdue">
-                        <div class="table-header">
-                            <div class="header-left">
-                                <h2 class="table-title">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                    <span data-i18n="category.overdue">Overdue Documents</span>
-                                    <span class="category-count" id="overdue-count">0</span>
-                                </h2>
-                                <p class="category-desc" data-i18n="category.overdue.desc">Draft documents older than 14 days</p>
-                            </div>
-                            <div class="header-right">
-                                <input type="text" class="category-search" data-category="overdue" placeholder="Search Overdue...">
-                                <i class="fas fa-chevron-down toggle-icon"></i>
-                            </div>
+                            <h2 class="table-title">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span data-i18n="category.overdue">Overdue Documents</span>
+                                <span class="category-count" id="overdue-count">0</span>
+                            </h2>
+                            <p class="category-desc" data-i18n="category.overdue.desc">Draft documents older than 14 days</p>
                         </div>
                         <div class="table-container">
                             <table class="diary-table">
@@ -334,21 +221,45 @@
                         </div>
                     </div>
 
-                    <!-- ===== 4. Closed Documents ===== -->
-                    <div class="diary-category-section collapsed" data-category="closed">
+                    <!-- ===== Pending Documents ===== -->
+                    <div class="diary-category-section" data-category="pending">
                         <div class="table-header">
-                            <div class="header-left">
-                                <h2 class="table-title">
-                                    <i class="fas fa-check-circle"></i>
-                                    <span data-i18n="category.closed">Closed Documents</span>
-                                    <span class="category-count" id="closed-count">0</span>
-                                </h2>
-                                <p class="category-desc" data-i18n="category.closed.desc">Completed, closed, or cancelled diaries</p>
-                            </div>
-                            <div class="header-right">
-                                <input type="text" class="category-search" data-category="closed" placeholder="Search Closed...">
-                                <i class="fas fa-chevron-down toggle-icon"></i>
-                            </div>
+                            <h2 class="table-title">
+                                <i class="fas fa-clock"></i>
+                                <span data-i18n="category.pending">Pending Documents</span>
+                                <span class="category-count" id="pending-count">0</span>
+                            </h2>
+                            <p class="category-desc" data-i18n="category.pending.desc">Submitted but not yet approved</p>
+                        </div>
+                        <div class="table-container">
+                            <table class="diary-table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="diary.id">Diary ID</th>
+                                        <th data-i18n="status">Status</th>
+                                        <th data-i18n="Approval status">Approval Status</th>
+                                        <th data-i18n="site">Site</th>
+                                        <th data-i18n="period">Period</th>
+                                        <th data-i18n="submitted.by">Submitted By</th>
+                                        <th data-i18n="document.type">Document Type</th>
+                                        <th data-i18n="actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pending-table-body"></tbody>
+                            </table>
+                            <div id="pending-no-results" class="no-results" style="display: none;">No pending documents.</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== Closed Documents ===== -->
+                    <div class="diary-category-section" data-category="closed">
+                        <div class="table-header">
+                            <h2 class="table-title">
+                                <i class="fas fa-check-circle"></i>
+                                <span data-i18n="category.closed">Closed Documents</span>
+                                <span class="category-count" id="closed-count">0</span>
+                            </h2>
+                            <p class="category-desc" data-i18n="category.closed.desc">Completed, closed, or cancelled diaries</p>
                         </div>
                         <div class="table-container">
                             <table class="diary-table">
@@ -370,8 +281,37 @@
                         </div>
                     </div>
 
-                </div>
+                    <!-- ===== Other Documents (Draft within 14 days, Reopen) ===== -->
+                    <div class="diary-category-section" data-category="other">
+                        <div class="table-header">
+                            <h2 class="table-title">
+                                <i class="fas fa-folder"></i>
+                                <span data-i18n="category.other">Other Documents</span>
+                                <span class="category-count" id="other-count">0</span>
+                            </h2>
+                            <p class="category-desc" data-i18n="category.other.desc">Drafts within 14 days, reopened, or in progress</p>
+                        </div>
+                        <div class="table-container">
+                            <table class="diary-table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="diary.id">Diary ID</th>
+                                        <th data-i18n="status">Status</th>
+                                        <th data-i18n="Approval status">Approval Status</th>
+                                        <th data-i18n="site">Site</th>
+                                        <th data-i18n="period">Period</th>
+                                        <th data-i18n="submitted.by">Submitted By</th>
+                                        <th data-i18n="document.type">Document Type</th>
+                                        <th data-i18n="actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="other-table-body"></tbody>
+                            </table>
+                            <div id="other-no-results" class="no-results" style="display: none;">No other documents.</div>
+                        </div>
+                    </div>
 
+                </div>
             </section>
             
             <footer>
@@ -458,7 +398,11 @@
             var escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             var re = new RegExp('^' + escaped + '(\\d+)[A-Za-z]?$');
 
-            var list = loadAll();
+            var list = Array.isArray(window.__dwssDiaryRecords) ? window.__dwssDiaryRecords.slice() : loadAll();
+            document.querySelectorAll('td').forEach(function (cell) {
+                var txt = (cell.textContent || '').replace(/\s+/g, '');
+                if (txt.indexOf('SD/') === 0) list.push({ id: txt });
+            });
             var maxNum = 0;
             list.forEach(function (item) {
                 if (!item || item.id == null) return;
@@ -568,97 +512,9 @@
         }
 
         function handleSubmit(e) {
-            var form = e.target;
-            if (!form || form.id !== 'add-diary-form') return;
-
-            e.preventDefault();
-            e.stopImmediatePropagation();
-
-            var id = getValue('input-diary-id');
-            var status = getValue('input-status') || 'draft';
-            var site = getValue('input-site');
-            var startDate = getValue('input-date-start');
-            var endDate = getValue('input-date-end');
-            var submittedBy = getValue('input-submitted-by');
-            var type = getValue('input-type');
-            var pdfInput = document.getElementById('input-pdf');
-            var pdfFile = pdfInput && pdfInput.files ? pdfInput.files[0] : null;
-
-            if (!id) { alert('❌ Please enter Diary ID.'); return; }
-            if (!site) { alert('❌ Please enter Site.'); return; }
-            if (!startDate) { alert('❌ Please select Period start date.'); return; }
-            if (!endDate) { alert('❌ Please select Period end date.'); return; }
-            if (startDate > endDate) {
-                alert('❌ Period start date must be earlier than or equal to end date.');
-                return;
-            }
-            if (!submittedBy) { alert('❌ Please enter Submitted By.'); return; }
-            if (!type) { alert('❌ Please select Document Type.'); return; }
-
-            var existing = loadRecords();
-            if (existing.some(function (r) { return String(r.id) === String(id); })) {
-                alert('❌ Diary ID "' + id + '" already exists.');
-                return;
-            }
-
-            var periodStr = fmtDate(startDate) + ' ~ ' + fmtDate(endDate);
-            var projectId = sessionStorage.getItem('currentProjectId') || null;
-            
-            var approvalStatus = 'pending';
-            if (status === 'cancelled') {
-                approvalStatus = 'cancelled';
-            }
-
-            var record = {
-                id: id,
-                status: status,
-                approvalStatus: approvalStatus,
-                site: site,
-                date: periodStr,
-                startDate: startDate,
-                endDate: endDate,
-                period: periodStr,
-                submittedBy: submittedBy,
-                type: type,
-                project: projectId,
-                annotations: [],
-                statusHistory: [],
-                totalPages: 10,
-                usesTemplate: true,
-                createdAt: new Date().toISOString()
-            };
-
-            var finish = function () {
-                try {
-                    saveRecord(record);
-                } catch (err) {
-                    console.error('[SiteDiary] Save failed:', err);
-                    alert('❌ Failed to save.');
-                    return;
-                }
-                var modal = document.getElementById('add-diary-modal');
-                if (modal) modal.style.display = 'none';
-                window.location.reload();
-            };
-
-            if (pdfFile) {
-                var reader = new FileReader();
-                reader.onload = function (ev) {
-                    try {
-                        var dataUrl = ev.target.result || '';
-                        var base64 = dataUrl.indexOf(',') !== -1 ? dataUrl.split(',')[1] : dataUrl;
-                        record.pdfData = base64;
-                        record.usesTemplate = false;
-                        finish();
-                    } catch (err) {
-                        alert('❌ Failed to read PDF.');
-                    }
-                };
-                reader.onerror = function () { alert('❌ Failed to read PDF.'); };
-                reader.readAsDataURL(pdfFile);
-            } else {
-                finish();
-            }
+            // Disabled: sitediary.js handles save the same way as safety records.
+            // This old handler reloaded the page before the database write finished.
+            return;
         }
 
         document.addEventListener('submit', handleSubmit, true);
@@ -743,15 +599,7 @@
             if (!Array.isArray(record.annotations)) record.annotations = [];
             if (!record.totalPages) record.totalPages = 10;
 
-            try {
-                sessionStorage.setItem('editDocument', JSON.stringify(record));
-                sessionStorage.setItem('currentDiaryRecord', JSON.stringify(record));
-                sessionStorage.setItem('currentRecord', JSON.stringify(record));
-            } catch (err) {
-                console.error('[DSD] sessionStorage write failed:', err);
-            }
-
-            window.location.href = 'editdsdsitediary.html';
+            window.location.href = 'editdsdsitediary.html?id=' + encodeURIComponent(diaryId);
         }
 
         function bind() {
@@ -972,7 +820,19 @@
         var modal = document.getElementById('history-modal');
         var content = document.getElementById('history-content');
         if (!modal || !content) return;
+        content.innerHTML = '<div style="padding:20px;text-align:center;color:#64748b;">Loading history...</div>';
+        modal.style.display = 'flex';
 
+        fetch('/api/record?collection=siteDiary&id=' + encodeURIComponent(diaryId), { cache: 'no-store' })
+            .then(function (res) { return res.ok ? res.json() : null; })
+            .then(function (full) {
+                if (full && full.id) record = full;
+                renderHistory(record, content);
+            })
+            .catch(function () { renderHistory(record, content); });
+    }
+
+    function renderHistory(record, content) {
         var history = Array.isArray(record.statusHistory) ? record.statusHistory : [];
 
         var html = '';
@@ -1032,7 +892,6 @@
         }
 
         content.innerHTML = html;
-        modal.style.display = 'flex';
     }
 
     function closeHistory() {
@@ -1119,70 +978,6 @@
         </div>
     </div>
 </div>
-    <script>
-    (function () {
-        'use strict';
-        
-        // 1. 處理折疊與展開
-        if (!window.__diaryFoldBound) {
-            window.__diaryFoldBound = true;
-            document.addEventListener('click', function(e) {
-                var header = e.target.closest('.diary-category-section .table-header');
-                if (header) {
-                    // ★ 關鍵修正：如果點擊的是輸入框，不要觸發折疊
-                    if (e.target.closest('input') || e.target.closest('button') || e.target.closest('a')) {
-                        return;
-                    }
-                    
-                    var section = header.closest('.diary-category-section');
-                    if (section) {
-                        section.classList.toggle('collapsed');
-                    }
-                }
-            });
-        }
 
-        // 2. 處理表格搜尋 (事件委派)
-        if (!window.__diarySearchBound) {
-            window.__diarySearchBound = true;
-            
-            document.addEventListener('input', function(e) {
-                if (!e.target.classList.contains('category-search')) return;
-                
-                var category = e.target.getAttribute('data-category');
-                var query = e.target.value.toLowerCase().trim();
-                var tbody = document.getElementById(category + '-table-body');
-                if (!tbody) return;
-
-                var rows = tbody.querySelectorAll('tr');
-                var visibleCount = 0;
-
-                rows.forEach(function(row) {
-                    var text = row.textContent.toLowerCase();
-                    if (text.includes(query)) {
-                        row.style.display = ''; // 顯示
-                        visibleCount++;
-                    } else {
-                        row.style.display = 'none'; // 隱藏
-                    }
-                });
-
-                // 處理無結果提示文字
-                var noResEl = document.getElementById(category + '-no-results');
-                if (noResEl) {
-                    if (rows.length === 0) {
-                        noResEl.style.display = 'block';
-                        noResEl.textContent = 'No documents.';
-                    } else if (visibleCount === 0 && query !== '') {
-                        noResEl.style.display = 'block';
-                        noResEl.textContent = 'No matching documents found for "' + e.target.value + '".';
-                    } else {
-                        noResEl.style.display = 'none';
-                    }
-                }
-            });
-        }
-    })();
-    </script>
 </body>
 </html>

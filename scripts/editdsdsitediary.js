@@ -106,6 +106,9 @@
 
     /* ========== 讀取/建立文件 ========== */
     function loadDocumentData() {
+        var params = new URLSearchParams(location.search);
+        var id = params.get('id');
+        if (id && window.__dwssDiaryDoc) return window.__dwssDiaryDoc;
         var sources = ['editDocument', 'currentDiaryRecord', 'currentRecord'];
         for (var i = 0; i < sources.length; i++) {
             var raw = sessionStorage.getItem(sources[i]);
@@ -116,6 +119,19 @@
             } catch (e) { /* ignore */ }
         }
         return null;
+    }
+
+    function loadDocumentFromServer() {
+        var params = new URLSearchParams(location.search);
+        var id = params.get('id');
+        if (!id) return Promise.resolve(loadDocumentData());
+        return fetch('/api/record?collection=siteDiary&id=' + encodeURIComponent(id), { cache: 'no-store' })
+            .then(function (res) { return res.ok ? res.json() : null; })
+            .then(function (doc) {
+                if (doc && doc.id) window.__dwssDiaryDoc = doc;
+                return doc || loadDocumentData();
+            })
+            .catch(function () { return loadDocumentData(); });
     }
 
     function buildDefaultDoc() {
@@ -1119,36 +1135,46 @@
         currentDoc.annotations = annotations;
         currentDoc.totalPages = totalVirtualPages;
         currentDoc.usesTemplate = true;
-
-        try {
-            sessionStorage.setItem('editDocument',        JSON.stringify(currentDoc));
-            sessionStorage.setItem('currentDiaryRecord',  JSON.stringify(currentDoc));
-            sessionStorage.setItem('currentRecord',       JSON.stringify(currentDoc));
-            // ★ Add these
-            sessionStorage.setItem('currentDocument',     JSON.stringify(currentDoc));
-            sessionStorage.setItem('viewDocument',        JSON.stringify(currentDoc));
-        } catch (e) { /* ignore */ }
-
-
-        var stored = localStorage.getItem(STORAGE_KEY);
-        var data = [];
-        if (stored) {
-            try {
-                var parsed = JSON.parse(stored);
-                if (Array.isArray(parsed)) data = parsed;
-            } catch (e) { data = []; }
+        if (window.__dwssFormData) {
+            currentDoc.formData = window.__dwssFormData;
+        } else if (window.__dwssDiaryDoc && window.__dwssDiaryDoc.formData) {
+            currentDoc.formData = window.__dwssDiaryDoc.formData;
         }
-        var idx = -1;
-        for (var i = 0; i < data.length; i++) {
-            if (String(data[i].id) === String(currentDoc.id)) { idx = i; break; }
+        if (window.__dwssDiaryDoc && window.__dwssDiaryDoc._version) {
+            currentDoc._version = window.__dwssDiaryDoc._version;
         }
-        if (idx !== -1) data[idx] = currentDoc;
-        else data.push(currentDoc);
+        window.__dwssDiaryDoc = currentDoc;
 
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
-        catch (e) { console.error('[DSD] Save failed', e); }
-
-        alert('✅ Changes saved successfully!');
+        function putDiary(doc) {
+            return fetch('/api/record?collection=siteDiary&id=' + encodeURIComponent(doc.id), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(doc)
+            }).then(function (res) {
+                return res.json().catch(function () { return {}; }).then(function (body) {
+                    return { ok: res.ok, status: res.status, body: body };
+                });
+            });
+        }
+        putDiary(currentDoc).then(function (result) {
+            if (result.status === 409) {
+                delete currentDoc._version;
+                return putDiary(currentDoc);
+            }
+            return result;
+        }).then(function (result) {
+            if (!result.ok) {
+                alert('Could not save to the database.' + (result.body && result.body.message ? '\n' + result.body.message : ''));
+                return;
+            }
+            if (result.body && result.body.version) {
+                currentDoc._version = result.body.version;
+                window.__dwssDiaryDoc = currentDoc;
+            }
+            alert('✅ Changes saved successfully!');
+        }).catch(function () {
+            alert('Could not save to the database.');
+        });
     }
 
     function submitDocument() {
@@ -1389,18 +1415,13 @@
     document.addEventListener('DOMContentLoaded', function () {
         try {
             syncGlobalDate();
-
-            var doc = loadDocumentData();
-            if (!doc) {
-                doc = buildDefaultDoc();
-                try { sessionStorage.setItem('editDocument', JSON.stringify(doc)); } catch (e) {}
-            }
+            loadDocumentFromServer().then(function (doc) {
+            if (!doc) doc = buildDefaultDoc();
             currentDoc = doc;
             annotations = Array.isArray(doc.annotations) ? doc.annotations : [];
 
             updateDocumentInfo(currentDoc);
 
-            // 決定總頁數（優先使用 currentDoc.totalPages，即 Period 計算的結果）
             var maxAnnotated = 1;
             annotations.forEach(function (a) {
                 if ((a.page || 1) > maxAnnotated) maxAnnotated = a.page;
@@ -1427,23 +1448,10 @@
             }).catch(function (err) {
                 console.error('[DSD] PDF load failed:', err);
                 hideLoading();
-                pageWrapper.innerHTML =
-                    '<div style="padding:40px;text-align:center;color:#e74c3c;background:#fff;border-radius:8px;">' +
-                    '<i class="fas fa-exclamation-triangle" style="font-size:32px;"></i><br><br>' +
-                    '<strong>Failed to load ' + PDF_PATH + '</strong><br>' +
-                    '<small>Error: ' + (err && err.message ? err.message : 'unknown') + '</small><br><br>' +
-                    '<small>請確認 SiteDiaryDSD.pdf 與 editdsdsitediary.html 在同一目錄</small>' +
-                    '</div>';
             });
-
+            });
         } catch (err) {
             console.error('[DSD] Init failed:', err);
-            if (pageWrapper) {
-                pageWrapper.innerHTML =
-                    '<div style="padding:40px;text-align:center;color:#e74c3c;">' +
-                    'Init error: ' + (err && err.message ? err.message : 'unknown') +
-                    '</div>';
-            }
         }
     });
 

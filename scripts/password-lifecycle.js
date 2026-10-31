@@ -60,19 +60,7 @@
         return user;
     }
 
-    function persistUserUpdate(user) {
-        var USERS_KEY = 'dwss_users_db';
-        try {
-            var users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-            var idx = users.findIndex(function (u) { return u.id === user.id; });
-            if (idx !== -1) {
-                users[idx] = user;
-                localStorage.setItem(USERS_KEY, JSON.stringify(users));
-                return true;
-            }
-        } catch (e) {
-            console.error('[PasswordLifecycle] Failed to persist:', e);
-        }
+    function persistUserUpdate() {
         return false;
     }
 
@@ -81,6 +69,7 @@
         if (status.required) {
             sessionStorage.setItem('password_change_required', JSON.stringify({
                 userId: user.id,
+                username: user.username,
                 reason: status.reason,
                 message: status.message
             }));
@@ -98,20 +87,11 @@
         enforce: enforcePasswordPolicy,
 
         changePassword: function (userId, newPassword) {
-            var USERS_KEY = 'dwss_users_db';
-            try {
-                var users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-                var user = users.find(function (u) { return u.id === userId; });
-                if (!user) return { success: false, error: 'User not found' };
+            return { success: false, error: 'Password changes are saved on the server only' };
+        },
 
-                user.password = newPassword;
-                updatePasswordMetadata(user);
-                localStorage.setItem(USERS_KEY, JSON.stringify(users));
-
-                return { success: true, user: user };
-            } catch (e) {
-                return { success: false, error: e.message };
-            }
+        saveUserToServer: async function (user) {
+            return { success: false, error: 'Use the change-password page. Passwords are saved on the server only' };
         }
     };
 

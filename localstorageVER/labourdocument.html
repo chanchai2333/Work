@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEL DWSS - Labour Wage Document</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles/main.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <script>
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        }
+    </script>
+
+    <script src="scripts/GF527A-data.js"></script>
+    <script src="scripts/GF527_2017-data.js"></script>
+    <script src="scripts/GF527_2003-data.js"></script>
+    <script src="scripts/labour-form-layouts.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { min-height: 100vh; background-color: #f5f7fa; color: #333; }
+        .main-content { padding: 30px; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #e0e6ed; }
+        .header h1 { color: #2c3e50; font-size: 2rem; }
+        .header-controls { display: flex; align-items: center; gap: 15px; }
+        .date-display { background: #eef2f6; padding: 8px 15px; border-radius: 8px; font-size: 16px; font-weight: 500; color: #308fee; }
+        .date-display i { margin-right: 8px; }
+        .user-date-row { display: flex; align-items: center; gap: 16px; }
+        .user-btn { background: #2563eb; color: #fff; border: none; border-radius: 20px; padding: 10px 20px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+
+        .document-view-page { background: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .document-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eaeaea; flex-wrap: wrap; gap: 15px; }
+        .document-header h2 { font-size: 1.6rem; color: #2c3e50; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .doc-status { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; }
+        .status-draft { background: rgba(149,165,166,0.2); color: #848f90; }
+        .status-submitted { background: rgba(52,152,219,0.2); color: #2980b9; }
+        .status-approved { background: rgba(46,204,113,0.2); color: #27ae60; }
+        .status-rejected { background: rgba(231,76,60,0.2); color: #c0392b; }
+        .status-pending { background: rgba(243,156,18,0.2); color: #d35400; }
+        .status-cancelled { background: rgba(231,76,60,0.2); color: #c0392b; }
+
+        .document-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; transition: all 0.3s ease; white-space: nowrap; color: #fff; text-decoration: none; }
+        .btn:hover { transform: translateY(-2px); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
+        .btn-primary { background: #3498db; } .btn-primary:hover { background: #2980b9; }
+        .btn-print { background: #27ae60; } .btn-print:hover { background: #219653; }
+        .btn-download { background: #8e44ad; } .btn-download:hover { background: #732d91; }
+
+        .download-dropdown { position: relative; display: inline-block; }
+        .download-dropdown .btn-download .fa-chevron-down { font-size: 0.7em; margin-left: 4px; }
+        .dropdown-menu {
+            display: none; position: absolute; top: calc(100% + 6px); right: 0;
+            background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15); min-width: 230px;
+            z-index: 1000; overflow: hidden;
+        }
+        .dropdown-menu.open { display: block; animation: ddFadeIn 0.15s ease-out; }
+        @keyframes ddFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+        .dropdown-menu button {
+            display: flex; align-items: center; gap: 12px; width: 100%;
+            padding: 12px 16px; background: none; border: none; text-align: left;
+            cursor: pointer; font-size: 0.9rem; color: #333;
+            transition: background 0.15s; font-family: inherit;
+        }
+        .dropdown-menu button:hover { background: #f1f5f9; }
+        .dropdown-menu button + button { border-top: 1px solid #e2e8f0; }
+        .dropdown-menu button i { font-size: 1.2rem; width: 20px; text-align: center; }
+        .dropdown-menu button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .document-meta { background: #f8f9fa; border-radius: 12px; padding: 20px 30px; margin: 20px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+        .meta-item { display: flex; flex-direction: column; }
+        .meta-label { font-weight: 600; color: #2c3e50; margin-bottom: 5px; font-size: 0.85rem; }
+        .meta-value { color: #555; font-size: 0.95rem; font-weight: 500; padding: 8px 12px; border-radius: 6px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+        .pdf-editor-container { display: flex; flex-direction: column; gap: 12px; }
+        .pdf-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #f1f5f9; padding: 10px 12px; border-radius: 6px; }
+        .nav-btn { background: #3498db; color: #fff; border: none; border-radius: 4px; padding: 8px 14px; cursor: pointer; font-size: 14px; }
+        .nav-btn:hover { background: #2980b9; }
+        .nav-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .page-info { font-size: 14px; font-weight: 600; color: #334155; padding: 0 4px; display: flex; align-items: center; gap: 6px; }
+        .page-input { width: 60px; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 14px; font-weight: 700; color: #1e40af; text-align: center; background: #fff; }
+        .page-input:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 2px rgba(52,152,219,0.25); background: #f0f9ff; }
+        .page-input::-webkit-inner-spin-button, .page-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .page-input { -moz-appearance: textfield; }
+
+        .pdf-canvas-container {
+            position: relative;
+            background: #e0e0e0;
+            border-radius: 8px;
+            padding: 24px;
+            overflow: auto;
+            min-height: 500px;
+            text-align: center;
+        }
+        #page-wrapper {
+            display: inline-block;
+            text-align: left;
+        }
+        .pdf-page {
+            position: relative;
+            display: block;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            background: #fff;
+            border: 3px solid transparent;
+            overflow: hidden;
+            margin: 0 auto;
+        }
+        .pdf-page.active-page { border-color: #3498db; }
+        .pdf-page > img {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: block;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        /* ★ overlay 基礎樣式（不指定 font-size，改由 JS 內聯設定） */
+        .pdf-view-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 30;
+            pointer-events: none;
+        }
+        .pdf-view-overlay .pdf-view-field {
+            position: absolute;
+            color: #0a1a5c;
+            font-family: Arial, sans-serif;
+            font-weight: 600;
+            padding: 1px 3px;
+            line-height: 1.2;
+            box-sizing: border-box;
+            overflow: hidden;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+        }
+        .pdf-view-overlay .pdf-view-field.check {
+            justify-content: center;
+            color: #0a1a5c;
+            font-weight: 900;
+        }
+
+        .loading-indicator { display: none; justify-content: center; align-items: center; gap: 10px; padding: 40px; color: #2563eb; font-weight: 600; background: #eff6ff; border-radius: 8px; }
+        .loading-indicator.visible { display: flex; }
+        .error-message { display: none; padding: 40px; color: #e74c3c; text-align: center; background: #fef2f2; border-radius: 8px; margin: 10px; }
+
+        footer { text-align: center; padding: 30px 0 20px; color: #7f8c8d; border-top: 1px solid #e0e6ed; margin-top: 30px; }
+        @media (max-width: 768px) { .main-content { padding: 15px; } .document-view-page { padding: 20px; } }
+        .sidebar.collapsed .logo { display: none !important; }
+
+        @page { size: A4 landscape; margin: 0; }
+        @media print {
+            html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+            body > *:not(#print-only-container) { display: none !important; }
+            #print-only-container { display: block !important; }
+            #print-only-container .print-page {
+                page-break-after: always;
+                break-after: page;
+                width: 100vw; height: 100vh;
+                display: flex; align-items: center; justify-content: center;
+                overflow: hidden; margin: 0; padding: 0;
+                position: relative;
+            }
+            #print-only-container .print-page:last-child { page-break-after: auto; break-after: auto; }
+            #print-only-container .print-page img {
+                max-width: 100%; max-height: 100%;
+                object-fit: contain; display: block;
+            }
+        }
+        #print-only-container { display: none; }
+    </style>
+</head>
+<body>
+    <div class="main-content">
+        <div class="header">
+            <h1>Labour Wage</h1>
+            <div class="header-controls">
+                <div class="user-date-row">
+                    <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
+                    <button class="user-btn"><i class="fas fa-user"></i> John Doe</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="document-view-page">
+            <div class="document-header">
+                <h2>
+                    <i class="fas fa-file-alt"></i>
+                    <span id="docTitle">Labour Wage Document</span>
+                    <span class="doc-status status-draft" id="docStatus">Draft</span>
+                </h2>
+                <div class="document-actions">
+                    <div class="download-dropdown">
+                        <button class="btn btn-download" id="download-btn">
+                            <i class="fas fa-download"></i> Download <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="dropdown-menu" id="download-menu">
+                            <button data-format="pdf" id="download-pdf-option">
+                                <i class="fas fa-file-pdf" style="color:#e74c3c;"></i>
+                                <span>Download as PDF</span>
+                            </button>
+                            <button data-format="xlsx" id="download-xlsx-option">
+                                <i class="fas fa-file-excel" style="color:#217346;"></i>
+                                <span>Download as Excel (.xlsx)</span>
+                            </button>
+                        </div>
+                    </div>
+                    <button class="btn btn-print" id="print-pdf-btn"><i class="fas fa-print"></i> Print</button>
+                    <button class="btn btn-primary" id="back-btn"><i class="fas fa-arrow-left"></i> Back</button>
+                </div>
+            </div>
+
+            <div class="document-meta">
+                <div class="meta-item"><span class="meta-label">Document ID:</span><span class="meta-value" id="docId">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Document Type:</span><span class="meta-value" id="docType">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Site:</span><span class="meta-value" id="docSite">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Period:</span><span class="meta-value" id="docPeriod">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">Submitted By:</span><span class="meta-value" id="docAuthor">N/A</span></div>
+            </div>
+
+            <div class="pdf-editor-container">
+                <div class="pdf-controls" id="pdf-controls" style="display:none;">
+                    <button class="nav-btn" id="prev-page"><i class="fas fa-chevron-left"></i></button>
+                    <span class="page-info">
+                        Page
+                        <input type="number" id="page-input" class="page-input" min="1" value="1">
+                        of <span id="total-pages">1</span>
+                    </span>
+                    <span id="current-page" style="display:none;">1</span>
+                    <button class="nav-btn" id="next-page"><i class="fas fa-chevron-right"></i></button>
+                </div>
+
+                <div class="pdf-canvas-container" id="pdf-container">
+                    <div class="loading-indicator" id="loading-indicator">
+                        <i class="fas fa-spinner fa-spin"></i> <span id="loading-text">Loading...</span>
+                    </div>
+                    <div class="error-message" id="error-message">
+                        <i class="fas fa-exclamation-triangle" style="font-size:32px;"></i><br><br>
+                        <strong>Failed to load document.</strong>
+                    </div>
+                    <div id="page-wrapper"></div>
+                </div>
+            </div>
+
+            <footer>
+                <p>&copy; 2025 AEL DWSS System. All rights reserved.</p>
+                <p>AEL DWSS Platform</p>
+            </footer>
+        </div>
+    </div>
+
+    <div id="print-only-container"></div>
+
+    <script src="scripts/language.js"></script>
+    <script src="scripts/app.js"></script>
+    <script src="scripts/sidebar.js"></script>
+    <script src="scripts/auth-check.js"></script>
+    <script src="scripts/user-display.js"></script>
+
+    <script>
+    (function () {
+        'use strict';
+
+        var PDF_RENDER_SCALE = 3.0;
+        var A3_W_MM = 420;
+        var A3_H_MM = 297;
+        var FALLBACK_PAGE_WIDTH = 1400;
+
+        var pageWrapper       = document.getElementById('page-wrapper');
+        var pdfContainer      = document.getElementById('pdf-container');
+        var loadingEl         = document.getElementById('loading-indicator');
+        var loadingText       = document.getElementById('loading-text');
+        var errorEl           = document.getElementById('error-message');
+        var pdfControls       = document.getElementById('pdf-controls');
+        var totalPagesEl      = document.getElementById('total-pages');
+        var currentPageEl     = document.getElementById('current-page');
+        var pageInput         = document.getElementById('page-input');
+        var prevBtn           = document.getElementById('prev-page');
+        var nextBtn           = document.getElementById('next-page');
+        var downloadBtn       = document.getElementById('download-btn');
+        var downloadMenu      = document.getElementById('download-menu');
+        var downloadPdfOpt    = document.getElementById('download-pdf-option');
+        var downloadXlsxOpt   = document.getElementById('download-xlsx-option');
+
+        var currentDoc        = null;
+        var currentPdfBlob    = null;
+        var pageImages        = [];
+        var pageAspects       = [];
+        var activePageNum     = 1;
+        var totalVirtualPages = 1;
+        var storedPageWidth   = null;
+
+        function base64ToUint8(b64) {
+            if (b64.indexOf('base64,') !== -1) b64 = b64.split('base64,')[1];
+            var bin = atob(b64);
+            var len = bin.length;
+            var bytes = new Uint8Array(len);
+            for (var i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+            return bytes;
+        }
+
+        function setLoading(msg) {
+            if (!loadingEl) return;
+            loadingEl.classList.add('visible');
+            if (loadingText) loadingText.textContent = msg || 'Loading...';
+            if (errorEl) errorEl.style.display = 'none';
+        }
+        function hideLoading() { if (loadingEl) loadingEl.classList.remove('visible'); }
+        function showError(msg) {
+            hideLoading();
+            if (errorEl) {
+                errorEl.style.display = 'block';
+                errorEl.innerHTML =
+                    '<i class="fas fa-exclamation-triangle" style="font-size:32px;"></i><br><br>' +
+                    '<strong>' + (msg || 'Failed to load document.') + '</strong>';
+            }
+        }
+
+        function syncGlobalDate() {
+            var ds = document.querySelector('.date-display span');
+            var stored = sessionStorage.getItem('globalDate');
+            if (stored && ds) ds.textContent = stored;
+            else if (ds) ds.textContent = new Date().toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'});
+        }
+
+        function setupSidebar() {
+            var sb = document.querySelector('.sidebar');
+            if (sb && localStorage.getItem('sidebarCollapsed') === 'true') sb.classList.add('collapsed');
+            var tb = document.querySelector('.toggle-btn');
+            if (tb) tb.addEventListener('click', function () {
+                setTimeout(function () {
+                    if (sb) localStorage.setItem('sidebarCollapsed', sb.classList.contains('collapsed') ? 'true' : 'false');
+                }, 50);
+            });
+        }
+
+        function getCurrentDoc() {
+            var sources = ['currentWageRecord', 'viewDocument', 'editDocument', 'currentRecord'];
+            for (var i = 0; i < sources.length; i++) {
+                var raw = sessionStorage.getItem(sources[i]);
+                if (!raw) continue;
+                try {
+                    var d = JSON.parse(raw);
+                    if (d && d.id) return d;
+                } catch (e) {}
+            }
+            return null;
+        }
+
+        function findRecordById(id) {
+            if (!id) return null;
+            var sources = [
+                { storage: sessionStorage, key: 'wageData' },
+                { storage: localStorage,  key: 'wageData' },
+                { storage: localStorage,  key: 'labourWageData' }
+            ];
+            for (var i = 0; i < sources.length; i++) {
+                try {
+                    var raw = sources[i].storage.getItem(sources[i].key);
+                    if (!raw) continue;
+                    var arr = JSON.parse(raw);
+                    if (!Array.isArray(arr)) continue;
+                    for (var j = 0; j < arr.length; j++) {
+                        if (arr[j] && String(arr[j].id) === String(id)) return arr[j];
+                    }
+                } catch (e) {}
+            }
+            return null;
+        }
+
+        function getFormData() {
+            if (!currentDoc) return {};
+            var id = currentDoc.id || 'default';
+            if (currentDoc.formData && typeof currentDoc.formData === 'object' && Object.keys(currentDoc.formData).length > 0) {
+                return currentDoc.formData;
+            }
+            try {
+                var raw1 = sessionStorage.getItem('labour_formdata_' + id);
+                if (raw1) {
+                    var d1 = JSON.parse(raw1);
+                    if (d1 && typeof d1 === 'object' && Object.keys(d1).length > 0) return d1;
+                }
+            } catch (e) {}
+            var rec = findRecordById(id);
+            if (rec && rec.formData && typeof rec.formData === 'object' && Object.keys(rec.formData).length > 0) {
+                return rec.formData;
+            }
+            console.warn('[LabourDoc] ⚠ 找不到 formData, id =', id);
+            return {};
+        }
+
+        function updateDocInfo(doc) {
+            function setText(id, val) {
+                var el = document.getElementById(id);
+                if (el) el.textContent = (val === undefined || val === null || val === '') ? 'N/A' : val;
+            }
+            setText('docId', doc.id);
+            var typeText = doc.typeText;
+            if (!typeText && doc.type) {
+                if (doc.type === 'GF527A') typeText = 'GF527A - Return on Construction Site Employment';
+                else if (doc.type === 'GF527-2003') typeText = 'GF527 (2003) - Labour Wage';
+                else if (doc.type === 'GF527-2017') typeText = 'GF527 (2017) - Labour Wage';
+                else typeText = doc.type;
+            }
+            setText('docType', typeText);
+            setText('docSite', doc.site || doc.siteName);
+            setText('docPeriod', doc.period);
+            setText('docAuthor', doc.submittedBy || doc.author);
+            var titleEl = document.getElementById('docTitle');
+            if (titleEl) titleEl.textContent = 'Labour Wage - ' + (doc.site || doc.id || 'Document');
+
+            var statusEl = document.getElementById('docStatus');
+            if (statusEl) {
+                var statusMap = {
+                    'draft': 'Draft', 'submitted': 'Submitted', 'approved': 'Approved',
+                    'rejected': 'Rejected', 'pending': 'Pending Approval',
+                    'cancelled': 'Cancelled', 'endorsed': 'Endorsed'
+                };
+                var clsMap = {
+                    'draft': 'status-draft', 'submitted': 'status-submitted',
+                    'approved': 'status-approved', 'rejected': 'status-rejected',
+                    'pending': 'status-pending', 'cancelled': 'status-cancelled',
+                    'endorsed': 'status-approved'
+                };
+                var key = doc.approvalStatus || doc.status || 'draft';
+                statusEl.textContent = statusMap[key] || doc.statusText || 'Draft';
+                statusEl.className = 'doc-status';
+                if (clsMap[key]) statusEl.classList.add(clsMap[key]);
+            }
+
+            var xlsxOptText = downloadXlsxOpt ? downloadXlsxOpt.querySelector('span') : null;
+            if (downloadXlsxOpt) {
+                var hasXlsx = (doc.type === 'GF527-2017') || (doc.excelData && doc.excelData.length > 100);
+                downloadXlsxOpt.disabled = !hasXlsx;
+                if (xlsxOptText) {
+                    xlsxOptText.textContent = hasXlsx ? 'Download as Excel (.xlsx)' : 'Excel 不適用於此文件類型';
+                }
+            }
+        }
+
+        /* ============================================================
+           從 localStorage / labour-form-layouts.js 讀取原始 layout
+           ============================================================ */
+        function getLayoutForPageRaw(docType, pageNum) {
+            try {
+                var saved = localStorage.getItem('editlabour_layout_' + docType);
+                if (saved) {
+                    var obj = JSON.parse(saved);
+                    var fieldsObj = null;
+                    if (obj && obj.fields && typeof obj.fields === 'object') {
+                        fieldsObj = obj.fields;
+                        if (obj.pageWidth && !storedPageWidth) {
+                            storedPageWidth = parseInt(obj.pageWidth, 10) || null;
+                            console.log('[LabourDoc] ✓ 讀到 editlabour 頁寬 = ' + storedPageWidth + 'px');
+                        }
+                    } else {
+                        fieldsObj = obj;
+                    }
+                    var arr = [];
+                    for (var id in fieldsObj) {
+                        if (fieldsObj.hasOwnProperty(id)) {
+                            var f = fieldsObj[id];
+                            if (!f || !f.left) continue;
+                            arr.push({
+                                id: id,
+                                left: f.left,
+                                top: f.top,
+                                width: f.width || '8%',
+                                height: f.height || '1.8%',
+                                type: f.type || 'text'
+                            });
+                        }
+                    }
+                    if (arr.length > 0) {
+                        console.log('[LabourDoc] ✓✓ 使用 editlabour 的 layout (' + docType + '): ' + arr.length + ' 個欄位');
+                        return arr;
+                    }
+                }
+            } catch (e) {
+                console.warn('[LabourDoc] 讀 editlabour_layout 失敗:', e);
+            }
+            console.warn('[LabourDoc] ⚠ 未找到 editlabour_layout_' + docType);
+            var L = window.LABOUR_FORM_LAYOUTS;
+            if (!L) return null;
+            if (docType === 'GF527A')     return pageNum === 1 ? L['GF527A'] : null;
+            if (docType === 'GF527-2003') return pageNum === 1 ? L['GF527-2003'] : null;
+            if (docType === 'GF527-2017') {
+                if (pageNum === 1) return L['GF527-2017-page1'];
+                if (pageNum === 3) return L['GF527-2017-page3'];
+                return null;
+            }
+            return null;
+        }
+
+        /* ============================================================
+           ★ GF527-2017 強制補丁（g17_08 打勾 / g17_1458~1459 簽名）
+           ============================================================ */
+        var LAYOUT_PATCHES = {
+            'GF527-2017': {
+                1: {
+                    'g17_08': { left: '76.15%', top: '4.31%', width: '0.83%', height: '1.00%', type: 'check' }
+                },
+                3: {
+                    'g17_1458': { left: '26.50%', top: '84.80%', width: '4.00%', height: '1.60%', type: 'signature' },
+                    'g17_1459': { left: '26.50%', top: '86.50%', width: '4.00%', height: '1.60%', type: 'signature' }
+                }
+            }
+        };
+
+        function applyLayoutPatches(docType, pageNum, layout) {
+            var docPatches = LAYOUT_PATCHES[docType];
+            if (!docPatches) return layout;
+
+            var patches = docPatches[pageNum];
+            if (!patches) return layout;
+
+            var arr = Array.isArray(layout) ? layout.slice() : [];
+            var seen = {};
+            arr.forEach(function (f) { if (f && f.id) seen[f.id] = true; });
+
+            arr.forEach(function (f) {
+                if (!f || !f.id) return;
+                if (patches[f.id]) {
+                    f.type = patches[f.id].type;
+                    if (patches[f.id].left   !== undefined) f.left   = patches[f.id].left;
+                    if (patches[f.id].top    !== undefined) f.top    = patches[f.id].top;
+                    if (patches[f.id].width  !== undefined) f.width  = patches[f.id].width;
+                    if (patches[f.id].height !== undefined) f.height = patches[f.id].height;
+                }
+            });
+
+            for (var id in patches) {
+                if (!patches.hasOwnProperty(id)) continue;
+                if (seen[id]) continue;
+                var p = patches[id];
+                arr.push({
+                    id: id,
+                    left: p.left,
+                    top: p.top,
+                    width: p.width,
+                    height: p.height,
+                    type: p.type
+                });
+            }
+
+            console.log('[LabourDoc] ✓ layout 補丁已套用 (' + docType + ' page ' + pageNum + ')');
+            return arr;
+        }
+
+        /* ============================================================
+           ★★★ GF527-2003 精確 layout（完全複製自 editlabour.js）★★★
+           ============================================================ */
+        var _cachedGF527_2003_Layout = null;
+
+        function getGF527_2003_ExactLayout() {
+            if (_cachedGF527_2003_Layout) return _cachedGF527_2003_Layout;
+
+            var fields = [];
+
+            /* 頂部欄位（固定座標，複製自 editlabour.js GF527_2003_FORM_LAYOUT） */
+            var topFields = [
+                { id: 'gf_01', left: '5.20%',  top: '5.90%',  width: '2.57%',  height: '1.08%' },
+                { id: 'gf_02', left: '8.16%',  top: '5.90%',  width: '2.57%',  height: '1.27%' },
+                { id: 'gf_03', left: '14.50%', top: '5.90%',  width: '1.54%',  height: '1.44%' },
+                { id: 'gf_04', left: '16.53%', top: '5.90%',  width: '1.54%',  height: '1.44%' },
+                { id: 'gf_05', left: '28.30%', top: '5.90%',  width: '6.34%',  height: '1.44%' },
+                { id: 'gf_06', left: '40.22%', top: '5.70%',  width: '15.61%', height: '1.81%' },
+                { id: 'gf_07', left: '60.88%', top: '5.30%',  width: '8.73%',  height: '2.09%' },
+                { id: 'gf_08', left: '72.15%', top: '6.10%',  width: '0.90%',  height: '1.00%', type: 'check' },
+                { id: 'gf_45', left: '88.00%', top: '5.90%',  width: '6.00%',  height: '1.50%' }
+            ];
+            for (var i = 0; i < topFields.length; i++) fields.push(topFields[i]);
+
+            /* 表格：52 行 × 36 欄（最後一行只有 32 欄） */
+            var cols = [
+                ['30.00%','1.47%'], ['31.70%','1.47%'], ['33.50%','1.47%'], ['35.00%','1.47%'],
+                ['36.70%','1.47%'], ['38.50%','1.47%'], ['40.30%','1.47%'], ['41.90%','1.47%'],
+                ['43.60%','1.47%'], ['45.60%','1.47%'], ['47.20%','1.47%'], ['49.00%','1.47%'],
+                ['50.60%','1.47%'], ['52.30%','1.47%'], ['54.20%','1.47%'], ['56.00%','1.47%'],
+                ['57.70%','1.47%'], ['59.30%','1.47%'], ['61.10%','1.47%'], ['62.80%','1.47%'],
+                ['64.50%','1.47%'], ['66.30%','1.47%'], ['68.00%','1.47%'], ['69.70%','1.47%'],
+                ['71.50%','1.47%'], ['73.20%','1.47%'], ['74.90%','1.47%'], ['76.70%','1.47%'],
+                ['78.50%','1.47%'], ['80.20%','1.47%'], ['82.00%','1.47%'], ['84.30%','1.97%'],
+                ['87.20%','2.47%'], ['90.20%','1.77%'], ['92.70%','1.77%'], ['94.80%','1.77%']
+            ];
+
+            var rowTops = [
+                '11.10%', '12.80%', '14.30%', '15.80%', '17.30%', '18.80%',
+                '21.80%', '23.30%', '24.80%', '26.70%', '28.40%', '31.30%',
+                '32.80%', '34.30%', '35.80%', '37.30%', '38.80%', '40.30%',
+                '41.80%', '43.30%', '44.80%', '46.30%', '47.70%', '49.20%',
+                '50.70%', '52.20%', '53.70%', '55.20%', '56.70%', '58.20%',
+                '59.70%', '61.20%', '62.70%', '64.20%', '65.50%', '67.00%',
+                '68.50%', '70.00%', '71.50%', '73.00%', '74.50%', '76.00%',
+                '77.50%', '79.00%', '80.50%', '81.70%', '83.20%', '84.70%',
+                '86.20%', '87.70%', '89.20%', '90.70%'
+            ];
+
+            var idx = 46;
+            for (var r = 0; r < rowTops.length; r++) {
+                var top = rowTops[r];
+                var isLastRow = (r === rowTops.length - 1);
+                var maxCols = isLastRow ? 32 : cols.length;
+                for (var c = 0; c < maxCols; c++) {
+                    fields.push({
+                        id: 'gf_' + idx++,
+                        left: cols[c][0],
+                        top: top,
+                        width: cols[c][1],
+                        height: '1.56%',
+                        type: 'text'
+                    });
+                }
+            }
+
+            /* code / tradename 特殊欄位 */
+            var specials = [
+                { id: 'gf_1913', left: '23.00%', top: '81.70%', width: '6.47%', height: '1.56%' },
+                { id: 'gf_1914', left: '23.00%', top: '83.20%', width: '6.47%', height: '1.56%' },
+                { id: 'gf_1915', left: '23.00%', top: '84.70%', width: '6.47%', height: '1.56%' },
+                { id: 'gf_1916', left: '23.00%', top: '86.20%', width: '6.47%', height: '1.56%' },
+                { id: 'gf_1917', left: '23.00%', top: '87.70%', width: '6.47%', height: '1.56%' },
+                { id: 'gf_1918', left: '10.00%', top: '81.70%', width: '9.47%', height: '1.56%' },
+                { id: 'gf_1919', left: '10.00%', top: '83.20%', width: '9.47%', height: '1.56%' },
+                { id: 'gf_1920', left: '10.00%', top: '84.70%', width: '9.47%', height: '1.56%' },
+                { id: 'gf_1921', left: '10.00%', top: '86.20%', width: '9.47%', height: '1.56%' },
+                { id: 'gf_1922', left: '10.00%', top: '87.70%', width: '9.47%', height: '1.56%' }
+            ];
+            for (var k = 0; k < specials.length; k++) fields.push(specials[k]);
+
+            console.log('[LabourDoc] ✓✓ GF527-2003 精確 layout 生效，欄位數 =', fields.length);
+            _cachedGF527_2003_Layout = fields;
+            return fields;
+        }
+
+        function getLayoutForPage(docType, pageNum) {
+            /* ★ GF527-2003 用精確 layout，其餘走原流程 */
+            if (docType === 'GF527-2003' && pageNum === 1) {
+                return getGF527_2003_ExactLayout();
+            }
+            var raw = getLayoutForPageRaw(docType, pageNum);
+            return applyLayoutPatches(docType, pageNum, raw);
+        }
+
+        function fieldHasValue(field, value) {
+            if (field.type === 'check') {
+                return (value === '1' || value === '✓' || value === true || value === 'true');
+            }
+            return (value !== undefined && value !== null && String(value).trim() !== '');
+        }
+
+        /* ============================================================
+           ★ 字體大小：依 overlay 頁寬動態計算
+           ------------------------------------------------------------
+           基準（取自 editlabour.html 實際顯示）：
+             GF527A       頁寬 714px  →  文字 11px  (factor 0.0154)
+                                         勾選 14px  (factor 0.0196)
+             GF527-2017   頁寬 1400px →  文字 7px   (factor 0.0050)
+                                         g17_01~08   11px (factor 0.00786)
+                                         g17_03,04    8px (factor 0.00571)
+                                         勾選 9px   (factor 0.00635)
+             GF527-2003   頁寬 1400px →  文字 7px   (factor 0.0050)
+                                         勾選 9px   (factor 0.00635)
+           ============================================================ */
+        var _overlayPageWidth = 1400;
+
+        function setOverlayPageWidth(pw) {
+            if (pw && pw > 50) _overlayPageWidth = pw;
+        }
+
+        function computeOverlayFontSize(docType, fieldId, fieldType) {
+            var pw = _overlayPageWidth;
+            var isCheck = (fieldType === 'check');
+
+            if (docType === 'GF527A') {
+                return isCheck ? (pw * 0.0196) : (pw * 0.0154);
+            }
+
+            if (docType === 'GF527-2017') {
+                if (fieldId === 'g17_01' || fieldId === 'g17_02' ||
+                    fieldId === 'g17_05' || fieldId === 'g17_06' ||
+                    fieldId === 'g17_07' || fieldId === 'g17_08') {
+                    return pw * 0.00786;
+                }
+                if (fieldId === 'g17_03' || fieldId === 'g17_04') {
+                    return pw * 0.00571;
+                }
+                return isCheck ? (pw * 0.00635) : (pw * 0.0050);
+            }
+
+            if (docType === 'GF527-2003') {
+                return isCheck ? (pw * 0.00635) : (pw * 0.0050);
+            }
+
+            return pw * 0.0154;
+        }
+
+        /* ============================================================
+           建立 overlay（含文字 / ✓ / 簽名圖），字體大小內聯寫入
+           ============================================================ */
+        function buildOverlayElement(docType, pageNum, formData, forPrint) {
+            var fields = getLayoutForPage(docType, pageNum);
+            if (!fields || !fields.length) return null;
+
+            var overlay = document.createElement('div');
+            overlay.className = 'pdf-view-overlay';
+            if (forPrint) overlay.style.background = 'transparent';
+
+            var count = 0;
+
+            fields.forEach(function (f) {
+                var val = formData[f.id];
+                if (val === undefined || val === null) return;
+
+                var strVal = String(val).trim();
+                if (strVal === '') return;
+
+                /* 依 pageWidth 動態計算字體大小 */
+                var fontSizePx = computeOverlayFontSize(docType, f.id, f.type);
+
+                /* ─── 1. 簽名欄位 ─── */
+                if (f.type === 'signature' || strVal.indexOf('data:image') === 0) {
+                    var sigEl = document.createElement('div');
+                    sigEl.className = 'pdf-view-field signature';
+                    sigEl.dataset.fieldId = f.id;
+                    sigEl.style.left   = f.left;
+                    sigEl.style.top    = f.top;
+                    sigEl.style.width  = f.width;
+                    sigEl.style.height = f.height;
+                    sigEl.style.padding = '0';
+                    sigEl.style.justifyContent = 'center';
+                    sigEl.style.overflow = 'hidden';
+
+                    var sigImg = document.createElement('img');
+                    sigImg.src = strVal;
+                    sigImg.alt = '簽名';
+                    sigImg.style.cssText =
+                        'max-width:100%;max-height:100%;width:100%;height:100%;' +
+                        'object-fit:contain;display:block;pointer-events:none;';
+                    sigEl.appendChild(sigImg);
+                    overlay.appendChild(sigEl);
+                    count++;
+                    return;
+                }
+
+                /* ─── 2. 勾選欄位 ─── */
+                // ★ 修正：只依賴 type 是否為 'check'，避免數字 '1' 被誤認為打勾
+                var isCheck = (f.type === 'check');
+
+                if (isCheck) {
+                    var chkEl = document.createElement('div');
+                    chkEl.className = 'pdf-view-field check';
+                    chkEl.dataset.fieldId = f.id;
+                    chkEl.style.left   = f.left;
+                    chkEl.style.top    = f.top;
+                    chkEl.style.width  = f.width;
+                    chkEl.style.height = f.height;
+                    chkEl.style.fontSize = fontSizePx.toFixed(2) + 'px';  /* ★ 內聯字體 */
+                    chkEl.textContent = '✓';
+                    overlay.appendChild(chkEl);
+                    count++;
+                    return;
+                }
+
+                /* ─── 3. 一般文字欄位 ─── */
+                var el = document.createElement('div');
+                el.className = 'pdf-view-field';
+                el.dataset.fieldId = f.id;
+                el.style.left   = f.left;
+                el.style.top    = f.top;
+                el.style.width  = f.width;
+                el.style.height = f.height;
+                el.style.fontSize = fontSizePx.toFixed(2) + 'px';  /* ★ 內聯字體 */
+                el.textContent = strVal;
+                el.title = strVal;
+                overlay.appendChild(el);
+                count++;
+            });
+
+            return count > 0 ? overlay : null;
+        }
+
+        function injectViewOverlay(pageDiv, pageNum) {
+            if (!currentDoc) return;
+            var docType = currentDoc.type || 'GF527A';
+            var formData = getFormData();
+            var overlay = buildOverlayElement(docType, pageNum, formData, false);
+            if (overlay) pageDiv.appendChild(overlay);
+        }
+
+        /* ============== XLSX → PDF ============== */
+        function buildHtmlTableFromWorkbook(ws) {
+            var range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
+            var merges = ws['!merges'] || [];
+            var mergeStarts = {}, covered = {};
+            merges.forEach(function (m) {
+                var key = m.s.r + ',' + m.s.c;
+                mergeStarts[key] = { rowspan: m.e.r - m.s.r + 1, colspan: m.e.c - m.s.c + 1 };
+                for (var r = m.s.r; r <= m.e.r; r++) {
+                    for (var c = m.s.c; c <= m.e.c; c++) {
+                        if (r === m.s.r && c === m.s.c) continue;
+                        covered[r + ',' + c] = true;
+                    }
+                }
+            });
+            var colWidths = [];
+            if (ws['!cols']) {
+                for (var ci = range.s.c; ci <= range.e.c; ci++) {
+                    var col = ws['!cols'][ci];
+                    if (col) {
+                        if (col.wch) colWidths[ci] = Math.round(col.wch * 7.2) + 'px';
+                        else if (col.wpx) colWidths[ci] = col.wpx + 'px';
+                        else if (col.width) colWidths[ci] = Math.round(col.width * 7.2) + 'px';
+                    }
+                }
+            }
+            var html = '<table style="border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:10.5px;background:#fff;color:#000;">';
+            if (colWidths.length) {
+                html += '<colgroup>';
+                for (var cc = range.s.c; cc <= range.e.c; cc++) {
+                    html += '<col style="width:' + (colWidths[cc] || 'auto') + '">';
+                }
+                html += '</colgroup>';
+            }
+            for (var R = range.s.r; R <= range.e.r; R++) {
+                html += '<tr>';
+                for (var C = range.s.c; C <= range.e.c; C++) {
+                    var key = R + ',' + C;
+                    if (covered[key]) continue;
+                    var addr = XLSX.utils.encode_cell({ r: R, c: C });
+                    var cell = ws[addr];
+                    var text = '';
+                    if (cell) {
+                        if (cell.w !== undefined && cell.w !== null) text = String(cell.w);
+                        else if (cell.v !== undefined && cell.v !== null) text = String(cell.v);
+                        else if (cell.f) text = '=' + cell.f;
+                    }
+                    text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+                    var m = mergeStarts[key];
+                    var rowspan = m ? ' rowspan="' + m.rowspan + '"' : '';
+                    var colspan = m ? ' colspan="' + m.colspan + '"' : '';
+                    var isHeader = (R <= (range.s.r + 2));
+                    html += '<td' + rowspan + colspan + ' style="border:1px solid #888;padding:2px 4px;vertical-align:middle;' +
+                            (isHeader ? 'font-weight:700;text-align:center;' : '') + '">' + text + '</td>';
+                }
+                html += '</tr>';
+            }
+            html += '</table>';
+            return html;
+        }
+
+        function xlsxBase64ToPdfBlob(xlsxB64) {
+            return new Promise(function (resolve, reject) {
+                setLoading('正在解析 Excel...');
+                try {
+                    var bytes = base64ToUint8(xlsxB64);
+                    var wb = XLSX.read(bytes, { type: 'array', cellStyles: true, cellFormula: true, cellNF: true, cellDates: false });
+                    if (!wb || !wb.SheetNames || !wb.SheetNames.length) { reject(new Error('無工作表')); return; }
+                    var ws = wb.Sheets[wb.SheetNames[0]];
+                    var html = buildHtmlTableFromWorkbook(ws);
+                    var container = document.createElement('div');
+                    container.innerHTML = html;
+                    container.style.cssText = 'position:fixed;left:-99999px;top:0;background:#ffffff;padding:16px;display:inline-block;';
+                    document.body.appendChild(container);
+                    setTimeout(function () {
+                        setLoading('轉換為 PDF...');
+                        html2canvas(container, {
+                            scale: 2, backgroundColor: '#ffffff', logging: false,
+                            windowWidth: container.scrollWidth, windowHeight: container.scrollHeight
+                        }).then(function (canvas) {
+                            if (container.parentNode) container.parentNode.removeChild(container);
+                            var imgData = canvas.toDataURL('image/jpeg', 0.92);
+                            var aspect = canvas.width / canvas.height;
+                            var pdfW = A3_W_MM, pdfH = A3_H_MM;
+                            if (aspect > (A3_W_MM / A3_H_MM)) pdfH = pdfW / aspect;
+                            else pdfW = pdfH * aspect;
+                            var jsPDFCtor = window.jspdf.jsPDF;
+                            var pdf = new jsPDFCtor({ orientation: 'landscape', unit: 'mm', format: [pdfW, pdfH], compress: true });
+                            var margin = 4;
+                            var imgW = pdfW - margin * 2;
+                            var imgH = imgW / aspect;
+                            if (imgH > pdfH - margin * 2) { imgH = pdfH - margin * 2; imgW = imgH * aspect; }
+                            pdf.addImage(imgData, 'JPEG', (pdfW - imgW) / 2, (pdfH - imgH) / 2, imgW, imgH, undefined, 'FAST');
+                            resolve(pdf.output('blob'));
+                        }).catch(function (err) {
+                            if (container.parentNode) container.parentNode.removeChild(container);
+                            reject(err);
+                        });
+                    }, 100);
+                } catch (e) { reject(e); }
+            });
+        }
+
+        async function preparePdfBlob(doc) {
+            if (!doc) throw new Error('缺少文件');
+            var type = doc.type;
+
+            if (type === 'GF527A') {
+                var b64A = window.LABOURWAGE_BASE64 || window.SITE_DIARY_TEMPLATE_BASE64 || window.GF527A_BASE64;
+                if (!b64A || b64A.length < 100) b64A = sessionStorage.getItem('labour_template_GF527A');
+                if (!b64A || b64A.length < 100) throw new Error('找不到 GF527A PDF');
+                setLoading('載入 GF527A PDF...');
+                return new Blob([base64ToUint8(b64A)], { type: 'application/pdf' });
+            }
+            if (type === 'GF527-2017') {
+                var b64_17 = window.GF527_2017_BASE64;
+                if (b64_17 && b64_17.length > 100 && b64_17.substring(0, 12).indexOf('JVBERi0') === 0) {
+                    setLoading('載入 GF527-2017 PDF...');
+                    return new Blob([base64ToUint8(b64_17)], { type: 'application/pdf' });
+                }
+                var xlsxB64 = (doc.excelData && doc.excelData.length > 100) ? doc.excelData : window.GF527_REV_1_2017_PROTECTED_FONT_SIZE_26_BASE64;
+                if (!xlsxB64 || xlsxB64.length < 100) throw new Error('找不到 GF527-2017 資料');
+                setLoading('轉換 GF527-2017...');
+                return await xlsxBase64ToPdfBlob(xlsxB64);
+            }
+            if (type === 'GF527-2003') {
+                if (window.GF527_2003_BASE64 && window.GF527_2003_BASE64.length > 100) {
+                    setLoading('載入 GF527-2003 PDF...');
+                    return new Blob([base64ToUint8(window.GF527_2003_BASE64)], { type: 'application/pdf' });
+                }
+                throw new Error('找不到 GF527-2003 PDF');
+            }
+            if (doc.pdfData && doc.pdfData.length > 100) {
+                return new Blob([base64ToUint8(doc.pdfData)], { type: 'application/pdf' });
+            }
+            throw new Error('不支援的文件類型: ' + type);
+        }
+
+        async function renderPdfBlobToImages(blob) {
+            setLoading('渲染 PDF 頁面...');
+            var ab = await blob.arrayBuffer();
+            var pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+            totalVirtualPages = pdf.numPages;
+            pageImages = [];
+            pageAspects = [];
+            for (var i = 1; i <= pdf.numPages; i++) {
+                setLoading('渲染第 ' + i + '/' + pdf.numPages + ' 頁...');
+                var page = await pdf.getPage(i);
+                var viewport = page.getViewport({ scale: PDF_RENDER_SCALE });
+                var canvas = document.createElement('canvas');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                var ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                pageImages.push(canvas.toDataURL('image/png'));
+                pageAspects.push(viewport.height / viewport.width);
+            }
+        }
+
+        function renderPage(pageNum) {
+            if (!pageImages.length) return;
+            if (pageNum < 1 || pageNum > totalVirtualPages) return;
+            activePageNum = pageNum;
+            pageWrapper.innerHTML = '';
+
+            var aspect = pageAspects[pageNum - 1] || 1.4142;
+
+            var pageWidth;
+            if (storedPageWidth && storedPageWidth > 100) {
+                pageWidth = storedPageWidth;
+            } else {
+                var cw = pdfContainer ? pdfContainer.clientWidth : 0;
+                pageWidth = (cw > 100) ? (cw - 48) : FALLBACK_PAGE_WIDTH;
+                if (pageWidth > 1600) pageWidth = 1600;
+                if (pageWidth < 600) pageWidth = 600;
+            }
+
+            var cw2 = pdfContainer ? pdfContainer.clientWidth : 0;
+            if (cw2 > 100 && pageWidth > cw2 - 48) {
+                pageWidth = cw2 - 48;
+            }
+
+            /* ★ 設定 overlay 頁寬（供字體縮放用） */
+            setOverlayPageWidth(pageWidth);
+
+            var pageHeight = Math.round(pageWidth * aspect);
+
+            var pageDiv = document.createElement('div');
+            pageDiv.className = 'pdf-page active-page';
+            pageDiv.dataset.page = pageNum;
+            pageDiv.style.width = pageWidth + 'px';
+            pageDiv.style.height = pageHeight + 'px';
+
+            var img = document.createElement('img');
+            img.src = pageImages[pageNum - 1];
+            img.alt = 'Page ' + pageNum;
+            img.draggable = false;
+            pageDiv.appendChild(img);
+
+            injectViewOverlay(pageDiv, pageNum);
+            pageWrapper.appendChild(pageDiv);
+            updatePageInfo();
+        }
+
+        function updatePageInfo() {
+            if (totalPagesEl) totalPagesEl.textContent = totalVirtualPages;
+            if (currentPageEl) currentPageEl.textContent = activePageNum;
+            if (pageInput) { pageInput.value = activePageNum; pageInput.max = totalVirtualPages; }
+            if (prevBtn) prevBtn.disabled = (activePageNum <= 1);
+            if (nextBtn) nextBtn.disabled = (activePageNum >= totalVirtualPages);
+        }
+
+        function setupNavigation() {
+            if (prevBtn) prevBtn.addEventListener('click', function () {
+                if (activePageNum > 1) renderPage(activePageNum - 1);
+            });
+            if (nextBtn) nextBtn.addEventListener('click', function () {
+                if (activePageNum < totalVirtualPages) renderPage(activePageNum + 1);
+            });
+            if (pageInput) pageInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    var t = parseInt(pageInput.value, 10);
+                    if (!isNaN(t) && t >= 1 && t <= totalVirtualPages) renderPage(t);
+                    else { alert('請輸入 1 到 ' + totalVirtualPages); pageInput.value = activePageNum; }
+                    pageInput.blur();
+                } else if (e.key === 'Escape') { pageInput.value = activePageNum; pageInput.blur(); }
+            });
+        }
+
+        function downloadBlob(blob, filename) {
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+        }
+
+        /* ============================================================
+           離螢幕捕獲頁面（含 overlay）
+           ============================================================ */
+        async function buildPageWithOverlay(pageIndex) {
+            var aspect = pageAspects[pageIndex - 1] || 1.4142;
+
+            var pageWidth = storedPageWidth && storedPageWidth > 100 ? storedPageWidth : FALLBACK_PAGE_WIDTH;
+            var cw = pdfContainer ? pdfContainer.clientWidth : 0;
+            if (cw > 100 && pageWidth > cw - 48) pageWidth = cw - 48;
+            if (pageWidth < 600) pageWidth = 600;
+
+            var pageHeight = Math.round(pageWidth * aspect);
+
+            var wrapper = document.createElement('div');
+            wrapper.className = 'labour-capture-wrapper';
+            wrapper.style.cssText =
+                'position:absolute;top:0;left:-200vw;' +
+                'width:' + pageWidth + 'px;height:' + pageHeight + 'px;' +
+                'background:#ffffff;overflow:hidden;';
+
+            var img = document.createElement('img');
+            img.src = pageImages[pageIndex - 1];
+            img.alt = 'Page ' + pageIndex;
+            img.draggable = false;
+            img.style.cssText =
+                'position:absolute;top:0;left:0;' +
+                'width:100%;height:100%;display:block;' +
+                'pointer-events:none;user-select:none;';
+            wrapper.appendChild(img);
+
+            /* ★ 設定 overlay 頁寬（與此捕獲的頁寬一致） */
+            setOverlayPageWidth(pageWidth);
+
+            var docType = currentDoc.type || 'GF527A';
+            var formData = getFormData();
+            var overlay = buildOverlayElement(docType, pageIndex, formData, true);
+            if (overlay) wrapper.appendChild(overlay);
+
+            document.body.appendChild(wrapper);
+
+            try {
+                if (typeof img.decode === 'function') {
+                    await img.decode();
+                } else if (!(img.complete && img.naturalWidth > 0)) {
+                    await new Promise(function (resolve) {
+                        img.addEventListener('load',  resolve, { once: true });
+                        img.addEventListener('error', resolve, { once: true });
+                    });
+                }
+            } catch (e) {}
+
+            await new Promise(function (r) { requestAnimationFrame(r); });
+            await new Promise(function (r) { setTimeout(r, 80); });
+
+            return { element: wrapper, width: pageWidth, height: pageHeight };
+        }
+
+        async function downloadPdfWithOverlay() {
+            if (!pageImages.length) { alert('尚未載入文件'); return; }
+            if (typeof html2canvas === 'undefined' || !window.jspdf) {
+                alert('PDF 引擎未載入'); return;
+            }
+
+            var btn = downloadBtn;
+            var origHTML = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 產生 PDF...';
+            }
+
+            var tempEls = [];
+
+            try {
+                var jsPDFCtor = window.jspdf.jsPDF;
+
+                var firstAspect = pageAspects[0] || 1.4142;
+                var firstPortrait = firstAspect > 1.0;
+
+                var A4_W = 210, A4_H = 297;
+
+                var pdf = new jsPDFCtor({
+                    orientation: firstPortrait ? 'portrait' : 'landscape',
+                    unit: 'mm',
+                    format: 'a4',
+                    compress: true
+                });
+
+                var isFirstPage = true;
+
+                for (var p = 1; p <= totalVirtualPages; p++) {
+                    if (btn) {
+                        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + p + '/' + totalVirtualPages;
+                    }
+
+                    var built = await buildPageWithOverlay(p);
+                    tempEls.push(built.element);
+
+                    var canvas = await html2canvas(built.element, {
+                        scale: 2.5,
+                        useCORS: true,
+                        backgroundColor: '#ffffff',
+                        logging: false,
+                        width: built.width,
+                        height: built.height,
+                        windowWidth: built.width,
+                        windowHeight: built.height
+                    });
+
+                    if (built.element && built.element.parentNode) {
+                        built.element.parentNode.removeChild(built.element);
+                        var idx = tempEls.indexOf(built.element);
+                        if (idx !== -1) tempEls.splice(idx, 1);
+                    }
+
+                    var imgData = canvas.toDataURL('image/jpeg', 0.92);
+
+                    var imgAspect = built.height / built.width;
+                    var thisPortrait = imgAspect > 1.0;
+                    var thisPageW = thisPortrait ? A4_W : A4_H;
+                    var thisPageH = thisPortrait ? A4_H : A4_W;
+
+                    if (isFirstPage) {
+                        pdf.addImage(imgData, 'JPEG', 0, 0, thisPageW, thisPageH, undefined, 'FAST');
+                        isFirstPage = false;
+                    } else {
+                        pdf.addPage([thisPageW, thisPageH], thisPortrait ? 'portrait' : 'landscape');
+                        pdf.addImage(imgData, 'JPEG', 0, 0, thisPageW, thisPageH, undefined, 'FAST');
+                    }
+                }
+
+                var blob = pdf.output('blob');
+                console.log('[LabourDoc] ✓ PDF 產生完成 (' + (firstPortrait ? 'portrait' : 'landscape') + '): ' +
+                            (blob.size / 1024).toFixed(0), 'KB');
+                downloadBlob(blob, (currentDoc.id || 'LabourWage') + '.pdf');
+
+            } catch (err) {
+                console.error('[LabourDoc] downloadPdfWithOverlay failed:', err);
+                alert('下載失敗：' + (err && err.message ? err.message : 'unknown'));
+            } finally {
+                tempEls.forEach(function (el) {
+                    if (el && el.parentNode) el.parentNode.removeChild(el);
+                });
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = origHTML;
+                }
+            }
+        }
+
+        function downloadPdfRaw() {
+            if (!currentPdfBlob) { alert('PDF 尚未生成'); return; }
+            downloadBlob(currentPdfBlob, (currentDoc.id || 'LabourWage') + '.pdf');
+        }
+
+        function downloadPdf() {
+            if (typeof html2canvas !== 'undefined' && window.jspdf) {
+                downloadPdfWithOverlay();
+            } else {
+                downloadPdfRaw();
+            }
+        }
+
+        function downloadXlsx() {
+            if (!currentDoc) return;
+            var xlsxB64 = null;
+            if (currentDoc.type === 'GF527-2017') {
+                xlsxB64 = (currentDoc.excelData && currentDoc.excelData.length > 100) ? currentDoc.excelData : window.GF527_REV_1_2017_PROTECTED_FONT_SIZE_26_BASE64;
+            } else if (currentDoc.excelData && currentDoc.excelData.length > 100) {
+                xlsxB64 = currentDoc.excelData;
+            }
+            if (!xlsxB64) { alert('此文件類型沒有 Excel 版本'); return; }
+            try {
+                downloadBlob(new Blob([base64ToUint8(xlsxB64)], {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                }), (currentDoc.id || 'LabourWage') + '.xlsx');
+            } catch (e) { alert('下載失敗: ' + (e && e.message ? e.message : e)); }
+        }
+
+        function setupDownloadMenu() {
+            if (!downloadBtn || !downloadMenu) return;
+            downloadBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                downloadMenu.classList.toggle('open');
+            });
+            if (downloadPdfOpt) downloadPdfOpt.addEventListener('click', function () {
+                downloadMenu.classList.remove('open'); downloadPdf();
+            });
+            if (downloadXlsxOpt) downloadXlsxOpt.addEventListener('click', function () {
+                if (downloadXlsxOpt.disabled) return;
+                downloadMenu.classList.remove('open'); downloadXlsx();
+            });
+            document.addEventListener('click', function () { downloadMenu.classList.remove('open'); });
+        }
+
+        function printPdf() {
+            if (!pageImages.length) { alert('尚未載入'); return; }
+
+            var formData = getFormData();
+            var docType = currentDoc.type || 'GF527A';
+            var firstAspect = pageAspects[0] || 1.4142;
+            var isPortrait = firstAspect > 1.0;
+
+            var pageW_mm = isPortrait ? 210 : 297;
+            var pageH_mm = isPortrait ? 297 : 210;
+
+            var oldStyle = document.getElementById('dynamic-print-style');
+            if (oldStyle) oldStyle.remove();
+
+            var printContainer = document.getElementById('print-only-container');
+            printContainer.innerHTML = '';
+
+            var imgPromises = [];
+
+            for (var p = 1; p <= totalVirtualPages; p++) {
+                var wrap = document.createElement('div');
+                wrap.className = 'print-page';
+                wrap.setAttribute('data-print-page', p);
+
+                var img = document.createElement('img');
+                img.src = pageImages[p - 1];
+                img.alt = 'Page ' + p;
+                img.style.cssText =
+                    'display:block;width:100%;height:100%;' +
+                    'object-fit:contain;pointer-events:none;user-select:none;';
+                wrap.appendChild(img);
+
+                if (typeof img.decode === 'function') {
+                    imgPromises.push(img.decode().catch(function () {}));
+                } else {
+                    imgPromises.push(new Promise(function (resolve) {
+                        if (img.complete && img.naturalWidth > 0) { resolve(); return; }
+                        img.addEventListener('load',  resolve, { once: true });
+                        img.addEventListener('error', resolve, { once: true });
+                    }));
+                }
+
+                try {
+                    /* ★ 設定 overlay 頁寬（mm → px，1mm ≈ 3.7795px） */
+                    setOverlayPageWidth(pageW_mm * 3.7795);
+
+                    var overlay = buildOverlayElement(docType, p, formData, true);
+                    if (overlay) {
+                        overlay.style.cssText =
+                            'position:absolute;top:0;left:0;' +
+                            'width:100%;height:100%;';
+                        wrap.appendChild(overlay);
+                    }
+                } catch (e) {}
+
+                printContainer.appendChild(wrap);
+            }
+
+            Promise.all(imgPromises).then(function () {
+
+                var style = document.createElement('style');
+                style.id = 'dynamic-print-style';
+                style.textContent = [
+                    '@media print {',
+                    '  @page { size: A4 ' + (isPortrait ? 'portrait' : 'landscape') + '; margin: 0; }',
+
+                    '  html, body {',
+                    '    margin: 0 !important;',
+                    '    padding: 0 !important;',
+                    '    display: block !important;',
+                    '    width: auto !important;',
+                    '    height: auto !important;',
+                    '    min-height: 0 !important;',
+                    '    max-height: none !important;',
+                    '    overflow: visible !important;',
+                    '    background: #fff !important;',
+                    '    color: #000 !important;',
+                    '  }',
+
+                    '  body > *:not(#print-only-container) { display: none !important; }',
+
+                    '  #print-only-container {',
+                    '    display: block !important;',
+                    '    position: static !important;',
+                    '    width: auto !important;',
+                    '    height: auto !important;',
+                    '    margin: 0 !important;',
+                    '    padding: 0 !important;',
+                    '    background: #fff !important;',
+                    '  }',
+
+                    '  #print-only-container .print-page {',
+                    '    page-break-after: always;',
+                    '    break-after: page;',
+                    '    width: ' + pageW_mm + 'mm !important;',
+                    '    height: ' + pageH_mm + 'mm !important;',
+                    '    margin: 0 !important;',
+                    '    padding: 0 !important;',
+                    '    position: relative !important;',
+                    '    overflow: hidden !important;',
+                    '    background: #fff !important;',
+                    '    display: block !important;',
+                    '  }',
+                    '  #print-only-container .print-page:last-child {',
+                    '    page-break-after: auto !important;',
+                    '    break-after: auto !important;',
+                    '  }',
+
+                    '  #print-only-container .print-page img {',
+                    '    display: block !important;',
+                    '    width: 100% !important;',
+                    '    height: 100% !important;',
+                    '    max-width: none !important;',
+                    '    max-height: none !important;',
+                    '    object-fit: contain !important;',
+                    '    margin: 0 !important;',
+                    '    padding: 0 !important;',
+                    '  }',
+
+                    '  #print-only-container .print-page .pdf-view-overlay {',
+                    '    position: absolute !important;',
+                    '    top: 0 !important; left: 0 !important;',
+                    '    width: 100% !important; height: 100% !important;',
+                    '    display: block !important;',
+                    '  }',
+                    '}'
+                ].join('\n');
+                document.head.appendChild(style);
+
+                void document.body.offsetHeight;
+
+                setTimeout(function () {
+                    window.print();
+
+                    setTimeout(function () {
+                        printContainer.innerHTML = '';
+                        var s = document.getElementById('dynamic-print-style');
+                        if (s) s.remove();
+                    }, 2000);
+                }, 300);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            try {
+                syncGlobalDate();
+                setupSidebar();
+                setupDownloadMenu();
+
+                var doc = getCurrentDoc();
+                if (!doc) { showError('找不到文件資料。請從 Labour Wage 列表重新點 View 進入。'); return; }
+                currentDoc = doc;
+                console.log('[LabourDoc] ===== 載入 ===== id=' + doc.id + ' type=' + doc.type);
+
+                var savedKey = 'editlabour_layout_' + doc.type;
+                if (localStorage.getItem(savedKey)) {
+                    console.log('[LabourDoc] ✓ 找到 ' + savedKey);
+                } else {
+                    console.warn('[LabourDoc] ⚠ 未找到 ' + savedKey + '，將使用 fallback layout');
+                }
+
+                updateDocInfo(doc);
+                setLoading('載入中...');
+
+                var blob = await preparePdfBlob(doc);
+                currentPdfBlob = blob;
+                await renderPdfBlobToImages(blob);
+
+                hideLoading();
+                pdfControls.style.display = 'flex';
+                requestAnimationFrame(function () { renderPage(1); });
+                setupNavigation();
+
+                var printBtn = document.getElementById('print-pdf-btn');
+                if (printBtn) printBtn.addEventListener('click', printPdf);
+
+                var backBtn = document.getElementById('back-btn');
+                if (backBtn) backBtn.addEventListener('click', function () { window.location.href = 'labourwage.html'; });
+
+            } catch (err) {
+                console.error('[LabourDoc] Init failed:', err);
+                showError('載入失敗：' + (err && err.message ? err.message : 'unknown'));
+            }
+        });
+
+    })();
+    </script>
+</body>
+</html>
