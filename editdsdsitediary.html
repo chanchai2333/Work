@@ -22,8 +22,8 @@
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { display: flex; min-height: 100vh; background-color: #f5f7fa; color: #333; }
-        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        body { min-height: 100vh; background-color: #f5f7fa; color: #333; }
+        .main-content { padding: 30px; overflow-y: auto; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #e0e6ed; }
         .header h1 { color: #2c3e50; font-size: 2rem; }
         .header-controls { display: flex; align-items: center; gap: 15px; }
@@ -311,22 +311,7 @@
     </style>
 </head>
 <body>
-    <div class="sidebar">
-        <div class="logo">
-            <img src="AEL Logo.png" alt="AEL Logo" class="logo-img" style="height: 45px; width: auto; object-fit: contain; margin-right: 8px;">
-            <h2>DWSS</h2>
-        </div>
-        <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
-        <ul class="menu">
-            <li><a href="index.html"><i class="fas fa-home"></i><span class="menu-text">Dashboard</span></a></li>
-            <li><a href="sitediary.html" class="active"><i class="fas fa-book"></i><span class="menu-text">Site Diary</span></a></li>
-            <li><a href="safetyinspect.html"><i class="fas fa-clipboard-check"></i><span class="menu-text">Safety Inspection</span></a></li>
-            <li><a href="sitelocations.html" id="menu-sitelocations"><i class="fas fa-map-marked-alt"></i><span class="menu-text" data-i18n="site.locations">Site Locations</span></a></li>
-            <li><a href="labourwage.html"><i class="fas fa-money-bill-wave"></i><span class="menu-text">Labour Wage</span></a></li>
-            <li><a href="settings.html"><i class="fas fa-cogs"></i><span class="menu-text">System Settings</span></a></li>
-            <li><a href="usermanagement.html"><i class="fas fa-user-circle"></i><span class="menu-text">User Management</span></a></li>
-        </ul>
-    </div>
+
 
     <div class="main-content">
         <div class="header">
@@ -360,6 +345,9 @@
                 <div class="meta-item"><span class="meta-label">Site:</span><span class="meta-value" id="docSite">N/A</span></div>
                 <div class="meta-item"><span class="meta-label">Period:</span><span class="meta-value" id="docPeriod">N/A</span></div>
                 <div class="meta-item"><span class="meta-label">Submitted By:</span><span class="meta-value" id="docAuthor">N/A</span></div>
+                <!-- ★ 新增這兩個 -->
+                <div class="meta-item"><span class="meta-label">SOR Item:</span><span class="meta-value" id="docSorItem">N/A</span></div>
+                <div class="meta-item"><span class="meta-label">CE No.:</span><span class="meta-value" id="docCeNo">N/A</span></div>
             </div>
 
             <div class="pdf-editor-container">
@@ -416,25 +404,11 @@
 
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
+    <script src="scripts/sidebar.js"></script>
     <script src="scripts/auth-check.js"></script>
 
     <script>
-    (function() {
-        function saveSidebarState() {
-            var sb = document.querySelector('.sidebar');
-            if (sb) localStorage.setItem('sidebarCollapsed', sb.classList.contains('collapsed') ? 'true' : 'false');
-        }
-        document.addEventListener('DOMContentLoaded', function() {
-            var sb = document.querySelector('.sidebar');
-            if (sb && localStorage.getItem('sidebarCollapsed') === 'true') sb.classList.add('collapsed');
-            var tb = document.querySelector('.toggle-btn');
-            if (tb) tb.addEventListener('click', function() { setTimeout(saveSidebarState, 50); });
-            var ds = document.querySelector('.date-display span');
-            var sd = sessionStorage.getItem('globalDate');
-            if (sd && ds) ds.textContent = sd;
-            else if (ds) ds.textContent = new Date().toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'});
-        });
-    })();
+
     </script>
 
     <script>
@@ -1177,16 +1151,23 @@
         function saveSignatureToAllRows() {
             if (!sigTargetPage) { closeSignatureModal(); return; }
             var base64 = getSignatureBase64();
+            
+            // ★ 關鍵修正：動態判斷欄位後綴（可能是 'dsdSig' 或 'contractorSig'）
+            var fieldSuffix = sigTargetFieldId.replace(/^r\d+_/, ''); 
+
             if (!base64) {
                 if (!confirm('尚未簽名，是否清空全部 7 天簽名？')) return;
                 if (!allFormData[sigTargetPage]) allFormData[sigTargetPage] = {};
-                for (var d = 0; d < 7; d++) allFormData[sigTargetPage]['r' + d + '_contractorSig'] = '';
+                for (var d = 0; d < 7; d++) allFormData[sigTargetPage]['r' + d + '_' + fieldSuffix] = '';
             } else {
                 if (!allFormData[sigTargetPage]) allFormData[sigTargetPage] = {};
-                for (var d2 = 0; d2 < 7; d2++) allFormData[sigTargetPage]['r' + d2 + '_contractorSig'] = base64;
+                for (var d2 = 0; d2 < 7; d2++) allFormData[sigTargetPage]['r' + d2 + '_' + fieldSuffix] = base64;
             }
             persistFormData();
-            for (var d3 = 0; d3 < 7; d3++) refreshSignatureCell(sigTargetPage, 'r' + d3 + '_contractorSig');
+            
+            // ★ 重新渲染對應的 7 天格子
+            for (var d3 = 0; d3 < 7; d3++) refreshSignatureCell(sigTargetPage, 'r' + d3 + '_' + fieldSuffix);
+            
             closeSignatureModal();
         }
         function refreshSignatureCell(pageNum, fieldId) {
@@ -1237,8 +1218,12 @@
 
             var defaultPlantName = pageData.nameOfPlant || (currentDocObj && currentDocObj.site) || '';
             overlay.appendChild(createTextInput('nameOfPlant', FORM_LAYOUT.header.nameOfPlant, defaultPlantName, pageNum));
-            overlay.appendChild(createTextInput('sorItem',     FORM_LAYOUT.header.sorItem,     pageData.sorItem,     pageNum));
-            overlay.appendChild(createTextInput('ceNo',        FORM_LAYOUT.header.ceNo,        pageData.ceNo,        pageNum));
+            // ★ 優先讀取頁面已存數據，其次讀取 currentDocObj 傳過來的 SOR 和 CE No.
+            var defaultSorItem = pageData.sorItem || (currentDocObj && currentDocObj.sorItem) || '';
+            overlay.appendChild(createTextInput('sorItem', FORM_LAYOUT.header.sorItem, defaultSorItem, pageNum));
+            
+            var defaultCeNo = pageData.ceNo || (currentDocObj && currentDocObj.ceNo) || '';
+            overlay.appendChild(createTextInput('ceNo', FORM_LAYOUT.header.ceNo, defaultCeNo, pageNum));
             var defaultTaskOrderNo = pageData.taskOrderNo || (currentDocObj && currentDocObj.id) || '';
             overlay.appendChild(createTextInput('taskOrderNo', FORM_LAYOUT.header.taskOrderNo, defaultTaskOrderNo, pageNum));
             overlay.appendChild(createTextInput('headerExtraA', FORM_LAYOUT.header.headerExtraA, pageData.headerExtraA, pageNum));
@@ -1303,12 +1288,12 @@
                 ));
 
                 /* DSD 簽名 — 全部顯示 */
-                overlay.appendChild(createTextInput(
+                /* ★ DSD 簽名 — 改為簽名格 */
+                overlay.appendChild(createSignatureCell(
                     'r' + d + '_dsdSig',
                     { left: cols.dsdSig.left, top: rowTopStr, width: cols.dsdSig.width, height: rowH + '%' },
                     pageData['r' + d + '_dsdSig'], pageNum
                 ));
-
                 /* 承建商簽名格 — 全部顯示 */
                 overlay.appendChild(createSignatureCell(
                     'r' + d + '_contractorSig',

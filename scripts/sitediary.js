@@ -301,7 +301,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var s = (item && item.status) || 'draft';
 
         if (s === 'draft') {
-            return isOverdue(item) ? 'overdue' : 'other';
+            return isOverdue(item) ? 'overdue' : 'open'; // 改這裡
         }
         if (s === 'submitted-wsg' || s === 'submitted-ig') {
             return 'pending';
@@ -309,13 +309,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (s === 'closed' || s === 'cancelled') {
             return 'closed';
         }
-        // reopen 歸類到 other
-        return 'other';
+        // reopen 歸類到 open
+        return 'open';
     }
 
     // ==================== 篩選器狀態 ====================
     let currentFilters = {
-        site: "all",
         status: "all",
         type: "all"
     };
@@ -414,12 +413,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ==================== ★ 渲染表格（四分類）====================
     function renderTable() {
-        const CATEGORIES = ['overdue', 'pending', 'closed', 'other'];
+        const CATEGORIES = ['open', 'pending', 'overdue', 'closed'];
         const TBODY_IDS = {
-            overdue: 'overdue-table-body',
+            open:    'open-table-body',
             pending: 'pending-table-body',
-            closed:  'closed-table-body',
-            other:   'other-table-body'
+            overdue: 'overdue-table-body',
+            closed:  'closed-table-body'
         };
 
         CATEGORIES.forEach(function (key) {
@@ -430,10 +429,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const projectFilteredData = getProjectData();
 
         const filtered = projectFilteredData.filter(item => {
-            if (currentFilters.site !== "all") {
-                const siteType = getSiteType(item.site);
-                if (siteType !== currentFilters.site) return false;
-            }
+ 
             if (currentFilters.status !== "all" && item.status !== currentFilters.status) return false;
             if (currentFilters.type !== "all" && item.type !== currentFilters.type) return false;
             return true;
@@ -468,6 +464,13 @@ document.addEventListener('DOMContentLoaded', function () {
         if (userCanChangeStatus) {
             bindStatusChangeEvents();
         }
+
+                // ★ 新增：重新渲染表格後，重新觸發所有搜尋框的過濾邏輯
+        document.querySelectorAll('.category-search').forEach(function(input) {
+            if (input.value.trim() !== '') {
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        });
     }
 
     // ==================== 狀態更改事件 ====================
@@ -732,6 +735,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 let id = document.getElementById('input-diary-id').value.trim();
                 const status = document.getElementById('input-status').value;
                 const site = document.getElementById('input-site').value.trim();
+                // ★ 抓取 SOR 和 CE No.
+                const sorItem = document.getElementById('input-sor').value.trim();
+                const ceNo = document.getElementById('input-ce-no').value.trim();
                 const startDate = (document.getElementById('input-date-start') || {}).value || '';
                 const endDate = (document.getElementById('input-date-end') || {}).value || '';
                 const submittedBy = document.getElementById('input-submitted-by').value.trim();
@@ -772,6 +778,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     status: status,
                     approvalStatus: initialApproval,
                     site: site,
+                    sorItem: sorItem, // ★ 新增
+                    ceNo: ceNo,       // ★ 新增
                     date: periodStr,
                     startDate: startDate,
                     endDate: endDate,
@@ -811,7 +819,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 form.reset();
                 const hint = document.getElementById('submit-only-hint');
                 if (hint) hint.remove();
-                alert('New diary added successfully!\n\nNew ID: ' + id);
+                
+                // ★ 修改這裡：將提示替換為直接跳轉到編輯頁
+                // alert('New diary added successfully!\n\nNew ID: ' + id);
+                window.location.href = 'editdsdsitediary.html?id=' + encodeURIComponent(id);
             });
         }
     }

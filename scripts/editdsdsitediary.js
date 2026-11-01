@@ -158,6 +158,9 @@
         setText('docSite', doc.site);
         setText('docPeriod', doc.period || doc.date);
         setText('docAuthor', doc.submittedBy || doc.author);
+                // ★ 新增這兩行
+        setText('docSorItem', doc.sorItem);
+        setText('docCeNo', doc.ceNo);
         setText('docType', doc.typeText || doc.type || 'Site Diary (DSD)');
         setText('docTitle', doc.id ? ('Site Diary - ' + (doc.site || doc.id)) : 'Site Diary Document');
 
@@ -1422,13 +1425,36 @@
 
             updateDocumentInfo(currentDoc);
 
+            // ★ 根據 Period 計算需要的頁數 (每頁 7 天)
+            var calcPages = 1;
+            if (currentDoc.startDate && currentDoc.endDate) {
+                var start = new Date(currentDoc.startDate);
+                var end = new Date(currentDoc.endDate);
+                if (!isNaN(start) && !isNaN(end)) {
+                    var days = Math.round((end - start) / 86400000) + 1;
+                    calcPages = Math.ceil(days / 7);
+                }
+            } else if (currentDoc.period) {
+                var parts = String(currentDoc.period).split('~');
+                if (parts.length >= 2) {
+                    var start2 = new Date(parts[0].trim());
+                    var end2 = new Date(parts[1].trim());
+                    if (!isNaN(start2) && !isNaN(end2)) {
+                        var days2 = Math.round((end2 - start2) / 86400000) + 1;
+                        calcPages = Math.ceil(days2 / 7);
+                    }
+                }
+            }
+            if (calcPages < 1) calcPages = 1;
+
             var maxAnnotated = 1;
             annotations.forEach(function (a) {
                 if ((a.page || 1) > maxAnnotated) maxAnnotated = a.page;
             });
             var savedTotal = currentDoc.totalPages || 0;
-            var needed = Math.max(1, maxAnnotated, savedTotal);
-            totalVirtualPages = needed;
+            
+            // 取最大值（確保有畫過圖的頁面不會消失）
+            totalVirtualPages = Math.max(calcPages, maxAnnotated, savedTotal, 1);
             if (totalVirtualPages < 1) totalVirtualPages = 1;
 
             updatePageInfo();

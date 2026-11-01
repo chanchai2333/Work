@@ -67,6 +67,57 @@
         .diary-category-section[data-category="closed"]  .table-title i { color: #27ae60; }
         .diary-category-section[data-category="other"]   .table-title i { color: #7f8c8d; }
 
+                /* ★ 分類折疊樣式 */
+        .diary-category-section .table-header {
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .diary-category-section .table-header .header-left {
+            flex: 1;
+        }
+        .diary-category-section .table-header .toggle-icon {
+            font-size: 1.2rem;
+            color: #94a3b8;
+            transition: transform 0.3s ease;
+            margin-top: 8px;
+            margin-left: 15px;
+        }
+        .diary-category-section.collapsed .table-header .toggle-icon {
+            transform: rotate(-90deg);
+        }
+        .diary-category-section.collapsed .table-container {
+            display: none !important;
+        }
+
+        /* ★ 分類搜尋框樣式 */
+        .diary-category-section .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center; /* 垂直置中，讓搜尋框和箭頭對齊 */
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .category-search {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            width: 220px;
+            transition: all 0.2s;
+            background: #fff;
+        }
+        .category-search:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52,152,219,0.2);
+        }
+
         @media (max-width: 768px) {
             .action-btn { width: 100%; margin: 2px 0; }
             .status-change-select { width: 100%; margin: 2px 0; }
@@ -91,7 +142,12 @@
                 </select>
                 <label data-i18n="site">Site</label>
                 <input type="text" id="input-site" required>
-
+                <!-- ★ 新增 SOR 與 CE No. -->
+                <label for="input-sor">SOR Item</label>
+                <input type="text" id="input-sor" placeholder="Enter SOR Item">
+                
+                <label for="input-ce-no">CE No.</label>
+                <input type="text" id="input-ce-no" placeholder="Enter CE No.">
                 <label data-i18n="period">Period</label>
                 <div class="period-inputs">
                     <input type="date" id="input-date-start" required>
@@ -149,17 +205,7 @@
                 </div>
                 
                 <section class="filters-section">
-                    <div class="filter-group" id="site-filter-group">
-                        <div class="filter-toggle"><span data-i18n="all.sites">All Sites</span><i class="fas fa-chevron-down"></i></div>
-                        <div class="filter-options">
-                            <div class="filter-option active" data-filter="site" data-value="all" data-i18n="all.sites">All Sites</div>
-                            <div class="filter-option" data-filter="site" data-value="treatment" data-i18n="site.treatment">Treatment Plant</div>
-                            <div class="filter-option" data-filter="site" data-value="pipeline" data-i18n="site.pipeline">Pipeline</div>
-                            <div class="filter-option" data-filter="site" data-value="reservoir" data-i18n="site.reservoir">Reservoir</div>
-                            <div class="filter-option" data-filter="site" data-value="distribution" data-i18n="site.distribution">Distribution</div>
-                            <div class="filter-option" data-filter="site" data-value="pump" data-i18n="site.pump">Pump Station</div>
-                        </div>
-                    </div>
+   
                     
                     <div class="filter-group" id="status-filter-group">
                         <div class="filter-toggle"><span data-i18n="all.statuses">All Statuses</span><i class="fas fa-chevron-down"></i></div>
@@ -189,17 +235,23 @@
             <!-- ★ 分類表格：Overdue / Pending / Closed / Other -->
             <!-- ============================================== -->
             <section class="content-section">
-                <div id="diary-tables-container">
+                  <div id="diary-tables-container">
 
-                    <!-- ===== Overdue Documents ===== -->
-                    <div class="diary-category-section" data-category="overdue">
+                    <!-- ===== 1. Open Documents ===== -->
+                    <div class="diary-category-section collapsed" data-category="open">
                         <div class="table-header">
-                            <h2 class="table-title">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                <span data-i18n="category.overdue">Overdue Documents</span>
-                                <span class="category-count" id="overdue-count">0</span>
-                            </h2>
-                            <p class="category-desc" data-i18n="category.overdue.desc">Draft documents older than 14 days</p>
+                            <div class="header-left">
+                                <h2 class="table-title">
+                                    <i class="fas fa-folder-open"></i>
+                                    <span data-i18n="category.open">Open Documents</span>
+                                    <span class="category-count" id="open-count">0</span>
+                                </h2>
+                                <p class="category-desc" data-i18n="category.open.desc">Drafts within 14 days, reopened, or in progress</p>
+                            </div>
+                            <div class="header-right">
+                                <input type="text" class="category-search" data-category="open" placeholder="Search Open...">
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
                         </div>
                         <div class="table-container">
                             <table class="diary-table">
@@ -215,21 +267,27 @@
                                         <th data-i18n="actions">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody id="overdue-table-body"></tbody>
+                                <tbody id="open-table-body"></tbody>
                             </table>
-                            <div id="overdue-no-results" class="no-results" style="display: none;">No overdue documents.</div>
+                            <div id="open-no-results" class="no-results" style="display: none;">No open documents.</div>
                         </div>
                     </div>
 
-                    <!-- ===== Pending Documents ===== -->
-                    <div class="diary-category-section" data-category="pending">
+                    <!-- ===== 2. Pending Documents ===== -->
+                    <div class="diary-category-section collapsed" data-category="pending">
                         <div class="table-header">
-                            <h2 class="table-title">
-                                <i class="fas fa-clock"></i>
-                                <span data-i18n="category.pending">Pending Documents</span>
-                                <span class="category-count" id="pending-count">0</span>
-                            </h2>
-                            <p class="category-desc" data-i18n="category.pending.desc">Submitted but not yet approved</p>
+                            <div class="header-left">
+                                <h2 class="table-title">
+                                    <i class="fas fa-clock"></i>
+                                    <span data-i18n="category.pending">Pending Documents</span>
+                                    <span class="category-count" id="pending-count">0</span>
+                                </h2>
+                                <p class="category-desc" data-i18n="category.pending.desc">Submitted but not yet approved</p>
+                            </div>
+                            <div class="header-right">
+                                <input type="text" class="category-search" data-category="pending" placeholder="Search Pending...">
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
                         </div>
                         <div class="table-container">
                             <table class="diary-table">
@@ -251,15 +309,57 @@
                         </div>
                     </div>
 
-                    <!-- ===== Closed Documents ===== -->
-                    <div class="diary-category-section" data-category="closed">
+                    <!-- ===== 3. Overdue Documents ===== -->
+                    <div class="diary-category-section collapsed" data-category="overdue">
                         <div class="table-header">
-                            <h2 class="table-title">
-                                <i class="fas fa-check-circle"></i>
-                                <span data-i18n="category.closed">Closed Documents</span>
-                                <span class="category-count" id="closed-count">0</span>
-                            </h2>
-                            <p class="category-desc" data-i18n="category.closed.desc">Completed, closed, or cancelled diaries</p>
+                            <div class="header-left">
+                                <h2 class="table-title">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span data-i18n="category.overdue">Overdue Documents</span>
+                                    <span class="category-count" id="overdue-count">0</span>
+                                </h2>
+                                <p class="category-desc" data-i18n="category.overdue.desc">Draft documents older than 14 days</p>
+                            </div>
+                            <div class="header-right">
+                                <input type="text" class="category-search" data-category="overdue" placeholder="Search Overdue...">
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="diary-table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="diary.id">Diary ID</th>
+                                        <th data-i18n="status">Status</th>
+                                        <th data-i18n="Approval status">Approval Status</th>
+                                        <th data-i18n="site">Site</th>
+                                        <th data-i18n="period">Period</th>
+                                        <th data-i18n="submitted.by">Submitted By</th>
+                                        <th data-i18n="document.type">Document Type</th>
+                                        <th data-i18n="actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="overdue-table-body"></tbody>
+                            </table>
+                            <div id="overdue-no-results" class="no-results" style="display: none;">No overdue documents.</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== 4. Closed Documents ===== -->
+                    <div class="diary-category-section collapsed" data-category="closed">
+                        <div class="table-header">
+                            <div class="header-left">
+                                <h2 class="table-title">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span data-i18n="category.closed">Closed Documents</span>
+                                    <span class="category-count" id="closed-count">0</span>
+                                </h2>
+                                <p class="category-desc" data-i18n="category.closed.desc">Completed, closed, or cancelled diaries</p>
+                            </div>
+                            <div class="header-right">
+                                <input type="text" class="category-search" data-category="closed" placeholder="Search Closed...">
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
                         </div>
                         <div class="table-container">
                             <table class="diary-table">
@@ -278,36 +378,6 @@
                                 <tbody id="closed-table-body"></tbody>
                             </table>
                             <div id="closed-no-results" class="no-results" style="display: none;">No closed documents.</div>
-                        </div>
-                    </div>
-
-                    <!-- ===== Other Documents (Draft within 14 days, Reopen) ===== -->
-                    <div class="diary-category-section" data-category="other">
-                        <div class="table-header">
-                            <h2 class="table-title">
-                                <i class="fas fa-folder"></i>
-                                <span data-i18n="category.other">Other Documents</span>
-                                <span class="category-count" id="other-count">0</span>
-                            </h2>
-                            <p class="category-desc" data-i18n="category.other.desc">Drafts within 14 days, reopened, or in progress</p>
-                        </div>
-                        <div class="table-container">
-                            <table class="diary-table">
-                                <thead>
-                                    <tr>
-                                        <th data-i18n="diary.id">Diary ID</th>
-                                        <th data-i18n="status">Status</th>
-                                        <th data-i18n="Approval status">Approval Status</th>
-                                        <th data-i18n="site">Site</th>
-                                        <th data-i18n="period">Period</th>
-                                        <th data-i18n="submitted.by">Submitted By</th>
-                                        <th data-i18n="document.type">Document Type</th>
-                                        <th data-i18n="actions">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="other-table-body"></tbody>
-                            </table>
-                            <div id="other-no-results" class="no-results" style="display: none;">No other documents.</div>
                         </div>
                     </div>
 
@@ -978,6 +1048,81 @@
         </div>
     </div>
 </div>
+    <script>
+    (function () {
+        'use strict';
+        
+        // 1. 處理折疊與展開
+        if (!window.__diaryFoldBound) {
+            window.__diaryFoldBound = true;
+            document.addEventListener('click', function(e) {
+                var header = e.target.closest('.diary-category-section .table-header');
+                if (header) {
+                    // ★ 關鍵修正：如果點擊的是輸入框，不要觸發折疊
+                    if (e.target.closest('input') || e.target.closest('button') || e.target.closest('a')) {
+                        return;
+                    }
+                    
+                    var section = header.closest('.diary-category-section');
+                    if (section) {
+                        section.classList.toggle('collapsed');
+                    }
+                }
+            });
+        }
 
+        // 2. 處理表格搜尋 (事件委派)
+        if (!window.__diarySearchBound) {
+            window.__diarySearchBound = true;
+            
+            document.addEventListener('input', function(e) {
+                if (!e.target.classList.contains('category-search')) return;
+                
+                var category = e.target.getAttribute('data-category');
+                var query = e.target.value.toLowerCase().trim();
+                var tbody = document.getElementById(category + '-table-body');
+                if (!tbody) return;
+
+                var rows = tbody.querySelectorAll('tr');
+                var visibleCount = 0;
+
+                rows.forEach(function(row) {
+                    // ★ 關鍵修正：只抓取 Diary ID, Site, 和 Submitted By 欄位
+                    var cells = row.cells;
+                    if (!cells || cells.length < 6) {
+                        row.style.display = 'none';
+                        return;
+                    }
+
+                    var diaryId = (cells[0] ? cells[0].textContent : '').toLowerCase();
+                    var site = (cells[3] ? cells[3].textContent : '').toLowerCase();
+                    var submittedBy = (cells[5] ? cells[5].textContent : '').toLowerCase();
+
+                    // 檢查這三個欄位是否包含搜尋關鍵字
+                    if (diaryId.includes(query) || site.includes(query) || submittedBy.includes(query)) {
+                        row.style.display = ''; // 顯示
+                        visibleCount++;
+                    } else {
+                        row.style.display = 'none'; // 隱藏
+                    }
+                });
+
+                // 處理無結果提示文字
+                var noResEl = document.getElementById(category + '-no-results');
+                if (noResEl) {
+                    if (rows.length === 0) {
+                        noResEl.style.display = 'block';
+                        noResEl.textContent = 'No documents.';
+                    } else if (visibleCount === 0 && query !== '') {
+                        noResEl.style.display = 'block';
+                        noResEl.textContent = 'No matching documents found for "' + e.target.value + '".';
+                    } else {
+                        noResEl.style.display = 'none';
+                    }
+                }
+            });
+        }
+    })();
+    </script>
 </body>
 </html>
