@@ -386,6 +386,13 @@ document.addEventListener("DOMContentLoaded", function() {
         if (userCanChangeStatus) {
             bindSafetyStatusChangeEvents();
         }
+
+        // ★ 新增：重新渲染表格後，重新觸發所有搜尋框的過濾邏輯
+        document.querySelectorAll('.category-search').forEach(function(input) {
+            if (input.value.trim() !== '') {
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        });
     }
 
     // ---------- 狀態更改事件 ----------
@@ -482,18 +489,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 return;
             }
 
-            const fullDoc = {
-                id: doc.id,
-                status: doc.status,
-                statusText: getStatusText(doc.status),
-                approvalStatus: doc.approvalStatus || 'pending',
-                site: doc.site,
-                date: formatDisplayDate(doc.date),
-                inspector: doc.inspector,
-                project: doc.project || null,
-                pdfData: doc.pdfData || null,
-                annotations: doc.annotations || []
-            };
             window.location.href = 'safetyinspectdocument.html?id=' + encodeURIComponent(doc.id);
         }
 
@@ -698,7 +693,9 @@ document.addEventListener("DOMContentLoaded", function() {
                     alert('Inspection was not saved to the database. Please try again.');
                     return;
                 }
-                alert('New inspection added successfully!');
+                
+                // ★ 修改這裡：存檔成功後直接跳轉到編輯頁
+                window.location.href = 'editsafetypdf.html?id=' + encodeURIComponent(id);
             });
         }
     }

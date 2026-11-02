@@ -65,6 +65,10 @@
     var opacitySlider = document.getElementById('opacity-slider');
     var opacityValue = document.getElementById('opacity-value');
     var lockBtn = document.getElementById('lock-btn');
+    var zoomLevel = 1.0;
+    var ZOOM_MIN = 0.5;
+    var ZOOM_MAX = 3.0;
+    var ZOOM_STEP = 0.2;
 
     /* ========== 工具 ========== */
     function uid() {
@@ -249,21 +253,24 @@
             });
     }
 
-    /* ========== 渲染當前頁 ========== */
     function renderCurrentPage() {
         if (!templateImageUrl) return;
 
-        // 清空
         pageWrapper.innerHTML = '';
 
-        // 建立新頁
+        // ★ 動態計算縮放尺寸
+        var displayWidth = pdfWidthCss * zoomLevel;
+        var displayHeight = pdfHeightCss * zoomLevel;
+
         var pageDiv = document.createElement('div');
         pageDiv.className = 'pdf-page active-page';
         pageDiv.dataset.page = activePageNum;
-        pageDiv.style.width = pdfWidthCss + 'px';
-        pageDiv.style.height = pdfHeightCss + 'px';
+        pageDiv.style.width = displayWidth + 'px';
+        pageDiv.style.height = displayHeight + 'px';
+        
+        // ★ 關鍵：把當前的縮放比例傳給 CSS 變數
+        pageDiv.style.setProperty('--pdf-zoom-scale', zoomLevel);
 
-        // 背景圖（PDF 模板）
         var img = document.createElement('img');
         img.src = templateImageUrl;
         img.className = 'pdf-bg';
@@ -271,21 +278,20 @@
         img.alt = 'Site Diary Template';
         pageDiv.appendChild(img);
 
-        // 註釋 canvas
         var drawCanvas = document.createElement('canvas');
         drawCanvas.className = 'draw-canvas';
+        // 內部解析度不變，只改變顯示大小
         drawCanvas.width = pdfWidthCss * PDF_RENDER_SCALE;
         drawCanvas.height = pdfHeightCss * PDF_RENDER_SCALE;
-        drawCanvas.style.width = pdfWidthCss + 'px';
-        drawCanvas.style.height = pdfHeightCss + 'px';
+        drawCanvas.style.width = displayWidth + 'px';
+        drawCanvas.style.height = displayHeight + 'px';
         pageDiv.appendChild(drawCanvas);
         var drawCtx = drawCanvas.getContext('2d');
 
-        // 文字層
         var textLayer = document.createElement('div');
         textLayer.className = 'text-layer';
-        textLayer.style.width = pdfWidthCss + 'px';
-        textLayer.style.height = pdfHeightCss + 'px';
+        textLayer.style.width = displayWidth + 'px';
+        textLayer.style.height = displayHeight + 'px';
         pageDiv.appendChild(textLayer);
 
         pageWrapper.appendChild(pageDiv);
@@ -302,10 +308,8 @@
         redrawAnnotationsForPage(currentPageObj);
         renderTextAnnotationsForPage(currentPageObj);
 
-        // 切換頁面時清空選取
         selectedAnnotationId = null;
         updateLockButtonState();
-
         updatePageInfo();
     }
 
@@ -673,9 +677,9 @@
         el.textContent = anno.text || '';
         el.style.color = anno.color || '#3498db';
         el.style.opacity = (anno.opacity || 100) / 100;
-        el.style.left = (anno.x) + 'px';
-        el.style.top = (anno.y) + 'px';
-        el.style.fontSize = ((anno.size || 3) * 4) + 'px';
+        el.style.left = (anno.x * zoomLevel) + 'px';
+        el.style.top = (anno.y * zoomLevel) + 'px';
+        el.style.fontSize = ((anno.size || 3) * 4 * zoomLevel) + 'px';
         el.contentEditable = false;
         if (anno.locked) el.classList.add('locked');
 
@@ -744,10 +748,11 @@
         el.className = 'tick-mark';
         el.setAttribute('data-id', anno._id);
         el.textContent = '✓';
-        el.style.left = (anno.x - 12) + 'px';
-        el.style.top = (anno.y - 12) + 'px';
+
+        el.style.left = ((anno.x - 12) * zoomLevel) + 'px';
+        el.style.top = ((anno.y - 12) * zoomLevel) + 'px';
+        el.style.fontSize = ((anno.size || 3) * 6 * zoomLevel) + 'px';
         el.style.color = anno.color || '#1a73e8';
-        el.style.fontSize = ((anno.size || 3) * 6) + 'px';
         if (anno.locked) el.classList.add('locked');
 
         var delBtn = document.createElement('button');
@@ -1012,17 +1017,18 @@
                 var el = currentPageObj.textLayer.querySelector('[data-id="' + draggedAnnotationId + '"]');
                 if (el) {
                     if (anno.type === 'tick') {
-                        anno.x = parseFloat(el.style.left) + 12;
-                        anno.y = parseFloat(el.style.top) + 12;
+                        anno.x = (parseFloat(el.style.left) + 12 * zoomLevel) / zoomLevel;
+                        anno.y = (parseFloat(el.style.top) + 12 * zoomLevel) / zoomLevel;
                     } else {
-                        anno.x = parseFloat(el.style.left);
-                        anno.y = parseFloat(el.style.top);
+                        anno.x = parseFloat(el.style.left) / zoomLevel;
+                        anno.y = parseFloat(el.style.top) / zoomLevel;
                     }
                     saveHistory();
                 }
             }
             draggedAnnotationId = null;
         }
+
         if (isDraggingAnnotation) endDragAnnotation();
     });
 
@@ -1111,6 +1117,31 @@
                 setTimeout(function () { addBtn.style.background = ''; }, 300);
             });
         }
+    }
+
+        function updateZoomDisplay() {
+        var el = document.getElementById('zoom-level');
+        if (el) el.textContent = Math.round(zoomLevel * 100) + '%';
+        var outBtn = document.getElementById('zoom-out-btn');
+        var inBtn = document.getElementById('zoom-in-btn');
+        if (outBtn) outBtn.disabled = zoomLevel <= ZOOM_MIN;
+        if (inBtn) inBtn.disabled = zoomLevel >= ZOOM_MAX;
+    }
+
+    function setZoom(newLevel) {
+        zoomLevel = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, newLevel));
+        updateZoomDisplay();
+        renderCurrentPage(); // 重新渲染當前頁
+    }
+
+    function setupZoom() {
+        var outBtn = document.getElementById('zoom-out-btn');
+        var inBtn = document.getElementById('zoom-in-btn');
+        var resetBtn = document.getElementById('zoom-reset-btn');
+        if (outBtn) outBtn.addEventListener('click', function() { setZoom(zoomLevel - ZOOM_STEP); });
+        if (inBtn) inBtn.addEventListener('click', function() { setZoom(zoomLevel + ZOOM_STEP); });
+        if (resetBtn) resetBtn.addEventListener('click', function() { setZoom(1.0); });
+        updateZoomDisplay();
     }
 
     /* ========== 儲存 / 提交 / 審批 ========== */
@@ -1327,8 +1358,12 @@
             changedBy: userName,
             changedRole: userRole,
             changedAt: nowIso,
-            action: 'reject'
+            action: 'reject',
+            comment: window.__currentRejectComment || '' // ★ 將剛剛輸入的 Comment 存進去
         });
+        
+        // ★ 存檔後清空變數，以免影響下一次拒絕
+        window.__currentRejectComment = null;
 
         currentDoc.status = 'draft';
         currentDoc.approvalStatus = 'rejected';
@@ -1464,6 +1499,7 @@
                 hideLoading();
                 renderCurrentPage();
                 setupTools();
+                setupZoom(); // ★ 加入這行，讓縮放按鈕生效
                 setupNavigation();
                 bindActionButtons();
                 history = [];

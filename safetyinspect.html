@@ -61,6 +61,21 @@
             font-weight: 500; display: inline-block; text-align: center; white-space: nowrap;
         }
 
+        /* ====== ★ 對齊與排版 ====== */
+        .diary-controls-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        .filters-section {
+            display: flex;
+            gap: 12px;
+            margin-left: auto; /* 讓 filters 靠右 */
+        }
+
         /* ====== ★ 分類區塊樣式 ====== */
         .diary-category-section { margin-bottom: 28px; }
         .diary-category-section:last-child { margin-bottom: 0; }
@@ -81,6 +96,49 @@
         .diary-category-section[data-category="pending"] .table-title i { color: #f39c12; }
         .diary-category-section[data-category="closed"]  .table-title i { color: #27ae60; }
         .diary-category-section[data-category="other"]   .table-title i { color: #7f8c8d; }
+
+        /* ★ 分類折疊樣式 */
+        .diary-category-section .table-header {
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .diary-category-section .table-header .header-left { flex: 1; }
+        .diary-category-section .table-header .toggle-icon {
+            font-size: 1.2rem;
+            color: #94a3b8;
+            transition: transform 0.3s ease;
+            margin-left: 15px;
+        }
+        .diary-category-section.collapsed .table-header .toggle-icon {
+            transform: rotate(-90deg);
+        }
+        .diary-category-section.collapsed .table-container {
+            display: none !important;
+        }
+
+        /* ★ 分類搜尋框樣式 */
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .category-search {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            width: 220px;
+            transition: all 0.2s;
+            background: #fff;
+        }
+        .category-search:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52,152,219,0.2);
+        }
 
         @media (max-width: 768px) {
             .action-btn { width: 100%; margin: 2px 0; }
@@ -115,6 +173,7 @@
         </div>
         <div class="site-diary-page">
             <h2><i class="fas fa-clipboard-check"></i> <span data-i18n="safety.inspection.management">Safety Inspection Management</span></h2>
+            
             <div class="diary-controls-row">
                 <div class="diary-stats">
                     <div class="stat-card">
@@ -131,8 +190,8 @@
                         if (c.safetyFiltered && c.safety) document.getElementById('total-inspections-count').textContent = c.safety;
                     } catch (e) {}
                     </script>
-                    </div>
                 </div>
+                
                 <section class="filters-section">
                     <div class="filter-group" id="site-filter-group">
                         <div class="filter-toggle">
@@ -169,14 +228,20 @@
                 <div id="inspection-tables-container">
 
                     <!-- ===== Overdue Documents ===== -->
-                    <div class="diary-category-section" data-category="overdue">
+                    <div class="diary-category-section collapsed" data-category="overdue">
                         <div class="table-header">
-                            <h2 class="table-title">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                <span data-i18n="category.overdue">Overdue Documents</span>
-                                <span class="category-count" id="overdue-count">0</span>
-                            </h2>
-                            <p class="category-desc" data-i18n="category.overdue.desc">Draft inspections older than 14 days</p>
+                            <div class="header-left">
+                                <h2 class="table-title">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span data-i18n="category.overdue">Overdue Documents</span>
+                                    <span class="category-count" id="overdue-count">0</span>
+                                </h2>
+                                <p class="category-desc" data-i18n="category.overdue.desc">Draft inspections older than 14 days</p>
+                            </div>
+                            <div class="header-right">
+                                <input type="text" class="category-search" data-category="overdue" placeholder="Search Overdue...">
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
                         </div>
                         <div class="table-container">
                             <table class="diary-table">
@@ -198,14 +263,20 @@
                     </div>
 
                     <!-- ===== Pending Documents ===== -->
-                    <div class="diary-category-section" data-category="pending">
+                    <div class="diary-category-section collapsed" data-category="pending">
                         <div class="table-header">
-                            <h2 class="table-title">
-                                <i class="fas fa-clock"></i>
-                                <span data-i18n="category.pending">Pending Documents</span>
-                                <span class="category-count" id="pending-count">0</span>
-                            </h2>
-                            <p class="category-desc" data-i18n="category.pending.desc">Submitted but not yet approved</p>
+                            <div class="header-left">
+                                <h2 class="table-title">
+                                    <i class="fas fa-clock"></i>
+                                    <span data-i18n="category.pending">Pending Documents</span>
+                                    <span class="category-count" id="pending-count">0</span>
+                                </h2>
+                                <p class="category-desc" data-i18n="category.pending.desc">Submitted but not yet approved</p>
+                            </div>
+                            <div class="header-right">
+                                <input type="text" class="category-search" data-category="pending" placeholder="Search Pending...">
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
                         </div>
                         <div class="table-container">
                             <table class="diary-table">
@@ -227,14 +298,20 @@
                     </div>
 
                     <!-- ===== Closed Documents ===== -->
-                    <div class="diary-category-section" data-category="closed">
+                    <div class="diary-category-section collapsed" data-category="closed">
                         <div class="table-header">
-                            <h2 class="table-title">
-                                <i class="fas fa-check-circle"></i>
-                                <span data-i18n="category.closed">Closed Documents</span>
-                                <span class="category-count" id="closed-count">0</span>
-                            </h2>
-                            <p class="category-desc" data-i18n="category.closed.desc">Completed, closed, or cancelled inspections</p>
+                            <div class="header-left">
+                                <h2 class="table-title">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span data-i18n="category.closed">Closed Documents</span>
+                                    <span class="category-count" id="closed-count">0</span>
+                                </h2>
+                                <p class="category-desc" data-i18n="category.closed.desc">Completed, closed, or cancelled inspections</p>
+                            </div>
+                            <div class="header-right">
+                                <input type="text" class="category-search" data-category="closed" placeholder="Search Closed...">
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
                         </div>
                         <div class="table-container">
                             <table class="diary-table">
@@ -255,15 +332,21 @@
                         </div>
                     </div>
 
-                    <!-- ===== Other Documents (Draft within 14 days, Reopen) ===== -->
-                    <div class="diary-category-section" data-category="other">
+                    <!-- ===== Other Documents ===== -->
+                    <div class="diary-category-section collapsed" data-category="other">
                         <div class="table-header">
-                            <h2 class="table-title">
-                                <i class="fas fa-folder"></i>
-                                <span data-i18n="category.other">Other Documents</span>
-                                <span class="category-count" id="other-count">0</span>
-                            </h2>
-                            <p class="category-desc" data-i18n="category.other.desc">Drafts within 14 days, reopened, or in progress</p>
+                            <div class="header-left">
+                                <h2 class="table-title">
+                                    <i class="fas fa-folder"></i>
+                                    <span data-i18n="category.other">Other Documents</span>
+                                    <span class="category-count" id="other-count">0</span>
+                                </h2>
+                                <p class="category-desc" data-i18n="category.other.desc">Drafts within 14 days, reopened, or in progress</p>
+                            </div>
+                            <div class="header-right">
+                                <input type="text" class="category-search" data-category="other" placeholder="Search Other...">
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
                         </div>
                         <div class="table-container">
                             <table class="diary-table">
@@ -883,6 +966,83 @@
     }
 })();
 </script>
+
+<!-- ============================================================ -->
+<!-- ★ 折疊與搜尋邏輯 (與 sitediary.html 相同) -->
+<!-- ============================================================ -->
+<script>
+(function () {
+    'use strict';
+    
+    // 1. 處理折疊與展開
+    if (!window.__inspectFoldBound) {
+        window.__inspectFoldBound = true;
+        document.addEventListener('click', function(e) {
+            var header = e.target.closest('.diary-category-section .table-header');
+            if (header) {
+                if (e.target.closest('input') || e.target.closest('button') || e.target.closest('a')) {
+                    return;
+                }
+                var section = header.closest('.diary-category-section');
+                if (section) {
+                    section.classList.toggle('collapsed');
+                }
+            }
+        });
+    }
+
+    // 2. 處理表格搜尋 (只針對 ID, Site, Inspector)
+    if (!window.__inspectSearchBound) {
+        window.__inspectSearchBound = true;
+        
+        document.addEventListener('input', function(e) {
+            if (!e.target.classList.contains('category-search')) return;
+            
+            var category = e.target.getAttribute('data-category');
+            var query = e.target.value.toLowerCase().trim();
+            var tbody = document.getElementById(category + '-table-body');
+            if (!tbody) return;
+
+            var rows = tbody.querySelectorAll('tr');
+            var visibleCount = 0;
+
+            rows.forEach(function(row) {
+                var cells = row.cells;
+                if (!cells || cells.length < 6) {
+                    row.style.display = 'none';
+                    return;
+                }
+
+                // ID (0), Site (3), Inspector (5)
+                var idText = (cells[0] ? cells[0].textContent : '').toLowerCase();
+                var site = (cells[3] ? cells[3].textContent : '').toLowerCase();
+                var inspector = (cells[5] ? cells[5].textContent : '').toLowerCase();
+
+                if (idText.includes(query) || site.includes(query) || inspector.includes(query)) {
+                    row.style.display = ''; 
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none'; 
+                }
+            });
+
+            var noResEl = document.getElementById(category + '-no-results');
+            if (noResEl) {
+                if (rows.length === 0) {
+                    noResEl.style.display = 'block';
+                    noResEl.textContent = 'No documents.';
+                } else if (visibleCount === 0 && query !== '') {
+                    noResEl.style.display = 'block';
+                    noResEl.textContent = 'No matching documents found for "' + e.target.value + '".';
+                } else {
+                    noResEl.style.display = 'none';
+                }
+            }
+        });
+    }
+})();
+</script>
+
 <!-- ============================================================ -->
 <!-- ★ Status Change History Modal                                -->
 <!-- ============================================================ -->

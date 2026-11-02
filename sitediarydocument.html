@@ -98,7 +98,7 @@
             outline: none;
             font-family: 'Times New Roman', 'SimSun', 'Songti SC', serif;
             color: #0a1a5c;
-            font-size: 11px;
+            font-size: calc(11px * var(--pdf-zoom-scale, 1)) !important;
             padding: 1px 3px;
             box-sizing: border-box;
             line-height: 1.2;
@@ -108,7 +108,7 @@
             pointer-events: none;
         }
         .pdf-form-overlay .pdf-field.worker-detail {
-            font-size: 6.5px;
+            font-size: calc(6.5px * var(--pdf-zoom-scale, 1)) !important;
             padding: 1px 2px;
             text-align: center;
             line-height: 1.1;
@@ -133,7 +133,7 @@
         .pdf-form-overlay .pdf-field.date-cell {
             text-align: center;
             font-family: 'Segoe UI', Arial, sans-serif;
-            font-size: 10.5px;
+            font-size: calc(10.5px * var(--pdf-zoom-scale, 1)) !important;
         }
 
         /* ============================================================
@@ -238,6 +238,15 @@
                     </span>
                     <span id="current-page" style="display:none;">1</span>
                     <button class="nav-btn" id="next-page"><i class="fas fa-chevron-right"></i></button>
+                </div>
+
+                                    <!-- ★ 新增：Zoom 控制 -->
+                    <span style="margin-left: auto; display: flex; gap: 8px; align-items: center; background: #fff; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1;">
+                        <button class="nav-btn" id="zoom-out-btn" style="padding: 4px 10px; background: transparent; color: #334155;"><i class="fas fa-search-minus"></i></button>
+                        <span id="zoom-level" style="font-weight: 600; font-size: 14px; width: 48px; text-align: center; color: #1e293b;">100%</span>
+                        <button class="nav-btn" id="zoom-in-btn" style="padding: 4px 10px; background: transparent; color: #334155;"><i class="fas fa-search-plus"></i></button>
+                        <button class="nav-btn" id="zoom-reset-btn" style="padding: 4px 10px; background: transparent; color: #334155;"><i class="fas fa-compress"></i></button>
+                    </span>
                 </div>
 
                 <div class="pdf-canvas-container" id="pdf-container">
@@ -350,6 +359,11 @@
         var currentDocId = 'default';
         var periodStartDate = null;
         var periodEndDate = null;
+        // ★ 新增縮放變數
+        var zoomLevel = 1.0;
+        var ZOOM_MIN = 0.5;
+        var ZOOM_MAX = 3.0;
+        var ZOOM_STEP = 0.2;
 
         async function getCurrentDocObject() {
             var params = new URLSearchParams(location.search);
@@ -686,8 +700,16 @@
             var pageDiv = document.createElement('div');
             pageDiv.className = 'pdf-page';
             pageDiv.dataset.page = pageNum;
-            pageDiv.style.width = pdfWidthCss + 'px';
-            pageDiv.style.height = pdfHeightCss + 'px';
+            
+            // ★ 動態計算縮放尺寸
+            var displayWidth = pdfWidthCss * zoomLevel;
+            var displayHeight = pdfHeightCss * zoomLevel;
+            
+            pageDiv.style.width = displayWidth + 'px';
+            pageDiv.style.height = displayHeight + 'px';
+            
+            // ★ 將縮放比例傳給 CSS 變數，讓字體跟著放大
+            pageDiv.style.setProperty('--pdf-zoom-scale', zoomLevel);
 
             var img = document.createElement('img');
             img.src = templateImageUrl;
@@ -754,6 +776,32 @@
                     goToPage(target);
                 }
             });
+        }
+
+                // ★ 新增：處理縮放顯示
+        function updateZoomDisplay() {
+            var el = document.getElementById('zoom-level');
+            if (el) el.textContent = Math.round(zoomLevel * 100) + '%';
+            var outBtn = document.getElementById('zoom-out-btn');
+            var inBtn = document.getElementById('zoom-in-btn');
+            if (outBtn) outBtn.disabled = zoomLevel <= ZOOM_MIN;
+            if (inBtn) inBtn.disabled = zoomLevel >= ZOOM_MAX;
+        }
+
+        function setZoom(newLevel) {
+            zoomLevel = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, newLevel));
+            updateZoomDisplay();
+            renderPage(activePageNum); // 重新渲染當前頁
+        }
+
+        function setupZoom() {
+            var outBtn = document.getElementById('zoom-out-btn');
+            var inBtn = document.getElementById('zoom-in-btn');
+            var resetBtn = document.getElementById('zoom-reset-btn');
+            if (outBtn) outBtn.addEventListener('click', function() { setZoom(zoomLevel - ZOOM_STEP); });
+            if (inBtn) inBtn.addEventListener('click', function() { setZoom(zoomLevel + ZOOM_STEP); });
+            if (resetBtn) resetBtn.addEventListener('click', function() { setZoom(1.0); });
+            updateZoomDisplay();
         }
 
         function waitForImages(container) {
@@ -1124,6 +1172,7 @@
                     setupNavigation();
                     setupRecordNavigation();
                     setupDownload();
+                    setupZoom(); // ★ 新增這行，啟動縮放功能
                     setupPrint();
                     setupBack();
                 }).catch(function (err) {
