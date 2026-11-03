@@ -1,162 +1,56 @@
-// login.js - DWSS 多用戶登錄系統 (with Account Lockout + Project Selection)
-document.addEventListener('DOMContentLoaded', function() {
+// login.js — DWSS Cloud Version (Two-Step Login with Project Picker)
+document.addEventListener('DOMContentLoaded', function () {
+    var form = document.getElementById('login-form');
+    var submitBtn = form ? form.querySelector('button[type="submit"]') : null;
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.dataset.label = submitBtn.innerHTML;
+        submitBtn.innerHTML = 'Loading...';
+    }
+
+    function enableLogin() {
+        if (!submitBtn) return;
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = submitBtn.dataset.label || 'Sign In';
+    }
+
+    function start() {
+        initLoginPage();
+        enableLogin();
+    }
+
+    if (window.DWSS_Storage && typeof window.DWSS_Storage.whenReady === 'function') {
+        window.DWSS_Storage.whenReady(start);
+    } else {
+        start();
+    }
+    setTimeout(enableLogin, 3000);
+});
+
+function initLoginPage() {
+
     const form = document.getElementById('login-form');
     const errorDiv = document.getElementById('login-error');
     const togglePasswordBtn = document.getElementById('toggle-password');
     const passwordInput = document.getElementById('password');
     const usernameInput = document.getElementById('username');
 
-    // ==================== 初始化用戶數據庫 ====================
-    function initializeUserDatabase() {
-        const stored = localStorage.getItem('dwss_users_db');
+    const projectModal = document.getElementById('project-modal');
+    const projectListEl = document.getElementById('project-list');
+    const pmUserInfo = document.getElementById('pm-user-info');
+    const pmUserName = document.getElementById('pm-user-name');
+    const pmCancelBtn = document.getElementById('pm-cancel');
+    const pmEnterBtn = document.getElementById('pm-enter');
 
-        // 每個用戶的預設 projects（用於補全舊資料）
-        const defaultProjectsMap = {
-            'admin':    ["DE/2026/05", "DE/2025/02", "DE/2025/09"],
-            'kenneth':  ["DE/2026/05", "DE/2025/02", "DE/2025/09"],
-            'garytang': ["DE/2026/05"],
-            'john':     ["DE/2025/02"],
-            'sarah':    ["DE/2025/09"]
-        };
+    let pendingUser = null;        // user returned by authenticate step
+    let selectedProject = null;    // project chosen in popup
+    let pendingCredentials = null; // { username, password } cached until Enter System
 
-        // ★ 情況 1：DB 不存在 → 建立完整預設用戶
-        if (!stored) {
-            const defaultUsers = [
-                {
-                    id: 1,
-                    name: "Admin",
-                    email: "admin@rdrive.io",
-                    username: "admin",
-                    password: "admin123",
-                    projects: ["DE/2026/05", "DE/2025/02", "DE/2025/09"],
-                    role: "admin",
-                    department: "System Administration",
-                    status: "online",
-                    passwordChanged: false,
-                    passwordChangedAt: null,
-                    passwordExpiresAt: null,
-                    permissions: {
-                        level: 5,
-                        canChangeStatus: true,
-                        canManageUsers: true,
-                        name: "Administrator"
-                    }
-                },
-                {
-                    id: 2,
-                    name: "Kenneth Daluz",
-                    email: "kenneth.daluz@aster-dsd.com",
-                    username: "kenneth",
-                    password: "officer123",
-                    projects: ["DE/2026/05", "DE/2025/02", "DE/2025/09"],
-                    role: "officer",
-                    department: "Administration",
-                    status: "online",
-                    passwordChanged: false,
-                    passwordChangedAt: null,
-                    passwordExpiresAt: null,
-                    permissions: {
-                        level: 4,
-                        canChangeStatus: true,
-                        canManageUsers: false,
-                        name: "Administration Officer"
-                    }
-                },
-                {
-                    id: 3,
-                    name: "TANG Chi Long, Gary",
-                    email: "gcifang@dsd.gov.hk",
-                    username: "garytang",
-                    password: "aei123",
-                    projects: ["DE/2026/05"],
-                    role: "aei",
-                    department: "AEI/NWNT",
-                    status: "online",
-                    passwordChanged: false,
-                    passwordChangedAt: null,
-                    passwordExpiresAt: null,
-                    permissions: {
-                        level: 3,
-                        canChangeStatus: true,
-                        canManageUsers: false,
-                        name: "AEI"
-                    }
-                },
-                {
-                    id: 4,
-                    name: "John Smith",
-                    email: "john.smith@ael-dwss.com",
-                    username: "john",
-                    password: "inspector123",
-                    projects: ["DE/2025/02"],
-                    role: "inspector",
-                    department: "Safety Inspection",
-                    status: "online",
-                    passwordChanged: false,
-                    passwordChangedAt: null,
-                    passwordExpiresAt: null,
-                    permissions: {
-                        level: 2,
-                        canChangeStatus: false,
-                        canManageUsers: false,
-                        name: "Inspector"
-                    }
-                },
-                {
-                    id: 5,
-                    name: "Sarah Johnson",
-                    email: "sarah.j@ael-dwss.com",
-                    username: "sarah",
-                    password: "contractor123",
-                    projects: ["DE/2025/09"],
-                    role: "contractor",
-                    department: "Contractor Team A",
-                    status: "online",
-                    passwordChanged: false,
-                    passwordChangedAt: null,
-                    passwordExpiresAt: null,
-                    permissions: {
-                        level: 1,
-                        canChangeStatus: false,
-                        canManageUsers: false,
-                        name: "Contractor"
-                    }
-                }
-            ];
-            localStorage.setItem('dwss_users_db', JSON.stringify(defaultUsers));
-            console.log('[Login] ✓ 建立預設用戶資料庫');
-            return;
-        }
+    const ALL_PROJECTS = ['DE/2026/05', 'DE/2025/02', 'DE/2025/09'];
 
-        // ★ 情況 2：DB 已存在 → 檢查是否有舊用戶缺 projects 欄位，補上
-        try {
-            const users = JSON.parse(stored);
-            if (!Array.isArray(users)) return;
-
-            let patched = 0;
-            users.forEach(u => {
-                if (!Array.isArray(u.projects) || u.projects.length === 0) {
-                    // 從 map 裡找對應的 projects，找不到就給全部
-                    const key = (u.username || '').toLowerCase();
-                    u.projects = defaultProjectsMap[key] || ["DE/2026/05", "DE/2025/02", "DE/2025/09"];
-                    patched++;
-                }
-            });
-
-            if (patched > 0) {
-                localStorage.setItem('dwss_users_db', JSON.stringify(users));
-                console.log('[Login] ✓ 已為 ' + patched + ' 個舊用戶補上 projects 欄位');
-            }
-        } catch (e) {
-            console.warn('[Login] DB 解析失敗，重建預設用戶', e);
-            localStorage.removeItem('dwss_users_db');
-            initializeUserDatabase();
-        }
-    }
-
-    // ==================== 密碼顯示/隱藏切換 ====================
+    // ==================== Password show/hide ====================
     if (togglePasswordBtn && passwordInput) {
-        togglePasswordBtn.addEventListener('click', function() {
+        togglePasswordBtn.addEventListener('click', function () {
             const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
             passwordInput.setAttribute('type', type);
             this.querySelector('i').classList.toggle('fa-eye');
@@ -164,207 +58,305 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ==================== 顯示錯誤信息 ====================
+    // ==================== Error helpers ====================
     function showError(message, duration) {
         if (!errorDiv) return;
         errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
         errorDiv.classList.add('show');
-        setTimeout(() => {
-            errorDiv.classList.remove('show');
-        }, duration || 4000);
+        setTimeout(() => errorDiv.classList.remove('show'), duration || 5000);
     }
 
-    // ==================== 顯示鎖定信息 ====================
-    function showLockedMessage(lockInfo) {
-        const mins = lockInfo.remainingMinutes || 0;
-        showError(
-            `🔒 Account locked due to too many failed attempts. ` +
-            `Please try again in ${mins} minute${mins === 1 ? '' : 's'}, ` +
-            `or contact an administrator to unlock.`,
-            8000
-        );
-    }
+    // ==================== STEP 1: authenticate against backend ====================
+    // POST /api/auth/login with mode=authenticate (no projectId yet).
+    // Expected response: { ok: true, user: { ..., projectIds: [...] } }
+    async function authenticateCloud(username, password) {
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, mode: 'authenticate' })
+            });
+            const body = await res.json().catch(() => ({}));
 
-    // ==================== 工具：找出匹配的用戶 ====================
-    function findMatchingUser(username) {
-        const users = JSON.parse(localStorage.getItem('dwss_users_db') || '[]');
-        const needle = String(username || '').trim().toLowerCase();
-        return users.find(u =>
-            (u.username && u.username.toLowerCase() === needle) ||
-            (u.email && u.email.toLowerCase() === needle) ||
-            (u.name && u.name.toLowerCase() === needle)
-        ) || null;
-    }
-
-    // ==================== 工具：取得規範化的鎖定鍵 ====================
-    function getLockKey(username) {
-        const matched = findMatchingUser(username);
-        return matched ? matched.email.toLowerCase() : String(username || '').trim().toLowerCase();
-    }
-
-    // ==================== 登錄驗證 ====================
-    function loginUser(username, password, projectId) {
-        console.log('[Login] 嘗試登入:', { username: username, projectId: projectId });
-
-        initializeUserDatabase();
-
-        // ---------- Step 1: 檢查帳號是否被鎖定 ----------
-        if (typeof DWSS_Lockout !== 'undefined') {
-            const matched = findMatchingUser(username);
-            const keysToCheck = [String(username).trim().toLowerCase()];
-            if (matched) {
-                keysToCheck.push(matched.email.toLowerCase());
-                keysToCheck.push(matched.username.toLowerCase());
+            if (body.error === 'no_database') {
+                return { ok: false, message: 'Server is not connected to the database. Start it with deploy\\start-windows.bat.' };
             }
+            if (res.status === 401) {
+                return { ok: false, message: 'Invalid username or password.' };
+            }
+            if (res.status === 403 && body.error === 'disabled') {
+                return { ok: false, message: 'Account is disabled. Please contact administrator.' };
+            }
+            if (res.status === 409 && body.error === 'already_logged_in') {
+                return { ok: false, code: 'ALREADY_LOGGED_IN', message: body.message || 'User already logged in elsewhere.', body };
+            }
+            if (!res.ok || !body.user) {
+                return { ok: false, message: 'Login failed. Please try again.' };
+            }
+            return { ok: true, user: body.user };
+        } catch (err) {
+            console.error('[Login] network error:', err);
+            return { ok: false, message: 'Cannot reach server. Check your connection.' };
+        }
+    }
 
-            for (let i = 0; i < keysToCheck.length; i++) {
-                const lockStatus = DWSS_Lockout.isLocked(keysToCheck[i]);
-                if (lockStatus.locked) {
-                    console.log('[Login] ✗ 帳號被鎖定:', keysToCheck[i]);
-                    showLockedMessage(lockStatus);
-                    return false;
+    // ==================== STEP 2: project picker ====================
+    function getAccessibleProjects(user) {
+        const isAdmin = (user.role === 'admin' || user.userRole === 'admin');
+        if (isAdmin) {
+            return (Array.isArray(user.projectIds) && user.projectIds.length)
+                ? user.projectIds.slice()
+                : ALL_PROJECTS.slice();
+        }
+        return Array.isArray(user.projectIds) ? user.projectIds.slice() : [];
+    }
+
+    function openProjectPicker(user) {
+        pendingUser = user;
+        selectedProject = null;
+
+        const projects = getAccessibleProjects(user);
+
+        pmUserInfo.style.display = projects.length ? 'flex' : 'none';
+        pmUserName.textContent = user.name + ' · ' + (user.department || user.role || '');
+
+        projectListEl.innerHTML = '';
+        if (projects.length === 0) {
+            projectListEl.innerHTML =
+                '<div class="pm-empty">Your account has no assigned projects.<br>Please contact the administrator.</div>';
+            pmEnterBtn.disabled = true;
+        } else {
+            projects.forEach(function (pid) {
+                const opt = document.createElement('div');
+                opt.className = 'project-option';
+                opt.dataset.projectId = pid;
+                opt.innerHTML = `<span>${pid}</span><span class="po-check"><i class="fas fa-check"></i></span>`;
+                opt.addEventListener('click', function () {
+                    projectListEl.querySelectorAll('.project-option')
+                        .forEach(el => el.classList.remove('selected'));
+                    opt.classList.add('selected');
+                    selectedProject = pid;
+                    pmEnterBtn.disabled = false;
+                });
+                projectListEl.appendChild(opt);
+            });
+            pmEnterBtn.disabled = true;
+        }
+
+        projectModal.classList.add('show');
+    }
+
+    function closeProjectPicker() {
+        projectModal.classList.remove('show');
+        pendingUser = null;
+        selectedProject = null;
+        pendingCredentials = null;
+        pmEnterBtn.disabled = true;
+    }
+
+    // ==================== STEP 3: commit session with project ====================
+    // POST /api/auth/login again, this time including projectId + mode=commit.
+    // Expected response: { ok: true, user: { ..., sessionToken } }
+    async function commitLogin(username, password, projectId, forceLogout) {
+        pmEnterBtn.disabled = true;
+        const original = pmEnterBtn.innerHTML;
+        pmEnterBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...';
+
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username, password, projectId,
+                    mode: 'commit', forceLogout: !!forceLogout
+                })
+            });
+            const body = await res.json().catch(() => ({}));
+
+            if (res.status === 401) { showError('Session expired. Please sign in again.'); closeProjectPicker(); return; }
+            if (res.status === 403 && body.error === 'no_project_access') {
+                showError('You do not have access to project "' + projectId + '".');
+                pmEnterBtn.disabled = false; pmEnterBtn.innerHTML = original; return;
+            }
+            if (res.status === 409 && body.error === 'already_logged_in') {
+                var msg = body.message || 'This user is already logged in elsewhere.';
+                if (confirm(msg + '\n\nLog that session out and continue here?')) {
+                    return commitLogin(username, password, projectId, true);
                 }
+                closeProjectPicker();
+                showError('Login cancelled. Existing session is still active.');
+                return;
+            }
+            if (!res.ok || !body.user) {
+                showError('Login failed. Please try again.');
+                pmEnterBtn.disabled = false; pmEnterBtn.innerHTML = original; return;
+            }
+
+            finishLogin(body.user, projectId);
+        } catch (err) {
+            console.error('[Login] commit error:', err);
+            showError('Cannot reach server. Check your connection.');
+            pmEnterBtn.disabled = false; pmEnterBtn.innerHTML = original;
+        }
+    }
+
+    // ==================== STEP 4: write session & redirect ====================
+    function finishLogin(user, projectId) {
+        if (typeof DWSS_PasswordLifecycle !== 'undefined') {
+            const pwdStatus = DWSS_PasswordLifecycle.enforce(user);
+            if (pwdStatus.required) {
+                sessionStorage.setItem('dwss_session', JSON.stringify({
+                    isLoggedIn: true,
+                    userId: user.id, username: user.username, userName: user.name,
+                    userEmail: user.email, userRole: user.role, role: user.role,
+                    organization: user.organization, companyName: user.companyName,
+                    contractNo: user.contractNo, userDepartment: user.department,
+                    projectIds: user.projectIds, permissions: user.permissions,
+                    loginTime: new Date().toISOString(),
+                    pendingPasswordChange: true
+                }));
+                sessionStorage.setItem('currentProjectId', projectId);
+                window.location.href = 'change-password.html';
+                return;
             }
         }
 
-        const users = JSON.parse(localStorage.getItem('dwss_users_db') || '[]');
-
-        // ---------- Step 2: 找匹配的用戶（含密碼驗證）----------
-        const user = users.find(u =>
-            ((u.username && u.username.toLowerCase() === username.toLowerCase()) ||
-             (u.email && u.email.toLowerCase() === username.toLowerCase()) ||
-             (u.name && u.name.toLowerCase() === username.toLowerCase())) &&
-            u.password === password
-        );
-
-        // ---------- Step 3: 用戶不存在 / 密碼錯誤 ----------
-        if (!user) {
-            console.log('[Login] ✗ 用戶不存在或密碼錯誤');
-            if (typeof DWSS_Lockout !== 'undefined') {
-                const lockKey = getLockKey(username);
-                DWSS_Lockout.recordFailedAttempt(lockKey);
-
-                const remaining = DWSS_Lockout.getRemainingAttempts(lockKey);
-
-                if (remaining <= 0) {
-                    const mins = Math.ceil(DWSS_Lockout.CONFIG.lockDurationMs / 60000);
-                    showError(
-                        `🔒 Account locked for ${mins} minutes due to too many failed attempts.`,
-                        8000
-                    );
-                } else {
-                    showError(
-                        `Invalid username or password. ` +
-                        `${remaining} attempt${remaining === 1 ? '' : 's'} remaining before lockout.`,
-                        5000
-                    );
-                }
-            } else {
-                showError('Invalid username or password');
-            }
-            return false;
-        }
-
-        console.log('[Login] ✓ 找到用戶:', user.name);
-
-        // ---------- Step 4: 項目權限檢查（用戶存在後才檢查）----------
-        if (!Array.isArray(user.projects) || !user.projects.includes(projectId)) {
-            console.log('[Login] ✗ 無此項目權限:', projectId, '| 用戶可用項目:', user.projects);
-            showError('You do not have access to this project.');
-            return false;
-        }
-
-        console.log('[Login] ✓ 項目權限通過:', projectId);
-
-        // ---------- Step 5: 帳號被停用 ----------
-        if (user.status === 'offline') {
-            console.log('[Login] ✗ 帳號已停用');
-            showError('Account is disabled. Please contact administrator.');
-            return false;
-        }
-
-        // ---------- Step 6: 成功登入 → 重置鎖定計數 ----------
-        if (typeof DWSS_Lockout !== 'undefined') {
-            DWSS_Lockout.recordSuccessfulAttempt(user.email.toLowerCase());
-            DWSS_Lockout.recordSuccessfulAttempt(user.username.toLowerCase());
-        }
-
-        // ---------- Step 7: 建立 session ----------
-        const sessionData = {
+        sessionStorage.setItem('dwss_session', JSON.stringify({
             isLoggedIn: true,
-            userId: user.id,
-            userName: user.name,
-            userEmail: user.email,
-            userRole: user.role,
-            userDepartment: user.department,
-            permissions: user.permissions,
-            projectId: projectId,
-            projectName: projectId,
+            userId: user.id, username: user.username, userName: user.name,
+            userEmail: user.email, userRole: user.role, role: user.role,
+            organization: user.organization, companyName: user.companyName,
+            contractNo: user.contractNo, userDepartment: user.department,
+            projectIds: user.projectIds, permissions: user.permissions,
+            sessionToken: user.sessionToken || '',
             loginTime: new Date().toISOString()
-        };
-
-        sessionStorage.setItem('dwss_session', JSON.stringify(sessionData));
+        }));
         sessionStorage.setItem('isLoggedIn', 'true');
         sessionStorage.setItem('loggedUser', user.name);
-
-        localStorage.setItem('current_user', JSON.stringify({
+        sessionStorage.setItem('currentProjectId', projectId);
+        sessionStorage.setItem('current_user', JSON.stringify({
             userId: user.id,
             userName: user.name,
             userRole: user.role,
+            organization: user.organization,
+            companyName: user.companyName,
+            projectIds: user.projectIds,
             permissions: user.permissions
         }));
 
-        console.log('[Login] ✓✓ 登入成功，session 已建立');
-        return true;
+        window.location.href = 'index.html';
     }
 
-    // ==================== 表單提交 ====================
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
+    // ==================== Form submit ====================
+    if (form) {
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
 
-        const username = usernameInput.value.trim();
-        const password = passwordInput.value.trim();
-        const projectId = document.getElementById('project').value;
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
 
-        // 先清掉舊的 session（避免殘留）
-        sessionStorage.removeItem('dwss_session');
-        sessionStorage.removeItem('isLoggedIn');
-        sessionStorage.removeItem('loggedUser');
+            sessionStorage.removeItem('dwss_session');
+            sessionStorage.removeItem('isLoggedIn');
+            sessionStorage.removeItem('loggedUser');
+            sessionStorage.removeItem('currentProjectId');
 
-        if (!username || !password) {
-            showError('Please enter username and password');
-            return;
-        }
+            if (!username || !password) {
+                showError('Please enter username and password');
+                return;
+            }
 
-        if (!projectId) {
-            showError('Please select a project');
-            return;
-        }
+            // Disable while calling
+            const originalHTML = form.querySelector('button[type="submit"]').innerHTML;
+            form.querySelector('button[type="submit"]').disabled = true;
+            form.querySelector('button[type="submit"]').innerHTML =
+                '<i class="fas fa-spinner fa-spin"></i> Verifying...';
 
-        if (loginUser(username, password, projectId)) {
-            window.location.href = 'index.html';
+            const result = await authenticateCloud(username, password);
+
+            form.querySelector('button[type="submit"]').disabled = false;
+            form.querySelector('button[type="submit"]').innerHTML = originalHTML;
+
+            if (!result.ok) {
+                if (result.code === 'ALREADY_LOGGED_IN') {
+                    // Handle at commit step instead — but if backend blocks here, ask now:
+                    if (confirm((result.message || 'User already logged in.') +
+                                '\n\nLog that session out and continue here?')) {
+                        pendingCredentials = { username, password };
+                        // We'll need the user object from the body
+                        if (result.body && result.body.user) {
+                            openProjectPicker(result.body.user);
+                        } else {
+                            showError('Cannot continue. Please try again.');
+                        }
+                    } else {
+                        showError('Login cancelled. Existing session is still active.');
+                    }
+                } else {
+                    showError(result.message, 6000);
+                }
+                return;
+            }
+
+            // Credentials OK — cache them for the commit step
+            pendingCredentials = { username, password };
+            openProjectPicker(result.user);
+        });
+    }
+
+    // ==================== Modal buttons ====================
+    if (pmCancelBtn) pmCancelBtn.addEventListener('click', closeProjectPicker);
+
+    if (pmEnterBtn) {
+        pmEnterBtn.addEventListener('click', function () {
+            if (!pendingUser || !selectedProject || !pendingCredentials) return;
+            const pid = selectedProject;
+            const creds = pendingCredentials;
+            commitLogin(creds.username, creds.password, pid, false);
+        });
+    }
+
+    if (projectModal) {
+        projectModal.addEventListener('click', function (e) {
+            if (e.target === projectModal) closeProjectPicker();
+        });
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && projectModal && projectModal.classList.contains('show')) {
+            closeProjectPicker();
         }
     });
 
-    // ==================== 更新頁面提示 ====================
+    // ==================== Demo credentials footer ====================
     function updateLoginFooter() {
         const footer = document.querySelector('.login-footer');
-        if (footer) {
-            footer.innerHTML = `
-                <p style="margin-bottom: 8px;">Demo Credentials:</p>
-                <div style="font-size: 0.75rem; line-height: 1.8; text-align: left; display: inline-block;">
-                    <div>🔴 <strong>Admin:</strong> admin / admin123 (全部項目)</div>
-                    <div>🔵 <strong>Officer:</strong> kenneth / officer123 (全部項目)</div>
-                    <div>🟢 <strong>AEI:</strong> garytang / aei123 (DE/2026/05)</div>
-                    <div>🟡 <strong>Inspector:</strong> john / inspector123 (DE/2025/02)</div>
-                    <div>⚫ <strong>Contractor:</strong> sarah / contractor123 (DE/2025/09)</div>
-                </div>
-                <p style="margin-top: 8px; font-size: 0.7rem; color: #e74c3c;">
-                    <i class="fas fa-info-circle"></i> You can use username or email to login
-                </p>
-            `;
-        }
+        if (!footer) return;
+        footer.innerHTML = `
+            <p style="margin-bottom: 8px; font-weight: 600; color: #2c3e50;">Demo Credentials</p>
+            <div style="font-size: 0.72rem; line-height: 1.7; text-align: left; display: inline-block;">
+                <div style="margin-bottom: 4px;"><span style="color:#3498db;">●</span> <strong>AEL (System Vendor)</strong><br>
+                    <code style="background:#f1f5f9;padding:1px 5px;border-radius:3px;">admin / admin123</code></div>
+                <div style="margin-bottom: 4px;"><span style="color:#2c3e50;">●</span> <strong>DSD — EG</strong><br>
+                    <code style="background:#f1f5f9;padding:1px 5px;border-radius:3px;">kenneth / officer123</code></div>
+                <div style="margin-bottom: 4px;"><span style="color:#16a085;">●</span> <strong>DSD — IG (Gary)</strong><br>
+                    <code style="background:#f1f5f9;padding:1px 5px;border-radius:3px;">garytang / aei123</code></div>
+                <div style="margin-bottom: 4px;"><span style="color:#27ae60;">●</span> <strong>DSD — WSG</strong><br>
+                    <code style="background:#f1f5f9;padding:1px 5px;border-radius:3px;">wcfung / wsg123</code></div>
+                <div style="margin-bottom: 4px;"><span style="color:#e74c3c;">●</span> <strong>REC-AEL JV — SA (John)</strong><br>
+                    <code style="background:#f1f5f9;padding:1px 5px;border-radius:3px;">john / inspector123</code></div>
+                <div style="margin-bottom: 4px;"><span style="color:#c0392b;">●</span> <strong>REC-AEL JV — SSA (Sarah)</strong><br>
+                    <code style="background:#f1f5f9;padding:1px 5px;border-radius:3px;">sarah / contractor123</code></div>
+                <div style="margin-bottom: 4px;"><span style="color:#d35400;">●</span> <strong>REC-AEL JV — RSO</strong><br>
+                    <code style="background:#f1f5f9;padding:1px 5px;border-radius:3px;">robert / rso123</code></div>
+                <div style="margin-bottom: 4px;"><span style="color:#f39c12;">●</span> <strong>Subcontractor</strong><br>
+                    <code style="background:#f1f5f9;padding:1px 5px;border-radius:3px;">lpwong / sub123</code></div>
+                <div style="margin-bottom: 4px;"><span style="color:#9b59b6;">●</span> <strong>Supplier</strong><br>
+                    <code style="background:#f1f5f9;padding:1px 5px;border-radius:3px;">emma / supplier123</code></div>
+                <div style="margin-bottom: 4px;"><span style="color:#16a085;">●</span> <strong>DSD — IG (CHA)</strong><br>
+                    <code style="background:#f1f5f9;padding:1px 5px;border-radius:3px;">cmcha / ig123</code></div>
+            </div>
+        `;
     }
 
     updateLoginFooter();
-});
+}
