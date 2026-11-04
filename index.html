@@ -922,12 +922,8 @@ html, body {
         /* ============================================================
            ★ Print Styles - Multi-page, 2-column cards, full charts
            ============================================================ */
-        @page {
-            margin: 1cm;
-        }
-
         @media print {
-    /* ---------- Hide controls ---------- */
+    /* Hide navigation, buttons, and controls */
     .sidebar, .header-controls, .btn-bar-4s, .refresh-alerts-btn,
     .export-btn, .smart-alert-filters, footer, .user-date-row,
     #current-date, .btn-print-dashboard, .trend-card select,
@@ -935,8 +931,12 @@ html, body {
         display: none !important;
     }
 
-    /* ---------- Base layout ---------- */
-    @page { margin: 1cm; }
+    /* Base page setup */
+    @page {
+        size: A4 landscape; /* Landscape is crucial for dashboard */
+        margin: 10mm; 
+    }
+    
     html, body {
         background: #fff !important;
         overflow: visible !important;
@@ -944,186 +944,151 @@ html, body {
         margin: 0 !important;
         padding: 0 !important;
         width: 100% !important;
+        height: auto !important;
     }
     
-    /* CRITICAL: Force flex/grid to standard block */
+    /* Main layout */
     .main-content {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
         margin: 0 !important;
         padding: 0 !important;
         width: 100% !important;
         max-width: 100% !important;
         display: block !important;
-        float: none !important;
     }
+
     .dashboard {
         padding: 0 !important;
         margin: 0 !important;
         display: block !important;
     }
 
-    /* ---------- Header ---------- */
+    /* Header */
     .header {
-        margin: 0 0 10pt 0 !important;
-        padding-bottom: 5pt !important;
+        margin: 0 0 15pt 0 !important;
+        padding-bottom: 10pt !important;
         border-bottom: 2px solid #000 !important;
         text-align: center !important;
         display: block !important;
     }
-    .header h1 { font-size: 16pt !important; margin: 0 !important; }
+    .header h1 { font-size: 18pt !important; margin: 0 !important; }
 
-    /* ---------- Feature cards: STACK them vertically ---------- */
+    /* --- Feature Cards Grid (3 columns to fit on one row) --- */
     .feature-cards {
-        display: block !important;
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 12pt !important;
         width: 100% !important;
-        margin: 0 !important;
+        margin: 0 0 20pt 0 !important;
         padding: 0 !important;
     }
     
     .feature-card {
-        display: block !important;
+        display: flex !important;
+        flex-direction: column !important;
         box-shadow: none !important;
-        border: 1px solid #666 !important;
-        border-radius: 0 !important;
-        padding: 10pt !important;
-        margin: 0 0 10pt 0 !important;
+        border: 1px solid #333 !important;
+        border-radius: 6px !important;
+        padding: 10pt !important; /* Slightly reduced padding to prevent clipping */
+        margin: 0 !important;
         width: 100% !important;
-        max-width: 100% !important;
         box-sizing: border-box !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
-        float: none !important;
     }
 
-    .feature-card .card-header {
-        display: flex !important;
-        justify-content: space-between !important;
-        align-items: center !important;
-        border-bottom: 1px solid #ccc !important;
-        padding-bottom: 4pt !important;
-        margin-bottom: 6pt !important;
-        width: 100% !important;
-    }
-    .feature-card .card-title { font-size: 11pt !important; font-weight: bold !important; }
-    
-    /* ---------- KPI Grid ---------- */
-    .kpi-data-grid {
-        display: block !important;
-        width: 100% !important;
-        margin-bottom: 10pt !important;
-    }
+    /* Ensure KPI rows don't overflow the card boundary */
     .kpi-row {
         display: flex !important;
         justify-content: space-between !important;
-        align-items: center !important;
-        padding: 3pt 0 !important;
-        border-bottom: 1px dotted #aaa !important;
+        align-items: flex-start !important;
+        gap: 4pt !important;
+    }
+    .kpi-label, .kpi-value {
         font-size: 9pt !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-    }
-    .kpi-row:last-child { border-bottom: none !important; }
-    .kpi-label { color: #333 !important; font-weight: normal !important; }
-    .kpi-value { font-weight: bold !important; color: #000 !important; text-align: right !important; }
-
-    /* ---------- Progress Bar ---------- */
-    .progress-section { display: block !important; margin-top: 5pt !important; width: 100% !important; }
-    .progress-container {
-        height: 6pt !important;
-        background: #eee !important;
-        border: 1px solid #999 !important;
-        display: block !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-    }
-    .progress-bar {
-        height: 100% !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-    .progress-labels {
-        display: flex !important;
-        justify-content: space-between !important;
-        font-size: 7pt !important;
-        color: #555 !important;
-        margin-top: 2pt !important;
     }
 
-    /* ---------- Charts ---------- */
+    /* --- Trend Charts Grid (2 columns) --- */
     .trend-charts {
-        display: block !important;
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 15pt !important;
         width: 100% !important;
+        margin: 0 !important;
     }
+    
     .trend-card {
-        display: block !important;
+        display: flex !important;
+        flex-direction: column !important;
         box-shadow: none !important;
-        border: 1px solid #666 !important;
-        border-radius: 0 !important;
-        padding: 10pt !important;
-        margin: 0 0 10pt 0 !important;
-        width: 100% !important;
+        border: 1px solid #333 !important;
+        border-radius: 6px !important;
+        padding: 12pt !important;
+        margin: 0 !important;
         box-sizing: border-box !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
-    .trend-card .chart-header h3 { font-size: 11pt !important; margin: 0 0 5pt 0 !important; }
 
-    /* CRITICAL: Lock canvas height */
+    /* Make the Overdue chart full width */
+    .trend-card[style*="grid-column: 1 / -1"] {
+        grid-column: 1 / -1 !important;
+    }
+
     .trend-card canvas {
         display: block !important;
         width: 100% !important;
-        height: 200pt !important;
-        max-height: 200pt !important;
+        height: 220px !important;
+        max-height: 220px !important;
     }
 
-    /* ---------- 4S Panels (if open) ---------- */
+    /* --- 4S Panels --- */
+    /* Removed forced page break so they naturally flow onto page 2 */
     .collapsible-wrapper-4s.show {
         display: block !important;
-        page-break-before: always !important;
+        margin-top: 15pt !important;
     }
     .collapsible-wrapper-4s:not(.show) { display: none !important; }
-
+    
     .smart-site-alerts-section,
     .smart-site-stats-section {
         display: block !important;
         box-shadow: none !important;
-        border: 1px solid #666 !important;
-        border-radius: 0 !important;
-        padding: 10pt !important;
-        margin: 0 0 10pt 0 !important;
+        border: 1px solid #333 !important;
+        border-radius: 6px !important;
+        padding: 12pt !important;
+        margin: 0 0 15pt 0 !important;
         width: 100% !important;
         box-sizing: border-box !important;
     }
 
+    /* 4S Stats (2 columns instead of 3 for better fit) */
     .smart-stats-kpi-grid {
-        display: block !important;
-        width: 100% !important;
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10pt !important;
     }
     .smart-kpi-card {
-        display: block !important;
-        border: 1px solid #999 !important;
-        padding: 5pt !important;
-        margin-bottom: 5pt !important;
+        border: 1px solid #333 !important;
+        padding: 8pt !important;
+        margin: 0 !important;
+        page-break-inside: avoid !important;
     }
 
     .smart-stats-charts-grid {
-        display: block !important;
-        width: 100% !important;
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 15pt !important;
     }
     .smart-chart-card {
-        display: block !important;
-        border: 1px solid #999 !important;
-        padding: 5pt !important;
-        margin-bottom: 10pt !important;
+        border: 1px solid #333 !important;
+        padding: 12pt !important;
+        margin: 0 !important;
+        page-break-inside: avoid !important;
     }
     .smart-chart-body {
-        height: 150pt !important;
-        display: block !important;
-    }
-    .smart-chart-card canvas {
-        height: 150pt !important;
-        max-height: 150pt !important;
-        width: 100% !important;
-        display: block !important;
+        height: 180px !important;
     }
 }
     </style>
@@ -3271,40 +3236,33 @@ html, body {
             // 3. Print Dashboard
             // ============================================================
             function printDashboard() {
-    console.log('[Print] Triggering print...');
+            console.log('[Print] Triggering print...');
 
-    // 1. Temporarily hide elements that might interfere
-    document.body.classList.add('printing-mode');
-
-    // 2. Force Chart.js to resize
-    if (typeof Chart !== 'undefined') {
-        document.querySelectorAll('canvas').forEach(function (cv) {
-            var chart = Chart.getChart(cv);
-            if (chart) {
-                try {
-                    // Give it a fake width/height for print
-                    chart.resize(800, 250); 
-                } catch (e) {}
-            }
-        });
-    }
-
-    // 3. Delay the print dialog slightly to allow the DOM to paint
-    setTimeout(function () {
-        window.print();
-        
-        // 4. Restore normal sizes after printing
-        setTimeout(function () {
-            document.body.classList.remove('printing-mode');
             if (typeof Chart !== 'undefined') {
                 document.querySelectorAll('canvas').forEach(function (cv) {
                     var chart = Chart.getChart(cv);
-                    if (chart) { try { chart.resize(); } catch (e) {} }
+                    if (chart) {
+                        try {
+                            // Resize for print
+                            chart.resize(800, 300); 
+                        } catch (e) {}
+                    }
                 });
             }
-        }, 500);
-    }, 500);
-}
+
+            setTimeout(function () {
+                window.print();
+                
+                setTimeout(function () {
+                    if (typeof Chart !== 'undefined') {
+                        document.querySelectorAll('canvas').forEach(function (cv) {
+                            var chart = Chart.getChart(cv);
+                            if (chart) { try { chart.resize(); } catch (e) {} }
+                        });
+                    }
+                }, 500);
+            }, 500);
+        }
 
             // ============================================================
             // 4. Bind Events
