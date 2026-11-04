@@ -36,7 +36,7 @@
     const opacityValue = document.getElementById('opacity-value');
     const currentPageSpan = document.getElementById('current-page');
     const totalPagesSpan = document.getElementById('total-pages');
-    const zoomLevelSpan = document.querySelector('.zoom-level');
+    const zoomLevelSpan = document.getElementById('zoom-level'); // ★ 更新為 id 選擇器
     const lockBtn = document.getElementById('lock-btn');
     const submitBtn = document.getElementById('submit-btn');
     const approveBtn = document.getElementById('approve-btn');
@@ -194,7 +194,7 @@
     function getStatusText(status) {
         const map = {
             'draft': 'Draft',
-            'submitted-ig': 'Submitted to IG',  // 確保這裡是 Submitted to IG
+            'submitted-ig': 'Submitted to IG',
             'closed': 'IG Endorsed',
             'reopen': 'Reopened',
             'cancelled': 'Cancelled'
@@ -236,9 +236,51 @@
 
         annotations = doc.annotations || [];
         annotations.forEach((a, idx) => a._id = a._id || Date.now() + idx);
+        
         if (doc.safetyFormData) {
             safetyFormData = doc.safetyFormData;
         }
+
+        // === ★ 自動預填表單欄位 ===
+        if (!safetyFormData.header) safetyFormData.header = {};
+
+        // 1. Contract No. (優先使用 doc.project，否則從 sessionStorage 抓取)
+        if (!safetyFormData.header.ContractNo) {
+            safetyFormData.header.ContractNo = doc.project || sessionStorage.getItem('currentProjectId') || '';
+        }
+
+        // 2. Location (Site)
+        if (!safetyFormData.header.location) {
+            safetyFormData.header.location = doc.site || '';
+        }
+
+        // 3. Task Order No. (Inspection ID)
+        if (!safetyFormData.header.taskOrder) {
+            safetyFormData.header.taskOrder = doc.id || '';
+        }
+
+        // 4. Date (確保格式為 YYYY-MM-DD 以符合 input type="date")
+        if (!safetyFormData.header.date) {
+            let d = doc.date || '';
+            // 若格式為 DD-MMM-YYYY，轉換為 YYYY-MM-DD
+            if (d.match(/^\d{2}-[A-Za-z]{3}-\d{4}$/)) {
+                const parts = d.split('-');
+                const monthMap = { 'Jan':'01','Feb':'02','Mar':'03','Apr':'04','May':'05','Jun':'06',
+                                   'Jul':'07','Aug':'08','Sep':'09','Oct':'10','Nov':'11','Dec':'12' };
+                const month = monthMap[parts[1]] || '01';
+                d = `${parts[2]}-${month}-${parts[0]}`;
+            }
+            safetyFormData.header.date = d;
+        }
+        // === 新增結束 ===
+        // 這樣即使使用者沒按儲存直接跳轉，查看頁也能讀到最新內容
+        currentDoc.safetyFormData = safetyFormData;
+        try {
+            sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
+            sessionStorage.setItem('currentInspectionRecord', JSON.stringify(currentDoc));
+            sessionStorage.setItem('currentRecord', JSON.stringify(currentDoc));
+        } catch (e) {}
+
         return doc;
     }
 
@@ -300,12 +342,12 @@
             '}' +
             '.safety-form-overlay .pdf-checkbox:hover {background:rgba(52,152,219,0.15);box-shadow:inset 0 0 0 1px #3498db;}' +
             '.safety-form-overlay .pdf-checkbox.checked {background:rgba(46,204,113,0.15);border-color:#27ae60;}' +
-            '.safety-form-overlay .pdf-checkbox .tick {display:none;color:#0a1a5c;font-weight:bold;font-size:0.9em;}' +
+            '.safety-form-overlay .pdf-checkbox .tick {display:none;color:#0a1a5c;font-weight:bold;font-size:calc(14px * var(--pdf-zoom-scale, 1)) !important;}' + // ★ 改這行
             '.safety-form-overlay .pdf-checkbox.checked .tick {display:inline-block;}' +
             '.safety-form-overlay .pdf-field {' +
                 'position: absolute;border:1px solid rgba(52,152,219,0.4);' +
                 'background: rgba(255,255,255,0.6);outline:none;' +
-                'font-family: Arial;color:#0a1a5c;font-size:11px;' +
+                'font-family: Arial;color:#0a1a5c;font-size:calc(11px * var(--pdf-zoom-scale, 1)) !important;' + // ★ 改這行
                 'padding:1px 4px;box-sizing:border-box;pointer-events:auto;border-radius:2px;' +
             '}' +
             '.safety-form-overlay .pdf-field:focus {' +
@@ -330,7 +372,7 @@
                 'object-fit: contain;pointer-events: none;display: block;transform: scale(1.15);' +
             '}' +
             '.safety-form-overlay .pdf-sign .signature-placeholder {' +
-                'font-size: 9px;color: #cbd5e1;font-style: italic;user-select: none;pointer-events: none;' +
+                'font-size: calc(9px * var(--pdf-zoom-scale, 1)) !important;color: #cbd5e1;font-style: italic;user-select: none;pointer-events: none;' + // ★ 改這行
             '}' +
             '.safety-form-overlay .pdf-sign .pdf-sign-clear {' +
                 'position: absolute;top: 1px;right: 1px;width: 14px;height: 14px;' +
@@ -354,11 +396,11 @@
                 'object-fit: contain;pointer-events: none;display: block;' +
             '}' +
             '.safety-form-overlay .pdf-image .image-placeholder {' +
-                'font-size: 9px;color: #94a3b8;font-style: italic;user-select: none;' +
+                'font-size: calc(9px * var(--pdf-zoom-scale, 1)) !important;color: #94a3b8;font-style: italic;user-select: none;' + // ★ 改這行
                 'pointer-events: none;display: flex;flex-direction: column;align-items: center;' +
                 'gap: 2px;line-height: 1.1;' +
             '}' +
-            '.safety-form-overlay .pdf-image .image-placeholder i {font-size: 14px;color: #60a5fa;}' +
+            '.safety-form-overlay .pdf-image .image-placeholder i {font-size: calc(14px * var(--pdf-zoom-scale, 1)) !important;color: #60a5fa;}' + // ★ 改這行
             '.safety-form-overlay .pdf-image .pdf-image-clear {' +
                 'position: absolute;top: 1px;right: 1px;width: 16px;height: 16px;' +
                 'border: none;border-radius: 50%;background: #e74c3c;color: #fff;' +
@@ -369,7 +411,7 @@
             '.safety-form-overlay .pdf-image .pdf-image-loading {' +
                 'position: absolute;inset: 0;display: flex;align-items: center;' +
                 'justify-content: center;background: rgba(255,255,255,0.8);' +
-                'font-size: 10px;color: #3498db;z-index: 3;' +
+                'font-size: calc(10px * var(--pdf-zoom-scale, 1)) !important;color: #3498db;z-index: 3;' + // ★ 改這行
             '}';
         document.head.appendChild(style);
     }
@@ -885,6 +927,9 @@
         overlay.style.cssText =
             'position:absolute;left:0;top:0;width:0;height:0;' +
             'z-index:50;pointer-events:none;';
+            
+        // ★ 新增這行，將目前的縮放比例傳遞給 CSS
+        overlay.style.setProperty('--pdf-zoom-scale', scale);
 
         var fields = [];
 
@@ -1067,6 +1112,25 @@
 
     function updateZoomLevel() {
         if (zoomLevelSpan) zoomLevelSpan.textContent = Math.round(scale * 100) + '%';
+        var outBtn = document.getElementById('zoom-out-btn');
+        var inBtn = document.getElementById('zoom-in-btn');
+        if (outBtn) outBtn.disabled = scale <= 0.5;
+        if (inBtn) inBtn.disabled = scale >= 3.0;
+    }
+
+    function setZoom(newScale) {
+        scale = Math.max(0.5, Math.min(3.0, newScale));
+        renderPage(currentPage);
+    }
+
+    function setupZoom() {
+        var outBtn = document.getElementById('zoom-out-btn');
+        var inBtn = document.getElementById('zoom-in-btn');
+        var resetBtn = document.getElementById('zoom-reset-btn');
+        if (outBtn) outBtn.addEventListener('click', function() { setZoom(scale - 0.2); });
+        if (inBtn) inBtn.addEventListener('click', function() { setZoom(scale + 0.2); });
+        if (resetBtn) resetBtn.addEventListener('click', function() { setZoom(1.0); });
+        updateZoomLevel();
     }
 
     function getCanvasOffset() {
@@ -1871,7 +1935,6 @@
         catch (e) { console.error('[SafetyEdit] Save failed', e); }
 
         alert('✅ Document saved successfully!');
-        // ★ 原本這裡有一行 window.location.href = 'safetyinspect.html'; 請將其刪除，保持在當前頁面
     }
 
     function submitDocument() {
@@ -1883,6 +1946,21 @@
             alert('This document has already been submitted.');
             return;
         }
+
+        // ★ 檢查第 7 頁的三個簽名是否都已填寫
+        var sign1 = safetyFormData.header && safetyFormData.header.Inspectedbysign1;
+        var sign2 = safetyFormData.header && safetyFormData.header.Inspectedbysign2;
+        var sign3 = safetyFormData.header && safetyFormData.header.Witnessbysign1;
+
+        if (!sign1 || !sign2 || !sign3) {
+            alert('⚠️ Submission Failed: Please complete all three signatures on Page 7 (Inspected by 1, Inspected by 2, and Witness by) before submitting.');
+            // 自動跳轉到第 7 頁方便使用者簽名
+            if (currentPage !== 7) {
+                renderPage(7);
+            }
+            return;
+        }
+
         if (!confirm('Submit this document for approval? Status will change to "Submitted to IG".')) {
             return;
         }
@@ -2174,6 +2252,7 @@
         }
         drawCanvas.style.pointerEvents = 'none';
         setupTools();
+        setupZoom(); // ★ 新增此行，啟動縮放功能
         bindDrawingEvents();
         setupNavigation();
         bindActionButtons();

@@ -87,7 +87,9 @@
             align-items: center;
             flex-wrap: wrap;
         }
-        .pdf-controls button {
+        
+        /* 修改原有按鈕樣式，避免影響 Zoom 按鈕 */
+        .pdf-controls #pdf-prev, .pdf-controls #pdf-next {
             padding: 6px 16px;
             background: #3498db;
             color: white;
@@ -97,9 +99,10 @@
             font-size: 0.9rem;
             transition: background 0.2s;
         }
-        .pdf-controls button:hover {
+        .pdf-controls #pdf-prev:hover, .pdf-controls #pdf-next:hover {
             background: #2980b9;
         }
+
         .pdf-controls span {
             font-weight: 500;
         }
@@ -111,16 +114,27 @@
         .document-actions .btn-print:hover { background: #219653; }
         .document-actions .btn-download { background: #8e44ad; color: white; }
         .document-actions .btn-download:hover { background: #732d91; }
-        #pdf-zoom-out, #pdf-zoom-in, .zoom-controls-label {
-            display: none !important;
+        
+        /* 新增 Zoom 按鈕樣式 */
+        .zoom-btn {
+            background: transparent !important;
+            color: #334155 !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 4px 10px;
+            transition: 0.15s;
         }
-        #pdf-zoom-level {
-            display: none !important;
+        .zoom-btn:hover {
+            background: #f1f5f9 !important;
+        }
+        .zoom-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
     </style>
 </head>
 <body>
-
 
     <!-- 主内容 -->
     <div class="main-content">
@@ -167,10 +181,19 @@
                     <i class="fas fa-file-pdf"></i>
                     <p>No PDF document available for this record.</p>
                 </div>
+                
                 <div class="pdf-controls" id="pdf-controls" style="display:none;">
                     <button id="pdf-prev"><i class="fas fa-chevron-left"></i> Prev</button>
                     <span id="pdf-page-info">Page <span id="pdf-current-page">1</span> of <span id="pdf-total-pages">1</span></span>
                     <button id="pdf-next">Next <i class="fas fa-chevron-right"></i></button>
+                    
+                    <!-- ★ 新增：Zoom 控制 -->
+                    <span style="margin-left: auto; display: flex; gap: 8px; align-items: center; background: #fff; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1;">
+                        <button id="zoom-out-btn" class="zoom-btn"><i class="fas fa-search-minus"></i></button>
+                        <span id="zoom-level" style="font-weight: 600; font-size: 14px; width: 48px; text-align: center; color: #1e293b;">100%</span>
+                        <button id="zoom-in-btn" class="zoom-btn"><i class="fas fa-search-plus"></i></button>
+                        <button id="zoom-reset-btn" class="zoom-btn"><i class="fas fa-compress"></i></button>
+                    </span>
                 </div>
             </div>
         </div>
@@ -183,10 +206,5 @@
     <script src="scripts/SafetyInspection-data.js"></script>
     <script src="scripts/safetyinspectdocument.js"></script>
 
-    
-    <!-- 侧边栏状态持久化 -->
-    <script>
-  
-    </script>
 </body>
 </html>
