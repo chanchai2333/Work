@@ -135,7 +135,6 @@
             user-select: none;
         }
 
-        /* ★ overlay 基礎樣式（不指定 font-size，改由 JS 內聯設定） */
         .pdf-view-overlay {
             position: absolute;
             top: 0; left: 0;
@@ -155,11 +154,17 @@
             white-space: nowrap;
             display: flex;
             align-items: center;
+            /* ★ 移除了強制置中，恢復文字靠左對齊 */
+            justify-content: flex-start; 
+            text-align: left;
         }
+        
+        /* ★ 只有打勾框 (Check) 才強制置中 */
         .pdf-view-overlay .pdf-view-field.check {
             justify-content: center;
             color: #0a1a5c;
             font-weight: 900;
+            padding: 0;
         }
 
         .loading-indicator { display: none; justify-content: center; align-items: center; gap: 10px; padding: 40px; color: #2563eb; font-weight: 600; background: #eff6ff; border-radius: 8px; }
@@ -193,7 +198,6 @@
     </style>
 </head>
 <body>
-
 
     <div class="main-content">
         <div class="header">
@@ -314,6 +318,74 @@
         var totalVirtualPages = 1;
         var storedPageWidth   = null;
 
+        var DEFAULT_GF527A_LAYOUT = [
+            { id: 'f01', left: '34.64%', top: '9.04%',  width: '55%', height: '1.8%' },
+            { id: 'f02', left: '28.78%', top: '10.92%', width: '55%', height: '1.8%' },
+            { id: 'f09', left: '18.67%', top: '13.49%', width: '52%', height: '1.8%' },
+            { id: 'f10', type: 'check', left: '10.67%', top: '15.79%', width: '3%', height: '1.8%' },
+            { id: 'f12', left: '80.14%', top: '13.69%', width: '13%', height: '1.8%' },
+            { id: 'f03', left: '41.14%', top: '22.89%', width: '34%', height: '1.8%' },
+            { id: 'f04', left: '35.14%', top: '25.69%', width: '60%', height: '1.8%' },
+            { id: 'f05', left: '15.14%', top: '27.69%', width: '60%', height: '1.8%' },
+            { id: 'f06', left: '85.74%', top: '27.69%', width: '10%', height: '1.8%' },
+            { id: 'f17', left: '19.51%', top: '18.44%', width: '77%', height: '1.8%' },
+            { id: 'f18', left: '38.53%', top: '20.98%', width: '37%', height: '1.8%' },
+            { id: 'f19', left: '80.80%', top: '20.62%', width: '15%', height: '1.8%' },
+            { id: 'f20', left: '80.80%', top: '23.34%', width: '15%', height: '1.8%' },
+            { id: 'ai01', type: 'check', left: '6.70%',  top: '33.91%', width: '2.24%',  height: '1.59%' },
+            { id: 'ai02', type: 'check', left: '6.70%',  top: '36.20%', width: '2.52%',  height: '1.48%' },
+            { id: 'ai03', type: 'check', left: '6.70%',  top: '38.28%', width: '2.20%',  height: '1.50%' },
+            { id: 'ai04', type: 'check', left: '38.54%', top: '34.00%', width: '2.52%',  height: '1.29%' },
+            { id: 'ai05', type: 'check', left: '38.54%', top: '36.00%', width: '2.52%',  height: '1.58%' },
+            { id: 'ai06', left: '72.88%', top: '33.91%', width: '12.46%', height: '1.59%' },
+            { id: 'ai07', left: '26.94%', top: '41.04%', width: '10.50%', height: '1.68%' },
+            { id: 'ai08', left: '65.87%', top: '41.34%', width: '7.71%',  height: '1.58%' },
+            { id: 'ai09', left: '51.17%', top: '51.83%', width: '8.40%',  height: '2.18%' },
+            { id: 'ai10', left: '51.59%', top: '54.20%', width: '7.56%',  height: '1.88%' },
+            { id: 'ai11', left: '51.59%', top: '56.38%', width: '7.84%',  height: '1.78%' },
+            { id: 'ai12', left: '51.45%', top: '58.76%', width: '7.84%',  height: '1.58%' },
+            { id: 'ai13', left: '52.01%', top: '60.83%', width: '7.14%',  height: '1.39%' },
+            { id: 'ai14', left: '51.73%', top: '62.81%', width: '7.56%',  height: '1.69%' },
+            { id: 'ai15', left: '51.59%', top: '64.79%', width: '7.98%',  height: '2.08%' },
+            { id: 'ai16', left: '62.51%', top: '52.03%', width: '7.42%',  height: '1.78%' },
+            { id: 'ai17', left: '7.19%',  top: '74.20%', width: '50.14%', height: '2.0%' },
+            { id: 'ai18', left: '7.19%',  top: '76.20%', width: '50.14%', height: '2.0%' },
+            { id: 'ai19', left: '7.19%',  top: '78.40%', width: '50.14%', height: '2.0%' },
+            { id: 'ai20', left: '7.19%',  top: '80.60%', width: '50.14%', height: '2.0%' },
+            { id: 'ai21', left: '7.19%',  top: '82.60%', width: '50.14%', height: '2.0%' },
+            { id: 'ai22', left: '62.79%', top: '74.30%', width: '7.98%',  height: '1.78%' },
+            { id: 'ai23', left: '62.79%', top: '76.27%', width: '7.98%',  height: '2.08%' },
+            { id: 'ai24', left: '62.79%', top: '78.60%', width: '7.98%',  height: '1.78%' },
+            { id: 'ai25', left: '62.79%', top: '80.63%', width: '7.98%',  height: '1.88%' },
+            { id: 'ai26', left: '62.79%', top: '82.71%', width: '7.98%',  height: '1.88%' },
+            { id: 'ai27', left: '18.52%', top: '86.57%', width: '20.00%', height: '1.88%' },
+            { id: 'ai28', type: 'signature', left: '42.16%', top: '86.57%', width: '10.85%',  height: '2.08%' },
+            { id: 'ai29', left: '57.97%', top: '86.57%', width: '10.88%', height: '1.98%' },
+            { id: 'ai30', left: '72.30%', top: '86.57%', width: '10.70%', height: '1.98%' },
+            { id: 'ai31', left: '76.94%', top: '52.12%', width: '19.33%', height: '1.29%' },
+            { id: 'ai32', left: '75.96%', top: '56.08%', width: '2.94%',  height: '2.35%' },
+            { id: 'ai33', left: '79.60%', top: '56.08%', width: '2.94%',  height: '2.35%' },
+            { id: 'ai34', left: '83.10%', top: '56.08%', width: '2.94%',  height: '2.35%' },
+            { id: 'ai35', left: '86.60%', top: '56.08%', width: '2.94%',  height: '2.35%' },
+            { id: 'ai36', left: '90.10%', top: '56.08%', width: '2.94%',  height: '2.35%' },
+            { id: 'ai37', left: '93.32%', top: '56.08%', width: '2.94%',  height: '2.35%' },
+            { id: 'ai38', left: '76.38%', top: '60.24%', width: '2.94%',  height: '2.30%' },
+            { id: 'ai39', left: '79.74%', top: '60.24%', width: '2.94%',  height: '2.30%' },
+            { id: 'ai40', left: '83.36%', top: '60.24%', width: '3.00%',  height: '2.30%' },
+            { id: 'ai41', left: '89.96%', top: '60.24%', width: '2.94%',  height: '2.30%' },
+            { id: 'ai42', left: '75.96%', top: '64.79%', width: '2.94%',  height: '2.30%' },
+            { id: 'ai43', left: '83.18%', top: '64.79%', width: '2.94%',  height: '2.30%' },
+            { id: 'ai44', left: '86.74%', top: '64.79%', width: '2.94%',  height: '2.30%' },
+            { id: 'ai45', left: '90.10%', top: '64.79%', width: '2.94%',  height: '2.30%' },
+            { id: 'ai46', left: '93.20%', top: '64.79%', width: '2.94%',  height: '2.30%' },
+            { id: 'ai47', left: '79.62%', top: '74.00%', width: '2.94%',  height: '2.30%' },
+            { id: 'ai48', left: '83.18%', top: '74.09%', width: '2.94%',  height: '2.30%' },
+            { id: 'ai49', left: '79.40%', top: '78.35%', width: '2.94%',  height: '2.30%' },
+            { id: 'ai50', left: '83.10%', top: '78.35%', width: '2.94%',  height: '2.30%' },
+            { id: 'ai51', left: '79.60%', top: '82.61%', width: '2.94%',  height: '2.30%' },
+            { id: 'ai52', left: '82.82%', top: '82.61%', width: '2.94%',  height: '2.30%' }
+        ];
+
         function base64ToUint8(b64) {
             if (b64.indexOf('base64,') !== -1) b64 = b64.split('base64,')[1];
             var bin = atob(b64);
@@ -370,11 +442,11 @@
 
         function loadWageFromServer(id) {
             if (!id) return Promise.resolve(null);
-            return fetch('/api/records/labourWage/' + encodeURIComponent(id), { cache: 'no-store' })
+            return fetch('/api/records/wage/' + encodeURIComponent(id), { cache: 'no-store' })
                 .then(function (res) { return res.ok ? res.json() : null; })
                 .then(function (doc) {
                     if (doc && doc.id) return doc;
-                    return fetch('/api/records/wage/' + encodeURIComponent(id), { cache: 'no-store' })
+                    return fetch('/api/records/labourWage/' + encodeURIComponent(id), { cache: 'no-store' })
                         .then(function (res) { return res.ok ? res.json() : null; });
                 })
                 .then(function (doc) {
@@ -387,14 +459,37 @@
         function getFormData() {
             if (!currentDoc) return {};
             var id = currentDoc.id || 'default';
+            
+            try {
+                var s1 = sessionStorage.getItem('labourWageData_' + id);
+                var s2 = sessionStorage.getItem('editDocument');
+                var s3 = sessionStorage.getItem('currentWageRecord');
+                var s4 = sessionStorage.getItem('currentRecord');
+                var list = [s1, s2, s3, s4];
+                for (var i = 0; i < list.length; i++) {
+                    if (list[i]) {
+                        var parsed = JSON.parse(list[i]);
+                        if (parsed && parsed.id === id && parsed.formData && Object.keys(parsed.formData).length > 0) {
+                            console.log('[LabourDoc] ✓ 從 sessionStorage [' + (i+1) + '] 獲取數據');
+                            return parsed.formData;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('[LabourDoc] 讀取 sessionStorage 失敗', e);
+            }
+
             if (currentDoc.formData && typeof currentDoc.formData === 'object' && Object.keys(currentDoc.formData).length > 0) {
+                console.log('[LabourDoc] ✓ 從 currentDoc.formData 獲取數據');
                 return currentDoc.formData;
             }
-            var rec = findRecordById(id);
-            if (rec && rec.formData && typeof rec.formData === 'object' && Object.keys(rec.formData).length > 0) {
-                return rec.formData;
+            
+            if (window.__dwssWageDoc && window.__dwssWageDoc.formData && Object.keys(window.__dwssWageDoc.formData).length > 0) {
+                console.log('[LabourDoc] ✓ 從 window.__dwssWageDoc.formData 獲取數據');
+                return window.__dwssWageDoc.formData;
             }
-            console.warn('[LabourDoc] ⚠ 找不到 formData, id =', id);
+            
+            console.warn('[LabourDoc] ⚠ 找不到 formData 資料');
             return {};
         }
 
@@ -421,17 +516,37 @@
             var statusEl = document.getElementById('docStatus');
             if (statusEl) {
                 var statusMap = {
-                    'draft': 'Draft', 'submitted': 'Submitted', 'approved': 'Approved',
-                    'rejected': 'Rejected', 'pending': 'Pending Approval',
-                    'cancelled': 'Cancelled', 'endorsed': 'Endorsed'
+                    'draft': 'Draft', 
+                    'submitted': 'Submit to IG', 
+                    'submitted-ig': 'Submit to IG',
+                    'closed': 'IG Accepted',
+                    'approved': 'Approved',
+                    'rejected': 'Rejected', 
+                    'pending': 'Pending Approval',
+                    'reopen': 'Reopened',
+                    'cancelled': 'Cancelled', 
+                    'endorsed': 'Endorsed'
                 };
                 var clsMap = {
-                    'draft': 'status-draft', 'submitted': 'status-submitted',
-                    'approved': 'status-approved', 'rejected': 'status-rejected',
-                    'pending': 'status-pending', 'cancelled': 'status-cancelled',
+                    'draft': 'status-draft', 
+                    'submitted': 'status-submitted',
+                    'submitted-ig': 'status-submitted',
+                    'closed': 'status-approved',
+                    'approved': 'status-approved', 
+                    'rejected': 'status-rejected',
+                    'pending': 'status-pending', 
+                    'reopen': 'status-pending',
+                    'cancelled': 'status-cancelled',
                     'endorsed': 'status-approved'
                 };
-                var key = doc.approvalStatus || doc.status || 'draft';
+                
+                var key = doc.status || doc.approvalStatus || 'draft';
+                if (doc.statusHistory && Array.isArray(doc.statusHistory) && doc.statusHistory.length > 0) {
+                    var last = doc.statusHistory[doc.statusHistory.length - 1];
+                    if (last.to) key = last.to;
+                }
+                if (key === 'submitted') key = 'submitted-ig';
+                
                 statusEl.textContent = statusMap[key] || doc.statusText || 'Draft';
                 statusEl.className = 'doc-status';
                 if (clsMap[key]) statusEl.classList.add(clsMap[key]);
@@ -447,10 +562,17 @@
             }
         }
 
-        /* ============================================================
-           從 localStorage / labour-form-layouts.js 讀取原始 layout
-           ============================================================ */
         function getLayoutForPageRaw(docType, pageNum) {
+            var L = window.LABOUR_FORM_LAYOUTS;
+            if (L) {
+                if (docType === 'GF527A' && pageNum === 1 && L['GF527A']) return L['GF527A'];
+                if (docType === 'GF527-2003' && pageNum === 1 && L['GF527-2003']) return L['GF527-2003'];
+                if (docType === 'GF527-2017') {
+                    if (pageNum === 1 && L['GF527-2017-page1']) return L['GF527-2017-page1'];
+                    if (pageNum === 3 && L['GF527-2017-page3']) return L['GF527-2017-page3'];
+                }
+            }
+
             try {
                 var saved = localStorage.getItem('editlabour_layout_' + docType);
                 if (saved) {
@@ -460,7 +582,6 @@
                         fieldsObj = obj.fields;
                         if (obj.pageWidth && !storedPageWidth) {
                             storedPageWidth = parseInt(obj.pageWidth, 10) || null;
-                            console.log('[LabourDoc] ✓ 讀到 editlabour 頁寬 = ' + storedPageWidth + 'px');
                         }
                     } else {
                         fieldsObj = obj;
@@ -488,23 +609,43 @@
             } catch (e) {
                 console.warn('[LabourDoc] 讀 editlabour_layout 失敗:', e);
             }
-            console.warn('[LabourDoc] ⚠ 未找到 editlabour_layout_' + docType);
-            var L = window.LABOUR_FORM_LAYOUTS;
-            if (!L) return null;
-            if (docType === 'GF527A')     return pageNum === 1 ? L['GF527A'] : null;
-            if (docType === 'GF527-2003') return pageNum === 1 ? L['GF527-2003'] : null;
+
+            console.warn('[LabourDoc] ⚠ 未找到外掛 layout，啟用內建預設座標 (' + docType + ' page ' + pageNum + ')');
+            if (docType === 'GF527A' && pageNum === 1) {
+                return DEFAULT_GF527A_LAYOUT;
+            }
             if (docType === 'GF527-2017') {
-                if (pageNum === 1) return L['GF527-2017-page1'];
-                if (pageNum === 3) return L['GF527-2017-page3'];
-                return null;
+                if (pageNum === 1 || pageNum === 3) return DEFAULT_GF527A_LAYOUT; // 暫時借用
             }
             return null;
         }
 
-        /* ============================================================
-           ★ GF527-2017 強制補丁（g17_08 打勾 / g17_1458~1459 簽名）
-           ============================================================ */
+        // ★★★ 強制覆蓋補丁（解決舊緩存導致座標或類型錯誤） ★★★
         var LAYOUT_PATCHES = {
+            'GF527A': {
+                1: {
+                    // --- USER_FORM_LAYOUT (強制更新，修復 f01 歪掉的問題) ---
+                    'f01': { left: '34.64%', top: '9.04%',  width: '55%', height: '1.8%', type: 'text' },
+                    'f02': { left: '28.78%', top: '10.92%', width: '55%', height: '1.8%', type: 'text' },
+                    'f09': { left: '18.67%', top: '13.49%', width: '52%', height: '1.8%', type: 'text' },
+                    'f10': { left: '10.67%', top: '15.79%', width: '3%',  height: '1.8%', type: 'check' },
+                    'f12': { left: '80.14%', top: '13.69%', width: '13%', height: '1.8%', type: 'text' },
+                    'f03': { left: '41.14%', top: '22.89%', width: '34%', height: '1.8%', type: 'text' },
+                    'f04': { left: '35.14%', top: '25.69%', width: '60%', height: '1.8%', type: 'text' },
+                    'f05': { left: '15.14%', top: '27.69%', width: '60%', height: '1.8%', type: 'text' },
+                    'f06': { left: '85.74%', top: '27.69%', width: '10%', height: '1.8%', type: 'text' },
+                    'f17': { left: '19.51%', top: '18.44%', width: '77%', height: '1.8%', type: 'text' },
+                    'f18': { left: '38.53%', top: '20.98%', width: '37%', height: '1.8%', type: 'text' },
+                    'f19': { left: '80.80%', top: '20.62%', width: '15%', height: '1.8%', type: 'text' },
+                    'f20': { left: '80.80%', top: '23.34%', width: '15%', height: '1.8%', type: 'text' },
+                    
+                    // --- 底部簽名區塊 ---
+                    'ai27': { left: '18.52%', top: '86.57%', width: '20.00%', height: '1.88%', type: 'text' },
+                    'ai28': { left: '42.16%', top: '86.57%', width: '10.85%', height: '2.08%', type: 'signature' },
+                    'ai29': { left: '57.97%', top: '86.57%', width: '10.88%', height: '1.98%', type: 'text' },
+                    'ai30': { left: '72.30%', top: '86.57%', width: '10.70%', height: '1.98%', type: 'text' }
+                }
+            },
             'GF527-2017': {
                 1: {
                     'g17_08': { left: '76.15%', top: '4.31%', width: '0.83%', height: '1.00%', type: 'check' }
@@ -551,22 +692,15 @@
                     type: p.type
                 });
             }
-
-            console.log('[LabourDoc] ✓ layout 補丁已套用 (' + docType + ' page ' + pageNum + ')');
             return arr;
         }
 
-        /* ============================================================
-           ★★★ GF527-2003 精確 layout（完全複製自 editlabour.js）★★★
-           ============================================================ */
         var _cachedGF527_2003_Layout = null;
 
         function getGF527_2003_ExactLayout() {
             if (_cachedGF527_2003_Layout) return _cachedGF527_2003_Layout;
 
             var fields = [];
-
-            /* 頂部欄位（固定座標，複製自 editlabour.js GF527_2003_FORM_LAYOUT） */
             var topFields = [
                 { id: 'gf_01', left: '5.20%',  top: '5.90%',  width: '2.57%',  height: '1.08%' },
                 { id: 'gf_02', left: '8.16%',  top: '5.90%',  width: '2.57%',  height: '1.27%' },
@@ -580,7 +714,6 @@
             ];
             for (var i = 0; i < topFields.length; i++) fields.push(topFields[i]);
 
-            /* 表格：52 行 × 36 欄（最後一行只有 32 欄） */
             var cols = [
                 ['30.00%','1.47%'], ['31.70%','1.47%'], ['33.50%','1.47%'], ['35.00%','1.47%'],
                 ['36.70%','1.47%'], ['38.50%','1.47%'], ['40.30%','1.47%'], ['41.90%','1.47%'],
@@ -622,7 +755,6 @@
                 }
             }
 
-            /* code / tradename 特殊欄位 */
             var specials = [
                 { id: 'gf_1913', left: '23.00%', top: '81.70%', width: '6.47%', height: '1.56%' },
                 { id: 'gf_1914', left: '23.00%', top: '83.20%', width: '6.47%', height: '1.56%' },
@@ -637,13 +769,11 @@
             ];
             for (var k = 0; k < specials.length; k++) fields.push(specials[k]);
 
-            console.log('[LabourDoc] ✓✓ GF527-2003 精確 layout 生效，欄位數 =', fields.length);
             _cachedGF527_2003_Layout = fields;
             return fields;
         }
 
         function getLayoutForPage(docType, pageNum) {
-            /* ★ GF527-2003 用精確 layout，其餘走原流程 */
             if (docType === 'GF527-2003' && pageNum === 1) {
                 return getGF527_2003_ExactLayout();
             }
@@ -651,26 +781,6 @@
             return applyLayoutPatches(docType, pageNum, raw);
         }
 
-        function fieldHasValue(field, value) {
-            if (field.type === 'check') {
-                return (value === '1' || value === '✓' || value === true || value === 'true');
-            }
-            return (value !== undefined && value !== null && String(value).trim() !== '');
-        }
-
-        /* ============================================================
-           ★ 字體大小：依 overlay 頁寬動態計算
-           ------------------------------------------------------------
-           基準（取自 editlabour.html 實際顯示）：
-             GF527A       頁寬 714px  →  文字 11px  (factor 0.0154)
-                                         勾選 14px  (factor 0.0196)
-             GF527-2017   頁寬 1400px →  文字 7px   (factor 0.0050)
-                                         g17_01~08   11px (factor 0.00786)
-                                         g17_03,04    8px (factor 0.00571)
-                                         勾選 9px   (factor 0.00635)
-             GF527-2003   頁寬 1400px →  文字 7px   (factor 0.0050)
-                                         勾選 9px   (factor 0.00635)
-           ============================================================ */
         var _overlayPageWidth = 1400;
 
         function setOverlayPageWidth(pw) {
@@ -704,12 +814,12 @@
             return pw * 0.0154;
         }
 
-        /* ============================================================
-           建立 overlay（含文字 / ✓ / 簽名圖），字體大小內聯寫入
-           ============================================================ */
         function buildOverlayElement(docType, pageNum, formData, forPrint) {
             var fields = getLayoutForPage(docType, pageNum);
-            if (!fields || !fields.length) return null;
+            if (!fields || !fields.length) {
+                console.warn('[LabourDoc] ⚠ 找不到 layout 欄位，無法繪製覆蓋層');
+                return null;
+            }
 
             var overlay = document.createElement('div');
             overlay.className = 'pdf-view-overlay';
@@ -724,11 +834,10 @@
                 var strVal = String(val).trim();
                 if (strVal === '') return;
 
-                /* 依 pageWidth 動態計算字體大小 */
                 var fontSizePx = computeOverlayFontSize(docType, f.id, f.type);
+                var isSignatureImage = strVal.indexOf('data:image') === 0;
 
-                /* ─── 1. 簽名欄位 ─── */
-                if (f.type === 'signature' || strVal.indexOf('data:image') === 0) {
+                if (isSignatureImage) {
                     var sigEl = document.createElement('div');
                     sigEl.className = 'pdf-view-field signature';
                     sigEl.dataset.fieldId = f.id;
@@ -752,8 +861,22 @@
                     return;
                 }
 
-                /* ─── 2. 勾選欄位 ─── */
-                // ★ 修正：只依賴 type 是否為 'check'，避免數字 '1' 被誤認為打勾
+                if (f.type === 'signature') {
+                    var el = document.createElement('div');
+                    el.className = 'pdf-view-field';
+                    el.dataset.fieldId = f.id;
+                    el.style.left   = f.left;
+                    el.style.top    = f.top;
+                    el.style.width  = f.width;
+                    el.style.height = f.height;
+                    el.style.fontSize = fontSizePx.toFixed(2) + 'px';
+                    el.textContent = strVal;
+                    el.title = strVal;
+                    overlay.appendChild(el);
+                    count++;
+                    return;
+                }
+
                 var isCheck = (f.type === 'check');
 
                 if (isCheck) {
@@ -764,14 +887,13 @@
                     chkEl.style.top    = f.top;
                     chkEl.style.width  = f.width;
                     chkEl.style.height = f.height;
-                    chkEl.style.fontSize = fontSizePx.toFixed(2) + 'px';  /* ★ 內聯字體 */
+                    chkEl.style.fontSize = fontSizePx.toFixed(2) + 'px';
                     chkEl.textContent = '✓';
                     overlay.appendChild(chkEl);
                     count++;
                     return;
                 }
 
-                /* ─── 3. 一般文字欄位 ─── */
                 var el = document.createElement('div');
                 el.className = 'pdf-view-field';
                 el.dataset.fieldId = f.id;
@@ -779,7 +901,7 @@
                 el.style.top    = f.top;
                 el.style.width  = f.width;
                 el.style.height = f.height;
-                el.style.fontSize = fontSizePx.toFixed(2) + 'px';  /* ★ 內聯字體 */
+                el.style.fontSize = fontSizePx.toFixed(2) + 'px';
                 el.textContent = strVal;
                 el.title = strVal;
                 overlay.appendChild(el);
@@ -797,7 +919,6 @@
             if (overlay) pageDiv.appendChild(overlay);
         }
 
-        /* ============== XLSX → PDF ============== */
         function buildHtmlTableFromWorkbook(ws) {
             var range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
             var merges = ws['!merges'] || [];
@@ -983,7 +1104,6 @@
                 pageWidth = cw2 - 48;
             }
 
-            /* ★ 設定 overlay 頁寬（供字體縮放用） */
             setOverlayPageWidth(pageWidth);
 
             var pageHeight = Math.round(pageWidth * aspect);
@@ -1071,9 +1191,6 @@
             setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
         }
 
-        /* ============================================================
-           離螢幕捕獲頁面（含 overlay）
-           ============================================================ */
         async function buildPageWithOverlay(pageIndex) {
             var aspect = pageAspects[pageIndex - 1] || 1.4142;
 
@@ -1101,7 +1218,6 @@
                 'pointer-events:none;user-select:none;';
             wrapper.appendChild(img);
 
-            /* ★ 設定 overlay 頁寬（與此捕獲的頁寬一致） */
             setOverlayPageWidth(pageWidth);
 
             var docType = currentDoc.type || 'GF527A';
@@ -1276,136 +1392,93 @@
             var pageW_mm = isPortrait ? 210 : 297;
             var pageH_mm = isPortrait ? 297 : 210;
 
-            var oldStyle = document.getElementById('dynamic-print-style');
-            if (oldStyle) oldStyle.remove();
+            // 設定 overlay 字體計算的基準寬度 (A4 寬度約為 1122px)
+            setOverlayPageWidth(pageW_mm * 3.7795);
 
-            var printContainer = document.getElementById('print-only-container');
-            printContainer.innerHTML = '';
-
-            var imgPromises = [];
+            // 動態生成獨立的列印用 HTML
+            var printHtml = '<!DOCTYPE html><html><head><style>';
+            printHtml += '@page { size: A4 ' + (isPortrait ? 'portrait' : 'landscape') + '; margin: 0; }';
+            printHtml += 'html, body { margin: 0; padding: 0; background: #fff; -webkit-print-color-adjust: exact; }';
+            printHtml += '.print-page { width: 100%; height: 100vh; page-break-after: always; position: relative; overflow: hidden; background: #fff; }';
+            printHtml += '.print-page:last-child { page-break-after: auto; }';
+            printHtml += '.print-page img.bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }';
+            printHtml += '.pdf-view-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 30; }';
+            printHtml += '.pdf-view-field { position: absolute; color: #0a1a5c; font-family: Arial, sans-serif; font-weight: 600; padding: 1px 3px; line-height: 1.2; box-sizing: border-box; overflow: hidden; white-space: nowrap; display: flex; align-items: center; justify-content: flex-start; text-align: left; }';
+            printHtml += '.pdf-view-field.check { justify-content: center; color: #0a1a5c; font-weight: 900; }';
+            printHtml += '</style></head><body>';
 
             for (var p = 1; p <= totalVirtualPages; p++) {
-                var wrap = document.createElement('div');
-                wrap.className = 'print-page';
-                wrap.setAttribute('data-print-page', p);
+                printHtml += '<div class="print-page">';
+                printHtml += '<img class="bg" src="' + pageImages[p - 1] + '" />';
+                
+                var fields = getLayoutForPage(docType, p);
+                if (fields && fields.length) {
+                    printHtml += '<div class="pdf-view-overlay">';
+                    fields.forEach(function (f) {
+                        var val = formData[f.id];
+                        if (val === undefined || val === null) return;
+                        var strVal = String(val).trim();
+                        if (strVal === '') return;
 
-                var img = document.createElement('img');
-                img.src = pageImages[p - 1];
-                img.alt = 'Page ' + p;
-                img.style.cssText =
-                    'display:block;width:100%;height:100%;' +
-                    'object-fit:contain;pointer-events:none;user-select:none;';
-                wrap.appendChild(img);
+                        var fontSizePx = computeOverlayFontSize(docType, f.id, f.type);
+                        var isSignatureImage = strVal.indexOf('data:image') === 0;
 
-                if (typeof img.decode === 'function') {
-                    imgPromises.push(img.decode().catch(function () {}));
-                } else {
-                    imgPromises.push(new Promise(function (resolve) {
-                        if (img.complete && img.naturalWidth > 0) { resolve(); return; }
-                        img.addEventListener('load',  resolve, { once: true });
-                        img.addEventListener('error', resolve, { once: true });
-                    }));
+                        if (isSignatureImage) {
+                            printHtml += '<div class="pdf-view-field signature" style="left:' + f.left + '; top:' + f.top + '; width:' + f.width + '; height:' + f.height + '; padding:0; justify-content:center; overflow:hidden;">';
+                            printHtml += '<img src="' + strVal + '" style="max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;display:block;" />';
+                            printHtml += '</div>';
+                            return;
+                        }
+
+                        if (f.type === 'signature') {
+                            printHtml += '<div class="pdf-view-field" style="left:' + f.left + '; top:' + f.top + '; width:' + f.width + '; height:' + f.height + '; font-size:' + fontSizePx.toFixed(2) + 'px;">';
+                            printHtml += strVal;
+                            printHtml += '</div>';
+                            return;
+                        }
+
+                        if (f.type === 'check') {
+                            printHtml += '<div class="pdf-view-field check" style="left:' + f.left + '; top:' + f.top + '; width:' + f.width + '; height:' + f.height + '; font-size:' + fontSizePx.toFixed(2) + 'px;">✓</div>';
+                            return;
+                        }
+
+                        printHtml += '<div class="pdf-view-field" style="left:' + f.left + '; top:' + f.top + '; width:' + f.width + '; height:' + f.height + '; font-size:' + fontSizePx.toFixed(2) + 'px;">';
+                        printHtml += strVal;
+                        printHtml += '</div>';
+                    });
+                    printHtml += '</div>';
                 }
-
-                try {
-                    /* ★ 設定 overlay 頁寬（mm → px，1mm ≈ 3.7795px） */
-                    setOverlayPageWidth(pageW_mm * 3.7795);
-
-                    var overlay = buildOverlayElement(docType, p, formData, true);
-                    if (overlay) {
-                        overlay.style.cssText =
-                            'position:absolute;top:0;left:0;' +
-                            'width:100%;height:100%;';
-                        wrap.appendChild(overlay);
-                    }
-                } catch (e) {}
-
-                printContainer.appendChild(wrap);
+                printHtml += '</div>';
             }
+            printHtml += '</body></html>';
 
-            Promise.all(imgPromises).then(function () {
+            // 建立隱藏的 iframe 進行列印
+            var iframe = document.createElement('iframe');
+            iframe.style.position = 'fixed';
+            iframe.style.right = '0';
+            iframe.style.bottom = '0';
+            iframe.style.width = '0px';
+            iframe.style.height = '0px';
+            iframe.style.border = 'none';
+            iframe.style.zIndex = '-9999';
+            document.body.appendChild(iframe);
 
-                var style = document.createElement('style');
-                style.id = 'dynamic-print-style';
-                style.textContent = [
-                    '@media print {',
-                    '  @page { size: A4 ' + (isPortrait ? 'portrait' : 'landscape') + '; margin: 0; }',
+            var iframeDoc = iframe.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(printHtml);
+            iframeDoc.close();
 
-                    '  html, body {',
-                    '    margin: 0 !important;',
-                    '    padding: 0 !important;',
-                    '    display: block !important;',
-                    '    width: auto !important;',
-                    '    height: auto !important;',
-                    '    min-height: 0 !important;',
-                    '    max-height: none !important;',
-                    '    overflow: visible !important;',
-                    '    background: #fff !important;',
-                    '    color: #000 !important;',
-                    '  }',
-
-                    '  body > *:not(#print-only-container) { display: none !important; }',
-
-                    '  #print-only-container {',
-                    '    display: block !important;',
-                    '    position: static !important;',
-                    '    width: auto !important;',
-                    '    height: auto !important;',
-                    '    margin: 0 !important;',
-                    '    padding: 0 !important;',
-                    '    background: #fff !important;',
-                    '  }',
-
-                    '  #print-only-container .print-page {',
-                    '    page-break-after: always;',
-                    '    break-after: page;',
-                    '    width: ' + pageW_mm + 'mm !important;',
-                    '    height: ' + pageH_mm + 'mm !important;',
-                    '    margin: 0 !important;',
-                    '    padding: 0 !important;',
-                    '    position: relative !important;',
-                    '    overflow: hidden !important;',
-                    '    background: #fff !important;',
-                    '    display: block !important;',
-                    '  }',
-                    '  #print-only-container .print-page:last-child {',
-                    '    page-break-after: auto !important;',
-                    '    break-after: auto !important;',
-                    '  }',
-
-                    '  #print-only-container .print-page img {',
-                    '    display: block !important;',
-                    '    width: 100% !important;',
-                    '    height: 100% !important;',
-                    '    max-width: none !important;',
-                    '    max-height: none !important;',
-                    '    object-fit: contain !important;',
-                    '    margin: 0 !important;',
-                    '    padding: 0 !important;',
-                    '  }',
-
-                    '  #print-only-container .print-page .pdf-view-overlay {',
-                    '    position: absolute !important;',
-                    '    top: 0 !important; left: 0 !important;',
-                    '    width: 100% !important; height: 100% !important;',
-                    '    display: block !important;',
-                    '  }',
-                    '}'
-                ].join('\n');
-                document.head.appendChild(style);
-
-                void document.body.offsetHeight;
-
-                setTimeout(function () {
-                    window.print();
-
-                    setTimeout(function () {
-                        printContainer.innerHTML = '';
-                        var s = document.getElementById('dynamic-print-style');
-                        if (s) s.remove();
-                    }, 2000);
-                }, 300);
-            });
+            setTimeout(function() {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+                
+                // 列印對話框關閉後移除 iframe
+                setTimeout(function() {
+                    if (document.body.contains(iframe)) {
+                        document.body.removeChild(iframe);
+                    }
+                }, 1000);
+            }, 300);
         }
 
         document.addEventListener('DOMContentLoaded', async function () {
@@ -1421,13 +1494,7 @@
                 if (!doc) { showError('找不到文件資料。請從 Labour Wage 列表重新點 View 進入。'); return; }
                 currentDoc = doc;
                 console.log('[LabourDoc] ===== 載入 ===== id=' + doc.id + ' type=' + doc.type);
-
-                var savedKey = 'editlabour_layout_' + doc.type;
-                if (localStorage.getItem(savedKey)) {
-                    console.log('[LabourDoc] ✓ 找到 ' + savedKey);
-                } else {
-                    console.warn('[LabourDoc] ⚠ 未找到 ' + savedKey + '，將使用 fallback layout');
-                }
+                console.log('[LabourDoc] 取得的 doc:', doc);
 
                 updateDocInfo(doc);
                 setLoading('載入中...');

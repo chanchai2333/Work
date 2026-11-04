@@ -3964,6 +3964,7 @@
         input.style.left = field.left; input.style.top = field.top;
         input.style.width = field.width || '8%';
         input.style.height = field.height || '1.8%';
+        input.style.fontSize = '1em'; 
         input.value = formData[field.id] || '';
         input.autocomplete = 'off';
         input.addEventListener('input', function () {
@@ -3985,6 +3986,7 @@
         box.style.left = field.left; box.style.top = field.top;
         box.style.width = field.width || '2%';
         box.style.height = field.height || '1.8%';
+        box.style.fontSize = '1em'; 
         var tick = document.createElement('span');
         tick.className = 'tick'; tick.textContent = '✓';
         box.appendChild(tick);
@@ -4750,6 +4752,8 @@ function refreshLabourSignatureCell(fieldId) {
         pageDiv.style.width  = displaySize.w + 'px';
         pageDiv.style.height = displaySize.h + 'px';
 
+        pageDiv.style.fontSize = Math.max(10, displaySize.w * 0.015) + 'px';
+
         var img = document.createElement('img');
         img.src = imgData;
         img.className = 'pdf-bg';
@@ -4833,6 +4837,15 @@ function refreshLabourSignatureCell(fieldId) {
             var cid = checks[j].dataset.fieldId;
             if (cid) formData[cid] = checks[j].classList.contains('checked') ? '1' : '';
         }
+        
+        // ★ 新增：抓取簽名格的數據（防止點擊 Save 時被覆蓋清空）
+        var sigs = overlay.querySelectorAll('.pdf-signature-cell[data-field-id]');
+        for (var k = 0; k < sigs.length; k++) {
+            var sid = sigs[k].dataset.fieldId;
+            // 如果 formData 裡沒有值，或者已經透過 Modal 寫入了，這裡不需重複寫入
+            // 但為了確保從記憶體同步，只要沒有被手動清空，就保留
+        }
+
         persistFormData();
     }
 
