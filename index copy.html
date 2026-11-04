@@ -1,6 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html style="visibility:hidden" lang="en">
 <head>
+<script>
+(function () {
+  try {
+    var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+    if (s && s.isLoggedIn) { document.documentElement.style.visibility = 'visible'; return; }
+  } catch (e) {}
+  document.documentElement.style.visibility = 'hidden';
+  window.location.replace('login.html');
+})();
+</script>
+
+    <script src="scripts/cloud-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n="dashboard">Dashboard - AEL DWSS</title>
@@ -834,6 +846,41 @@
         .main-content > footer {
             margin-top: 10px;     
         }
+
+                /* ============================================================ */
+        /* ★ 終極側邊欄防遮擋補丁 */
+        /* ============================================================ */
+        body {
+            overflow-x: hidden !important; /* 防止出現橫向滾動條 */
+        }
+
+        /* 強制主內容向右推開，並使用 border-box 讓 padding 不會撐破寬度 */
+        .main-content {
+            margin-left: 260px !important; /* 預設展開寬度 */
+            width: calc(100% - 260px) !important;
+            box-sizing: border-box !important;
+            transition: margin-left 0.3s ease, width 0.3s ease !important;
+        }
+
+        /* 當側邊欄收合時，主內容自動調整 */
+        .sidebar.collapsed + .main-content,
+        .sidebar.collapsed ~ .main-content,
+        body.sidebar-collapsed .main-content {
+            margin-left: 70px !important; /* 收合寬度 */
+            width: calc(100% - 70px) !important;
+        }
+
+        /* 確保側邊欄本身不會被壓縮，且層級最高 */
+        .sidebar {
+            flex-shrink: 0 !important;
+            z-index: 1000 !important;
+            width: 260px;
+            transition: width 0.3s ease !important;
+        }
+        .sidebar.collapsed {
+            width: 70px;
+        }
+
     </style>
 </head>
 <body>
@@ -850,7 +897,7 @@
                         <span id="current-date">September 17, 2025</span>
                     </div>
                     <button class="user-btn">
-                        <i class="fas fa-user"></i> <span data-i18n="user.name"></span>
+                        <i class="fas fa-user"></i> <span class="header-username"></span>
                     </button>
                 </div>
             </div>
@@ -1039,6 +1086,29 @@
                     </div>
                 </div>
             </div>
+            <script>
+            (function () {
+                function readSnap() {
+                    try { return JSON.parse(sessionStorage.getItem('dwss_dashboard_snap') || '{}'); }
+                    catch (e) { return {}; }
+                }
+                function paint() {
+                    var snap = readSnap();
+                    if (!snap.filtered) return;
+                    var map = {
+                        'diary-total': snap.diaryTotal,
+                        'inspection-total': snap.inspectionTotal,
+                        'wage-total': snap.wageTotal
+                    };
+                    Object.keys(map).forEach(function (id) {
+                        var el = document.getElementById(id);
+                        if (el && map[id] != null && map[id] !== '') el.textContent = map[id];
+                    });
+                }
+                if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paint);
+                else paint();
+            })();
+            </script>
 
             <div class="trend-charts">
                 <!-- Site Diary 趨勢圖 -->
@@ -1075,6 +1145,17 @@
                         </div>
                     </div>
                     <canvas id="labourWageChart"></canvas>
+                </div>
+                <!-- Overdue Trend Chart -->
+                <div class="trend-card" style="grid-column: 1 / -1;">
+                    <div class="chart-header">
+                        <h3><i class="fas fa-exclamation-triangle" style="color:#e74c3c;"></i> Overdue Documents Trend</h3>
+                        <div style="margin-top: 10px;">
+                            <label for="overdue-year-select" style="font-weight: normal; margin-right: 8px;">Year:</label>
+                            <select id="overdue-year-select" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc;"></select>
+                        </div>
+                    </div>
+                    <canvas id="overdueTrendChart"></canvas>
                 </div>
             </div>
 
@@ -1320,20 +1401,113 @@
         setTimeout(function() {
             DWSS_Auth.updateHeaderUser();
         }, 100);
+
+        window.addEventListener('storage', function(e) {
+            if (['siteDiaryData','inspectionData','wageData'].includes(e.key)) {
+                location.reload(); // or re-run KPI update functions
+            }
+        });
     </script>
 
     <!-- ============================================================
          自定义脚本：更新所有卡片 KPI 及趋势图（真实数据）
          ============================================================ -->
     <script>
-        (function() {
-            function getData(key, defaultData) {
-                const stored = localStorage.getItem(key);
-                if (stored) {
-                    try { return JSON.parse(stored); } catch(e) { return defaultData; }
-                }
-                return defaultData;
+    (function() {
+        try {
+            var early = JSON.parse(sessionStorage.getItem('dwss_dashboard_snap') || '{}');
+            function earlyPaint(id, value) {
+                var el = document.getElementById(id);
+                if (el && value != null && value !== '') el.textContent = value;
             }
+            function restoreSnap() {
+                earlyPaint('diary-total', early.diaryTotal);
+                earlyPaint('diary-closed', early.diaryClosed);
+                earlyPaint('diary-pending-close', early.diaryPending);
+                earlyPaint('diary-closed-percent', early.diaryPercent);
+                earlyPaint('diary-last-submitted', early.diaryLastSubmitted);
+                earlyPaint('diary-last-passed', early.diaryLastPassed);
+                earlyPaint('inspection-total', early.inspectionTotal);
+                earlyPaint('inspection-closed', early.inspectionClosed);
+                earlyPaint('inspection-pending-close', early.inspectionPending);
+                earlyPaint('inspection-closed-percent', early.inspectionPercent);
+                earlyPaint('wage-total', early.wageTotal);
+                earlyPaint('wage-closed', early.wageClosed);
+                earlyPaint('wage-pending-close', early.wagePending);
+                earlyPaint('wage-closed-percent', early.wagePercent);
+            }
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', restoreSnap);
+            else restoreSnap();
+        } catch (e) {}
+        function runDashboard() {
+        var lastSnap = {};
+        try { lastSnap = JSON.parse(sessionStorage.getItem('dwss_dashboard_snap') || '{}'); } catch (e) {}
+        function paint(id, value) {
+            var el = document.getElementById(id);
+            if (el && value != null && value !== '') el.textContent = value;
+        }
+        paint('diary-total', lastSnap.diaryTotal);
+        paint('safety-total', lastSnap.safetyTotal);
+        paint('wage-total', lastSnap.wageTotal);
+
+        function remember() {
+            var d = document.getElementById('diary-total');
+            var s = document.getElementById('safety-total');
+            var w = document.getElementById('wage-total');
+            var snap = {
+                diaryTotal: d ? d.textContent : lastSnap.diaryTotal,
+                safetyTotal: s ? s.textContent : lastSnap.safetyTotal,
+                wageTotal: w ? w.textContent : lastSnap.wageTotal
+            };
+            if (snap.diaryTotal === '0' && lastSnap.diaryTotal && lastSnap.diaryTotal !== '0') snap.diaryTotal = lastSnap.diaryTotal;
+            sessionStorage.setItem('dwss_dashboard_snap', JSON.stringify(snap));
+        }
+
+        // ★ NEW: current project helper
+        function getCurrentProjectId() {
+            // 1) Prefer the session variable set at login
+            var pid = sessionStorage.getItem('currentProjectId');
+            if (pid) return pid;
+
+            // 2) Fallback: dwss_session
+            try {
+                var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+                if (s && Array.isArray(s.projectIds) && s.projectIds.length) {
+                    return s.projectIds[0];
+                }
+            } catch (e) {}
+
+            // 3) Fallback: localStorage.current_user
+            try {
+                var u = JSON.parse(localStorage.getItem('current_user') || '{}');
+                if (u && Array.isArray(u.projectIds) && u.projectIds.length) {
+                    return u.projectIds[0];
+                }
+            } catch (e) {}
+
+            return null;
+        }
+
+        // ★ NEW: filter records by current project
+        function filterByCurrentProject(records) {
+            if (!Array.isArray(records)) return [];
+            var pid = getCurrentProjectId();
+            if (!pid) return [];
+            return records.filter(function (r) {
+                if (!r) return false;
+                return String(r.project || '') === String(pid);
+            });
+        }
+
+        // Keep the original getData helper
+        function getData(key, defaultData) {
+            if (window.__dwssDash && Array.isArray(window.__dwssDash[key])) return window.__dwssDash[key];
+            if (window.DWSS_Storage && typeof window.DWSS_Storage.getCache === 'function') {
+                var cached = window.DWSS_Storage.getCache(key);
+                if (Array.isArray(cached) && cached.length) return cached;
+            }
+            return defaultData;
+        }
 
             // ===== 1. Site Diary =====
             (function handleSiteDiary() {
@@ -1351,19 +1525,8 @@
                 updateTimeDisplay();
                 setInterval(updateTimeDisplay, 60000);
 
-                const diaryDefault = [
-                    { id: "SD-2025-001", status: "draft", site: "Treatment Plant", date: "2025-08-15", submittedBy: "John Doe", type: "Contractor Documents" },
-                    { id: "SD-2025-002", status: "submitted-wsg", site: "Pipeline", date: "2025-08-14", submittedBy: "Jane Smith", type: "Contractor Documents" },
-                    { id: "SD-2025-003", status: "submitted-ig", site: "Reservoir", date: "2025-08-13", submittedBy: "Robert Johnson", type: "Sub Contractor Documents" },
-                    { id: "SD-2025-004", status: "closed", site: "Distribution", date: "2025-08-12", submittedBy: "Sarah Williams", type: "Sub Contractor Documents" },
-                    { id: "SD-2025-005", status: "reopen", site: "Pump Station", date: "2025-08-11", submittedBy: "Michael Brown", type: "Contractor Documents" },
-                    { id: "SD-2025-006", status: "cancelled", site: "Treatment Plant", date: "2025-08-10", submittedBy: "David Wilson", type: "Contractor Documents" },
-                    { id: "SD-2025-007", status: "draft", site: "Pipeline", date: "2025-08-09", submittedBy: "Emma Davis", type: "Sub Contractor Documents" },
-                    { id: "SD-2025-008", status: "submitted-wsg", site: "Reservoir", date: "2025-08-08", submittedBy: "James Miller", type: "Contractor Documents" },
-                    { id: "SD-2025-009", status: "closed", site: "Distribution", date: "2025-08-07", submittedBy: "Olivia Garcia", type: "Sub Contractor Documents" },
-                    { id: "SD-2025-010", status: "reopen", site: "Pump Station", date: "2025-08-06", submittedBy: "William Rodriguez", type: "Contractor Documents" }
-                ];
-                let diaryData = getData('siteDiaryData', diaryDefault);
+                const diaryDefault = [];
+                let diaryData = filterByCurrentProject(getData('siteDiaryData', diaryDefault));
 
                 function updateDiaryKPI() {
                     const total = diaryData.length;
@@ -1511,7 +1674,7 @@
                     { id: "INSP-2025-2", status: "reopen", statusText: "Reopen", site: "Pipeline", date: "14-Sep-2025", inspector: "Jane Smith" },
                     { id: "INSP-2025-3", status: "closed", statusText: "Closed", site: "Reservoir", date: "13-Sep-2025", inspector: "Robert Johnson" }
                 ];
-                let inspectionData = getData('inspectionData', inspectionDefault);
+                let inspectionData = filterByCurrentProject(getData('inspectionData', inspectionDefault));
 
                 function updateInspectionKPI() {
                     const total = inspectionData.length;
@@ -1674,7 +1837,7 @@
                     { id: "GF-527A-2", type: "GF527A", typeText: "GF527A - Return on Construction Site Employment", status: "confirm", statusText: "Client's Site Representative to Confirm", site: "Distribution", periodStart: "2025-09-10", periodEnd: "2025-09-16" },
                     { id: "GF527-2003-LW-2", type: "GF527-2003", typeText: "GF527 (2003) - Labour Wage", status: "double-check", statusText: "Contractor/Contractor's Agent Double Check", site: "Pump Station", periodStart: "2025-09-05", periodEnd: "2025-09-11" }
                 ];
-                let wageData = getData('wageData', wageDefault);
+                let wageData = filterByCurrentProject(getData('wageData', wageDefault));
 
                 function updateWageKPI() {
                     const total = wageData.length;
@@ -1802,8 +1965,376 @@
                 }
                 waitForWageChart();
             })();
+        }
+        function paintSummaryModule(prefix, mod, barId) {
+            if (!mod) return;
+            var set = function (id, val) {
+                var el = document.getElementById(id);
+                if (el) el.textContent = val;
+            };
+            set(prefix + '-total', mod.total);
+            set(prefix + '-closed', mod.closed);
+            set(prefix + '-pending-close', mod.pending);
+            set(prefix + '-closed-percent', mod.percent + '%');
+            set(prefix + '-last-submitted', mod.lastSubmitted || 'N/A');
+            set(prefix + '-last-passed', mod.lastPassed || 'N/A');
+            var bar = document.getElementById(barId);
+            if (bar) bar.style.setProperty('width', mod.percent + '%', 'important');
+        }
 
+        function paintSummaryChart(canvasId, yearSelectId, mod, color) {
+            if (!mod || typeof Chart === 'undefined') return;
+            var canvas = document.getElementById(canvasId);
+            var sel = document.getElementById(yearSelectId);
+            if (!canvas) return;
+            var years = (mod.years && mod.years.length) ? mod.years : [String(new Date().getFullYear())];
+            if (sel && !sel.dataset.summaryBound) {
+                sel.innerHTML = '';
+                years.forEach(function (y) {
+                    var opt = document.createElement('option');
+                    opt.value = y; opt.textContent = y;
+                    sel.appendChild(opt);
+                });
+                var current = String(new Date().getFullYear());
+                sel.value = years.indexOf(current) !== -1 ? current : years[years.length - 1];
+                sel.dataset.summaryBound = '1';
+                sel.addEventListener('change', function () {
+                    paintSummaryChart(canvasId, yearSelectId, mod, color);
+                });
+            }
+            var year = sel ? sel.value : years[years.length - 1];
+            var data = (mod.monthly && mod.monthly[year]) ? mod.monthly[year] : [0,0,0,0,0,0,0,0,0,0,0,0];
+            var existing = Chart.getChart(canvasId);
+            if (existing) existing.destroy();
+            new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+                    datasets: [{
+                        label: 'Submitted',
+                        data: data,
+                        borderColor: color,
+                        backgroundColor: color === '#e74c3c' ? 'rgba(231,76,60,0.1)' : (color === '#8e44ad' ? 'rgba(142,68,173,0.1)' : 'rgba(52,152,219,0.1)'),
+                        tension: 0.3,
+                        fill: true,
+                        pointBackgroundColor: color
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+            });
+        }
+
+        function loadDashboardSummary() {
+            var projectId = sessionStorage.getItem('currentProjectId') || '';
+            var url = '/api/dashboard/summary' + (projectId ? ('?projectId=' + encodeURIComponent(projectId)) : '');
+            fetch(url, { cache: 'no-store' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (summary) {
+                    if (!summary || !summary.diary) { runDashboard(); return; }
+                    paintSummaryModule('diary', summary.diary, 'diary-progress-bar');
+                    paintSummaryModule('inspection', summary.inspection, 'inspection-progress-bar');
+                    paintSummaryModule('wage', summary.wage, 'wage-progress-bar');
+                    paintSummaryChart('siteDiaryChart', 'diary-year-select', summary.diary, '#3498db');
+                    paintSummaryChart('safetyInspectionChart', 'inspection-year-select', summary.inspection, '#e74c3c');
+                    paintSummaryChart('labourWageChart', 'wage-year-select', summary.wage, '#8e44ad');
+                    try {
+                        sessionStorage.setItem('dwss_dashboard_snap', JSON.stringify({
+                            filtered: true,
+                            diaryTotal: summary.diary.total,
+                            diaryClosed: summary.diary.closed,
+                            diaryPending: summary.diary.pending,
+                            diaryPercent: summary.diary.percent + '%',
+                            diaryLastSubmitted: summary.diary.lastSubmitted,
+                            diaryLastPassed: summary.diary.lastPassed,
+                            inspectionTotal: summary.inspection.total,
+                            inspectionClosed: summary.inspection.closed,
+                            inspectionPending: summary.inspection.pending,
+                            inspectionPercent: summary.inspection.percent + '%',
+                            wageTotal: summary.wage.total,
+                            wageClosed: summary.wage.closed,
+                            wagePending: summary.wage.pending,
+                            wagePercent: summary.wage.percent + '%'
+                        }));
+                    } catch (e) {}
+                })
+                .catch(function () { runDashboard(); });
+        }
+
+        loadDashboardSummary();
         })();
+
+        (function handleOverdueTrend() {
+    const OVERDUE_DAYS = 14;
+
+    // 讀取資料
+    function loadAll() {
+        function byProject(list) {
+            var pid = sessionStorage.getItem('currentProjectId');
+            if (!pid || !Array.isArray(list)) return [];
+            return list.filter(function (r) { return r && String(r.project || '') === String(pid); });
+        }
+        var out = { diary: [], inspection: [], wage: [] };
+        if (window.__dwssDash) {
+            out.diary = byProject(window.__dwssDash.siteDiaryData);
+            out.inspection = byProject(window.__dwssDash.inspectionData);
+            out.wage = byProject(window.__dwssDash.wageData);
+            return out;
+        }
+        if (window.DWSS_Storage && typeof window.DWSS_Storage.getCache === 'function') {
+            out.diary = byProject(window.DWSS_Storage.getCache('siteDiaryData'));
+            out.inspection = byProject(window.DWSS_Storage.getCache('inspectionData'));
+            out.wage = byProject(window.DWSS_Storage.getCache('wageData'));
+        }
+        return out;
+    }
+
+    // ==========================================
+    // 1. Site Diary 的解析 (原封不動搬自 sitediary.js)
+    // ==========================================
+    function getDiaryDate(item) {
+        if (!item) return null;
+        if (item.endDate) {
+            var d1 = new Date(item.endDate);
+            if (!isNaN(d1.getTime())) return d1;
+        }
+        var dateStr = item.period || item.date;
+        if (dateStr) {
+            var s = String(dateStr).trim();
+            if (s.indexOf('~') !== -1) {
+                var parts = s.split('~');
+                var endPart = parts[1] ? parts[1].trim() : '';
+                var m1 = endPart.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                if (m1) return new Date(parseInt(m1[1], 10), parseInt(m1[2], 10) - 1, parseInt(m1[3], 10));
+                var m2 = endPart.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+                if (m2) return new Date(parseInt(m2[3], 10), parseInt(m2[2], 10) - 1, parseInt(m2[1], 10));
+            }
+            var m3 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (m3) return new Date(parseInt(m3[1], 10), parseInt(m3[2], 10) - 1, parseInt(m3[3], 10));
+            var m4 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+            if (m4) return new Date(parseInt(m4[3], 10), parseInt(m4[2], 10) - 1, parseInt(m4[1], 10));
+            var d2 = new Date(s);
+            if (!isNaN(d2.getTime())) return d2;
+        }
+        if (item.createdAt) {
+            var d3 = new Date(item.createdAt);
+            if (!isNaN(d3.getTime())) return d3;
+        }
+        return null;
+    }
+
+    function isDiaryOverdue(item) {
+        if (!item || item.status !== 'draft') return false;
+        var endDate = getDiaryDate(item);
+        if (!endDate) return false;
+        var now = new Date();
+        var end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+        var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        var diffDays = (today.getTime() - end.getTime()) / (1000 * 60 * 60 * 24);
+        return diffDays > OVERDUE_DAYS;
+    }
+
+    // ==========================================
+    // 2. Safety Inspection 的解析 (原封不動搬自 safetyinspect.js)
+    // ==========================================
+    function formatSafetyDate(dateString) {
+        if (!dateString) return '';
+        if (/^\d{2}-[A-Za-z]{3}-\d{4}$/.test(dateString)) {
+            const parts = dateString.split('-');
+            const monthMap = { 'Jan':'01','Feb':'02','Mar':'03','Apr':'04','May':'05','Jun':'06',
+                               'Jul':'07','Aug':'08','Sep':'09','Oct':'10','Nov':'11','Dec':'12' };
+            const month = monthMap[parts[1]] || '01';
+            return `${parts[2]}-${month}-${parts[0]}`;
+        }
+        const date = new Date(dateString);
+        if (isNaN(date)) return dateString;
+        const d = String(date.getDate()).padStart(2,'0');
+        const m = String(date.getMonth() + 1).padStart(2,'0');
+        const y = date.getFullYear();
+        return `${y}-${m}-${d}`;
+    }
+
+    function getInspectionDate(item) {
+        if (!item) return null;
+        var isoStr = formatSafetyDate(item.date);
+        if (isoStr) {
+            var parts = isoStr.split('-');
+            if (parts.length === 3) {
+                var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                if (!isNaN(d.getTime())) return d;
+            }
+        }
+        if (item.createdAt) {
+            var d2 = new Date(item.createdAt);
+            if (!isNaN(d2.getTime())) return d2;
+        }
+        return null;
+    }
+
+    function isInspectionOverdue(item) {
+        if (!item || item.status !== 'draft') return false;
+        var d = getInspectionDate(item);
+        if (!d) return false;
+        var now = new Date();
+        var diffDays = (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24);
+        return diffDays > OVERDUE_DAYS;
+    }
+
+    // ==========================================
+    // 3. Labour Wage 的解析 (原封不動搬自 labourwage.js)
+    // ==========================================
+    function getWageDate(item) {
+        if (!item) return null;
+        if (item.periodStart) {
+            var d = new Date(item.periodStart);
+            if (!isNaN(d.getTime())) return d;
+        }
+        if (item.createdAt) {
+            var d2 = new Date(item.createdAt);
+            if (!isNaN(d2.getTime())) return d2;
+        }
+        return null;
+    }
+
+    function isWageOverdue(item) {
+        if (!item || item.status !== 'draft') return false;
+        var d = getWageDate(item);
+        if (!d) return false;
+        var now = new Date();
+        var diffDays = (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24);
+        return diffDays > OVERDUE_DAYS;
+    }
+
+    // ==========================================
+    // 圖表渲染
+    // ==========================================
+    let overdueChart = null;
+
+    function renderOverdueChart(year) {
+        const canvas = document.getElementById('overdueTrendChart');
+        if (!canvas) return;
+        
+        const { diary, inspection, wage } = loadAll();
+        
+        const counts = {
+            diary: Array(12).fill(0),
+            inspection: Array(12).fill(0),
+            wage: Array(12).fill(0)
+        };
+        
+        diary.forEach(item => {
+            if (isDiaryOverdue(item)) {
+                const d = getDiaryDate(item);
+                if (d && String(d.getFullYear()) === String(year)) counts.diary[d.getMonth()]++;
+            }
+        });
+
+        inspection.forEach(item => {
+            if (isInspectionOverdue(item)) {
+                const d = getInspectionDate(item);
+                if (d && String(d.getFullYear()) === String(year)) counts.inspection[d.getMonth()]++;
+            }
+        });
+
+        wage.forEach(item => {
+            if (isWageOverdue(item)) {
+                const d = getWageDate(item);
+                if (d && String(d.getFullYear()) === String(year)) counts.wage[d.getMonth()]++;
+            }
+        });
+
+        const labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        
+        if (overdueChart) overdueChart.destroy();
+        
+        overdueChart = new Chart(canvas.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Site Diary',
+                        data: counts.diary,
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52,152,219,0.1)',
+                        tension: 0.3, fill: true, pointRadius: 3
+                    },
+                    {
+                        label: 'Safety Inspection',
+                        data: counts.inspection,
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231,76,60,0.1)',
+                        tension: 0.3, fill: true, pointRadius: 3
+                    },
+                    {
+                        label: 'Labour Wage',
+                        data: counts.wage,
+                        borderColor: '#9b59b6',
+                        backgroundColor: 'rgba(155,89,182,0.1)',
+                        tension: 0.3, fill: true, pointRadius: 3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { mode: 'index', intersect: false }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: true, 
+                        suggestedMax: 20,      // ★ 至少顯示到 20，超過 20 會自動往上加
+                        ticks: { 
+                            stepSize: 1,
+                            precision: 0       // 避免出現小數點
+                        }, 
+                        title: { display: true, text: 'Overdue Count' } 
+                    }
+                }
+            }
+        });
+    }
+
+    function initOverdueYearSelector() {
+        const sel = document.getElementById('overdue-year-select');
+        if (!sel) return;
+        const { diary, inspection, wage } = loadAll();
+        const years = new Set();
+        
+        diary.forEach(i => { const d = getDiaryDate(i); if(d) years.add(String(d.getFullYear())); });
+        inspection.forEach(i => { const d = getInspectionDate(i); if(d) years.add(String(d.getFullYear())); });
+        wage.forEach(i => { const d = getWageDate(i); if(d) years.add(String(d.getFullYear())); });
+
+        if (!years.size) years.add(new Date().getFullYear().toString());
+        
+        sel.innerHTML = '';
+        const sorted = Array.from(years).sort();
+        const curYear = new Date().getFullYear().toString();
+        
+        sorted.forEach(y => {
+            const o = document.createElement('option');
+            o.value = y; o.textContent = y;
+            if (y === curYear) o.selected = true;
+            sel.appendChild(o);
+        });
+        
+        if (!sel.value && sorted.length) sel.value = sorted[0];
+        
+        renderOverdueChart(sel.value);
+        sel.addEventListener('change', () => renderOverdueChart(sel.value));
+    }
+
+    function waitForChart() {
+        if (typeof Chart === 'undefined') { setTimeout(waitForChart, 200); return; }
+        if (window.DWSS_Storage && typeof window.DWSS_Storage.whenReady === 'function' && !window.__dwssDash) {
+            window.DWSS_Storage.whenReady(function () { setTimeout(waitForChart, 300); });
+            return;
+        }
+        initOverdueYearSelector();
+    }
+    waitForChart();
+})();
+
     </script>
 
     <!-- ============================================================
@@ -2370,7 +2901,6 @@
             } else {
                 waitForChart(initSmartSite);
             }
-
         })();
     </script>
 
@@ -2525,6 +3055,12 @@
             }
 
         })();
+        // Reload when the current project changes from another tab
+        window.addEventListener('storage', function (e) {
+            if (e.key === 'currentProjectId' || e.key === null) {
+                location.reload();
+            }
+        });
         </script>
 </body>
 </html>
