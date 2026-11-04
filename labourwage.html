@@ -20,15 +20,166 @@
     <link rel="stylesheet" href="styles/main.css">
     <script src="scripts/theme-config.js"></script>
 
-    <!-- ★ 模板轉換依賴 ★ -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        /* 狀態與操作按鈕樣式 */
+        .status-change-select { padding: 6px 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 0.85rem; cursor: pointer; background: white; min-width: 120px; vertical-align: middle; }
+        .status-change-select:hover { border-color: #3498db; }
+        .status-change-select:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 2px rgba(52,152,219,0.2); }
+        .permission-lock-hint { font-size: 0.7rem; color: #e74c3c; display: inline-block; margin-left: 8px; white-space: nowrap; }
+        .action-btn { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem; min-width: 36px; min-height: 36px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin: 2px; vertical-align: middle; }
+        .view-btn { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
+        .view-btn:hover { background: linear-gradient(135deg, #2980b9, #2471a3); transform: translateY(-2px); }
+        .edit-btn { background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; }
+        .edit-btn:hover { background: linear-gradient(135deg, #27ae60, #219653); transform: translateY(-2px); }
+        .delete-btn { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; }
+        .delete-btn:hover { background: linear-gradient(135deg, #c0392b, #e74c3c); transform: translateY(-2px); }
+        
+        .status-badge { padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; display: inline-block; text-align: center; white-space: nowrap; }
+        .status-draft { background: rgba(149,165,166,0.2); color: #848f90; }
+        .status-submitted { background: rgba(52,152,219,0.2); color: #2980b9; }
+        .status-submitted-ig { background: rgba(46,204,113,0.2); color: #27ae60; }
+        .status-closed { background: rgba(39,174,96,0.2); color: #1e8449; }
+        .status-reopen { background: rgba(243,156,18,0.2); color: #d35400; }
+        .status-cancelled { background: rgba(231,76,60,0.2); color: #c0392b; }
+        .status-approved { background: rgba(46,204,113,0.2); color: #27ae60; }
+        .status-rejected { background: rgba(231,76,60,0.2); color: #c0392b; }
+        .status-pending { background: rgba(243,156,18,0.2); color: #d35400; }
 
-    <!-- ★ 內嵌 GF527-2003 PDF base64 ★ -->
-    <script src="scripts/GF527_2003-data.js"></script>
+        /* 分類區塊樣式 */
+        .diary-category-section { margin-bottom: 28px; }
+        .diary-category-section:last-child { margin-bottom: 0; }
+        .diary-category-section .table-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .category-count {
+            display: inline-block; min-width: 26px; text-align: center;
+            padding: 2px 10px; border-radius: 12px;
+            font-size: 0.8rem; font-weight: 700;
+            background: #e0e7ff; color: #3730a3;
+        }
+        .diary-category-section[data-category="overdue"] .category-count { background: #fee2e2; color: #991b1b; }
+        .diary-category-section[data-category="pending"] .category-count { background: #fef3c7; color: #92400e; }
+        .diary-category-section[data-category="closed"]  .category-count { background: #d1fae5; color: #065f46; }
+        .diary-category-section[data-category="open"]    .category-count { background: #e5e7eb; color: #374151; }
+
+        .category-desc { color: #64748b; font-size: 0.82rem; margin: 4px 0 12px 0; }
+        .diary-category-section[data-category="overdue"] .table-title i { color: #e74c3c; }
+        .diary-category-section[data-category="pending"] .table-title i { color: #f39c12; }
+        .diary-category-section[data-category="closed"]  .table-title i { color: #27ae60; }
+        .diary-category-section[data-category="open"]    .table-title i { color: #7f8c8d; }
+
+        /* 折疊樣式 */
+        .diary-category-section .table-header {
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .diary-category-section .table-header .header-left { flex: 1; }
+        .diary-category-section .table-header .toggle-icon {
+            font-size: 1.2rem;
+            color: #94a3b8;
+            transition: transform 0.3s ease;
+            margin-left: 15px;
+        }
+        .diary-category-section.collapsed .table-header .toggle-icon {
+            transform: rotate(-90deg);
+        }
+        .diary-category-section.collapsed .table-container {
+            display: none !important;
+        }
+
+        /* 搜尋框樣式 */
+        .header-right { display: flex; align-items: center; gap: 15px; }
+        .category-search {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            width: 220px;
+            transition: all 0.2s;
+            background: #fff;
+        }
+        .category-search:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52,152,219,0.2);
+        }
+        
+        /* Modal 樣式 */
+        .modal-content select, .modal-content input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            margin-bottom: 16px;
+            box-sizing: border-box;
+        }
+        .modal-content label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #334155;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .action-btn { width: 100%; margin: 2px 0; }
+            .status-change-select { width: 100%; margin: 2px 0; }
+        }
+    </style>
 </head>
 <body>
+    <!-- 新增 Wage Modal -->
+    <div class="modal" id="add-wage-modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Add New Wage Record</h3>
+            <form id="add-wage-form" enctype="multipart/form-data">
+                
+                <label>Copy from Existing Record (Optional)</label>
+                <select id="input-copy-from">
+                    <option value="">-- Do not copy --</option>
+                </select>
+
+                <label>Document ID</label>
+                <input type="text" id="input-doc-id" required>
+
+                <label>Document Type</label>
+                <select id="input-type" required>
+                    <option value="GF527A">GF527A - Return on Construction Site Employment</option>
+                    <option value="GF527-2003">GF527 (2003) - Labour Wage</option>
+                    <option value="GF527-2017">GF527 (2017) - Labour Wage</option>
+                </select>
+                
+                <label>Status</label>
+                <select id="input-status" required>
+                    <option value="draft">Draft</option>
+                    <option value="submitted-ig">Submitted to IG</option>
+                    <option value="closed">Closed</option>
+                    <option value="reopen">Reopen</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+                
+                <label>Site</label>
+                <input type="text" id="input-site" required placeholder="Enter site name">
+
+                <label>Period</label>
+                <input type="text" id="input-period" placeholder="e.g., 01-Sep-2025 to 07-Sep-2025" required>
+
+                <label>Submitted By</label>
+                <input type="text" id="input-submitted-by" required>
+                
+                <label for="input-pdf">Upload PDF (optional)</label>
+                <input type="file" id="input-pdf" accept=".pdf">
+                
+                <div class="modal-actions">
+                    <button type="submit" class="btn">Save</button>
+                    <button type="button" class="btn" id="cancel-add-wage">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="main-content">
         <div class="header">
             <h1 data-i18n="labour.wage">Labour Wage</h1>
@@ -39,16 +190,16 @@
                 </div>
             </div>
         </div>
-
+        
         <div class="search-buttons">
             <div class="nav-buttons">
                 <button id="add-wage-btn"><i class="fas fa-plus"></i> <span data-i18n="add.new.wage">Add New Wage Record</span></button>
             </div>
         </div>
-
-        <div class="labour-wage-page">
+        
+        <div class="site-diary-page">
             <h2><i class="fas fa-money-bill-wave"></i> <span data-i18n="labour.wage.management">Labour Wage Management</span></h2>
-
+            
             <div class="diary-controls-row">
                 <div class="diary-stats">
                     <div class="stat-card"><div class="label">Total Records</div><div class="value" id="total-records-count">…</div></div>
@@ -60,7 +211,7 @@
                     } catch (e) {}
                     </script>
                 </div>
-
+                
                 <section class="filters-section">
                     <div class="filter-group" id="type-filter-group">
                         <div class="filter-toggle"><span>All Document Types</span><i class="fas fa-chevron-down"></i></div>
@@ -71,29 +222,16 @@
                             <div class="filter-option" data-filter="type" data-value="GF527-2017">GF527 (2017) - Labour Wage</div>
                         </div>
                     </div>
-
+                    
                     <div class="filter-group" id="status-filter-group">
                         <div class="filter-toggle"><span>All Statuses</span><i class="fas fa-chevron-down"></i></div>
                         <div class="filter-options">
                             <div class="filter-option active" data-filter="status" data-value="all">All Statuses</div>
                             <div class="filter-option" data-filter="status" data-value="draft">Draft</div>
-                            <div class="filter-option" data-filter="status" data-value="submitted">Submitted</div>
-                            <div class="filter-option" data-filter="status" data-value="endorsed">Endorsed</div>
+                            <div class="filter-option" data-filter="status" data-value="submitted-ig">Submitted to IG</div>
+                            <div class="filter-option" data-filter="status" data-value="closed">Closed</div>
+                            <div class="filter-option" data-filter="status" data-value="reopen">Reopen</div>
                             <div class="filter-option" data-filter="status" data-value="cancelled">Cancelled</div>
-                            <div class="filter-option" data-filter="status" data-value="confirm">Client's Site Representative to Confirm</div>
-                            <div class="filter-option" data-filter="status" data-value="double-check">Contractor/Contractor's Agent Double Check</div>
-                        </div>
-                    </div>
-
-                    <div class="filter-group" id="site-filter-group">
-                        <div class="filter-toggle"><span>All Sites</span><i class="fas fa-chevron-down"></i></div>
-                        <div class="filter-options">
-                            <div class="filter-option active" data-filter="site" data-value="all">All Sites</div>
-                            <div class="filter-option" data-filter="site" data-value="treatment">Treatment Plant</div>
-                            <div class="filter-option" data-filter="site" data-value="pipeline">Pipeline</div>
-                            <div class="filter-option" data-filter="site" data-value="reservoir">Reservoir</div>
-                            <div class="filter-option" data-filter="site" data-value="distribution">Distribution</div>
-                            <div class="filter-option" data-filter="site" data-value="pump">Pump Station</div>
                         </div>
                     </div>
                 </section>
@@ -102,19 +240,19 @@
             <section class="content-section">
                 <div id="wage-tables-container">
 
-                    <!-- ===== 1. Overdue ===== -->
-                    <div class="diary-category-section collapsed" data-category="overdue">
+                    <!-- ===== 1. Open Records ===== -->
+                    <div class="diary-category-section collapsed" data-category="open">
                         <div class="table-header">
                             <div class="header-left">
                                 <h2 class="table-title">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                    <span>Overdue Records</span>
-                                    <span class="category-count" id="overdue-count">0</span>
+                                    <i class="fas fa-folder-open"></i>
+                                    <span>Open Records</span>
+                                    <span class="category-count" id="open-count">0</span>
                                 </h2>
-                                <p class="category-desc">Draft records older than 14 days</p>
+                                <p class="category-desc">Drafts within 14 days or reopened</p>
                             </div>
                             <div class="header-right">
-                                <input type="text" class="category-search" data-category="overdue" placeholder="Search Overdue...">
+                                <input type="text" class="category-search" data-category="open" placeholder="Search Open...">
                                 <i class="fas fa-chevron-down toggle-icon"></i>
                             </div>
                         </div>
@@ -132,13 +270,13 @@
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody id="overdue-table-body"></tbody>
+                                <tbody id="open-table-body"></tbody>
                             </table>
-                            <div id="overdue-no-results" class="no-results" style="display:none;">No overdue records.</div>
+                            <div id="open-no-results" class="no-results" style="display:none;">No open records.</div>
                         </div>
                     </div>
 
-                    <!-- ===== 2. Pending ===== -->
+                    <!-- ===== 2. Pending Records ===== -->
                     <div class="diary-category-section collapsed" data-category="pending">
                         <div class="table-header">
                             <div class="header-left">
@@ -174,7 +312,43 @@
                         </div>
                     </div>
 
-                    <!-- ===== 3. Closed ===== -->
+                    <!-- ===== 3. Overdue Records ===== -->
+                    <div class="diary-category-section collapsed" data-category="overdue">
+                        <div class="table-header">
+                            <div class="header-left">
+                                <h2 class="table-title">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>Overdue Records</span>
+                                    <span class="category-count" id="overdue-count">0</span>
+                                </h2>
+                                <p class="category-desc">Draft records older than 14 days</p>
+                            </div>
+                            <div class="header-right">
+                                <input type="text" class="category-search" data-category="overdue" placeholder="Search Overdue...">
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="diary-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Document Type</th>
+                                        <th>Status</th>
+                                        <th>Approval</th>
+                                        <th>Site</th>
+                                        <th>Period</th>
+                                        <th>Submitted By</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="overdue-table-body"></tbody>
+                            </table>
+                            <div id="overdue-no-results" class="no-results" style="display:none;">No overdue records.</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== 4. Closed Records ===== -->
                     <div class="diary-category-section collapsed" data-category="closed">
                         <div class="table-header">
                             <div class="header-left">
@@ -210,109 +384,22 @@
                         </div>
                     </div>
 
-                    <!-- ===== 4. Other ===== -->
-                    <div class="diary-category-section collapsed" data-category="other">
-                        <div class="table-header">
-                            <div class="header-left">
-                                <h2 class="table-title">
-                                    <i class="fas fa-folder"></i>
-                                    <span>Other Records</span>
-                                    <span class="category-count" id="other-count">0</span>
-                                </h2>
-                                <p class="category-desc">Drafts within 14 days, reopened, or in progress</p>
-                            </div>
-                            <div class="header-right">
-                                <input type="text" class="category-search" data-category="other" placeholder="Search Other...">
-                                <i class="fas fa-chevron-down toggle-icon"></i>
-                            </div>
-                        </div>
-                        <div class="table-container">
-                            <table class="diary-table">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Document Type</th>
-                                        <th>Status</th>
-                                        <th>Approval</th>
-                                        <th>Site</th>
-                                        <th>Period</th>
-                                        <th>Submitted By</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="other-table-body"></tbody>
-                            </table>
-                            <div id="other-no-results" class="no-results" style="display:none;">No other records.</div>
-                        </div>
-                    </div>
-
                 </div>
             </section>
-        </div>
-
-        <footer>
-            <p>© 2025 AEL DWSS System. All rights reserved.</p>
-            <p>AEL DWSS Platform</p>
-        </footer>
-    </div>
-
-    <div class="modal" id="add-wage-modal" style="display: none;">
-        <div class="modal-content">
-            <h3>Add New Wage Record</h3>
-            <form id="add-wage-form" enctype="multipart/form-data">
-                <!-- ★ Document ID（可編輯） -->
-                <label>Document ID</label>
-                <input type="text" id="input-doc-id" required>
-
-                <label>Document Type</label>
-                <select id="input-type" required>
-                    <option value="GF527A">GF527A - Return on Construction Site Employment</option>
-                    <option value="GF527-2003">GF527 (2003) - Labour Wage</option>
-                    <option value="GF527-2017">GF527 (2017) - Labour Wage</option>
-                </select>
-                
-                <label>Status</label>
-                <select id="input-status" required>
-                    <option value="draft">Draft</option>
-                    <option value="submitted">Submitted</option>
-                    <option value="endorsed">Endorsed</option>
-                    <option value="cancelled">Cancelled</option>
-                    <option value="confirm">Client's Site Representative to Confirm</option>
-                    <option value="double-check">Contractor/Contractor's Agent Double Check</option>
-                </select>
-                
-                <label>Site</label>
-                <input type="text" id="input-site" required placeholder="Enter site name">
-
-                <!-- ★ 修改：將 Period Start / End 改為單一 Period 輸入框 -->
-                <label>Period</label>
-                <input type="text" id="input-period" placeholder="e.g., 01-Sep-2025 to 07-Sep-2025" required>
-
-                <label>Submitted By</label>
-                <input type="text" id="input-submitted-by" required>
-                
-                <label for="input-pdf">Upload PDF (optional)</label>
-                <input type="file" id="input-pdf" accept=".pdf">
-                
-                <div class="modal-actions">
-                    <button type="submit" class="btn">Save</button>
-                    <button type="button" class="btn" id="cancel-add-wage">Cancel</button>
-                </div>
-            </form>
+            
+            <footer>
+                <p>© 2025 AEL DWSS System. All rights reserved.</p>
+                <p>AEL DWSS Platform</p>
+            </footer>
         </div>
     </div>
 
     <script src="scripts/permissions.js"></script>
     <script src="scripts/language.js"></script>
     <script src="scripts/app.js"></script>
-    <script src="scripts/sidebar.js"></script>
-    <script src="scripts/ac-lock.js"></script>
     <script src="scripts/auth-check.js"></script>
-    <script src="scripts/locked-ac.js"></script>
+    <script src="scripts/sidebar.js"></script>
 
-    <!-- ============================================================ -->
-    <!-- ★ getContractCode — 提供給 labourwage.js 及本頁 ID 生成使用     -->
-    <!-- ============================================================ -->
     <script>
     (function () {
         'use strict';
@@ -320,7 +407,6 @@
 
         window.getContractCode = function () {
             var pid = sessionStorage.getItem('currentProjectId');
-
             if (!pid) {
                 try {
                     var u = JSON.parse(localStorage.getItem('current_user') || '{}');
@@ -329,7 +415,6 @@
                     }
                 } catch (e) { /* ignore */ }
             }
-
             if (!pid) {
                 try {
                     var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
@@ -338,31 +423,16 @@
                     }
                 } catch (e) { /* ignore */ }
             }
-
             if (!pid) pid = 'DE/2026/05';
-
             return String(pid).replace(/\//g, '-');
         };
-
-        console.log('[LabourWage] ✓ getContractCode ready, currentProjectId =',
-                    sessionStorage.getItem('currentProjectId') || '(fallback)',
-                    '→ contractCode =',
-                    window.getContractCode());
     })();
     </script>
 
     <script src="scripts/labourwage.js"></script>
 
     <!-- ============================================================ -->
-    <!-- ★★★ Document ID 自動遞增修正                                  -->
-    <!-- ------------------------------------------------------------ -->
-    <!-- 格式：LRR/{合同代碼}/{6 位序號}A                                -->
-    <!--   e.g. LRR/DE-2026-05/000001A                                  -->
-    <!-- 策略：                                                        -->
-    <!--   1. 掃描 localStorage 所有 key，找任何含 ID 的陣列            -->
-    <!--   2. 過濾出 ID 前綴 = LRR/{contractCode}/ 的記錄               -->
-    <!--   3. 找最大序號 +1                                            -->
-    <!--   4. 點 Add New Wage Record 後覆蓋 input-doc-id 欄位           -->
+    <!-- ★ Document ID 自動遞增 -->
     <!-- ============================================================ -->
     <script>
     (function () {
@@ -386,15 +456,12 @@
                 for (var i = 0; i < localStorage.length; i++) {
                     var key = localStorage.key(i);
                     if (!key) continue;
-
                     var raw = localStorage.getItem(key);
                     if (!raw || raw.length < 2) continue;
                     var c = raw.charAt(0);
                     if (c !== '[' && c !== '{') continue;
-
                     var data;
                     try { data = JSON.parse(raw); } catch (e) { continue; }
-
                     var arrs = [];
                     if (Array.isArray(data)) {
                         arrs.push(data);
@@ -403,7 +470,6 @@
                             if (Array.isArray(data[k])) arrs.push(data[k]);
                         });
                     }
-
                     arrs.forEach(function (arr) {
                         arr.forEach(function (item) {
                             if (item && item.id != null) {
@@ -416,11 +482,8 @@
                         });
                     });
                 }
-            } catch (e) {
-                console.warn('[LabourWage] scan localStorage failed:', e);
-            }
+            } catch (e) { /* ignore */ }
 
-            /* 從當前表格 DOM 收集 */
             try {
                 var tbodies = document.querySelectorAll('#wage-tables-container tbody');
                 tbodies.forEach(function (tbody) {
@@ -448,13 +511,6 @@
                     }
                 });
             }
-            document.querySelectorAll('td').forEach(function (cell) {
-                var txt = (cell.textContent || '').replace(/\s+/g, '');
-                if (txt.indexOf(ID_PREFIX) === 0 && !seen[txt]) {
-                    seen[txt] = true;
-                    ids.push(txt);
-                }
-            });
             return ids;
         }
 
@@ -462,7 +518,6 @@
             var contractCode = window.getContractCode();
             var prefix = ID_PREFIX + contractCode + '/';
             var re = new RegExp('^' + escapeRegExp(prefix) + '(\\d+)[A-Za-z]?$');
-
             var ids = collectAllLabourIds();
             var maxNum = 0;
             ids.forEach(function (id) {
@@ -472,28 +527,20 @@
                     if (!isNaN(n) && n > maxNum) maxNum = n;
                 }
             });
-
             var nextNum = maxNum + 1;
             var numStr = String(nextNum);
             while (numStr.length < ID_PAD) numStr = '0' + numStr;
-            var newId = prefix + numStr + ID_SUFFIX;
-
-            console.log('[LabourWage] ✓ Document ID 生成:', newId,
-                        '(現有最大序號 =', maxNum, ', prefix =', prefix, ')');
-            return newId;
+            return prefix + numStr + ID_SUFFIX;
         };
 
         document.addEventListener('click', function (e) {
             var btn = e.target && e.target.closest ? e.target.closest('#add-wage-btn') : null;
             if (!btn) return;
-
             setTimeout(function () {
                 var modal = document.getElementById('add-wage-modal');
                 if (!modal || modal.style.display === 'none') return;
-
                 var idInput = document.getElementById('input-doc-id');
                 if (!idInput) return;
-
                 var correctId = window.computeNextLabourId();
                 idInput.value = correctId;
 
@@ -502,20 +549,15 @@
                     var lockValue = correctId;
                     var obs = new MutationObserver(function () {
                         if (idInput.value !== lockValue) {
-                            if (idInput.__lrrUserEdited) {
-                                obs.disconnect();
-                                return;
-                            }
+                            if (idInput.__lrrUserEdited) { obs.disconnect(); return; }
                             idInput.value = lockValue;
                         }
                     });
                     obs.observe(idInput, { attributes: true, attributeFilter: ['value'] });
-
                     idInput.addEventListener('input', function () {
                         idInput.__lrrUserEdited = true;
                         lockValue = idInput.value;
                     });
-
                     var modalObs = new MutationObserver(function () {
                         if (modal.style.display === 'none') {
                             idInput.__lrrIdLocked = false;
@@ -532,42 +574,7 @@
     </script>
 
     <!-- ============================================================ -->
-    <!-- ★ Sidebar state (unchanged) -->
-    <!-- ============================================================ -->
-    <script>
-        (function() {
-            function saveSidebarState() {
-                var sb = document.querySelector('.sidebar');
-                if (sb) localStorage.setItem('sidebarCollapsed', sb.classList.contains('collapsed') ? 'true' : 'false');
-            }
-            function restoreSidebarState() {
-                var sb = document.querySelector('.sidebar');
-                if (sb) {
-                    var savedState = localStorage.getItem('sidebarCollapsed');
-                    if (savedState === 'true') sb.classList.add('collapsed');
-                    else if (savedState === 'false') sb.classList.remove('collapsed');
-                }
-            }
-            function bindToggleEvent() {
-                var tb = document.querySelector('.toggle-btn');
-                if (tb) {
-                    tb.removeEventListener('click', saveSidebarState);
-                    tb.addEventListener('click', function() { setTimeout(saveSidebarState, 50); });
-                }
-            }
-            document.addEventListener('DOMContentLoaded', function() {
-                restoreSidebarState();
-                bindToggleEvent();
-                var storedDate = sessionStorage.getItem('globalDate');
-                var dateSpan = document.querySelector('.date-display span');
-                if (storedDate && dateSpan) dateSpan.textContent = storedDate;
-                else if (dateSpan) dateSpan.textContent = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
-            });
-        })();
-    </script>
-
-    <!-- ============================================================ -->
-    <!-- ★ 折疊 + 分類搜尋 (Labour Wage: ID=0, Site=4, SubmittedBy=6) -->
+    <!-- ★ 折疊、搜尋與排序 -->
     <!-- ============================================================ -->
     <script>
     (function () {
@@ -579,20 +586,17 @@
             document.addEventListener('click', function (e) {
                 var header = e.target.closest('.diary-category-section .table-header');
                 if (!header) return;
-                // 點擊搜尋框 / 按鈕 / 連結時不觸發折疊
                 if (e.target.closest('input') || e.target.closest('button') || e.target.closest('a')) return;
                 var section = header.closest('.diary-category-section');
                 if (section) section.classList.toggle('collapsed');
             });
         }
 
-        // 2. 分類搜尋（Labour Wage：ID=0, Site=4, SubmittedBy=6）
+        // 2. 分類搜尋 (ID=0, Site=4, SubmittedBy=6)
         if (!window.__labourSearchBound) {
             window.__labourSearchBound = true;
-
             document.addEventListener('input', function (e) {
                 if (!e.target.classList.contains('category-search')) return;
-
                 var category = e.target.getAttribute('data-category');
                 var query = e.target.value.toLowerCase().trim();
                 var tbody = document.getElementById(category + '-table-body');
@@ -603,12 +607,9 @@
 
                 rows.forEach(function (row) {
                     var cells = row.cells;
-                    if (!cells || cells.length < 7) {
-                        row.style.display = 'none';
-                        return;
-                    }
-                    var idText     = (cells[0] ? cells[0].textContent : '').toLowerCase();
-                    var siteText   = (cells[4] ? cells[4].textContent : '').toLowerCase();
+                    if (!cells || cells.length < 7) { row.style.display = 'none'; return; }
+                    var idText = (cells[0] ? cells[0].textContent : '').toLowerCase();
+                    var siteText = (cells[4] ? cells[4].textContent : '').toLowerCase();
                     var submitText = (cells[6] ? cells[6].textContent : '').toLowerCase();
 
                     if (idText.includes(query) || siteText.includes(query) || submitText.includes(query)) {
@@ -626,267 +627,264 @@
                         noResEl.textContent = 'No records.';
                     } else if (visibleCount === 0 && query !== '') {
                         noResEl.style.display = 'block';
-                        noResEl.textContent = 'No matching records found for "' + e.target.value + '".';
+                        noResEl.textContent = 'No matching records found.';
                     } else {
                         noResEl.style.display = 'none';
                     }
                 }
             });
         }
+
+        // 3. 表格按日期倒序排列
+        if (!window.__labourSortBound) {
+            window.__labourSortBound = true;
+            var _sorting = false;
+            var _sortTimer = null;
+            var PRIMARY_KEY = 'wageData';
+
+            function loadRecords() {
+                try {
+                    var raw = localStorage.getItem(PRIMARY_KEY);
+                    if (!raw) return [];
+                    var d = JSON.parse(raw);
+                    return Array.isArray(d) ? d : [];
+                } catch (e) { return []; }
+            }
+
+            function getSortKey(record) {
+                if (!record) return '';
+                if (record.period) {
+                    // 嘗試從 period 解析日期，例如 "01-Sep-2025 to 07-Sep-2025"
+                    var parts = String(record.period).split(' to ');
+                    if (parts.length > 0) {
+                        var d = new Date(parts[0].trim());
+                        if (!isNaN(d.getTime())) return d.toISOString();
+                    }
+                }
+                if (record.periodStart) return record.periodStart;
+                if (record.createdAt) return record.createdAt;
+                return '';
+            }
+
+            function sortTableByDate() {
+                if (_sorting) return;
+                var tbodies = document.querySelectorAll('#wage-tables-container .diary-table tbody');
+                if (!tbodies.length) return;
+
+                var records = loadRecords();
+                var map = {};
+                records.forEach(function (r) {
+                    if (r && r.id != null) map[String(r.id)] = r;
+                });
+
+                _sorting = true;
+                try {
+                    tbodies.forEach(function (tbody) {
+                        var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+                        if (rows.length < 2) return;
+                        var sortedRows = rows.slice().sort(function (a, b) {
+                            var idA = a.cells && a.cells[0] ? a.cells[0].textContent.trim() : '';
+                            var idB = b.cells && b.cells[0] ? b.cells[0].textContent.trim() : '';
+                            var keyA = getSortKey(map[idA]);
+                            var keyB = getSortKey(map[idB]);
+                            if (keyA < keyB) return 1;
+                            if (keyA > keyB) return -1;
+                            return 0;
+                        });
+                        var same = true;
+                        for (var i = 0; i < rows.length; i++) {
+                            if (rows[i] !== sortedRows[i]) { same = false; break; }
+                        }
+                        if (same) return;
+                        var frag = document.createDocumentFragment();
+                        sortedRows.forEach(function (row) { frag.appendChild(row); });
+                        tbody.appendChild(frag);
+                    });
+                } catch (e) { console.error('[Sort]', e); }
+                _sorting = false;
+            }
+
+            function scheduleSort() {
+                if (_sortTimer) clearTimeout(_sortTimer);
+                _sortTimer = setTimeout(sortTableByDate, 100);
+            }
+
+            function bindSort() {
+                var container = document.getElementById('wage-tables-container');
+                if (!container) { setTimeout(bindSort, 300); return; }
+                var observer = new MutationObserver(function () {
+                    if (_sorting) return;
+                    scheduleSort();
+                });
+                observer.observe(container, { childList: true, subtree: true });
+                scheduleSort();
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', bindSort);
+            } else {
+                bindSort();
+            }
+        }
     })();
     </script>
 
     <!-- ============================================================ -->
-    <!-- ★ 安全網：表格按 periodStart 倒序（labourwage.js 已排序，此處僅補保險） -->
+    <!-- ★ History 按鈕與 Modal -->
     <!-- ============================================================ -->
+    <div class="modal" id="history-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+        <div class="modal-content" style="background:white; border-radius:12px; width:780px; max-width:95%; padding:24px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+            <h3 style="margin-top:0; color:#1e293b; display:flex; align-items:center; gap:8px;"><i class="fas fa-history"></i> Status Change History</h3>
+            <div id="history-content" style="margin: 16px 0; max-height: 60vh; overflow-y: auto;"></div>
+            <div style="text-align:right; margin-top:16px;">
+                <button type="button" class="btn" id="close-history-modal" style="background:#e2e8f0; color:#334155; border:none; padding:8px 18px; border-radius:6px; cursor:pointer;">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
     (function () {
         'use strict';
-        if (window.__labourSortBound) return;
-        window.__labourSortBound = true;
+        if (window.__labourHistoryBound) return;
+        window.__labourHistoryBound = true;
 
-        var _sorting = false;
-        var _sortTimer = null;
+        var PRIMARY_KEY = 'wageData';
 
         function loadRecords() {
             try {
-                var raw = localStorage.getItem('wageData');
+                var raw = localStorage.getItem(PRIMARY_KEY);
                 if (!raw) return [];
                 var d = JSON.parse(raw);
                 return Array.isArray(d) ? d : [];
             } catch (e) { return []; }
         }
 
-        function getSortKey(record) {
-            if (!record) return '';
-            if (record.periodStart) return record.periodStart;
-            if (record.createdAt) return record.createdAt;
-            return '';
-        }
-
-        function sortTableByDate() {
-            if (_sorting) return;
-
-            var tbodies = document.querySelectorAll('#wage-tables-container .diary-table tbody');
-            if (!tbodies.length) return;
-
-            var records = loadRecords();
-            var map = {};
-            records.forEach(function (r) {
-                if (r && r.id != null) map[String(r.id)] = r;
-            });
-
-            _sorting = true;
+        function fmtDateTime(iso) {
+            if (!iso) return '—';
             try {
-                tbodies.forEach(function (tbody) {
-                    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
-                    if (rows.length < 2) return;
+                var d = new Date(iso);
+                if (isNaN(d.getTime())) return iso;
+                var yy = d.getFullYear();
+                var mm = String(d.getMonth() + 1).padStart(2, '0');
+                var dd = String(d.getDate()).padStart(2, '0');
+                var hh = String(d.getHours()).padStart(2, '0');
+                var mi = String(d.getMinutes()).padStart(2, '0');
+                return yy + '-' + mm + '-' + dd + ' ' + hh + ':' + mi;
+            } catch (e) { return iso; }
+        }
 
-                    var sortedRows = rows.slice().sort(function (a, b) {
-                        var idA = a.cells && a.cells[0] ? a.cells[0].textContent.trim() : '';
-                        var idB = b.cells && b.cells[0] ? b.cells[0].textContent.trim() : '';
-                        var keyA = getSortKey(map[idA]);
-                        var keyB = getSortKey(map[idB]);
-                        if (keyA < keyB) return 1;
-                        if (keyA > keyB) return -1;
-                        return 0;
-                    });
+        function escapeHtml(s) {
+            if (s == null) return '';
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
 
-                    var same = true;
-                    for (var i = 0; i < rows.length; i++) {
-                        if (rows[i] !== sortedRows[i]) { same = false; break; }
-                    }
-                    if (same) return;
+        function statusLabel(s) {
+            var map = {
+                'draft': 'Draft', 'submitted': 'Inspector Submitted', 'submitted-ig': 'Submit to IG',
+                'closed': 'IG Accepted', 'reopen': 'Reopened', 'cancelled': 'Cancelled',
+                'approved': 'Approved', 'rejected': 'Rejected', 'pending': 'Pending Approval'
+            };
+            return map[s] || s || '—';
+        }
 
-                    var frag = document.createDocumentFragment();
-                    sortedRows.forEach(function (row) { frag.appendChild(row); });
-                    tbody.appendChild(frag);
-                });
-            } catch (e) {
-                console.error('[Sort] Failed to sort:', e);
+        function showHistory(wageId) {
+            var records = loadRecords();
+            var record = null;
+            for (var i = 0; i < records.length; i++) {
+                if (String(records[i].id) === String(wageId)) { record = records[i]; break; }
             }
-            _sorting = false;
+            if (!record) { alert('Record not found.'); return; }
+
+            var modal = document.getElementById('history-modal');
+            var content = document.getElementById('history-content');
+            if (!modal || !content) return;
+            content.innerHTML = '<div style="padding:20px;text-align:center;color:#64748b;">Loading history...</div>';
+            modal.style.display = 'flex';
+
+            fetch('/api/record?collection=wage&id=' + encodeURIComponent(wageId), { cache: 'no-store' })
+                .then(function (res) { return res.ok ? res.json() : null; })
+                .then(function (full) {
+                    if (full && full.id) record = full;
+                    renderWageHistory(record, content);
+                })
+                .catch(function () { renderWageHistory(record, content); });
         }
 
-        function scheduleSort() {
-            if (_sortTimer) clearTimeout(_sortTimer);
-            _sortTimer = setTimeout(sortTableByDate, 100);
+        function renderWageHistory(record, content) {
+            var history = Array.isArray(record.statusHistory) ? record.statusHistory : [];
+            var html = '<div style="margin-bottom: 16px; padding: 12px 16px; background: #f8fafc; border-radius: 8px;"><div style="font-size: 0.8rem; color: #64748b; margin-bottom: 4px;">Document ID</div><div style="font-weight: 700; color: #1e40af;">' + escapeHtml(record.id) + '</div></div>';
+
+            if (history.length === 0) {
+                html += '<div style="padding: 30px; text-align: center; color: #94a3b8; font-style: italic;">No status change history yet.</div>';
+            } else {
+                html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">';
+                html += '<thead><tr style="background: #f1f5f9;"><th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">Date / Time</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">From</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">To</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">Approval</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">Changed By</th></tr></thead><tbody>';
+                history.slice().reverse().forEach(function (h) {
+                    var fa = h.fromApproval || ''; var ta = h.toApproval || '';
+                    var approvalCell = (fa || ta) ? (fa === ta ? escapeHtml(statusLabel(fa)) : escapeHtml(statusLabel(fa)) + ' <i class="fas fa-arrow-right" style="font-size:10px;"></i> <strong style="color:#8e44ad;">' + escapeHtml(statusLabel(ta)) + '</strong>') : '—';
+                    html += '<tr><td style="padding: 10px; border-bottom: 1px solid #f1f5f9;">' + escapeHtml(fmtDateTime(h.changedAt)) + '</td><td style="padding: 10px; border-bottom: 1px solid #f1f5f9;">' + escapeHtml(statusLabel(h.from)) + '</td><td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color:#2980b9; font-weight:600;">' + escapeHtml(statusLabel(h.to)) + '</td><td style="padding: 10px; border-bottom: 1px solid #f1f5f9;">' + approvalCell + '</td><td style="padding: 10px; border-bottom: 1px solid #f1f5f9;">' + escapeHtml(h.changedBy || '—') + '</td></tr>';
+                });
+                html += '</tbody></table>';
+            }
+            content.innerHTML = html;
         }
 
-        function bindSort() {
-            var container = document.getElementById('wage-tables-container');
-            if (!container) { setTimeout(bindSort, 300); return; }
-            var observer = new MutationObserver(function () {
-                if (_sorting) return;
-                scheduleSort();
+        function closeHistory() {
+            var modal = document.getElementById('history-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        document.addEventListener('click', function (e) {
+            var btn = e.target && e.target.closest ? e.target.closest('.history-btn') : null;
+            if (btn) {
+                e.preventDefault(); e.stopPropagation();
+                showHistory(btn.dataset.id);
+                return;
+            }
+            if (e.target && e.target.id === 'close-history-modal') { closeHistory(); return; }
+            var modal = document.getElementById('history-modal');
+            if (modal && e.target === modal) closeHistory();
+        });
+
+        function injectHistoryButtons() {
+            var tbodies = document.querySelectorAll('#wage-tables-container tbody');
+            if (!tbodies.length) { setTimeout(injectHistoryButtons, 500); return; }
+            tbodies.forEach(function (tbody) {
+                var rows = tbody.querySelectorAll('tr');
+                for (var i = 0; i < rows.length; i++) {
+                    var row = rows[i];
+                    var firstCell = row.cells && row.cells[0];
+                    if (!firstCell) continue;
+                    var wageId = firstCell.textContent.trim();
+                    if (!wageId) continue;
+                    var actionCell = row.cells[row.cells.length - 1];
+                    if (!actionCell) continue;
+                    if (actionCell.querySelector('.history-btn')) continue;
+                    var btn = document.createElement('button');
+                    btn.className = 'action-btn history-btn';
+                    btn.dataset.id = wageId;
+                    btn.title = 'View status change history';
+                    btn.innerHTML = '<i class="fas fa-history"></i>';
+                    btn.style.cssText = 'background: linear-gradient(135deg, #8e44ad, #732d91); color: white; margin-left: 4px;';
+                    actionCell.appendChild(btn);
+                }
             });
-            observer.observe(container, { childList: true, subtree: true });
-            scheduleSort();
+        }
+
+        function bindObserver() {
+            var container = document.getElementById('wage-tables-container');
+            if (!container) { setTimeout(bindObserver, 500); return; }
+            var obs = new MutationObserver(function () { injectHistoryButtons(); });
+            obs.observe(container, { childList: true, subtree: true });
+            injectHistoryButtons();
         }
 
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', bindSort);
+            document.addEventListener('DOMContentLoaded', function () { setTimeout(bindObserver, 500); });
         } else {
-            bindSort();
+            setTimeout(bindObserver, 500);
         }
     })();
     </script>
 </body>
-
-<!-- History Modal (unchanged) -->
-<div class="modal" id="history-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
-    <div class="modal-content" style="background:white; border-radius:12px; width:780px; max-width:95%; padding:24px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
-        <h3 style="margin-top:0; color:#1e293b; display:flex; align-items:center; gap:8px;"><i class="fas fa-history"></i> Status Change History</h3>
-        <div id="history-content" style="margin: 16px 0; max-height: 60vh; overflow-y: auto;"></div>
-        <div style="text-align:right; margin-top:16px;">
-            <button type="button" class="btn" id="close-history-modal" style="background:#e2e8f0; color:#334155; border:none; padding:8px 18px; border-radius:6px; cursor:pointer;">Close</button>
-        </div>
-    </div>
-</div>
-
-<!-- History Script (unchanged) -->
-<script>
-(function () {
-    'use strict';
-    if (window.__labourHistoryBound) return;
-    window.__labourHistoryBound = true;
-
-    var PRIMARY_KEY = 'wageData';
-
-    function loadRecords() {
-        try {
-            var raw = localStorage.getItem(PRIMARY_KEY);
-            if (!raw) return [];
-            var d = JSON.parse(raw);
-            return Array.isArray(d) ? d : [];
-        } catch (e) { return []; }
-    }
-
-    function fmtDateTime(iso) {
-        if (!iso) return '—';
-        try {
-            var d = new Date(iso);
-            if (isNaN(d.getTime())) return iso;
-            var yy = d.getFullYear();
-            var mm = String(d.getMonth() + 1).padStart(2, '0');
-            var dd = String(d.getDate()).padStart(2, '0');
-            var hh = String(d.getHours()).padStart(2, '0');
-            var mi = String(d.getMinutes()).padStart(2, '0');
-            return yy + '-' + mm + '-' + dd + ' ' + hh + ':' + mi;
-        } catch (e) { return iso; }
-    }
-
-    function escapeHtml(s) {
-        if (s == null) return '';
-        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-
-    function statusLabel(s) {
-        var map = {
-            'draft': 'Draft', 'submitted': 'Inspector Submitted', 'submitted-ig': 'Submit to IG',
-            'closed': 'IG Accepted', 'reopen': 'Reopened', 'cancelled': 'Cancelled',
-            'approved': 'Approved', 'rejected': 'Rejected', 'pending': 'Pending Approval'
-        };
-        return map[s] || s || '—';
-    }
-
-    function showHistory(wageId) {
-        var records = loadRecords();
-        var record = null;
-        for (var i = 0; i < records.length; i++) {
-            if (String(records[i].id) === String(wageId)) { record = records[i]; break; }
-        }
-        if (!record) { alert('Record not found.'); return; }
-
-        var modal = document.getElementById('history-modal');
-        var content = document.getElementById('history-content');
-        if (!modal || !content) return;
-        content.innerHTML = '<div style="padding:20px;text-align:center;color:#64748b;">Loading history...</div>';
-        modal.style.display = 'flex';
-
-        fetch('/api/record?collection=wage&id=' + encodeURIComponent(wageId), { cache: 'no-store' })
-            .then(function (res) { return res.ok ? res.json() : null; })
-            .then(function (full) {
-                if (full && full.id) record = full;
-                renderWageHistory(record, content);
-            })
-            .catch(function () { renderWageHistory(record, content); });
-    }
-
-    function renderWageHistory(record, content) {
-        var history = Array.isArray(record.statusHistory) ? record.statusHistory : [];
-        var html = '<div style="margin-bottom: 16px; padding: 12px 16px; background: #f8fafc; border-radius: 8px;"><div style="font-size: 0.8rem; color: #64748b; margin-bottom: 4px;">Document ID</div><div style="font-weight: 700; color: #1e40af;">' + escapeHtml(record.id) + '</div></div>';
-
-        if (history.length === 0) {
-            html += '<div style="padding: 30px; text-align: center; color: #94a3b8; font-style: italic;">No status change history yet.</div>';
-        } else {
-            html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">';
-            html += '<thead><tr style="background: #f1f5f9;"><th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">Date / Time</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">From</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">To</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">Approval</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">Changed By</th></tr></thead><tbody>';
-            history.slice().reverse().forEach(function (h) {
-                var fa = h.fromApproval || ''; var ta = h.toApproval || '';
-                var approvalCell = (fa || ta) ? (fa === ta ? escapeHtml(statusLabel(fa)) : escapeHtml(statusLabel(fa)) + ' <i class="fas fa-arrow-right" style="font-size:10px;"></i> <strong style="color:#8e44ad;">' + escapeHtml(statusLabel(ta)) + '</strong>') : '—';
-                html += '<tr><td style="padding: 10px; border-bottom: 1px solid #f1f5f9;">' + escapeHtml(fmtDateTime(h.changedAt)) + '</td><td style="padding: 10px; border-bottom: 1px solid #f1f5f9;">' + escapeHtml(statusLabel(h.from)) + '</td><td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color:#2980b9; font-weight:600;">' + escapeHtml(statusLabel(h.to)) + '</td><td style="padding: 10px; border-bottom: 1px solid #f1f5f9;">' + approvalCell + '</td><td style="padding: 10px; border-bottom: 1px solid #f1f5f9;">' + escapeHtml(h.changedBy || '—') + '</td></tr>';
-            });
-            html += '</tbody></table>';
-        }
-        content.innerHTML = html;
-    }
-
-    function closeHistory() {
-        var modal = document.getElementById('history-modal');
-        if (modal) modal.style.display = 'none';
-    }
-
-    document.addEventListener('click', function (e) {
-        var btn = e.target && e.target.closest ? e.target.closest('.history-btn') : null;
-        if (btn) {
-            e.preventDefault(); e.stopPropagation();
-            showHistory(btn.dataset.id);
-            return;
-        }
-        if (e.target && e.target.id === 'close-history-modal') { closeHistory(); return; }
-        var modal = document.getElementById('history-modal');
-        if (modal && e.target === modal) closeHistory();
-    });
-
-    function injectHistoryButtons() {
-        var tbodies = document.querySelectorAll('#wage-tables-container tbody');
-        if (!tbodies.length) { setTimeout(injectHistoryButtons, 500); return; }
-        tbodies.forEach(function (tbody) {
-            var rows = tbody.querySelectorAll('tr');
-            for (var i = 0; i < rows.length; i++) {
-                var row = rows[i];
-                var firstCell = row.cells && row.cells[0];
-                if (!firstCell) continue;
-                var wageId = firstCell.textContent.trim();
-                if (!wageId) continue;
-                var actionCell = row.cells[row.cells.length - 1];
-                if (!actionCell) continue;
-                if (actionCell.querySelector('.history-btn')) continue;
-                var btn = document.createElement('button');
-                btn.className = 'action-btn history-btn';
-                btn.dataset.id = wageId;
-                btn.title = 'View status change history';
-                btn.innerHTML = '<i class="fas fa-history"></i>';
-                btn.style.cssText = 'background: linear-gradient(135deg, #8e44ad, #732d91); color: white; margin-left: 4px;';
-                actionCell.appendChild(btn);
-            }
-        });
-    }
-
-    function bindObserver() {
-        var container = document.getElementById('wage-tables-container');
-        if (!container) { setTimeout(bindObserver, 500); return; }
-        var obs = new MutationObserver(function () { injectHistoryButtons(); });
-        obs.observe(container, { childList: true, subtree: true });
-        injectHistoryButtons();
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function () { setTimeout(bindObserver, 500); });
-    } else {
-        setTimeout(bindObserver, 500);
-    }
-})();
-</script>
 </html>
