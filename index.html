@@ -24,6 +24,14 @@
         /* ============================================================
            ★ 4S Button Group (btn-group-4s)
            ============================================================ */
+
+        /* Prevent the browser from treating the page as a fixed-height app */
+html, body {
+    height: auto !important;
+    min-height: 100% !important;
+    overflow-y: auto !important;
+}
+
         .btn-bar-4s {
             display: flex;
             justify-content: flex-end; /* 靠右 */
@@ -100,6 +108,36 @@
 
         .btn-4s-toggle.active .toggle-arrow {
             transform: rotate(180deg);
+        }
+
+        /* ============================================================
+           ★ Print Button (Top Header)
+           ============================================================ */
+        .btn-print-dashboard {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            box-shadow: 0 3px 10px rgba(52, 152, 219, 0.3);
+            margin-left: 12px;
+        }
+
+        .btn-print-dashboard:hover {
+            background: linear-gradient(135deg, #2980b9, #1f618d);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.45);
+        }
+
+        .btn-print-dashboard:active {
+            transform: scale(0.98);
         }
 
         /* ============================================================
@@ -847,7 +885,7 @@
             margin-top: 10px;     
         }
 
-                /* ============================================================ */
+        /* ============================================================ */
         /* ★ 終極側邊欄防遮擋補丁 */
         /* ============================================================ */
         body {
@@ -881,6 +919,213 @@
             width: 70px;
         }
 
+        /* ============================================================
+           ★ Print Styles - Multi-page, 2-column cards, full charts
+           ============================================================ */
+        @page {
+            margin: 1cm;
+        }
+
+        @media print {
+    /* ---------- Hide controls ---------- */
+    .sidebar, .header-controls, .btn-bar-4s, .refresh-alerts-btn,
+    .export-btn, .smart-alert-filters, footer, .user-date-row,
+    #current-date, .btn-print-dashboard, .trend-card select,
+    .card-badge {
+        display: none !important;
+    }
+
+    /* ---------- Base layout ---------- */
+    @page { margin: 1cm; }
+    html, body {
+        background: #fff !important;
+        overflow: visible !important;
+        font-size: 10pt !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+    
+    /* CRITICAL: Force flex/grid to standard block */
+    .main-content {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        display: block !important;
+        float: none !important;
+    }
+    .dashboard {
+        padding: 0 !important;
+        margin: 0 !important;
+        display: block !important;
+    }
+
+    /* ---------- Header ---------- */
+    .header {
+        margin: 0 0 10pt 0 !important;
+        padding-bottom: 5pt !important;
+        border-bottom: 2px solid #000 !important;
+        text-align: center !important;
+        display: block !important;
+    }
+    .header h1 { font-size: 16pt !important; margin: 0 !important; }
+
+    /* ---------- Feature cards: STACK them vertically ---------- */
+    .feature-cards {
+        display: block !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .feature-card {
+        display: block !important;
+        box-shadow: none !important;
+        border: 1px solid #666 !important;
+        border-radius: 0 !important;
+        padding: 10pt !important;
+        margin: 0 0 10pt 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        float: none !important;
+    }
+
+    .feature-card .card-header {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        border-bottom: 1px solid #ccc !important;
+        padding-bottom: 4pt !important;
+        margin-bottom: 6pt !important;
+        width: 100% !important;
+    }
+    .feature-card .card-title { font-size: 11pt !important; font-weight: bold !important; }
+    
+    /* ---------- KPI Grid ---------- */
+    .kpi-data-grid {
+        display: block !important;
+        width: 100% !important;
+        margin-bottom: 10pt !important;
+    }
+    .kpi-row {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 3pt 0 !important;
+        border-bottom: 1px dotted #aaa !important;
+        font-size: 9pt !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    .kpi-row:last-child { border-bottom: none !important; }
+    .kpi-label { color: #333 !important; font-weight: normal !important; }
+    .kpi-value { font-weight: bold !important; color: #000 !important; text-align: right !important; }
+
+    /* ---------- Progress Bar ---------- */
+    .progress-section { display: block !important; margin-top: 5pt !important; width: 100% !important; }
+    .progress-container {
+        height: 6pt !important;
+        background: #eee !important;
+        border: 1px solid #999 !important;
+        display: block !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    .progress-bar {
+        height: 100% !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    .progress-labels {
+        display: flex !important;
+        justify-content: space-between !important;
+        font-size: 7pt !important;
+        color: #555 !important;
+        margin-top: 2pt !important;
+    }
+
+    /* ---------- Charts ---------- */
+    .trend-charts {
+        display: block !important;
+        width: 100% !important;
+    }
+    .trend-card {
+        display: block !important;
+        box-shadow: none !important;
+        border: 1px solid #666 !important;
+        border-radius: 0 !important;
+        padding: 10pt !important;
+        margin: 0 0 10pt 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+    .trend-card .chart-header h3 { font-size: 11pt !important; margin: 0 0 5pt 0 !important; }
+
+    /* CRITICAL: Lock canvas height */
+    .trend-card canvas {
+        display: block !important;
+        width: 100% !important;
+        height: 200pt !important;
+        max-height: 200pt !important;
+    }
+
+    /* ---------- 4S Panels (if open) ---------- */
+    .collapsible-wrapper-4s.show {
+        display: block !important;
+        page-break-before: always !important;
+    }
+    .collapsible-wrapper-4s:not(.show) { display: none !important; }
+
+    .smart-site-alerts-section,
+    .smart-site-stats-section {
+        display: block !important;
+        box-shadow: none !important;
+        border: 1px solid #666 !important;
+        border-radius: 0 !important;
+        padding: 10pt !important;
+        margin: 0 0 10pt 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .smart-stats-kpi-grid {
+        display: block !important;
+        width: 100% !important;
+    }
+    .smart-kpi-card {
+        display: block !important;
+        border: 1px solid #999 !important;
+        padding: 5pt !important;
+        margin-bottom: 5pt !important;
+    }
+
+    .smart-stats-charts-grid {
+        display: block !important;
+        width: 100% !important;
+    }
+    .smart-chart-card {
+        display: block !important;
+        border: 1px solid #999 !important;
+        padding: 5pt !important;
+        margin-bottom: 10pt !important;
+    }
+    .smart-chart-body {
+        height: 150pt !important;
+        display: block !important;
+    }
+    .smart-chart-card canvas {
+        height: 150pt !important;
+        max-height: 150pt !important;
+        width: 100% !important;
+        display: block !important;
+    }
+}
     </style>
 </head>
 <body>
@@ -905,6 +1150,11 @@
 
         <div class="dashboard">
             <!-- 并排卡片布局 -->
+             <!-- ★ Print Dashboard Button moved here -->
+                    <button type="button" id="print-dashboard-btn" class="btn-print-dashboard" title="Print Dashboard">
+                        <i class="fas fa-print"></i>
+                        <span>Print Dashboard</span>
+                    </button>
             <div class="feature-cards">
                 <!-- Site Diaries 卡片 -->
                 <div class="feature-card site-diary">
@@ -1489,10 +1739,14 @@
         }
 
         // ★ NEW: filter records by current project
+        // FIXED: if there's no project id OR no record has a `project` field,
+        // pass everything through (so legacy/static data still displays).
         function filterByCurrentProject(records) {
             if (!Array.isArray(records)) return [];
             var pid = getCurrentProjectId();
-            if (!pid) return [];
+            if (!pid) return records;
+            var hasProjectField = records.some(function (r) { return r && r.project; });
+            if (!hasProjectField) return records;
             return records.filter(function (r) {
                 if (!r) return false;
                 return String(r.project || '') === String(pid);
@@ -1626,6 +1880,7 @@
                         },
                         options: {
                             responsive: true,
+                            maintainAspectRatio: false,
                             plugins: {
                                 legend: { position: 'top' },
                                 tooltip: { mode: 'index', intersect: false, callbacks: { label: ctx => `Submitted: ${ctx.parsed.y}` } }
@@ -1787,6 +2042,7 @@
                         },
                         options: {
                             responsive: true,
+                            maintainAspectRatio: false,
                             plugins: {
                                 legend: { position: 'top' },
                                 tooltip: { mode: 'index', intersect: false, callbacks: { label: ctx => `Submitted: ${ctx.parsed.y}` } }
@@ -1939,6 +2195,7 @@
                         },
                         options: {
                             responsive: true,
+                            maintainAspectRatio: false,
                             plugins: {
                                 legend: { position: 'top' },
                                 tooltip: { mode: 'index', intersect: false, callbacks: { label: ctx => `Submitted: ${ctx.parsed.y}` } }
@@ -2063,14 +2320,30 @@
         loadDashboardSummary();
         })();
 
+        // ★ FIX: Overdue Trend logic
         (function handleOverdueTrend() {
     const OVERDUE_DAYS = 14;
+
+    // Helper to get date parts correctly (avoid timezone issues)
+    function getLocalDateParts(dateInput) {
+        if (!dateInput) return null;
+        let d = new Date(dateInput);
+        if (isNaN(d.getTime())) return null;
+        // Normalize to local midnight to compare dates
+        return {
+            year: d.getFullYear(),
+            month: d.getMonth(),
+            date: d.getDate()
+        };
+    }
 
     // 讀取資料
     function loadAll() {
         function byProject(list) {
             var pid = sessionStorage.getItem('currentProjectId');
-            if (!pid || !Array.isArray(list)) return [];
+            // FIX: If no project selected, still show data for demo purposes
+            if (!pid) return Array.isArray(list) ? list : [];
+            if (!Array.isArray(list)) return [];
             return list.filter(function (r) { return r && String(r.project || '') === String(pid); });
         }
         var out = { diary: [], inspection: [], wage: [] };
@@ -2089,7 +2362,7 @@
     }
 
     // ==========================================
-    // 1. Site Diary 的解析 (原封不動搬自 sitediary.js)
+    // 1. Site Diary
     // ==========================================
     function getDiaryDate(item) {
         if (!item) return null;
@@ -2134,7 +2407,7 @@
     }
 
     // ==========================================
-    // 2. Safety Inspection 的解析 (原封不動搬自 safetyinspect.js)
+    // 2. Safety Inspection
     // ==========================================
     function formatSafetyDate(dateString) {
         if (!dateString) return '';
@@ -2180,7 +2453,7 @@
     }
 
     // ==========================================
-    // 3. Labour Wage 的解析 (原封不動搬自 labourwage.js)
+    // 3. Labour Wage
     // ==========================================
     function getWageDate(item) {
         if (!item) return null;
@@ -2276,6 +2549,7 @@
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false, // FIX: Important for print
                 plugins: {
                     legend: { position: 'top' },
                     tooltip: { mode: 'index', intersect: false }
@@ -2326,13 +2600,25 @@
 
     function waitForChart() {
         if (typeof Chart === 'undefined') { setTimeout(waitForChart, 200); return; }
+        
+        // FIX: Ensure we wait for data to load if DWSS_Storage is used
         if (window.DWSS_Storage && typeof window.DWSS_Storage.whenReady === 'function' && !window.__dwssDash) {
-            window.DWSS_Storage.whenReady(function () { setTimeout(waitForChart, 300); });
+            window.DWSS_Storage.whenReady(function () { 
+                setTimeout(initOverdueYearSelector, 300); 
+            });
             return;
         }
+        
+        // FIX: If no storage, initialize directly (fallback to defaults)
         initOverdueYearSelector();
     }
-    waitForChart();
+    
+    // FIX: Use window.load to ensure all other scripts (like storage) have run
+    if (document.readyState === 'complete') {
+        waitForChart();
+    } else {
+        window.addEventListener('load', waitForChart);
+    }
 })();
 
     </script>
@@ -2905,9 +3191,10 @@
     </script>
 
     <!-- ============================================================
-         ★ 4S Toggle Handler
+         ★ 4S Toggle Handler & Print Handler
          - Button 1 (btn-4s-open): 跳轉 4S 系統
          - Button 2 (btn-4s-toggle): 展開/收起 SSSS 面板
+         - Button 3 (btn-print-dashboard): 打印儀表板
          ============================================================ -->
     <script>
         (function () {
@@ -2967,9 +3254,10 @@
                     // Chart.js 需要 resize（因為之前 display 為 hidden）
                     setTimeout(function () {
                         try {
-                            if (typeof Chart !== 'undefined' && Chart.instances) {
-                                Object.keys(Chart.instances).forEach(function (k) {
-                                    try { Chart.instances[k].resize(); } catch (e) {}
+                            if (typeof Chart !== 'undefined') {
+                                document.querySelectorAll('canvas').forEach(function (cv) {
+                                    var c = Chart.getChart(cv);
+                                    if (c) { try { c.resize(); } catch (e) {} }
                                 });
                             }
                         } catch (e) {
@@ -2980,34 +3268,69 @@
             }
 
             // ============================================================
-            // 3. Bind Events
+            // 3. Print Dashboard
+            // ============================================================
+            function printDashboard() {
+    console.log('[Print] Triggering print...');
+
+    // 1. Temporarily hide elements that might interfere
+    document.body.classList.add('printing-mode');
+
+    // 2. Force Chart.js to resize
+    if (typeof Chart !== 'undefined') {
+        document.querySelectorAll('canvas').forEach(function (cv) {
+            var chart = Chart.getChart(cv);
+            if (chart) {
+                try {
+                    // Give it a fake width/height for print
+                    chart.resize(800, 250); 
+                } catch (e) {}
+            }
+        });
+    }
+
+    // 3. Delay the print dialog slightly to allow the DOM to paint
+    setTimeout(function () {
+        window.print();
+        
+        // 4. Restore normal sizes after printing
+        setTimeout(function () {
+            document.body.classList.remove('printing-mode');
+            if (typeof Chart !== 'undefined') {
+                document.querySelectorAll('canvas').forEach(function (cv) {
+                    var chart = Chart.getChart(cv);
+                    if (chart) { try { chart.resize(); } catch (e) {} }
+                });
+            }
+        }, 500);
+    }, 500);
+}
+
+            // ============================================================
+            // 4. Bind Events
             // ============================================================
             function bindEvents() {
                 console.log('[4S] Binding events...');
 
                 var openBtn = document.getElementById('open-4s-btn');
                 var toggleBtn = document.getElementById('toggle-4s-btn');
+                var printBtn = document.getElementById('print-dashboard-btn');
                 var panel = document.getElementById('s4-panel');
 
                 // Debug: 檢查元素是否存在
                 console.log('[4S] Elements check:');
                 console.log('  - #open-4s-btn:', openBtn ? '✓ FOUND' : '✗ NOT FOUND');
                 console.log('  - #toggle-4s-btn:', toggleBtn ? '✓ FOUND' : '✗ NOT FOUND');
+                console.log('  - #print-dashboard-btn:', printBtn ? '✓ FOUND' : '✗ NOT FOUND');
                 console.log('  - #s4-panel:', panel ? '✓ FOUND' : '✗ NOT FOUND');
 
-                if (!openBtn) {
-                    console.error('[4S] Cannot bind: #open-4s-btn missing');
-                }
-                if (!toggleBtn) {
-                    console.error('[4S] Cannot bind: #toggle-4s-btn missing');
-                }
-                if (!panel) {
-                    console.error('[4S] Cannot bind: #s4-panel missing');
-                }
+                if (!openBtn) console.error('[4S] Cannot bind: #open-4s-btn missing');
+                if (!toggleBtn) console.error('[4S] Cannot bind: #toggle-4s-btn missing');
+                if (!printBtn) console.error('[Print] Cannot bind: #print-dashboard-btn missing');
+                if (!panel) console.error('[4S] Cannot bind: #s4-panel missing');
 
                 // Bind open button
                 if (openBtn) {
-                    // 先移除舊 listener（防止重複綁定）
                     var newOpenBtn = openBtn.cloneNode(true);
                     openBtn.parentNode.replaceChild(newOpenBtn, openBtn);
                     newOpenBtn.addEventListener('click', function (e) {
@@ -3030,6 +3353,18 @@
                     console.log('[4S] ✓ Toggle button bound');
                 }
 
+                // Bind print button
+                if (printBtn) {
+                    var newPrintBtn = printBtn.cloneNode(true);
+                    printBtn.parentNode.replaceChild(newPrintBtn, printBtn);
+                    newPrintBtn.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        printDashboard();
+                    });
+                    console.log('[Print] ✓ Print button bound');
+                }
+
                 // 默認隱藏
                 if (panel) {
                     panel.classList.remove('show');
@@ -3040,11 +3375,20 @@
             }
 
             // ============================================================
-            // 4. Init
+            // 5. Init
             // ============================================================
             function init() {
                 console.log('[4S] Init called');
                 bindEvents();
+
+                // Make sure all charts are correctly sized before printing
+                window.addEventListener('beforeprint', function () {
+                    if (typeof Chart === 'undefined') return;
+                    document.querySelectorAll('canvas').forEach(function (cv) {
+                        var c = Chart.getChart(cv);
+                        if (c) { try { c.resize(); } catch (e) {} }
+                    });
+                });
             }
 
             // 用 window.load 確保所有 script + DOM 已 render
@@ -3061,6 +3405,6 @@
                 location.reload();
             }
         });
-        </script>
+    </script>
 </body>
 </html>
