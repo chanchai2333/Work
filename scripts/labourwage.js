@@ -493,17 +493,30 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         // 監聽 Copy from 選擇
+         // 監聽 Copy from 選擇，並填入表單
         if (copyFromSelect) {
             copyFromSelect.addEventListener('change', function() {
                 var selectedId = this.value;
                 if (!selectedId) return;
+
                 var source = wageData.find(function(r) { return String(r.id) === String(selectedId); });
                 if (!source) return;
 
                 if (source.type) document.getElementById('input-type').value = source.type;
                 if (source.site) document.getElementById('input-site').value = source.site;
                 if (source.submittedBy) document.getElementById('input-submitted-by').value = source.submittedBy;
-                if (source.period) document.getElementById('input-period').value = source.period;
+
+                // ★ 解析 Period 並填入單一月份與年份
+                if (source.period) {
+                    const parts = source.period.split(' to ');
+                    if (parts.length > 0) {
+                        const d = new Date(parts[0].trim());
+                        if (!isNaN(d)) {
+                            document.getElementById('input-period-year').value = d.getFullYear();
+                            document.getElementById('input-period-month').value = String(d.getMonth() + 1).padStart(2, '0');
+                        }
+                    }
+                }
             });
         }
 
@@ -530,8 +543,17 @@ document.addEventListener("DOMContentLoaded", function () {
                 var type = document.getElementById('input-type').value;
                 var status = document.getElementById('input-status').value;
                 var site = document.getElementById('input-site').value.trim();
+                
+                // ★ 讀取單一月份與年份
+                var targetMonth = document.getElementById('input-period-month').value;
+                var targetYear = document.getElementById('input-period-year').value;
+
                 var submittedBy = document.getElementById('input-submitted-by').value;
-                var periodStr = document.getElementById('input-period').value.trim();
+
+                // 自動計算該月第一天與最後一天
+                var periodStart = targetYear + '-' + targetMonth + '-01';
+                var endDay = new Date(targetYear, parseInt(targetMonth), 0).getDate();
+                var periodEnd = targetYear + '-' + targetMonth + '-' + String(endDay).padStart(2, '0');
 
                 var pdfData = null;
                 var file = fileInput.files[0];
@@ -546,7 +568,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
 
                 var docIdInput = document.getElementById('input-doc-id');
-                var newId = (docIdInput && docIdInput.value.trim()) ? docIdInput.value.trim() : generateNextLabourWageId();
+                var newId = (docIdInput && docIdInput.value.trim())
+                    ? docIdInput.value.trim()
+                    : generateNextLabourWageId();
 
                 if (wageData.some(function(r) { return String(r.id) === String(newId); })) {
                     newId = generateNextLabourWageId();
@@ -558,9 +582,23 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
 
                 var typeText = "";
-                if (type === "GF527A") typeText = "GF527A - Return on Construction Site Employment";
-                else if (type === "GF527-2003") typeText = "GF527 (2003) - Labour Wage";
-                else typeText = "GF527 (2017) - Labour Wage";
+                if (type === "GF527A") {
+                    typeText = "GF527A - Return on Construction Site Employment";
+                } else if (type === "GF527-2003") {
+                    typeText = "GF527 (2003) - Labour Wage";
+                } else {
+                    typeText = "GF527 (2017) - Labour Wage";
+                }
+
+                // 格式化 Period 字串 (ex: 01-Jan-2025 to 31-Jan-2025)
+                function fmt(dStr) {
+                    var d = new Date(dStr);
+                    var day = String(d.getDate()).padStart(2, '0');
+                    var month = d.toLocaleString('en-US', { month: 'short' });
+                    var year = d.getFullYear();
+                    return day + '-' + month + '-' + year;
+                }
+                var periodStr = fmt(periodStart) + ' to ' + fmt(periodEnd);
 
                 var newWage = {
                     id: newId,
@@ -568,7 +606,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     typeText: typeText,
                     status: status,
                     site: site,
-                    period: periodStr,
+                    period: periodStr, 
                     submittedBy: submittedBy,
                     project: getCurrentProjectId(),
                     pdfData: pdfData,
@@ -579,7 +617,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 wageData.push(newWage);
                 saveData();
+                
                 var saved = false;
+               
                 try {
                     var res = await fetch('/api/record?collection=wage&id=' + encodeURIComponent(newId), {
                         method: 'PUT',

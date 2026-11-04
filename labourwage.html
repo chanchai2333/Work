@@ -163,8 +163,24 @@
                 <label>Site</label>
                 <input type="text" id="input-site" required placeholder="Enter site name">
 
-                <label>Period</label>
-                <input type="text" id="input-period" placeholder="e.g., 01-Sep-2025 to 07-Sep-2025" required>
+                 <label>Period</label>
+                <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                    <select id="input-period-month" required style="flex: 1; margin-bottom: 0;">
+                        <option value="01">January</option>
+                        <option value="02">February</option>
+                        <option value="03">March</option>
+                        <option value="04">April</option>
+                        <option value="05">May</option>
+                        <option value="06">June</option>
+                        <option value="07">July</option>
+                        <option value="08">August</option>
+                        <option value="09">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                    <input type="number" id="input-period-year" required value="2025" style="width: 120px; margin-bottom: 0;">
+                </div>
 
                 <label>Submitted By</label>
                 <input type="text" id="input-submitted-by" required>
