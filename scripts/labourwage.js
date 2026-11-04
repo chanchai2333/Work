@@ -489,11 +489,15 @@ document.addEventListener("DOMContentLoaded", function () {
                     DWSS_Auth.adjustFormStatusOptions('input-status');
                     DWSS_Auth.autoFillSubmittedBy('input-submitted-by');
                 }
+                
+                // 設定預設年份
+                var currYear = new Date().getFullYear();
+                var yearInput = document.getElementById('input-period-year');
+                if (yearInput) yearInput.value = currYear;
             });
         }
 
         // 監聽 Copy from 選擇
-         // 監聽 Copy from 選擇，並填入表單
         if (copyFromSelect) {
             copyFromSelect.addEventListener('change', function() {
                 var selectedId = this.value;
@@ -543,27 +547,44 @@ document.addEventListener("DOMContentLoaded", function () {
                 var type = document.getElementById('input-type').value;
                 var status = document.getElementById('input-status').value;
                 var site = document.getElementById('input-site').value.trim();
+                var submittedBy = document.getElementById('input-submitted-by').value;
                 
                 // ★ 讀取單一月份與年份
                 var targetMonth = document.getElementById('input-period-month').value;
                 var targetYear = document.getElementById('input-period-year').value;
 
-                var submittedBy = document.getElementById('input-submitted-by').value;
-
-                // 自動計算該月第一天與最後一天
+                // 組合出 YYYY-MM-DD
                 var periodStart = targetYear + '-' + targetMonth + '-01';
+                // 計算所選月份的最後一天
                 var endDay = new Date(targetYear, parseInt(targetMonth), 0).getDate();
                 var periodEnd = targetYear + '-' + targetMonth + '-' + String(endDay).padStart(2, '0');
 
                 var pdfData = null;
+                var copiedFormData = {};
+                
+                // ★ 關鍵修正：處理 PDF 與表單數據複製
                 var file = fileInput.files[0];
                 if (file) {
+                    // 使用者有上傳新檔案
                     try { pdfData = await readFileAsBase64(file); }
                     catch (err) { alert('Failed to read PDF file.'); return; }
                 } else if (copyFromSelect && copyFromSelect.value) {
-                    var sourceRecord = wageData.find(function(r) { return String(r.id) === String(copyFromSelect.value); });
-                    if (sourceRecord && sourceRecord.pdfData) {
-                        pdfData = sourceRecord.pdfData;
+                    // 使用者選擇從舊文件複製
+                    var sourceId = copyFromSelect.value;
+                    try {
+                        // 必須向後端請求「完整」的單筆資料，因為列表 API 沒有 formData
+                        var detailRes = await fetch('/api/records/wage/' + encodeURIComponent(sourceId), { cache: 'no-store' });
+                        if (detailRes.ok) {
+                            var sourceRecord = await detailRes.json();
+                            if (sourceRecord.pdfData) {
+                                pdfData = sourceRecord.pdfData;
+                            }
+                            if (sourceRecord.formData) {
+                                copiedFormData = JSON.parse(JSON.stringify(sourceRecord.formData));
+                            }
+                        }
+                    } catch (err) {
+                        console.error('無法取得來源文件詳細資料:', err);
                     }
                 }
 
@@ -590,7 +611,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     typeText = "GF527 (2017) - Labour Wage";
                 }
 
-                // 格式化 Period 字串 (ex: 01-Jan-2025 to 31-Jan-2025)
+                // 格式化 Period 字串 (ex: 01-Sep-2025 to 30-Sep-2025)
                 function fmt(dStr) {
                     var d = new Date(dStr);
                     var day = String(d.getDate()).padStart(2, '0');
@@ -610,6 +631,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     submittedBy: submittedBy,
                     project: getCurrentProjectId(),
                     pdfData: pdfData,
+                    formData: copiedFormData, // ★ 這裡就會有完整的表單內容了
                     annotations: [],
                     statusHistory: [],
                     createdAt: new Date().toISOString()
@@ -617,9 +639,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 wageData.push(newWage);
                 saveData();
-                
                 var saved = false;
-               
+              
                 try {
                     var res = await fetch('/api/record?collection=wage&id=' + encodeURIComponent(newId), {
                         method: 'PUT',
@@ -632,14 +653,17 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (!saved && window.DWSS_Storage && typeof window.DWSS_Storage.flush === 'function') {
                     saved = await window.DWSS_Storage.flush(STORAGE_KEY);
                 }
-                renderWageTable();
+                
                 modal.style.display = 'none';
                 addForm.reset();
+                
                 if (!saved) {
                     alert('Wage record was not saved to the database. Please try again.');
                     return;
                 }
-                alert('Wage record added successfully!\n\nNew ID: ' + newId);
+                
+                // ★ 新增成功後，直接跳轉到編輯頁面
+                window.location.href = 'editlabour.html?id=' + encodeURIComponent(newId);
             });
         }
     }
