@@ -54,11 +54,21 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             if (!res.ok || !data.user) {
-                showError(data.message || 'Invalid username or password.');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
-                return;
+            var msg = 'Invalid username or password.';
+            if (data && data.error === 'no_project_access') {
+                msg = 'You do not have access to the selected project.';
+            } else if (data && data.error === 'no_projects_assigned') {
+                msg = 'No projects have been assigned to your account. Please contact the administrator.';
+            } else if (data && data.error === 'disabled') {
+                msg = 'This account is disabled. Please contact the administrator.';
+            } else if (data && data.message) {
+                msg = data.message;
             }
+            showError(msg);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+            return;
+        }
 
             // 3. Success! Show project picker
             pendingCredentials = { username, password };
@@ -182,5 +192,22 @@ document.addEventListener('DOMContentLoaded', function () {
             err.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${msg}`;
             err.classList.add('show');
         }
+    }
+});
+// Add near the bottom of login.html or in login.js
+document.addEventListener('DOMContentLoaded', function () {
+    var toggleBtn = document.getElementById('toggle-password');
+    var pwdInput  = document.getElementById('password');
+    if (toggleBtn && pwdInput) {
+        toggleBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            var isPwd = pwdInput.type === 'password';
+            pwdInput.type = isPwd ? 'text' : 'password';
+            var icon = toggleBtn.querySelector('i');
+            if (icon) {
+                icon.classList.toggle('fa-eye', !isPwd);
+                icon.classList.toggle('fa-eye-slash', isPwd);
+            }
+        });
     }
 });

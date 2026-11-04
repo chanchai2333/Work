@@ -181,9 +181,34 @@
                     </div>
                 </div>
                 
-                <!-- 电邮设置卡片 已移除 -->
-                
-                <!-- 下载路径设置卡片 已移除 -->
+                <div class="feature-card security-settings">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon"><i class="fas fa-lock"></i></div>
+                        <span>Security Settings</span>
+                    </div>
+                    <div class="card-badge"><i class="fas fa-shield-alt"></i> Admin Only</div>
+                </div>
+                <div class="settings-form">
+                    <div class="form-group">
+                        <label for="require-submit-password">
+                            Require password confirmation on Submit / Approve / Reject
+                        </label>
+                        <select id="require-submit-password" class="form-control">
+                            <option value="true">Enabled (recommended)</option>
+                            <option value="false">Disabled</option>
+                        </select>
+                        <small style="color:#64748b;display:block;margin-top:6px;">
+                            When enabled, every user must re-enter their password before performing a status-changing action.
+                        </small>
+                    </div>
+                    <div class="settings-actions">
+                        <button class="btn btn-primary" id="save-security-settings">
+                            <i class="fas fa-save"></i> Save Security Settings
+                        </button>
+                    </div>
+                </div>
+            </div>
                 
             </div>
         </div>
@@ -459,6 +484,22 @@
         } else {
             setTimeout(initPasswordToggle, 100);
         }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var sel = document.getElementById('require-submit-password');
+        if (sel) {
+            var v = localStorage.getItem('dwss_require_submit_password');
+            sel.value = (v === 'false') ? 'false' : 'true';
+        }
+        var saveBtn = document.getElementById('save-security-settings');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function () {
+                localStorage.setItem('dwss_require_submit_password',
+                    document.getElementById('require-submit-password').value);
+                alert('Security settings saved.');
+            });
+        }
+    });
     </script>
     
     <style>

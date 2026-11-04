@@ -909,6 +909,14 @@
             }
 
             this.saveToStorage();
+            var pwdToSet = password || (editingUserId ? null : 'Welcome@123');
+            if (pwdToSet) {
+                fetch('/api/users/set-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: user.id, newPassword: pwdToSet })
+                }).catch(function (e) { console.warn('[UserMgmt] set-password failed', e); });
+            }
             this.renderUserTable();
             this.updateUserStats();
             this.closeModal();

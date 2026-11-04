@@ -260,9 +260,17 @@ app.post('/api/auth/login', async (req, res) => {
     if (matched.status === 'offline') return res.status(403).json({ error: 'disabled' });
 
     const isAdmin = matched.role === 'admin' || matched.userRole === 'admin';
+
+    // Allow the first call (which sends NO projectId) to succeed.
+    // Only enforce the project check when a projectId is actually provided.
     if (!isAdmin) {
-      if (!Array.isArray(matched.projectIds) || !matched.projectIds.includes(projectId)) {
-        return res.status(403).json({ error: 'no_project_access', projects: matched.projectIds || [] });
+      if (!Array.isArray(matched.projectIds) || matched.projectIds.length === 0) {
+        return res.status(403).json({ error: 'no_projects_assigned', projects: [] });
+      }
+      if (projectId) {
+        if (!matched.projectIds.includes(projectId)) {
+          return res.status(403).json({ error: 'no_project_access', projects: matched.projectIds });
+        }
       }
     }
 
@@ -788,6 +796,39 @@ app.post('/api/records/:collection/bulk', requireActiveSession, async (req, res)
     res.status(500).json({ error: err.message });
   } finally {
     conn.release();
+  }
+});
+
+app.post('/api/users/set-password', async (req, res) => {
+  if (!pool) return res.status(400).json({ error: 'no_database' });
+  const userId = String(req.body.userId || '');
+  const newPassword = String(req.body.newPassword || '');
+  if (!userId || !newPassword) return res.status(400).json({ error: 'missing_fields' });
+
+  try {
+    const [rows] = await pool.query(
+      'SELECT collection, record_id, data FROM records WHERE collection IN (?, ?)',
+      ['usersDb', 'users']
+    );
+    const matched = rows.find(r => {
+      const u = parseRecord(r.data);
+      return String(r.record_id) === userId || String(u.id) === userId;
+    });
+    if (!matched) return res.status(404).json({ error: 'user_not_found' });
+
+    const changedAt = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + 90 * 86400000).toISOString();
+    await pool.query(
+      `UPDATE records SET data = JSON_SET(data,
+         '$.password', ?, '$.passwordChanged', true,
+         '$.passwordChangedAt', ?, '$.passwordExpiresAt', ?),
+         version = version + 1
+       WHERE collection = ? AND record_id = ?`,
+      [newPassword, changedAt, expiresAt, matched.collection, matched.record_id]
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 

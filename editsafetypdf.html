@@ -573,7 +573,11 @@
 })();
 </script>
 <!-- ============================================================ -->
-<!-- ★ Submit / Approve / Reject 需密碼驗證 (v2 - 修復 disabled)   -->
+<!-- ★ Submit / Approve / Reject 需密碼驗證 (v3 — respects admin flag) -->
+<!--   Admin can disable this in System Settings → Security Settings  -->
+<!--   Flag key: localStorage.dwss_require_submit_password           -->
+<!--   - 'false'  => skip password modal for non-admins              -->
+<!--   - anything else / missing => always require password          -->
 <!-- ============================================================ -->
 <script>
 (function () {
@@ -587,6 +591,30 @@
         'reject-btn':  { label: 'Reject'  }
     };
 
+    // ---------- read the admin flag ----------
+    function isPasswordRequired() {
+        // Default = required. Only the exact string 'false' disables it.
+        try {
+            return localStorage.getItem('dwss_require_submit_password') !== 'false';
+        } catch (e) {
+            return true;
+        }
+    }
+
+    function getSession() {
+        try { return JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); }
+        catch (e) { return {}; }
+    }
+
+    function isAdminSession() {
+        var s = getSession();
+        if (!s) return false;
+        if (s.role === 'admin' || s.userRole === 'admin') return true;
+        if (s.permissions && s.permissions.canManageUsers === true) return true;
+        return false;
+    }
+
+    // ---------- inject style (once) ----------
     function injectStyle() {
         if (document.getElementById('action-pwd-style')) return;
         var style = document.createElement('style');
@@ -660,6 +688,7 @@
             '.action-pwd-btn-confirm { background: #10b981; color: #fff; }',
             '.action-pwd-btn-confirm:hover { background: #059669; }',
             '.action-pwd-btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }',
+            /* Keep document-lock patches from disabling this modal's inputs */
             'body.document-locked #action-pwd-overlay input {',
             '  pointer-events: auto !important;',
             '  opacity: 1 !important;',
@@ -668,6 +697,7 @@
         document.head.appendChild(style);
     }
 
+    // ---------- modal state ----------
     var modalEl, inputEl, errorEl, confirmBtn, cancelBtn, toggleBtn, descEl;
     var pendingBtn = null;
     var bypass = false;
@@ -679,7 +709,7 @@
         modalEl = document.createElement('div');
         modalEl.className = 'action-pwd-overlay';
         modalEl.id = 'action-pwd-overlay';
-        modalEl.setAttribute('data-lock-exempt', 'true');   
+        modalEl.setAttribute('data-lock-exempt', 'true');   /* exempt from document-lock */
         modalEl.innerHTML =
             '<div class="action-pwd-modal">' +
                 '<div class="action-pwd-header">' +
@@ -708,6 +738,7 @@
         toggleBtn  = document.getElementById('action-pwd-toggle');
         descEl     = document.getElementById('action-pwd-desc');
 
+        /* Guard: keep input enabled even after document-lock observers run */
         var inputGuardObs = new MutationObserver(function () {
             if (inputEl.disabled) inputEl.disabled = false;
             if (inputEl.readOnly) inputEl.readOnly = false;
@@ -717,6 +748,7 @@
             attributeFilter: ['disabled', 'readonly']
         });
 
+        /* Guard: keep all modal controls enabled */
         var modalGuardObs = new MutationObserver(function () {
             modalEl.querySelectorAll('input, textarea, select, button').forEach(function (el) {
                 if (el.disabled) el.disabled = false;
@@ -752,11 +784,6 @@
         });
     }
 
-    function getSession() {
-        try { return JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); }
-        catch (e) { return {}; }
-    }
-
     function findCurrentUser() {
         var s = getSession();
         var users = [];
@@ -779,8 +806,7 @@
     }
 
     async function verifyPassword(pwd) {
-        var session = {};
-        try { session = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch (e) {}
+        var session = getSession();
         var username = session.userEmail || session.userName || '';
         if (!username) return false;
         try {
@@ -803,6 +829,7 @@
         ensureModal();
         pendingBtn = btn;
 
+        /* Force-enable everything inside the modal, in case a lock patch ran */
         inputEl.disabled = false;
         inputEl.readOnly = false;
         inputEl.style.pointerEvents = 'auto';
@@ -879,6 +906,41 @@
         finally { setTimeout(function () { bypass = false; }, 80); }
     }
 
+    // ---------- Reject Comment modal (site diary / safety / labour) ----------
+    var rejectModal = document.getElementById('reject-comment-modal');
+    var rejectInput = document.getElementById('reject-comment-input');
+    var rejectError = document.getElementById('reject-comment-error');
+    var pendingRejectBtn = null;
+
+    if (rejectModal && rejectInput) {
+        var rc = document.getElementById('reject-comment-close');
+        var rn = document.getElementById('reject-comment-cancel');
+        var rf = document.getElementById('reject-comment-confirm');
+        if (rc) rc.addEventListener('click', function () { rejectModal.style.display = 'none'; });
+        if (rn) rn.addEventListener('click', function () { rejectModal.style.display = 'none'; });
+        if (rf) rf.addEventListener('click', function () {
+            var comment = rejectInput.value.trim();
+            if (!comment) {
+                if (rejectError) rejectError.style.display = 'block';
+                return;
+            }
+            window.__currentRejectComment = comment;
+            rejectModal.style.display = 'none';
+
+            /* Continue to password step only if it's required */
+            if (!isPasswordRequired()) {
+                if (pendingRejectBtn) {
+                    bypass = true;
+                    try { pendingRejectBtn.click(); }
+                    finally { setTimeout(function () { bypass = false; }, 80); }
+                }
+                return;
+            }
+            if (pendingRejectBtn) openModal(pendingRejectBtn);
+        });
+    }
+
+    // ---------- Capture-phase click interceptor ----------
     document.addEventListener('click', function (e) {
         if (bypass) return;
 
@@ -891,13 +953,28 @@
         var st = window.getComputedStyle(btn);
         if (st.display === 'none' || st.visibility === 'hidden') return;
 
+        // ★ Admin flag: skip password prompt when admin turned it off,
+        //   except admins themselves (admins always get the prompt).
+        var requirePwd = isPasswordRequired();
+        if (!requirePwd && !isAdminSession()) {
+            return;  // Let the original handler run unimpeded
+        }
+
         e.stopImmediatePropagation();
         e.preventDefault();
 
-        openModal(btn);
+        if (btn.id === 'reject-btn' && rejectModal) {
+            // ★ Reject flow: capture a comment first, then verify password
+            pendingRejectBtn = btn;
+            rejectInput.value = '';
+            if (rejectError) rejectError.style.display = 'none';
+            rejectModal.style.display = 'flex';
+        } else {
+            openModal(btn);
+        }
     }, true);
 
-    console.log('[ActionPwd] ✓ 已啟用（v2）— Submit / Approve / Reject 需密碼驗證');
+    console.log('[ActionPwd] ✓ v3 installed — respects admin flag (dwss_require_submit_password)');
 })();
 </script>
 </body>
