@@ -259,6 +259,13 @@
                     <button class="nav-btn" id="next-page"><i class="fas fa-chevron-right"></i></button>
                 </div>
 
+                                    <!-- ★ 新增：縮放控制項 -->
+                    <div class="zoom-controls" style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
+                        <button class="nav-btn" id="zoom-out-btn" title="Zoom Out"><i class="fas fa-search-minus"></i></button>
+                        <span id="zoom-level" style="font-weight: 700; font-size: 14px; min-width: 50px; text-align: center; color: #1e40af;">100%</span>
+                        <button class="nav-btn" id="zoom-in-btn" title="Zoom In"><i class="fas fa-search-plus"></i></button>
+                        <button class="nav-btn" id="zoom-reset-btn" title="Reset Zoom" style="background: #64748b;"><i class="fas fa-compress-arrows-alt"></i></button>
+                    </div>
                 <div class="pdf-canvas-container" id="pdf-container">
                     <div class="loading-indicator" id="loading-indicator">
                         <i class="fas fa-spinner fa-spin"></i> <span id="loading-text">Loading...</span>
@@ -317,6 +324,12 @@
         var activePageNum     = 1;
         var totalVirtualPages = 1;
         var storedPageWidth   = null;
+
+                // ★ 新增縮放變數
+        var zoomLevel = 1.0;
+        var ZOOM_MIN  = 0.5;
+        var ZOOM_MAX  = 3.0;
+        var ZOOM_STEP = 0.2;
 
         var DEFAULT_GF527A_LAYOUT = [
             { id: 'f01', left: '34.64%', top: '9.04%',  width: '55%', height: '1.8%' },
@@ -1089,20 +1102,24 @@
 
             var aspect = pageAspects[pageNum - 1] || 1.4142;
 
-            var pageWidth;
+            // 1. 先取得基礎寬度（適應容器大小）
+            var baseWidth;
             if (storedPageWidth && storedPageWidth > 100) {
-                pageWidth = storedPageWidth;
+                baseWidth = storedPageWidth;
             } else {
                 var cw = pdfContainer ? pdfContainer.clientWidth : 0;
-                pageWidth = (cw > 100) ? (cw - 48) : FALLBACK_PAGE_WIDTH;
-                if (pageWidth > 1600) pageWidth = 1600;
-                if (pageWidth < 600) pageWidth = 600;
+                baseWidth = (cw > 100) ? (cw - 48) : FALLBACK_PAGE_WIDTH;
+                if (baseWidth > 1600) baseWidth = 1600;
+                if (baseWidth < 600) baseWidth = 600;
             }
 
             var cw2 = pdfContainer ? pdfContainer.clientWidth : 0;
-            if (cw2 > 100 && pageWidth > cw2 - 48) {
-                pageWidth = cw2 - 48;
+            if (cw2 > 100 && baseWidth > cw2 - 48) {
+                baseWidth = cw2 - 48;
             }
+
+            // 2. ★ 乘上縮放倍率
+            var pageWidth = Math.round(baseWidth * zoomLevel);
 
             setOverlayPageWidth(pageWidth);
 
@@ -1161,6 +1178,46 @@
                     if (prev) prev.addEventListener('click', function () { go(index - 1); });
                     if (next) next.addEventListener('click', function () { go(index + 1); });
                 });
+        }
+
+                // ★ 新增縮放控制邏輯
+        function updateZoomDisplay() {
+            var el = document.getElementById('zoom-level');
+            if (el) el.textContent = Math.round(zoomLevel * 100) + '%';
+            
+            var zoomOutBtn = document.getElementById('zoom-out-btn');
+            var zoomInBtn  = document.getElementById('zoom-in-btn');
+            
+            if (zoomOutBtn) {
+                zoomOutBtn.disabled = (zoomLevel <= ZOOM_MIN + 0.001);
+                zoomOutBtn.style.opacity = zoomOutBtn.disabled ? '0.5' : '1';
+                zoomOutBtn.style.cursor  = zoomOutBtn.disabled ? 'not-allowed' : 'pointer';
+            }
+            if (zoomInBtn) {
+                zoomInBtn.disabled = (zoomLevel >= ZOOM_MAX - 0.001);
+                zoomInBtn.style.opacity = zoomInBtn.disabled ? '0.5' : '1';
+                zoomInBtn.style.cursor  = zoomInBtn.disabled ? 'not-allowed' : 'pointer';
+            }
+        }
+
+        function setZoom(newZoom) {
+            if (newZoom < ZOOM_MIN) newZoom = ZOOM_MIN;
+            if (newZoom > ZOOM_MAX) newZoom = ZOOM_MAX;
+            zoomLevel = Math.round(newZoom * 100) / 100;
+            updateZoomDisplay();
+            renderPage(activePageNum);
+        }
+
+        function setupZoom() {
+            var zoomInBtn    = document.getElementById('zoom-in-btn');
+            var zoomOutBtn   = document.getElementById('zoom-out-btn');
+            var zoomResetBtn = document.getElementById('zoom-reset-btn');
+
+            if (zoomInBtn)    zoomInBtn.addEventListener('click',    function () { setZoom(zoomLevel + ZOOM_STEP); });
+            if (zoomOutBtn)   zoomOutBtn.addEventListener('click',   function () { setZoom(zoomLevel - ZOOM_STEP); });
+            if (zoomResetBtn) zoomResetBtn.addEventListener('click', function () { setZoom(1.0); });
+
+            updateZoomDisplay();
         }
 
         function setupNavigation() {
@@ -1487,6 +1544,7 @@
                 syncGlobalDate();
                 setupSidebar();
                 setupDownloadMenu();
+                setupZoom();
 
                 var params = new URLSearchParams(location.search);
                 var doc = await loadWageFromServer(params.get('id'));
