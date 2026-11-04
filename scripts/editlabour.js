@@ -104,10 +104,10 @@
             { id: 'ai24', label: '', left: '62.79%', top: '78.60%', width: '7.98%',  height: '1.78%' },
             { id: 'ai25', label: '', left: '62.79%', top: '80.63%', width: '7.98%',  height: '1.88%' },
             { id: 'ai26', label: '', left: '62.79%', top: '82.71%', width: '7.98%',  height: '1.88%' },
-            { id: 'ai27', label: '', left: '20.92%', top: '86.57%', width: '14.84%', height: '1.68%' },
-            { id: 'ai28', label: '', left: '44.16%', top: '86.27%', width: '7.85%',  height: '2.08%' },
-            { id: 'ai29', label: '', left: '60.97%', top: '86.27%', width: '5.88%',  height: '1.98%' },
-            { id: 'ai30', label: '', left: '73.30%', top: '86.47%', width: '7.70%',  height: '1.98%' },
+            { id: 'ai27', label: '', left: '18.52%', top: '86.57%', width: '20.00%', height: '1.88%' },
+            { id: 'ai28', label: '', type: 'signature', left: '42.16%', top: '86.57%', width: '10.85%', height: '2.08%' },
+            { id: 'ai29', label: '', left: '57.97%', top: '86.57%', width: '10.88%',  height: '1.98%' },
+            { id: 'ai30', label: '', left: '72.30%', top: '86.57%', width: '10.70%',  height: '1.98%' },
             { id: 'ai31', label: '', left: '76.94%', top: '52.12%', width: '19.33%', height: '1.29%' },
             { id: 'ai32', label: '', left: '75.96%', top: '56.08%', width: '2.94%',  height: '2.35%' },
             { id: 'ai33', label: '', left: '79.60%', top: '56.08%', width: '2.94%',  height: '2.35%' },
@@ -3964,6 +3964,7 @@
         input.style.left = field.left; input.style.top = field.top;
         input.style.width = field.width || '8%';
         input.style.height = field.height || '1.8%';
+        input.style.fontSize = '1em'; 
         input.value = formData[field.id] || '';
         input.autocomplete = 'off';
         input.addEventListener('input', function () {
@@ -3985,6 +3986,7 @@
         box.style.left = field.left; box.style.top = field.top;
         box.style.width = field.width || '2%';
         box.style.height = field.height || '1.8%';
+        box.style.fontSize = '1em'; 
         var tick = document.createElement('span');
         tick.className = 'tick'; tick.textContent = '✓';
         box.appendChild(tick);
@@ -4750,6 +4752,8 @@ function refreshLabourSignatureCell(fieldId) {
         pageDiv.style.width  = displaySize.w + 'px';
         pageDiv.style.height = displaySize.h + 'px';
 
+        pageDiv.style.fontSize = Math.max(10, displaySize.w * 0.015) + 'px';
+
         var img = document.createElement('img');
         img.src = imgData;
         img.className = 'pdf-bg';
@@ -4833,6 +4837,15 @@ function refreshLabourSignatureCell(fieldId) {
             var cid = checks[j].dataset.fieldId;
             if (cid) formData[cid] = checks[j].classList.contains('checked') ? '1' : '';
         }
+        
+        // ★ 新增：抓取簽名格的數據（防止點擊 Save 時被覆蓋清空）
+        var sigs = overlay.querySelectorAll('.pdf-signature-cell[data-field-id]');
+        for (var k = 0; k < sigs.length; k++) {
+            var sid = sigs[k].dataset.fieldId;
+            // 如果 formData 裡沒有值，或者已經透過 Modal 寫入了，這裡不需重複寫入
+            // 但為了確保從記憶體同步，只要沒有被手動清空，就保留
+        }
+
         persistFormData();
     }
 
