@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="platform">AEL DWSS - Labour Wage</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles/main.css">
+    <script src="scripts/theme-config.js"></script>
+
+    <!-- ★ 模板轉換依賴 ★ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- ★ 內嵌 GF527-2003 PDF base64 ★ -->
+    <script src="scripts/GF527_2003-data.js"></script>
+</head>
+<body>
+    <div class="main-content">
+        <div class="header">
+            <h1 data-i18n="labour.wage">Labour Wage</h1>
+            <div class="header-controls">
+                <div class="user-date-row">
+                    <div class="date-display"><i class="fas fa-calendar-alt"></i><span id="current-date"></span></div>
+                    <button class="user-btn"><i class="fas fa-user"></i> <span data-i18n="user.name"></span></button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="search-buttons">
+            <div class="nav-buttons">
+                <button id="add-wage-btn"><i class="fas fa-plus"></i> <span data-i18n="add.new.wage">Add New Wage Record</span></button>
+            </div>
+        </div>
+        
+        <div class="labour-wage-page">
+            <h2><i class="fas fa-money-bill-wave"></i> <span data-i18n="labour.wage.management">Labour Wage Management</span></h2>
+            
+            <div class="diary-controls-row">
+                <div class="diary-stats">
+                    <div class="stat-card"><div class="label">Total Records</div><div class="value" id="total-records-count">0</div></div>
+                    <div class="stat-card"><div class="label">This Month</div><div class="value" id="month-count">0</div></div>
+                </div>
+                
+                <section class="filters-section">
+                    <div class="filter-group" id="type-filter-group">
+                        <div class="filter-toggle"><span>All Document Types</span><i class="fas fa-chevron-down"></i></div>
+                        <div class="filter-options">
+                            <div class="filter-option active" data-filter="type" data-value="all">All Document Types</div>
+                            <div class="filter-option" data-filter="type" data-value="GF527A">GF527A - Return on Construction Site Employment</div>
+                            <div class="filter-option" data-filter="type" data-value="GF527-2003">GF527 (2003) - Labour Wage</div>
+                            <div class="filter-option" data-filter="type" data-value="GF527-2017">GF527 (2017) - Labour Wage</div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group" id="status-filter-group">
+                        <div class="filter-toggle"><span>All Statuses</span><i class="fas fa-chevron-down"></i></div>
+                        <div class="filter-options">
+                            <div class="filter-option active" data-filter="status" data-value="all">All Statuses</div>
+                            <div class="filter-option" data-filter="status" data-value="draft">Draft</div>
+                            <div class="filter-option" data-filter="status" data-value="submitted">Submitted</div>
+                            <div class="filter-option" data-filter="status" data-value="endorsed">Endorsed</div>
+                            <div class="filter-option" data-filter="status" data-value="cancelled">Cancelled</div>
+                            <div class="filter-option" data-filter="status" data-value="confirm">Client's Site Representative to Confirm</div>
+                            <div class="filter-option" data-filter="status" data-value="double-check">Contractor/Contractor's Agent Double Check</div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group" id="site-filter-group">
+                        <div class="filter-toggle"><span>All Sites</span><i class="fas fa-chevron-down"></i></div>
+                        <div class="filter-options">
+                            <div class="filter-option active" data-filter="site" data-value="all">All Sites</div>
+                            <div class="filter-option" data-filter="site" data-value="treatment">Treatment Plant</div>
+                            <div class="filter-option" data-filter="site" data-value="pipeline">Pipeline</div>
+                            <div class="filter-option" data-filter="site" data-value="reservoir">Reservoir</div>
+                            <div class="filter-option" data-filter="site" data-value="distribution">Distribution</div>
+                            <div class="filter-option" data-filter="site" data-value="pump">Pump Station</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+                    
+            <section class="content-section">
+                <div id="wage-tables-container">
+                    <!-- ===== Overdue ===== -->
+                    <div class="diary-category-section" data-category="overdue" style="margin-bottom: 24px;">
+                        <div class="table-header" style="display:flex; justify-content:space-between; align-items:center;">
+                            <h2 class="table-title"><i class="fas fa-exclamation-triangle" style="color:#e74c3c;"></i> Overdue Records <span class="category-count" id="overdue-count" style="background:#fee2e2; color:#991b1b; padding:2px 10px; border-radius:12px; font-size:0.8rem; margin-left:8px;">0</span></h2>
+                        </div>
+                        <div class="table-container" style="overflow-x:auto; margin-bottom: 20px;">
+                            <table class="wage-table" style="min-width: 1000px; width: 100%;">
+                                <thead>
+                                    <tr><th>ID</th><th>Document Type</th><th>Status</th><th>Approval</th><th>Site</th><th>Period</th><th>Submitted By</th><th>Actions</th></tr>
+                                </thead>
+                                <tbody id="overdue-table-body"></tbody>
+                            </table>
+                            <div id="overdue-no-results" class="no-results" style="display: none; padding: 20px; text-align: center; color: #7f8c8d;">No overdue records.</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== Pending ===== -->
+                    <div class="diary-category-section" data-category="pending" style="margin-bottom: 24px;">
+                        <div class="table-header" style="display:flex; justify-content:space-between; align-items:center;">
+                            <h2 class="table-title"><i class="fas fa-clock" style="color:#f39c12;"></i> Pending Records <span class="category-count" id="pending-count" style="background:#fef3c7; color:#92400e; padding:2px 10px; border-radius:12px; font-size:0.8rem; margin-left:8px;">0</span></h2>
+                        </div>
+                        <div class="table-container" style="overflow-x:auto; margin-bottom: 20px;">
+                            <table class="wage-table" style="min-width: 1000px; width: 100%;">
+                                <thead>
+                                    <tr><th>ID</th><th>Document Type</th><th>Status</th><th>Approval</th><th>Site</th><th>Period</th><th>Submitted By</th><th>Actions</th></tr>
+                                </thead>
+                                <tbody id="pending-table-body"></tbody>
+                            </table>
+                            <div id="pending-no-results" class="no-results" style="display: none; padding: 20px; text-align: center; color: #7f8c8d;">No pending records.</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== Closed ===== -->
+                    <div class="diary-category-section" data-category="closed" style="margin-bottom: 24px;">
+                        <div class="table-header" style="display:flex; justify-content:space-between; align-items:center;">
+                            <h2 class="table-title"><i class="fas fa-check-circle" style="color:#27ae60;"></i> Closed Records <span class="category-count" id="closed-count" style="background:#d1fae5; color:#065f46; padding:2px 10px; border-radius:12px; font-size:0.8rem; margin-left:8px;">0</span></h2>
+                        </div>
+                        <div class="table-container" style="overflow-x:auto; margin-bottom: 20px;">
+                            <table class="wage-table" style="min-width: 1000px; width: 100%;">
+                                <thead>
+                                    <tr><th>ID</th><th>Document Type</th><th>Status</th><th>Approval</th><th>Site</th><th>Period</th><th>Submitted By</th><th>Actions</th></tr>
+                                </thead>
+                                <tbody id="closed-table-body"></tbody>
+                            </table>
+                            <div id="closed-no-results" class="no-results" style="display: none; padding: 20px; text-align: center; color: #7f8c8d;">No closed records.</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== Other ===== -->
+                    <div class="diary-category-section" data-category="other" style="margin-bottom: 24px;">
+                        <div class="table-header" style="display:flex; justify-content:space-between; align-items:center;">
+                            <h2 class="table-title"><i class="fas fa-folder" style="color:#7f8c8d;"></i> Other Records <span class="category-count" id="other-count" style="background:#e5e7eb; color:#374151; padding:2px 10px; border-radius:12px; font-size:0.8rem; margin-left:8px;">0</span></h2>
+                        </div>
+                        <div class="table-container" style="overflow-x:auto; margin-bottom: 20px;">
+                            <table class="wage-table" style="min-width: 1000px; width: 100%;">
+                                <thead>
+                                    <tr><th>ID</th><th>Document Type</th><th>Status</th><th>Approval</th><th>Site</th><th>Period</th><th>Submitted By</th><th>Actions</th></tr>
+                                </thead>
+                                <tbody id="other-table-body"></tbody>
+                            </table>
+                            <div id="other-no-results" class="no-results" style="display: none; padding: 20px; text-align: center; color: #7f8c8d;">No other records.</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+        
+        <footer>
+            <p>© 2025 AEL DWSS System. All rights reserved.</p>
+            <p>AEL DWSS Platform</p>
+        </footer>
+    </div>
+
+    <div class="modal" id="add-wage-modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Add New Wage Record</h3>
+            <form id="add-wage-form" enctype="multipart/form-data">
+                <!-- ★ Document ID（可編輯） -->
+                <label>Document ID</label>
+                <input type="text" id="input-doc-id">
+
+                <label>Document Type</label>
+                <select id="input-type" required>
+                    <option value="GF527A">GF527A - Return on Construction Site Employment</option>
+                    <option value="GF527-2003">GF527 (2003) - Labour Wage</option>
+                    <option value="GF527-2017">GF527 (2017) - Labour Wage</option>
+                </select>
+                <label>Status</label>
+                <select id="input-status" required>
+                    <option value="draft">Draft</option>
+                    <option value="submitted">Submitted</option>
+                    <option value="endorsed">Endorsed</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="confirm">Client's Site Representative to Confirm</option>
+                    <option value="double-check">Contractor/Contractor's Agent Double Check</option>
+                </select>
+                <label>Site</label>
+                <select id="input-site" required>
+                    <option value="Treatment Plant">Treatment Plant</option>
+                    <option value="Pipeline">Pipeline</option>
+                    <option value="Reservoir">Reservoir</option>
+                    <option value="Distribution">Distribution</option>
+                    <option value="Pump Station">Pump Station</option>
+                </select>
+                <label>Period Start</label>
+                <input type="date" id="input-period-start" required>
+                <label>Period End</label>
+                <input type="date" id="input-period-end" required>
+                <label>Submitted By</label>
+                <input type="text" id="input-submitted-by" required>
+                <label for="input-pdf">Upload PDF (optional)</label>
+                <input type="file" id="input-pdf" accept=".pdf">
+                <div class="modal-actions">
+                    <button type="submit" class="btn">Save</button>
+                    <button type="button" class="btn" id="cancel-add-wage">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="scripts/permissions.js"></script>
+    <script src="scripts/language.js"></script>
+    <script src="scripts/app.js"></script>
+    <script src="scripts/sidebar.js"></script>
+    <script src="scripts/ac-lock.js"></script>
+    <script src="scripts/auth-check.js"></script>
+    <script src="scripts/locked-ac.js"></script>
+
+    <!-- ============================================================ -->
+    <!-- ★ getContractCode — 提供給 labourwage.js 及本頁 ID 生成使用     -->
+    <!-- ============================================================ -->
+    <script>
+    (function () {
+        'use strict';
+        if (window.getContractCode) return;
+
+        window.getContractCode = function () {
+            var pid = sessionStorage.getItem('currentProjectId');
+
+            if (!pid) {
+                try {
+                    var u = JSON.parse(localStorage.getItem('current_user') || '{}');
+                    if (u && Array.isArray(u.projectIds) && u.projectIds.length > 0) {
+                        pid = u.projectIds[0];
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            if (!pid) {
+                try {
+                    var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+                    if (s && Array.isArray(s.projectIds) && s.projectIds.length > 0) {
+                        pid = s.projectIds[0];
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            if (!pid) pid = 'DE/2026/05';
+
+            return String(pid).replace(/\//g, '-');
+        };
+
+        console.log('[LabourWage] ✓ getContractCode ready, currentProjectId =',
+                    sessionStorage.getItem('currentProjectId') || '(fallback)',
+                    '→ contractCode =',
+                    window.getContractCode());
+    })();
+    </script>
+
+    <script src="scripts/labourwage.js"></script>
+
+    <!-- ============================================================ -->
+    <!-- ★★★ Document ID 自動遞增修正                                  -->
+    <!-- ------------------------------------------------------------ -->
+    <!-- 格式：LRR/{合同代碼}/{6 位序號}A                                -->
+    <!--   e.g. LRR/DE-2026-05/000001A                                  -->
+    <!-- 策略：                                                        -->
+    <!--   1. 掃描 localStorage 所有 key，找任何含 ID 的陣列            -->
+    <!--   2. 過濾出 ID 前綴 = LRR/{contractCode}/ 的記錄               -->
+    <!--   3. 找最大序號 +1                                            -->
+    <!--   4. 點 Add New Wage Record 後覆蓋 input-doc-id 欄位           -->
+    <!-- ============================================================ -->
+    <script>
+    (function () {
+        'use strict';
+        if (window.__labourIdAutoIncrementBound) return;
+        window.__labourIdAutoIncrementBound = true;
+
+        var ID_PREFIX = 'LRR/';
+        var ID_SUFFIX = 'A';
+        var ID_PAD    = 6;
+
+        function escapeRegExp(s) {
+            return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        /* 掃描 localStorage 所有 key，蒐集所有可能的 labour wage ID */
+        function collectAllLabourIds() {
+            var ids = [];
+            var seen = {};
+
+            try {
+                for (var i = 0; i < localStorage.length; i++) {
+                    var key = localStorage.key(i);
+                    if (!key) continue;
+
+                    var raw = localStorage.getItem(key);
+                    if (!raw || raw.length < 2) continue;
+                    var c = raw.charAt(0);
+                    if (c !== '[' && c !== '{') continue;
+
+                    var data;
+                    try { data = JSON.parse(raw); } catch (e) { continue; }
+
+                    var arrs = [];
+                    if (Array.isArray(data)) {
+                        arrs.push(data);
+                    } else if (data && typeof data === 'object') {
+                        Object.keys(data).forEach(function (k) {
+                            if (Array.isArray(data[k])) arrs.push(data[k]);
+                        });
+                    }
+
+                    arrs.forEach(function (arr) {
+                        arr.forEach(function (item) {
+                            if (item && item.id != null) {
+                                var idStr = String(item.id);
+                                if (idStr.indexOf(ID_PREFIX) === 0 && !seen[idStr]) {
+                                    seen[idStr] = true;
+                                    ids.push(idStr);
+                                }
+                            }
+                        });
+                    });
+                }
+            } catch (e) {
+                console.warn('[LabourWage] scan localStorage failed:', e);
+            }
+
+            /* 從當前表格 DOM 收集 */
+            try {
+                var tbody = document.getElementById('wage-table-body');
+                if (tbody) {
+                    var rows = tbody.querySelectorAll('tr');
+                    for (var r = 0; r < rows.length; r++) {
+                        var firstCell = rows[r].cells && rows[r].cells[0];
+                        if (!firstCell) continue;
+                        var txt = firstCell.textContent.trim();
+                        if (txt && txt.indexOf(ID_PREFIX) === 0 && !seen[txt]) {
+                            seen[txt] = true;
+                            ids.push(txt);
+                        }
+                    }
+                }
+            } catch (e) { /* ignore */ }
+
+            return ids;
+        }
+
+        /**
+         * 計算下一個 Document ID
+         *   prefix = "LRR/" + getContractCode() + "/"
+         */
+        window.computeNextLabourId = function () {
+            var contractCode = window.getContractCode();     // DE-2026-05
+            var prefix = ID_PREFIX + contractCode + '/';     // LRR/DE-2026-05/
+            var re = new RegExp('^' + escapeRegExp(prefix) + '(\\d+)[A-Za-z]?$');
+
+            var ids = collectAllLabourIds();
+            var maxNum = 0;
+            ids.forEach(function (id) {
+                var m = id.match(re);
+                if (m) {
+                    var n = parseInt(m[1], 10);
+                    if (!isNaN(n) && n > maxNum) maxNum = n;
+                }
+            });
+
+            var nextNum = maxNum + 1;
+            var numStr = String(nextNum);
+            while (numStr.length < ID_PAD) numStr = '0' + numStr;
+            var newId = prefix + numStr + ID_SUFFIX;
+
+            console.log('[LabourWage] ✓ Document ID 生成:', newId,
+                        '(現有最大序號 =', maxNum, ', prefix =', prefix, ')');
+            return newId;
+        };
+
+        /* 監聽 Add New Wage Record 按鈕 → modal 顯示後覆蓋欄位 */
+        document.addEventListener('click', function (e) {
+            var btn = e.target && e.target.closest ? e.target.closest('#add-wage-btn') : null;
+            if (!btn) return;
+
+            setTimeout(function () {
+                var modal = document.getElementById('add-wage-modal');
+                if (!modal || modal.style.display === 'none') return;
+
+                var idInput = document.getElementById('input-doc-id');
+                if (!idInput) return;
+
+                var correctId = window.computeNextLabourId();
+                idInput.value = correctId;
+
+                if (!idInput.__lrrIdLocked) {
+                    idInput.__lrrIdLocked = true;
+                    var lockValue = correctId;
+                    var obs = new MutationObserver(function () {
+                        if (idInput.value !== lockValue) {
+                            if (idInput.__lrrUserEdited) {
+                                obs.disconnect();
+                                return;
+                            }
+                            idInput.value = lockValue;
+                        }
+                    });
+                    obs.observe(idInput, { attributes: true, attributeFilter: ['value'] });
+
+                    idInput.addEventListener('input', function () {
+                        idInput.__lrrUserEdited = true;
+                        lockValue = idInput.value;
+                    });
+
+                    var modalObs = new MutationObserver(function () {
+                        if (modal.style.display === 'none') {
+                            idInput.__lrrIdLocked = false;
+                            idInput.__lrrUserEdited = false;
+                            obs.disconnect();
+                            modalObs.disconnect();
+                        }
+                    });
+                    modalObs.observe(modal, { attributes: true, attributeFilter: ['style'] });
+                }
+            }, 100);
+        }, false);
+    })();
+    </script>
+
+    <style>
+        .labour-wage-page { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 30px; box-sizing: border-box; }
+        .labour-wage-page > h2 { color: #2c3e50; margin-bottom: 25px; font-size: 1.8rem; display: flex; align-items: center; gap: 12px; }
+        .labour-wage-page > h2 i { color: #9b59b6; }
+        .labour-wage-page .diary-stats .stat-card { background: linear-gradient(135deg, #9b59b6, #8e44ad) !important; }
+        .labour-wage-page .diary-stats .stat-card .label,
+        .labour-wage-page .diary-stats .stat-card .value { color: white !important; }
+        .labour-wage-page .view-btn { background: linear-gradient(135deg, #9b59b6, #8e44ad) !important; }
+        .labour-wage-page .table-container { overflow-x: auto !important; border-radius: 8px !important; background: white !important; width: 100% !important; }
+        .labour-wage-page .wage-table { min-width: 1000px; width: 100% !important; border-collapse: separate; border-spacing: 0; background: white; }
+        .labour-wage-page .wage-table th, .labour-wage-page .wage-table td { padding: 12px 16px !important; vertical-align: middle !important; }
+        .labour-wage-page .wage-table th { background: #f8f9fa; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #eaeaea; }
+        .labour-wage-page .wage-table td { border-bottom: 1px solid #eaeaea; color: #555; }
+        .labour-wage-page .wage-table tr:hover td { background: #f9fbfd; }
+        .labour-wage-page .status-badge { padding: 6px 12px !important; border-radius: 20px; font-size: 0.85rem; font-weight: 500; display: inline-block; white-space: nowrap; }
+        .labour-wage-page .status-draft { background: rgba(149,165,166,0.2); color: #848f90; }
+        .labour-wage-page .status-submitted { background: rgba(52,152,219,0.2); color: #2980b9; }
+        .labour-wage-page .status-endorsed { background: rgba(46,204,113,0.2); color: #27ae60; }
+        .labour-wage-page .status-cancelled { background: rgba(231,76,60,0.2); color: #c0392b; }
+        .labour-wage-page .status-confirm { background: rgba(155,89,182,0.2); color: #8e44ad; }
+        .labour-wage-page .status-double-check { background: rgba(243,156,18,0.2); color: #d35400; }
+        .labour-wage-page .action-buttons { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .labour-wage-page .action-btn { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; transition: all 0.3s; display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem; min-width: 36px; min-height: 36px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .labour-wage-page .edit-btn { background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; }
+        .labour-wage-page .delete-btn { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; }
+        .labour-wage-page .no-results { text-align: center; padding: 40px; color: #7f8c8d; font-style: italic; }
+        .status-change-select { padding: 6px 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 0.85rem; min-width: 120px; }
+        .permission-lock-hint { font-size: 0.7rem; color: #e74c3c; display: block; margin-top: 4px; }
+    </style>
+
+    <script>
+        (function() {
+            function saveSidebarState() {
+                var sb = document.querySelector('.sidebar');
+                if (sb) localStorage.setItem('sidebarCollapsed', sb.classList.contains('collapsed') ? 'true' : 'false');
+            }
+            function restoreSidebarState() {
+                var sb = document.querySelector('.sidebar');
+                if (sb) {
+                    var savedState = localStorage.getItem('sidebarCollapsed');
+                    if (savedState === 'true') sb.classList.add('collapsed');
+                    else if (savedState === 'false') sb.classList.remove('collapsed');
+                }
+            }
+            function bindToggleEvent() {
+                var tb = document.querySelector('.toggle-btn');
+                if (tb) {
+                    tb.removeEventListener('click', saveSidebarState);
+                    tb.addEventListener('click', function() { setTimeout(saveSidebarState, 50); });
+                }
+            }
+            document.addEventListener('DOMContentLoaded', function() {
+                restoreSidebarState();
+                bindToggleEvent();
+                var storedDate = sessionStorage.getItem('globalDate');
+                var dateSpan = document.querySelector('.date-display span');
+                if (storedDate && dateSpan) dateSpan.textContent = storedDate;
+                else if (dateSpan) dateSpan.textContent = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+            });
+        })();
+    </script>
+</body>
+    <!-- History Modal -->
+    <div class="modal" id="history-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+        <div class="modal-content" style="background:white; border-radius:12px; width:780px; max-width:95%; padding:24px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+            <h3 style="margin-top:0; color:#1e293b; display:flex; align-items:center; gap:8px;"><i class="fas fa-history"></i> Status Change History</h3>
+            <div id="history-content" style="margin: 16px 0; max-height: 60vh; overflow-y: auto;"></div>
+            <div style="text-align:right; margin-top:16px;">
+                <button type="button" class="btn" id="close-history-modal" style="background:#e2e8f0; color:#334155; border:none; padding:8px 18px; border-radius:6px; cursor:pointer;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Script 補丁 -->
+    <script>
+    (function () {
+        'use strict';
+        if (window.__labourHistoryBound) return;
+        window.__labourHistoryBound = true;
+
+        var PRIMARY_KEY = 'wageData';
+
+        function loadRecords() {
+            try {
+                var raw = localStorage.getItem(PRIMARY_KEY);
+                if (!raw) return [];
+                var d = JSON.parse(raw);
+                return Array.isArray(d) ? d : [];
+            } catch (e) { return []; }
+        }
+
+        function fmtDateTime(iso) {
+            if (!iso) return '—';
+            try {
+                var d = new Date(iso);
+                if (isNaN(d.getTime())) return iso;
+                var yy = d.getFullYear();
+                var mm = String(d.getMonth() + 1).padStart(2, '0');
+                var dd = String(d.getDate()).padStart(2, '0');
+                var hh = String(d.getHours()).padStart(2, '0');
+                var mi = String(d.getMinutes()).padStart(2, '0');
+                return yy + '-' + mm + '-' + dd + ' ' + hh + ':' + mi;
+            } catch (e) { return iso; }
+        }
+
+        function escapeHtml(s) {
+            if (s == null) return '';
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function statusLabel(s) {
+            var map = {
+                'draft': 'Draft', 'submitted': 'Inspector Submitted', 'submitted-ig': 'Submit to IG',
+                'closed': 'IG Accepted', 'reopen': 'Reopened', 'cancelled': 'Cancelled',
+                'approved': 'Approved', 'rejected': 'Rejected', 'pending': 'Pending Approval'
+            };
+            return map[s] || s || '—';
+        }
+
+        function showHistory(wageId) {
+            var records = loadRecords();
+            var record = null;
+            for (var i = 0; i < records.length; i++) {
+                if (String(records[i].id) === String(wageId)) { record = records[i]; break; }
+            }
+            if (!record) { alert('Record not found.'); return; }
+
+            var modal = document.getElementById('history-modal');
+            var content = document.getElementById('history-content');
+            if (!modal || !content) return;
+
+            var history = Array.isArray(record.statusHistory) ? record.statusHistory : [];
+            var html = '<div style="margin-bottom: 16px; padding: 12px 16px; background: #f8fafc; border-radius: 8px;"><div style="font-size: 0.8rem; color: #64748b; margin-bottom: 4px;">Document ID</div><div style="font-weight: 700; color: #1e40af;">' + escapeHtml(record.id) + '</div></div>';
+
+            if (history.length === 0) {
+                html += '<div style="padding: 30px; text-align: center; color: #94a3b8; font-style: italic;">No status change history yet.</div>';
+            } else {
+                html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">';
+                html += '<thead><tr style="background: #f1f5f9;"><th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">Date / Time</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">From</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">To</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">Approval</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">Changed By</th></tr></thead><tbody>';
+                history.slice().reverse().forEach(function (h) {
+                    var fa = h.fromApproval || ''; var ta = h.toApproval || '';
+                    var approvalCell = (fa || ta) ? (fa === ta ? escapeHtml(statusLabel(fa)) : escapeHtml(statusLabel(fa)) + ' <i class="fas fa-arrow-right" style="font-size:10px;"></i> <strong style="color:#8e44ad;">' + escapeHtml(statusLabel(ta)) + '</strong>') : '—';
+                    html += '<tr><td style="padding: 10px; border-bottom: 1px solid #f1f5f9;">' + escapeHtml(fmtDateTime(h.changedAt)) + '</td><td style="padding: 10px; border-bottom: 1px solid #f1f5f9;">' + escapeHtml(statusLabel(h.from)) + '</td><td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color:#2980b9; font-weight:600;">' + escapeHtml(statusLabel(h.to)) + '</td><td style="padding: 10px; border-bottom: 1px solid #f1f5f9;">' + approvalCell + '</td><td style="padding: 10px; border-bottom: 1px solid #f1f5f9;">' + escapeHtml(h.changedBy || '—') + '</td></tr>';
+                });
+                html += '</tbody></table>';
+            }
+            content.innerHTML = html;
+            modal.style.display = 'flex';
+        }
+
+        function closeHistory() {
+            var modal = document.getElementById('history-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        document.addEventListener('click', function (e) {
+            var btn = e.target && e.target.closest ? e.target.closest('.history-btn') : null;
+            if (btn) {
+                e.preventDefault(); e.stopPropagation();
+                showHistory(btn.dataset.id);
+                return;
+            }
+            if (e.target && e.target.id === 'close-history-modal') { closeHistory(); return; }
+            var modal = document.getElementById('history-modal');
+            if (modal && e.target === modal) closeHistory();
+        });
+
+        function injectHistoryButtons() {
+            var tbodies = document.querySelectorAll('#wage-tables-container .wage-table tbody');
+            if (!tbodies.length) { setTimeout(injectHistoryButtons, 500); return; }
+            tbodies.forEach(function (tbody) {
+                var rows = tbody.querySelectorAll('tr');
+                for (var i = 0; i < rows.length; i++) {
+                    var row = rows[i];
+                    var firstCell = row.cells && row.cells[0];
+                    if (!firstCell) continue;
+                    var wageId = firstCell.textContent.trim();
+                    if (!wageId) continue;
+                    var actionCell = row.cells[row.cells.length - 1];
+                    if (!actionCell) continue;
+                    if (actionCell.querySelector('.history-btn')) continue;
+                    var btn = document.createElement('button');
+                    btn.className = 'action-btn history-btn';
+                    btn.dataset.id = wageId;
+                    btn.title = 'View status change history';
+                    btn.innerHTML = '<i class="fas fa-history"></i>';
+                    btn.style.cssText = 'background: linear-gradient(135deg, #8e44ad, #732d91); color: white; margin-left: 4px;';
+                    actionCell.appendChild(btn);
+                }
+            });
+        }
+
+        function bindObserver() {
+            var container = document.getElementById('wage-tables-container');
+            if (!container) { setTimeout(bindObserver, 500); return; }
+            var obs = new MutationObserver(function () { injectHistoryButtons(); });
+            obs.observe(container, { childList: true, subtree: true });
+            injectHistoryButtons();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function () { setTimeout(bindObserver, 500); });
+        } else {
+            setTimeout(bindObserver, 500);
+        }
+    })();
+    </script>
+</html>
