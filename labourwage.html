@@ -27,6 +27,26 @@
 
     <!-- ★ 內嵌 GF527-2003 PDF base64 ★ -->
     <script src="scripts/GF527_2003-data.js"></script>
+    
+    <style>
+        /* 新增：支援自訂下拉選單樣式 */
+        .modal-content select, .modal-content input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            margin-bottom: 16px;
+            box-sizing: border-box;
+        }
+        .modal-content label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #334155;
+            font-size: 0.9rem;
+        }
+    </style>
 </head>
 <body>
     <div class="main-content">
@@ -178,9 +198,15 @@
         <div class="modal-content">
             <h3>Add New Wage Record</h3>
             <form id="add-wage-form" enctype="multipart/form-data">
-                <!-- ★ Document ID（可編輯） -->
+                
+                <!-- 新增：從舊文件複製 -->
+                <label>Copy from Existing Record (Optional)</label>
+                <select id="input-copy-from">
+                    <option value="">-- Do not copy --</option>
+                </select>
+
                 <label>Document ID</label>
-                <input type="text" id="input-doc-id">
+                <input type="text" id="input-doc-id" required>
 
                 <label>Document Type</label>
                 <select id="input-type" required>
@@ -188,6 +214,7 @@
                     <option value="GF527-2003">GF527 (2003) - Labour Wage</option>
                     <option value="GF527-2017">GF527 (2017) - Labour Wage</option>
                 </select>
+                
                 <label>Status</label>
                 <select id="input-status" required>
                     <option value="draft">Draft</option>
@@ -197,22 +224,20 @@
                     <option value="confirm">Client's Site Representative to Confirm</option>
                     <option value="double-check">Contractor/Contractor's Agent Double Check</option>
                 </select>
+                
                 <label>Site</label>
-                <select id="input-site" required>
-                    <option value="Treatment Plant">Treatment Plant</option>
-                    <option value="Pipeline">Pipeline</option>
-                    <option value="Reservoir">Reservoir</option>
-                    <option value="Distribution">Distribution</option>
-                    <option value="Pump Station">Pump Station</option>
-                </select>
-                <label>Period Start</label>
-                <input type="date" id="input-period-start" required>
-                <label>Period End</label>
-                <input type="date" id="input-period-end" required>
+                <input type="text" id="input-site" required placeholder="Enter site name">
+
+                <!-- ★ 修改：將 Period Start / End 改為單一 Period 輸入框 -->
+                <label>Period</label>
+                <input type="text" id="input-period" placeholder="e.g., 01-Sep-2025 to 07-Sep-2025" required>
+
                 <label>Submitted By</label>
                 <input type="text" id="input-submitted-by" required>
+                
                 <label for="input-pdf">Upload PDF (optional)</label>
                 <input type="file" id="input-pdf" accept=".pdf">
+                
                 <div class="modal-actions">
                     <button type="submit" class="btn">Save</button>
                     <button type="button" class="btn" id="cancel-add-wage">Cancel</button>
@@ -274,14 +299,6 @@
 
     <!-- ============================================================ -->
     <!-- ★★★ Document ID 自動遞增修正                                  -->
-    <!-- ------------------------------------------------------------ -->
-    <!-- 格式：LRR/{合同代碼}/{6 位序號}A                                -->
-    <!--   e.g. LRR/DE-2026-05/000001A                                  -->
-    <!-- 策略：                                                        -->
-    <!--   1. 掃描 localStorage 所有 key，找任何含 ID 的陣列            -->
-    <!--   2. 過濾出 ID 前綴 = LRR/{contractCode}/ 的記錄               -->
-    <!--   3. 找最大序號 +1                                            -->
-    <!--   4. 點 Add New Wage Record 後覆蓋 input-doc-id 欄位           -->
     <!-- ============================================================ -->
     <script>
     (function () {
@@ -297,7 +314,6 @@
             return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         }
 
-        /* 掃描 localStorage 所有 key，蒐集所有可能的 labour wage ID */
         function collectAllLabourIds() {
             var ids = [];
             var seen = {};
@@ -340,7 +356,6 @@
                 console.warn('[LabourWage] scan localStorage failed:', e);
             }
 
-            /* 從當前表格 DOM 收集 */
             try {
                 var tbody = document.getElementById('wage-table-body');
                 if (tbody) {
@@ -378,13 +393,9 @@
             return ids;
         }
 
-        /**
-         * 計算下一個 Document ID
-         *   prefix = "LRR/" + getContractCode() + "/"
-         */
         window.computeNextLabourId = function () {
-            var contractCode = window.getContractCode();     // DE-2026-05
-            var prefix = ID_PREFIX + contractCode + '/';     // LRR/DE-2026-05/
+            var contractCode = window.getContractCode();
+            var prefix = ID_PREFIX + contractCode + '/';
             var re = new RegExp('^' + escapeRegExp(prefix) + '(\\d+)[A-Za-z]?$');
 
             var ids = collectAllLabourIds();
@@ -407,7 +418,6 @@
             return newId;
         };
 
-        /* 監聽 Add New Wage Record 按鈕 → modal 顯示後覆蓋欄位 */
         document.addEventListener('click', function (e) {
             var btn = e.target && e.target.closest ? e.target.closest('#add-wage-btn') : null;
             if (!btn) return;

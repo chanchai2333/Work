@@ -227,19 +227,19 @@
             <section class="content-section">
                 <div id="inspection-tables-container">
 
-                    <!-- ===== Overdue Documents ===== -->
-                    <div class="diary-category-section collapsed" data-category="overdue">
+                    <!-- ===== Open Documents (原本的 Other) ===== -->
+                    <div class="diary-category-section collapsed" data-category="other">
                         <div class="table-header">
                             <div class="header-left">
                                 <h2 class="table-title">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                    <span data-i18n="category.overdue">Overdue Documents</span>
-                                    <span class="category-count" id="overdue-count">0</span>
+                                    <i class="fas fa-folder"></i>
+                                    <span data-i18n="category.open">Open Documents</span>
+                                    <span class="category-count" id="other-count">0</span>
                                 </h2>
-                                <p class="category-desc" data-i18n="category.overdue.desc">Draft inspections older than 14 days</p>
+                                <p class="category-desc" data-i18n="category.open.desc">Drafts within 14 days, reopened, or in progress</p>
                             </div>
                             <div class="header-right">
-                                <input type="text" class="category-search" data-category="overdue" placeholder="Search Overdue...">
+                                <input type="text" class="category-search" data-category="other" placeholder="Search Open...">
                                 <i class="fas fa-chevron-down toggle-icon"></i>
                             </div>
                         </div>
@@ -256,9 +256,9 @@
                                         <th data-i18n="actions">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody id="overdue-table-body"></tbody>
+                                <tbody id="other-table-body"></tbody>
                             </table>
-                            <div id="overdue-no-results" class="no-results" style="display: none;">No overdue documents.</div>
+                            <div id="other-no-results" class="no-results" style="display: none;">No open documents.</div>
                         </div>
                     </div>
 
@@ -297,6 +297,41 @@
                         </div>
                     </div>
 
+                    <!-- ===== Overdue Documents ===== -->
+                    <div class="diary-category-section collapsed" data-category="overdue">
+                        <div class="table-header">
+                            <div class="header-left">
+                                <h2 class="table-title">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span data-i18n="category.overdue">Overdue Documents</span>
+                                    <span class="category-count" id="overdue-count">0</span>
+                                </h2>
+                                <p class="category-desc" data-i18n="category.overdue.desc">Draft inspections older than 14 days</p>
+                            </div>
+                            <div class="header-right">
+                                <input type="text" class="category-search" data-category="overdue" placeholder="Search Overdue...">
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="diary-table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="inspection.id">Inspection ID</th>
+                                        <th data-i18n="status">Status</th>
+                                        <th>Approval Status</th>
+                                        <th data-i18n="site">Site</th>
+                                        <th data-i18n="date">Date</th>
+                                        <th data-i18n="inspector">Inspector</th>
+                                        <th data-i18n="actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="overdue-table-body"></tbody>
+                            </table>
+                            <div id="overdue-no-results" class="no-results" style="display: none;">No overdue documents.</div>
+                        </div>
+                    </div>
+
                     <!-- ===== Closed Documents ===== -->
                     <div class="diary-category-section collapsed" data-category="closed">
                         <div class="table-header">
@@ -329,41 +364,6 @@
                                 <tbody id="closed-table-body"></tbody>
                             </table>
                             <div id="closed-no-results" class="no-results" style="display: none;">No closed documents.</div>
-                        </div>
-                    </div>
-
-                    <!-- ===== Other Documents ===== -->
-                    <div class="diary-category-section collapsed" data-category="other">
-                        <div class="table-header">
-                            <div class="header-left">
-                                <h2 class="table-title">
-                                    <i class="fas fa-folder"></i>
-                                    <span data-i18n="category.other">Other Documents</span>
-                                    <span class="category-count" id="other-count">0</span>
-                                </h2>
-                                <p class="category-desc" data-i18n="category.other.desc">Drafts within 14 days, reopened, or in progress</p>
-                            </div>
-                            <div class="header-right">
-                                <input type="text" class="category-search" data-category="other" placeholder="Search Other...">
-                                <i class="fas fa-chevron-down toggle-icon"></i>
-                            </div>
-                        </div>
-                        <div class="table-container">
-                            <table class="diary-table">
-                                <thead>
-                                    <tr>
-                                        <th data-i18n="inspection.id">Inspection ID</th>
-                                        <th data-i18n="status">Status</th>
-                                        <th>Approval Status</th>
-                                        <th data-i18n="site">Site</th>
-                                        <th data-i18n="date">Date</th>
-                                        <th data-i18n="inspector">Inspector</th>
-                                        <th data-i18n="actions">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="other-table-body"></tbody>
-                            </table>
-                            <div id="other-no-results" class="no-results" style="display: none;">No other documents.</div>
                         </div>
                     </div>
 

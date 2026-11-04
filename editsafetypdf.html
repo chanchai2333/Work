@@ -364,6 +364,14 @@
                     </span>
                     <span id="current-page" style="display:none;">1</span>
                     <button class="nav-btn" id="next-page" title="下一頁"><i class="fas fa-chevron-right"></i></button>
+                    
+                    <!-- ★ 新增：Zoom 控制 -->
+                    <span style="margin-left: auto; display: flex; gap: 8px; align-items: center; background: #fff; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1;">
+                        <button class="nav-btn" id="zoom-out-btn" style="padding: 4px 10px; background: transparent; color: #334155;"><i class="fas fa-search-minus"></i></button>
+                        <span id="zoom-level" style="font-weight: 600; font-size: 14px; width: 48px; text-align: center; color: #1e293b;">100%</span>
+                        <button class="nav-btn" id="zoom-in-btn" style="padding: 4px 10px; background: transparent; color: #334155;"><i class="fas fa-search-plus"></i></button>
+                        <button class="nav-btn" id="zoom-reset-btn" style="padding: 4px 10px; background: transparent; color: #334155;"><i class="fas fa-compress"></i></button>
+                    </span>
                 </div>
 
                 <div class="pdf-canvas-container" id="pdf-container">

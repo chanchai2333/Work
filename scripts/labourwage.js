@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // ==================== 狀態映射 ====================
     const STATUS_TEXT_MAP = {
         'draft': 'Draft',
-        'submitted': 'Submit to IG',      // 兼容舊資料
+        'submitted': 'Submit to IG',
         'submitted-ig': 'Submit to IG',
         'closed': 'IG Accepted',
         'reopen': 'Reopened',
@@ -20,52 +20,6 @@ document.addEventListener("DOMContentLoaded", function () {
         'reopen': 'status-confirm',
         'cancelled': 'status-cancelled'
     };
-
-    // ==================== 載入 / 儲存 ====================
-    function initWageData() {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored && stored !== 'null' && stored !== '[]') {
-            try {
-                wageData = JSON.parse(stored);
-                let migrated = 0;
-                wageData.forEach(item => {
-                    if (!item.hasOwnProperty('pdfData')) item.pdfData = null;
-                    if (!item.hasOwnProperty('annotations')) item.annotations = [];
-                    
-                    // ★ 舊資料修復：直接轉為 submitted-ig
-                    if (!item.status || item.status === 'submitted') {
-                        item.status = 'submitted-ig';
-                    }
-
-                    if (!item.project) {
-                        if (item.id && item.id.indexOf('LRR/DE-2025-02') === 0) {
-                            item.project = 'DE/2025/02';
-                        } else if (item.id && item.id.indexOf('LRR/DE-2025-09') === 0) {
-                            item.project = 'DE/2025/09';
-                        } else if (item.id && item.id.indexOf('LRR/DE-2026-05') === 0) {
-                            item.project = 'DE/2026/05';
-                        } else {
-                            item.project = getCurrentProjectId() || 'DE/2026/05';
-                        }
-                        migrated++;
-                    }
-                });
-                if (migrated > 0) {
-                    console.log('[LabourWage] ✓ 已為 ' + migrated + ' 筆舊記錄補上 project');
-                }
-                saveData();
-            } catch(e) {
-                console.error('[LabourWage] 資料解析失敗，使用預設', e);
-                wageData = getAllDefaultRecords();
-                saveData();
-            }
-        } else {
-            console.log('[LabourWage] ✓ 首次載入，建立 3 個項目的預設資料');
-            wageData = getAllDefaultRecords();
-            saveData();
-        }
-        renderWageTable();
-    }
 
     // ==================== 數據管理 ====================
     const STORAGE_KEY = 'wageData';
@@ -208,7 +162,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ==================== 輔助 ====================
-        const OVERDUE_DAYS = 14;
+    const OVERDUE_DAYS = 14;
 
     function parseLabourDate(item) {
         if (!item) return null;
@@ -260,14 +214,6 @@ document.addEventListener("DOMContentLoaded", function () {
     function getStatusClass(status) { return STATUS_CLASS_MAP[status] || 'status-draft'; }
     function getStatusText(status) { return STATUS_TEXT_MAP[status] || status || 'Draft'; }
 
-    function sortByDateDesc(data) {
-        return data.slice().sort(function(a, b) {
-            if (!a.periodStart) return 1;
-            if (!b.periodStart) return -1;
-            return b.periodStart.localeCompare(a.periodStart);
-        });
-    }
-
     function getSiteType(siteName) {
         if (!siteName) return 'other';
         var lower = siteName.toLowerCase();
@@ -288,7 +234,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // ==================== 渲染 ====================
     // ==================== 渲染表格 (四分類) ====================
     function renderWageTable() {
         const CATEGORIES = ['overdue', 'pending', 'closed', 'other'];
@@ -384,22 +329,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
         updateStats(projectFilteredData);
         if (userCanChangeStatus) bindStatusChangeEvents();
-    }
-
-    function generateStatusSelect(recordId) {
-        if (window.DWSS_Auth && DWSS_Auth.canChangeStatus()) {
-            return `
-                <select class="status-change-select" data-id="${recordId}" title="Change Status">
-                    <option value="">📝 Change Status</option>
-                    <option value="draft">Draft</option>
-                    <option value="submitted-ig">Submit to IG</option>
-                    <option value="closed">Closed</option>
-                    <option value="reopen">Reopened</option>
-                    <option value="cancelled">Cancelled</option>
-                </select>
-            `;
-        }
-        return '';
     }
 
     function bindStatusChangeEvents() {
@@ -602,20 +531,102 @@ document.addEventListener("DOMContentLoaded", function () {
         var cancelBtn = document.getElementById('cancel-add-wage');
         var addForm = document.getElementById('add-wage-form');
         var fileInput = document.getElementById('input-pdf');
+        var copyFromSelect = document.getElementById('input-copy-from');
 
         if (addWageBtn && modal) {
             addWageBtn.addEventListener('click', function() {
                 modal.style.display = 'flex';
                 addForm.reset();
 
+                // 1. 重置 Copy from 下拉選單並填入當前專案的舊文件
+                if (copyFromSelect) {
+                    copyFromSelect.innerHTML = '<option value="">-- Do not copy --</option>';
+                    var projectData = getProjectData();
+                    projectData.sort(function(a, b) {
+                        if (!a.periodStart) return 1;
+                        if (!b.periodStart) return -1;
+                        return b.periodStart.localeCompare(a.periodStart);
+                    });
+                    projectData.forEach(function(r) {
+                        var opt = document.createElement('option');
+                        opt.value = r.id;
+                        opt.textContent = r.id + ' (' + r.typeText + ' - ' + r.site + ')';
+                        copyFromSelect.appendChild(opt);
+                    });
+                }
+
+                // 2. 自動生成新 Document ID
                 var docIdInput = document.getElementById('input-doc-id');
                 if (docIdInput) {
                     docIdInput.value = generateNextLabourWageId();
                 }
 
+                // 3. 權限處理與自動填入
                 if (window.DWSS_Auth) {
                     DWSS_Auth.adjustFormStatusOptions('input-status');
                     DWSS_Auth.autoFillSubmittedBy('input-submitted-by');
+                }
+
+                // 4. 設定預設年份
+                var currYear = new Date().getFullYear();
+                document.getElementById('input-period-start-year').value = currYear;
+                document.getElementById('input-period-end-year').value = currYear;
+            });
+        }
+
+        // 監聽 Copy from 選擇，並填入表單
+        if (copyFromSelect) {
+            copyFromSelect.addEventListener('change', function() {
+                var selectedId = this.value;
+                if (!selectedId) return;
+
+                var source = wageData.find(function(r) { return String(r.id) === String(selectedId); });
+                if (!source) return;
+
+                // 填入 Document Type
+                if (source.type) document.getElementById('input-type').value = source.type;
+                
+                // 填入 Site
+                if (source.site) document.getElementById('input-site').value = source.site;
+
+                // 填入 Submitted By
+                if (source.submittedBy) document.getElementById('input-submitted-by').value = source.submittedBy;
+
+                // ★ 解析 Period Start & End
+                let pStart = source.periodStart;
+                let pEnd = source.periodEnd;
+
+                // 如果沒有 periodStart/periodEnd，嘗試從 period 字串解析（例如 "01-Sep-2025 to 07-Sep-2025"）
+                if ((!pStart || !pEnd) && source.period) {
+                    const parts = source.period.split(' to ');
+                    if (parts.length === 2) {
+                        const parseDate = (str) => {
+                            const d = new Date(str);
+                            if (!isNaN(d)) {
+                                const y = d.getFullYear();
+                                const m = String(d.getMonth() + 1).padStart(2, '0');
+                                return `${y}-${m}`;
+                            }
+                            return '';
+                        };
+                        pStart = pStart || parseDate(parts[0].trim());
+                        pEnd = pEnd || parseDate(parts[1].trim());
+                    }
+                }
+
+                if (pStart) {
+                    const parts = pStart.split('-');
+                    if (parts.length >= 2) {
+                        document.getElementById('input-period-start-year').value = parts[0];
+                        document.getElementById('input-period-start-month').value = parts[1];
+                    }
+                }
+                if (pEnd) {
+                    const parts = pEnd.split('-');
+                    if (parts.length >= 2) {
+                        document.getElementById('input-period-end-year').value = parts[0];
+                        document.getElementById('input-period-end-month').value = parts[1];
+                    }
                 }
             });
         }
@@ -642,16 +653,31 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 var type = document.getElementById('input-type').value;
                 var status = document.getElementById('input-status').value;
-                var site = document.getElementById('input-site').value;
-                var periodStart = document.getElementById('input-period-start').value;
-                var periodEnd = document.getElementById('input-period-end').value;
+                var site = document.getElementById('input-site').value.trim();
+                var startMonth = document.getElementById('input-period-start-month').value;
+                var startYear = document.getElementById('input-period-start-year').value;
+                var endMonth = document.getElementById('input-period-end-month').value;
+                var endYear = document.getElementById('input-period-end-year').value;
                 var submittedBy = document.getElementById('input-submitted-by').value;
 
+                // 組合出 YYYY-MM-DD
+                var periodStart = startYear + '-' + startMonth + '-01';
+                // 計算所選月份的最後一天
+                var endDay = new Date(endYear, parseInt(endMonth), 0).getDate();
+                var periodEnd = endYear + '-' + endMonth + '-' + String(endDay).padStart(2, '0');
+
                 var pdfData = null;
+                
+                // 處理 PDF 來源（新上傳的優先，沒有的話才看是否從舊文件複製）
                 var file = fileInput.files[0];
                 if (file) {
                     try { pdfData = await readFileAsBase64(file); }
                     catch (err) { alert('Failed to read PDF file.'); return; }
+                } else if (copyFromSelect && copyFromSelect.value) {
+                    var sourceRecord = wageData.find(function(r) { return String(r.id) === String(copyFromSelect.value); });
+                    if (sourceRecord && sourceRecord.pdfData) {
+                        pdfData = sourceRecord.pdfData;
+                    }
                 }
 
                 var docIdInput = document.getElementById('input-doc-id');
@@ -677,12 +703,15 @@ document.addEventListener("DOMContentLoaded", function () {
                     typeText = "GF527 (2017) - Labour Wage";
                 }
 
-                function fmt(d) {
-                    var date = new Date(d);
-                    return date.getDate().toString().padStart(2, '0') + '-' +
-                           date.toLocaleString('en-US', { month: 'short' }) + '-' +
-                           date.getFullYear();
+                // 格式化 Period 字串 (ex: 01-Sep-2025 to 30-Sep-2025)
+                function fmt(dStr) {
+                    var d = new Date(dStr);
+                    var day = String(d.getDate()).padStart(2, '0');
+                    var month = d.toLocaleString('en-US', { month: 'short' });
+                    var year = d.getFullYear();
+                    return day + '-' + month + '-' + year;
                 }
+                var periodStr = fmt(periodStart) + ' to ' + fmt(periodEnd);
 
                 var newWage = {
                     id: newId,
@@ -690,11 +719,11 @@ document.addEventListener("DOMContentLoaded", function () {
                     typeText: typeText,
                     status: status,
                     site: site,
-                    period: fmt(periodStart) + ' to ' + fmt(periodEnd),
+                    period: periodStr,
                     submittedBy: submittedBy,
                     periodStart: periodStart,
                     periodEnd: periodEnd,
-                    project: getCurrentProjectId(),   // ★ 統一來源
+                    project: getCurrentProjectId(),
                     pdfData: pdfData,
                     annotations: []
                 };

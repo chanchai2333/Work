@@ -8,10 +8,14 @@
     let totalPages = 0;
     let annotations = [];
     let currentDocId = null;
-    let safetyFormData = null; // ★ 保存表單資料
+    let safetyFormData = null;
+    let documentData = null; // ★ 保存原始文檔數據，用於 Fallback
     
-    const baseScale = 1.0; 
-    const renderScale = 2.0;
+    const renderScale = 2.0; 
+    let zoomLevel = 1.0;     
+    const ZOOM_MIN = 0.5;
+    const ZOOM_MAX = 3.0;
+    const ZOOM_STEP = 0.2;
 
     // ---------- DOM 引用 ----------
     const pdfCanvas = document.getElementById('pdf-canvas');
@@ -27,127 +31,134 @@
     const totalPagesSpan = document.getElementById('pdf-total-pages');
     const printBtn = document.getElementById('print-pdf-btn');
     const downloadBtn = document.getElementById('download-pdf-btn');
+    
+    const zoomLevelEl = document.getElementById('zoom-level');
+    const zoomOutBtn = document.getElementById('zoom-out-btn');
+    const zoomInBtn = document.getElementById('zoom-in-btn');
+    const zoomResetBtn = document.getElementById('zoom-reset-btn');
 
     // ========================================
-    // ★ Safety Inspection 固定表單 Layout (與編輯器一致)
+    // ★ Safety Inspection 固定表單 Layout (完全對齊編輯頁)
     // ========================================
     var SAFETY_LAYOUT = {
         typeCheckboxes: {
             1: [
-                { key: 'weekly', left: '27.72%', top: '17.00%', width: '1.08%', height: '0.89%' },
-                { key: 'daily',  left: '37.14%', top: '17.00%', width: '1.16%', height: '0.89%' },
-                { key: 'adhoc',  left: '44.72%', top: '17.00%', width: '1.17%', height: '0.83%' }
+                { key: 'weekly', left: '23.72%', top: '16.30%', width: '1.08%', height: '0.89%' },
+                { key: 'daily',  left: '33.14%', top: '16.30%', width: '1.16%', height: '0.89%' },
+                { key: 'adhoc',  left: '40.60%', top: '16.30%', width: '1.17%', height: '0.83%' }
             ],
         },
         header: {
             '*': {
-                Project:    { left: '55.00%', top: '4.50%',  width: '33.00%', height: '6.30%', multiline: true },
-                ContractNo: { left: '61.64%', top: '11.00%', width: '29.58%', height: '1.71%' },
+                Project:    { left: '53.00%', top: '4.50%',  width: '33.00%', height: '6.30%', multiline: true },
+                ContractNo: { left: '53.64%', top: '11.00%', width: '29.58%', height: '1.51%' },
             },
             1: {
-                location:  { left: '18.72%', top: '18.15%', width: '31.92%', height: '1.59%' },
-                taskOrder: { left: '63.64%', top: '18.15%', width: '29.58%', height: '1.71%' },
-                date:      { left: '15.89%', top: '20.00%', width: '34.75%', height: '1.59%' },
-                time:      { left: '56.30%', top: '20.00%', width: '37.00%', height: '1.65%' },
+                location:  { left: '15.72%', top: '17.90%', width: '31.00%', height: '1.5%' },
+                taskOrder: { left: '60.64%', top: '17.90%', width: '28.5%', height: '1.5%' },
+                date:      { left: '13.50%', top: '19.20%', width: '33.00%', height: '1.59%' },
+                time:      { left: '53.30%', top: '19.20%', width: '36.00%', height: '1.59%' },
             },
             7: {
-                Detail:  { left: '10.72%', top: '52.15%', width: '80.92%', height: '25.59%', multiline: true},
-                Inspectedbyname1:  { left: '17.72%', top: '86.15%', width: '10.92%', height: '2.59%'},
-                Inspectedbypos1:   { left: '18.72%', top: '90.0%',  width: '10.92%', height: '2.59%'},
-                Inspectedbysign1:  { left: '19.72%', top: '92.5%', width: '10.92%', height: '4.5%', sign: true },
-                Inspectedbyname2:  { left: '47.72%', top: '86.15%', width: '10.92%', height: '2.59%'},
-                Inspectedbypos2:   { left: '48.72%', top: '90.0%',  width: '10.92%', height: '2.59%'},
-                Inspectedbysign2:  { left: '49.72%', top: '92.5%', width: '10.92%', height: '4.5%', sign: true },
-                Witnessbyname1:    { left: '77.72%', top: '86.15%', width: '10.92%', height: '2.59%'},
-                Witnessbypos1:     { left: '78.72%', top: '90.0%',  width: '10.92%', height: '2.59%'},
-                Witnessbysign1:    { left: '79.72%', top: '92.5%', width: '10.92%', height: '4.5%', sign: true },
+                Detail:  { left: '7.22%', top: '51.15%', width: '80.92%', height: '20.00%', multiline: true},
+                Inspectedbyname1:  { left: '12.72%', top: '76.05%', width: '20.92%', height: '3.59%', multiline: true},
+                Inspectedbypos1:   { left: '14.72%', top: '80.0%',  width: '18.92%', height: '3.59%', multiline: true},
+                Inspectedbysign1:  { left: '15.22%', top: '84.5%', width: '18.92%', height: '4.5%', sign: true },
+                Inspectedbyname2:  { left: '40.72%', top: '76.05%', width: '20.92%', height: '3.59%', multiline: true},
+                Inspectedbypos2:   { left: '42.72%', top: '80.0%',  width: '18.92%', height: '3.59%', multiline: true},
+                Inspectedbysign2:  { left: '42.72%', top: '84.5%', width: '18.92%', height: '4.5%', sign: true },
+                Witnessbyname1:    { left: '70.72%', top: '76.05%', width: '20.92%', height: '3.59%', multiline: true},
+                Witnessbypos1:     { left: '72.72%', top: '80.0%',  width: '18.92%', height: '3.59%', multiline: true},
+                Witnessbysign1:    { left: '72.72%', top: '84.5%', width: '18.92%', height: '4.5%', sign: true },
             },
             8: {
-                PhotoNo1a: { left: '74.64%', top: '19.00%', width: '18.58%', height: '1.71%' },
-                location1: { left: '64.00%', top: '21.00%', width: '24.58%', height: '1.71%' },
-                Description1: { left: '64.00%', top: '23.00%',  width: '30.00%', height: '13.30%', multiline: true },
-                PhotoNo1b: { left: '74.64%', top: '37.00%', width: '18.58%', height: '1.71%' },
-                Action1: { left: '64.00%', top: '39.00%',  width: '30.00%', height: '5.30%', multiline: true },
-                Reportedby1: { left: '64.00%', top: '45.50%', width: '24.58%', height: '1.71%' },
-                Completiondate1: { left: '64.00%', top: '48.00%',  width: '30.00%', height: '5.30%', multiline: true },
-                PhotoNo2a: { left: '74.64%', top: '56.00%', width: '18.58%', height: '1.71%' },
-                location2: { left: '64.00%', top: '58.00%', width: '24.58%', height: '1.71%' },
-                Description2: { left: '64.00%', top: '60.00%',  width: '30.00%', height: '13.30%', multiline: true },
-                PhotoNo2b: { left: '74.64%', top: '74.00%', width: '18.58%', height: '1.71%' },
-                Action2: { left: '64.00%', top: '76.00%',  width: '30.00%', height: '5.30%', multiline: true },
-                Reportedby2: { left: '64.00%', top: '82.50%', width: '24.58%', height: '1.71%' },
-                Completiondate2: { left: '64.00%', top: '85.00%',  width: '30.00%', height: '5.30%', multiline: true },
-                Photo1: { left: '11.00%', top: '18.50%', width: '38.00%', height: '18.00%', image: true },
-                Photo2: { left: '11.00%', top: '36.50%', width: '38.00%', height: '16.00%', image: true },
-                Photo3: { left: '11.00%', top: '55.70%', width: '38.00%', height: '18.00%', image: true },
-                Photo4: { left: '11.00%', top: '74.00%', width: '38.00%', height: '16.00%', image: true },
+                PhotoNo1a: { left: '59.64%', top: '17.50%', width: '29.58%', height: '1.71%' },
+                location1: { left: '59.64%', top: '19.50%', width: '29.58%', height: '1.71%' },
+                Description1: { left: '59.64%', top: '21.50%', width: '29.58%', height: '13.30%', multiline: true },
+                PhotoNo1b: { left: '59.64%', top: '34.50%', width: '29.58%', height: '1.71%'},
+                Action1: { left: '59.64%', top: '36.50%',  width: '30.00%', height: '5.30%', multiline: true },
+                Reportedby1: { left: '59.64%', top: '41.50%', width: '29.58%', height: '3.71%' },
+                Completiondate1: { left: '59.64%', top: '46.00%',  width: '30.00%', height: '5.30%', multiline: true },
+                PhotoNo2a: { left: '59.64%', top: '53.00%', width: '29.58%', height: '1.71%' },
+                location2: { left: '59.64%', top: '55.00%', width: '29.58%', height: '1.71%' },
+                Description2: { left: '59.64%', top: '56.50%', width: '29.58%', height: '13.30%', multiline: true },
+                PhotoNo2b: { left: '59.64%', top: '70.50%', width: '29.58%', height: '1.71%'},
+                Action2: { left: '59.64%', top: '72.50%',  width: '30.00%', height: '5.30%', multiline: true },
+                Reportedby2: { left: '59.64%', top: '77.50%', width: '29.58%', height: '3.71%' },
+                Completiondate2: { left: '59.64%', top: '81.00%',  width: '30.00%', height: '5.30%', multiline: true },
+                Photo1: { left: '7.00%', top: '17.50%', width: '38.00%', height: '17.50%', image: true },
+                Photo2: { left: '7.00%', top: '35.00%', width: '38.00%', height: '16.00%', image: true },
+                Photo3: { left: '7.00%', top: '52.70%', width: '38.00%', height: '17.50%', image: true },
+                Photo4: { left: '7.00%', top: '70.50%', width: '38.00%', height: '16.00%', image: true },
             }
         },
         ratingColumns: {
-            A:     { left: '67.67%', width: '5.00%' },
-            B:     { left: '73.95%', width: '5.00%' },
-            C:     { left: '80.03%', width: '5.00%' },
-            'N/A': { left: '86.91%', width: '5.00%' }
+            A:     { left: '63.67%', width: '5.00%' },
+            B:     { left: '69.55%', width: '5.00%' },
+            C:     { left: '75.33%', width: '5.00%' },
+            'N/A': { left: '82.91%', width: '5.00%' }
         },
         sections: [
             { letter: 'A',   page: 1, startY: '26.95%', rowHeight: '2.18%', cellHeight: '2.40%', itemCount: 13 },
-            { letter: 'B',   page: 1, startY: '58.40%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 9 },
-            { letter: 'C.i1to3', page: 1, startY: '81.80%', rowHeight: '2.18%', cellHeight: '2.12%', itemCount: 3 },
-            { letter: 'C.i4', page: 1, startY: '89.92%', rowHeight: '2.18%', cellHeight: '2.12%', itemCount: 1 },
-            { letter: 'C.i5', page: 1, startY: '93.00%', rowHeight: '2.18%', cellHeight: '2.12%', itemCount: 1 },
-            { letter: 'C.i6', page: 2, startY: '14.50%', rowHeight: '2.18%', cellHeight: '2.12%', itemCount: 1 },
-            { letter: 'C.ii1to4', page: 2, startY: '18.40%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
-            { letter: 'C.ii5to6', page: 2, startY: '28.40%', rowHeight: '4.18%', cellHeight: '2.18%', itemCount: 2 },
-            { letter: 'C.ii7to8', page: 2, startY: '36.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
-            { letter: 'C.ii9', page: 2, startY: '41.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
-            { letter: 'C.iii1to2', page: 2, startY: '48.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
-            { letter: 'C.iii3', page: 2, startY: '54.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
-            { letter: 'C.iii4to7', page: 2, startY: '57.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
-            { letter: 'C.iii8', page: 2, startY: '67.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
-            { letter: 'C.iii9to10', page: 2, startY: '71.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
-            { letter: 'D.1to4', page: 2, startY: '79.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
-            { letter: 'D.5', page: 2, startY: '89.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
-            { letter: 'D.6to7', page: 2, startY: '92.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
-            { letter: 'D.8to12', page: 3, startY: '14.10%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 5 },
-            { letter: 'D.13to14', page: 3, startY: '26.20%', rowHeight: '5.18%', cellHeight: '2.18%', itemCount: 2 },
-            { letter: 'E.1to4', page: 3, startY: '40.80%', rowHeight: '4.18%', cellHeight: '2.18%', itemCount: 4 },
-            { letter: 'E.5to6', page: 3, startY: '56.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
-            { letter: 'E.7', page: 3, startY: '62.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
-            { letter: 'E.8to10', page: 3, startY: '66.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 3 },
-            { letter: 'E.11', page: 3, startY: '74.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
-            { letter: 'E.12', page: 3, startY: '76.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
-            { letter: 'E.13to16', page: 3, startY: '80.80%', rowHeight: '4.18%', cellHeight: '2.18%', itemCount: 4 },
-            { letter: 'F.1to2', page: 4, startY: '18.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
-            { letter: 'F.3', page: 4, startY: '24.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
-            { letter: 'F.4to8', page: 4, startY: '27.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 5 },
-            { letter: 'F.9', page: 4, startY: '39.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
-            { letter: 'G.1', page: 4, startY: '49.00%', rowHeight: '2.18%', cellHeight: '15.18%', itemCount: 1 },
-            { letter: 'G.2to3', page: 4, startY: '69.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
-            { letter: 'G.4', page: 4, startY: '75.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
-            { letter: 'G.5', page: 4, startY: '80.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
-            { letter: 'G.6', page: 4, startY: '84.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'B',   page: 1, startY: '59.00%', rowHeight: '1.65%', cellHeight: '1.50%', itemCount: 9 },
+            { letter: 'C.i1to3', page: 1, startY: '77.00%', rowHeight: '2.18%', cellHeight: '2.12%', itemCount: 3 },
+            { letter: 'C.i4', page: 1, startY: '83.92%', rowHeight: '2.18%', cellHeight: '2.12%', itemCount: 1 },
+            { letter: 'C.i5', page: 1, startY: '87.50%', rowHeight: '2.18%', cellHeight: '2.12%', itemCount: 1 },
+            { letter: 'C.i6', page: 1, startY: '89.50%', rowHeight: '2.18%', cellHeight: '2.12%', itemCount: 1 },
+            { letter: 'C.ii1to4', page: 2, startY: '14.40%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'C.ii5to6', page: 2, startY: '23.00%', rowHeight: '4.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'C.ii7to8', page: 2, startY: '30.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'C.ii9', page: 2, startY: '36.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'C.ii10', page: 2, startY: '38.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'C.iii1to2', page: 2, startY: '43.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'C.iii3', page: 2, startY: '49.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'C.iii4to7', page: 2, startY: '52.90%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'C.iii8', page: 2, startY: '63.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'C.iii9to10', page: 2, startY: '66.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'D.1to4', page: 2, startY: '74.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'D.5', page: 2, startY: '83.90%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'D.6to9', page: 2, startY: '86.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'D.10to12', page: 3, startY: '14.10%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 3 },
+            { letter: 'D.13to14', page: 3, startY: '20.70%', rowHeight: '4.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'D.15', page: 3, startY: '29.70%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'E.1to4', page: 3, startY: '36.80%', rowHeight: '4.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'E.5to6', page: 3, startY: '53.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'E.7', page: 3, startY: '59.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'E.8to10', page: 3, startY: '63.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 3 },
+            { letter: 'E.11', page: 3, startY: '70.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'E.12', page: 3, startY: '73.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'E.13to16', page: 3, startY: '75.80%', rowHeight: '3.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'F.1to2', page: 4, startY: '17.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'F.3', page: 4, startY: '22.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'F.4to8', page: 4, startY: '24.50%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 5 },
+            { letter: 'F.9', page: 4, startY: '36.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'G.1', page: 4, startY: '43.00%', rowHeight: '2.18%', cellHeight: '15.18%', itemCount: 1 },
+            { letter: 'G.2to3', page: 4, startY: '58.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'G.4', page: 4, startY: '64.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'G.5', page: 4, startY: '67.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'G.6', page: 4, startY: '71.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
             { letter: 'H.1to4', page: 5, startY: '17.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
             { letter: 'H.5', page: 5, startY: '27.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
-            { letter: 'H.6', page: 5, startY: '30.50%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
-            { letter: 'I.1to10', page: 5, startY: '36.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 10 },
-            { letter: 'J.1to5', page: 5, startY: '61.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 6 },
-            { letter: 'J.7', page: 5, startY: '75.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
-            { letter: 'J.8', page: 5, startY: '78.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
-            { letter: 'J.9', page: 5, startY: '81.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
-            { letter: 'J.10', page: 5, startY: '85.50%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
-            { letter: 'K.1to3', page: 6, startY: '18.50%', rowHeight: '4.18%', cellHeight: '2.18%', itemCount: 3 },
-            { letter: 'K.4', page: 6, startY: '30.50%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
-            { letter: 'L.1to2', page: 6, startY: '36.50%', rowHeight: '4.18%', cellHeight: '2.18%', itemCount: 2 },
-            { letter: 'L.3to6', page: 6, startY: '44.50%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'H.6', page: 5, startY: '29.50%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'I.1to10', page: 5, startY: '35.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 10 },
+            { letter: 'J.1to5', page: 5, startY: '60.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 6 },
+            { letter: 'J.7', page: 5, startY: '73.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'J.8', page: 5, startY: '76.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'J.9', page: 5, startY: '80.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'J.10', page: 5, startY: '82.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'K.1to3', page: 6, startY: '17.20%', rowHeight: '3.38%', cellHeight: '2.18%', itemCount: 3 },
+            { letter: 'K.4', page: 6, startY: '26.50%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'L.1to2', page: 6, startY: '33.50%', rowHeight: '4.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'L.3to6', page: 6, startY: '40.80%', rowHeight: '2.58%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'L.7', page: 6, startY: '50.80%', rowHeight: '2.58%', cellHeight: '2.18%', itemCount: 1 },
             { letter: 'M.1', page: 6, startY: '57.50%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
-            { letter: 'M.2to5', page: 6, startY: '60.70%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
-            { letter: 'N.1to6', page: 6, startY: '73.70%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 6 },
-            { letter: 'O.1to5', page: 7, startY: '17.70%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 5 },
-            { letter: 'P.1to7', page: 7, startY: '31.70%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 7 },
+            { letter: 'M.2to5', page: 6, startY: '59.70%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'N.1to6', page: 6, startY: '71.90%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 6 },
+            { letter: 'O.1to5', page: 7, startY: '17.30%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 5 },
+            { letter: 'P.1to7', page: 7, startY: '31.30%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 7 },
         ]
     };
 
-    // 加入在 syncGlobalDate() 函數附近
     function getStatusText(status) {
         const map = {
             'draft': 'Draft',
@@ -169,20 +180,6 @@
         }
     }
 
-    function loadAnnotationsFromStorage(docId) {
-        const STORAGE_KEY = 'inspectionData';
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (!stored) return [];
-        try {
-            const inspectionData = JSON.parse(stored);
-            const doc = inspectionData.find(d => String(d.id) === String(docId));
-            return doc && doc.annotations ? doc.annotations : [];
-        } catch (e) {
-            console.error('Failed to load annotations:', e);
-            return [];
-        }
-    }
-
     // ========================================
     // ★ 注入唯讀表單內容 (隱藏所有框框與背景)
     // ========================================
@@ -193,19 +190,19 @@
         style.textContent =
             '.pdf-checkbox-readonly {' +
                 'display:flex;align-items:center;justify-content:center;' +
-                'color:#0a1a5c;font-weight:bold;font-size:18px;' +
-                'box-sizing:border-box;background:transparent !important;border:none !important;' + // 強制無背景、無邊框
+                'color:#0a1a5c;font-weight:bold;font-size:calc(14px * var(--pdf-zoom-scale, 1)) !important;' + 
+                'box-sizing:border-box;background:transparent !important;border:none !important;' + 
                 'font-family: Arial, sans-serif;' +
             '}' +
             '.pdf-checkbox-readonly.checked { ' +
                 'color: #0a1a5c;' +
             '}' +
             '.pdf-field-readonly {' +
-                'font-family: Arial;color:#0a1a5c;font-size:11px;' +
+                'font-family: Arial;color:#0a1a5c;font-size:calc(11px * var(--pdf-zoom-scale, 1)) !important;' +
                 'padding:1px 4px;box-sizing:border-box;overflow:hidden;' +
                 'display:flex;align-items:center;' +
-                'border:none !important;' + // ★ 強制移除邊框
-                'background:transparent !important;' + // ★ 強制移除背景
+                'border:none !important;' + 
+                'background:transparent !important;' + 
             '}' +
             '.pdf-image-readonly, .pdf-sign-readonly {' +
                 'object-fit:contain;display:block;' +
@@ -214,7 +211,6 @@
     }
 
     function createReadOnlyOverlay(pageNum, formData) {
-        if (!formData) return null;
         ensureReadOnlyStyle();
         
         var overlay = document.createElement('div');
@@ -223,15 +219,17 @@
         
         // 1. Type checkboxes
         var pageTypeCbs = SAFETY_LAYOUT.typeCheckboxes[pageNum] || [];
-        pageTypeCbs.forEach(function (cb) {
-            if (formData.type === cb.key) {
-                var el = document.createElement('div');
-                el.className = 'pdf-checkbox-readonly checked';
-                el.style.cssText = 'position:absolute;left:'+cb.left+';top:'+cb.top+';width:'+cb.width+';height:'+cb.height+';';
-                el.innerHTML = '✓';
-                overlay.appendChild(el);
-            }
-        });
+        if (formData && formData.type) {
+            pageTypeCbs.forEach(function (cb) {
+                if (formData.type === cb.key) {
+                    var el = document.createElement('div');
+                    el.className = 'pdf-checkbox-readonly checked';
+                    el.style.cssText = 'position:absolute;left:'+cb.left+';top:'+cb.top+';width:'+cb.width+';height:'+cb.height+';';
+                    el.innerHTML = '✓';
+                    overlay.appendChild(el);
+                }
+            });
+        }
         
         // 2. Header
         var pageHeaderDefaults = SAFETY_LAYOUT.header['*'] || {};
@@ -240,7 +238,29 @@
         
         Object.keys(pageHeader).forEach(function (key) {
             var f = pageHeader[key];
-            var val = formData.header && formData.header[key];
+            var val = formData && formData.header && formData.header[key];
+            
+            // ★ Fallback：如果表單沒資料，嘗試從 doc 基本資訊抓取
+            if (!val && documentData) {
+                if (key === 'ContractNo') {
+                    val = documentData.project || sessionStorage.getItem('currentProjectId');
+                } else if (key === 'location') {
+                    val = documentData.site;
+                } else if (key === 'taskOrder') {
+                    val = documentData.id;
+                } else if (key === 'date') {
+                    var d = documentData.date || '';
+                    if (d.match(/^\d{2}-[A-Za-z]{3}-\d{4}$/)) {
+                        const parts = d.split('-');
+                        const monthMap = { 'Jan':'01','Feb':'02','Mar':'03','Apr':'04','May':'05','Jun':'06',
+                                           'Jul':'07','Aug':'08','Sep':'09','Oct':'10','Nov':'11','Dec':'12' };
+                        const month = monthMap[parts[1]] || '01';
+                        d = `${parts[2]}-${month}-${parts[0]}`;
+                    }
+                    val = d;
+                }
+            }
+
             if (val) {
                 var el;
                 if (f.sign === true || f.type === 'sign') {
@@ -264,28 +284,30 @@
         });
         
         // 3. Ratings
-        SAFETY_LAYOUT.sections.forEach(function (section) {
-            if (section.page !== pageNum) return;
-            var startY = parseFloat(section.startY);
-            var rowH = parseFloat(section.rowHeight);
-            var cellH = parseFloat(section.cellHeight);
-            
-            for (var i = 0; i < section.itemCount; i++) {
-                var top = (startY + i * rowH) + '%';
-                var rowKey = section.letter + '_' + i;
-                var selectedRating = formData.ratings && formData.ratings[rowKey];
-                if (selectedRating) {
-                    var col = SAFETY_LAYOUT.ratingColumns[selectedRating];
-                    if (col) {
-                        var el = document.createElement('div');
-                        el.className = 'pdf-checkbox-readonly checked';
-                        el.style.cssText = 'position:absolute;left:'+col.left+';top:'+top+';width:'+col.width+';height:'+cellH+'%;';
-                        el.innerHTML = '✓';
-                        overlay.appendChild(el);
+        if (formData && formData.ratings) {
+            SAFETY_LAYOUT.sections.forEach(function (section) {
+                if (section.page !== pageNum) return;
+                var startY = parseFloat(section.startY);
+                var rowH = parseFloat(section.rowHeight);
+                var cellH = parseFloat(section.cellHeight);
+                
+                for (var i = 0; i < section.itemCount; i++) {
+                    var top = (startY + i * rowH) + '%';
+                    var rowKey = section.letter + '_' + i;
+                    var selectedRating = formData.ratings[rowKey];
+                    if (selectedRating) {
+                        var col = SAFETY_LAYOUT.ratingColumns[selectedRating];
+                        if (col) {
+                            var el = document.createElement('div');
+                            el.className = 'pdf-checkbox-readonly checked';
+                            el.style.cssText = 'position:absolute;left:'+col.left+';top:'+top+';width:'+col.width+';height:'+cellH+'%;';
+                            el.innerHTML = '✓';
+                            overlay.appendChild(el);
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
         
         return overlay;
     }
@@ -298,27 +320,10 @@
         if (oldOverlay) oldOverlay.remove();
         
         var overlay = createReadOnlyOverlay(pageNum, formData);
-        if (overlay) wrapper.appendChild(overlay);
-    }
-
-    function alignSafetyOverlay() {
-        var wrapper = document.getElementById('pdf-canvas-wrapper');
-        var canvas = document.getElementById('pdf-canvas');
-        if (!wrapper || !canvas) return;
-        var overlay = wrapper.querySelector('.safety-form-overlay');
-        if (!overlay) return;
-        if (canvas.offsetWidth === 0 && canvas.offsetHeight === 0) return;
-        
-        var canvasRect = canvas.getBoundingClientRect();
-        var wrapperRect = wrapper.getBoundingClientRect();
-        
-        var left = canvasRect.left - wrapperRect.left;
-        var top = canvasRect.top - wrapperRect.top;
-        
-        overlay.style.left = left + 'px';
-        overlay.style.top = top + 'px';
-        overlay.style.width = canvasRect.width + 'px';
-        overlay.style.height = canvasRect.height + 'px';
+        if (overlay) {
+            overlay.style.setProperty('--pdf-zoom-scale', zoomLevel);
+            wrapper.appendChild(overlay);
+        }
     }
 
     // ---------- 绘制非文本注释 ----------
@@ -444,23 +449,40 @@
             el.textContent = anno.text || '';
             el.style.color = anno.color || '#000000';
             el.style.opacity = (anno.opacity || 100) / 100;
-            el.style.fontSize = (anno.size * 4 * scale) + 'px';
+            el.style.fontSize = (anno.size * 4 * scale) + 'px'; 
             el.style.left = (anno.x * scale) + 'px';
             el.style.top = (anno.y * scale) + 'px';
             textContainer.appendChild(el);
         });
     }
 
-    function fitToWidth() {
-        return Promise.resolve();
+    // ---------- 縮放邏輯 ----------
+    function updateZoomDisplay() {
+        if (zoomLevelEl) zoomLevelEl.textContent = Math.round(zoomLevel * 100) + '%';
+        if (zoomOutBtn) zoomOutBtn.disabled = zoomLevel <= ZOOM_MIN;
+        if (zoomInBtn) zoomInBtn.disabled = zoomLevel >= ZOOM_MAX;
     }
 
+    function setZoom(newLevel) {
+        zoomLevel = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, newLevel));
+        updateZoomDisplay();
+        renderPage(currentPage);
+    }
+
+    function setupZoom() {
+        if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => setZoom(zoomLevel - ZOOM_STEP));
+        if (zoomInBtn) zoomInBtn.addEventListener('click', () => setZoom(zoomLevel + ZOOM_STEP));
+        if (zoomResetBtn) zoomResetBtn.addEventListener('click', () => setZoom(1.0));
+        updateZoomDisplay();
+    }
+
+    // ---------- 渲染頁面 ----------
     function renderPage(pageNum) {
         if (!pdfDoc) return Promise.reject('No PDF document');
         return pdfDoc.getPage(pageNum).then(page => {
-            const viewport = page.getViewport({ scale: renderScale });
-            const cssViewport = page.getViewport({ scale: baseScale });
-            
+            const viewport = page.getViewport({ scale: zoomLevel * renderScale });
+            const cssViewport = page.getViewport({ scale: zoomLevel });
+
             pdfCanvas.width = viewport.width;
             pdfCanvas.height = viewport.height;
             annoCanvas.width = viewport.width;
@@ -468,35 +490,37 @@
 
             const widthPx = cssViewport.width + 'px';
             const heightPx = cssViewport.height + 'px';
-            
+
             pdfCanvas.style.width = widthPx;
             pdfCanvas.style.height = heightPx;
             annoCanvas.style.width = widthPx;
             annoCanvas.style.height = heightPx;
 
+            const wrapper = document.getElementById('pdf-canvas-wrapper');
+            if (wrapper) {
+                wrapper.style.width = widthPx;
+                wrapper.style.height = heightPx;
+                wrapper.style.setProperty('--pdf-zoom-scale', zoomLevel);
+            }
+
             const renderContext = { canvasContext: ctx, viewport: viewport };
             return page.render(renderContext).promise;
         }).then(() => {
-            const offsetX = pdfCanvas.offsetLeft || 0;
-            const offsetY = pdfCanvas.offsetTop || 0;
-            
-            annoCanvas.style.left = offsetX + 'px';
-            annoCanvas.style.top = offsetY + 'px';
-            
-            textContainer.style.left = offsetX + 'px';
-            textContainer.style.top = offsetY + 'px';
+            annoCanvas.style.left = '0px';
+            annoCanvas.style.top = '0px';
+
+            textContainer.style.left = '0px';
+            textContainer.style.top = '0px';
             textContainer.style.width = pdfCanvas.style.width;
             textContainer.style.height = pdfCanvas.style.height;
 
             currentPageSpan.textContent = pageNum;
             currentPage = pageNum;
 
-            // ★ 注入表單內容與對齊
             injectReadOnlyFormFields(pageNum, safetyFormData);
-            alignSafetyOverlay();
 
-            redrawAnnotations(renderScale);
-            renderTextAnnotations(baseScale);
+            redrawAnnotations(zoomLevel * renderScale);
+            renderTextAnnotations(zoomLevel); 
             
         }).catch(err => {
             console.error('Render page error:', err);
@@ -513,11 +537,12 @@
             errorEl.style.display = 'block';
             return;
         }
-        var documentData = null;
+        
         try {
             var res = await fetch('/api/records/inspection/' + encodeURIComponent(id), { cache: 'no-store' });
             if (res.ok) documentData = await res.json();
         } catch (e) {}
+        
         if (!documentData || !documentData.id) {
             loadingEl.style.display = 'none';
             errorEl.textContent = 'Record not found in the database.';
@@ -531,20 +556,43 @@
         document.getElementById('docSite').textContent = documentData.site || 'N/A';
         document.getElementById('docDate').textContent = documentData.date || 'N/A';
         document.getElementById('docAuthor').textContent = documentData.inspector || documentData.submittedBy || 'N/A';
-        // 替換為：
+        
         const statusEl = document.getElementById('docStatus');
         if (statusEl) {
             statusEl.textContent = getStatusText(documentData.status);
             statusEl.className = `doc-status status-${documentData.status || 'draft'}`;
         }
 
-        // ★ 載入註解與表單資料
+        // ★ 優先從資料庫讀取，若無則從 sessionStorage 的暫存中讀取（防止未點擊保存直接查看）
+        safetyFormData = documentData.safetyFormData;
+        
+        if (!safetyFormData) {
+            try {
+                var localDocStr = sessionStorage.getItem('editDocument');
+                if (localDocStr) {
+                    var localDoc = JSON.parse(localDocStr);
+                    if (localDoc && localDoc.id === id) {
+                        safetyFormData = localDoc.safetyFormData;
+                    }
+                }
+            } catch (e) {}
+        }
+
         annotations = documentData.annotations || [];
-        safetyFormData = documentData.safetyFormData || null;
+        if (!annotations.length) {
+            try {
+                var localAnnoStr = sessionStorage.getItem('editDocument');
+                if (localAnnoStr) {
+                    var localAnnoDoc = JSON.parse(localAnnoStr);
+                    if (localAnnoDoc && localAnnoDoc.id === id && localAnnoDoc.annotations) {
+                        annotations = localAnnoDoc.annotations;
+                    }
+                }
+            } catch(e){}
+        }
 
         let pdfSrc = documentData.pdfData || documentData.pdfUrl || null;
 
-        // ★ 使用 SafetyInspection-data.js 的變數名稱
         if (!pdfSrc && window.SAFETY_INSPECTION_BASE64) {
             console.log('[SafetyDoc] 使用 Safety Inspection 固定模板');
             pdfSrc = 'data:application/pdf;base64,' + window.SAFETY_INSPECTION_BASE64;
@@ -592,11 +640,10 @@
             controlsEl.style.display = 'flex';
             loadingEl.style.display = 'none';
             
-            // ★ PDF 載入成功，顯示按鈕
             printBtn.style.display = 'inline-flex';
             downloadBtn.style.display = 'inline-flex';
 
-            return fitToWidth().then(() => renderPage(currentPage));
+            return renderPage(currentPage);
         }).catch(err => {
             console.error('PDF loading error:', err);
             loadingEl.style.display = 'none';
@@ -613,6 +660,10 @@
             alert('PDF content not available.');
             throw new Error('No wrapper');
         }
+
+        const originalZoom = zoomLevel;
+        zoomLevel = 1.0;
+        updateZoomDisplay();
 
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({
@@ -637,7 +688,6 @@
 
             const imgData = canvas.toDataURL('image/jpeg', 0.85);
             const imgWidth = 210;
-            const pageHeight = 297;
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
             if (firstPage) {
@@ -649,7 +699,10 @@
             }
         }
 
-        await renderPage(1);
+        zoomLevel = originalZoom;
+        updateZoomDisplay();
+        await renderPage(currentPage);
+
         return pdf;
     }
 
@@ -687,32 +740,33 @@
             loadingEl.style.display = 'flex';
         }
 
+        const originalZoom = zoomLevel;
+        zoomLevel = 1.0;
+        updateZoomDisplay();
+
         try {
             let printContainer = document.getElementById('print-only-container');
             if (!printContainer) {
                 printContainer = document.createElement('div');
                 printContainer.id = 'print-only-container';
-                // 預設隱藏，打印時才顯示
                 printContainer.style.display = 'none';
                 document.body.appendChild(printContainer);
             }
             printContainer.innerHTML = '';
 
-            // 渲染每一頁並生成高解析度圖片+Overlay
             for (let i = 1; i <= totalPages; i++) {
                 const page = await pdfDoc.getPage(i);
-                const viewport = page.getViewport({ scale: 2.5 }); // 高解析度
+                const viewport = page.getViewport({ scale: 2.5 });
                 
                 const canvas = document.createElement('canvas');
                 canvas.width = viewport.width;
                 canvas.height = viewport.height;
-                const ctx = canvas.getContext('2d');
+                const ctx2 = canvas.getContext('2d');
                 
-                // 填白底
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx2.fillStyle = '#ffffff';
+                ctx2.fillRect(0, 0, canvas.width, canvas.height);
                 
-                await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                await page.render({ canvasContext: ctx2, viewport: viewport }).promise;
                 const imgUrl = canvas.toDataURL('image/jpeg', 0.95);
 
                 const pageWrap = document.createElement('div');
@@ -722,14 +776,12 @@
                 img.src = imgUrl;
                 pageWrap.appendChild(img);
 
-                // 注入表單 Overlay
                 const overlay = createReadOnlyOverlay(i, safetyFormData);
                 if (overlay) pageWrap.appendChild(overlay);
 
                 printContainer.appendChild(pageWrap);
             }
 
-            // 注入打印專用樣式
             let styleEl = document.getElementById('dynamic-print-style');
             if (styleEl) styleEl.remove();
             
@@ -772,28 +824,30 @@
                         max-width: 100%; max-height: 100%;
                         object-fit: contain;
                     }
-                    /* 確保 overlay 覆蓋在圖片正上方 */
                     #print-only-container .print-page .safety-form-overlay {
                         position: absolute;
                         top: 0; left: 0;
                         width: 100%; height: 100%;
+                        --pdf-zoom-scale: 1 !important; 
                     }
                 }
             `;
             document.head.appendChild(styleEl);
 
-            // 等待圖片加載與 DOM 渲染後觸發打印
             setTimeout(() => {
                 window.print();
                 
-                // 打印對話框關閉後清理
-                setTimeout(() => {
+                setTimeout(async () => {
                     if (printContainer) printContainer.innerHTML = '';
                     if (styleEl) styleEl.remove();
                     if (loadingEl) {
                         loadingEl.innerHTML = originalText;
                         loadingEl.style.display = 'none';
                     }
+                    
+                    zoomLevel = originalZoom;
+                    updateZoomDisplay();
+                    await renderPage(currentPage);
                 }, 1000);
             }, 500);
 
@@ -804,6 +858,9 @@
                 loadingEl.innerHTML = originalText;
                 loadingEl.style.display = 'none';
             }
+            zoomLevel = originalZoom;
+            updateZoomDisplay();
+            await renderPage(currentPage);
         }
     }
 
@@ -840,6 +897,7 @@
         syncGlobalDate();
         loadDocument();
         setupControls();
+        setupZoom(); 
         bindEvents();
     });
 })();

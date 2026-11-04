@@ -226,7 +226,7 @@ document.addEventListener("DOMContentLoaded", function() {
         return '';
     }
 
-    // ==================== ★ 分類：Overdue / Pending / Closed / Other ====================
+    // ==================== ★ 分類：Open / Pending / Overdue / Closed ====================
     const OVERDUE_DAYS = 14;
 
     function parseInspectionDate(item) {
@@ -331,14 +331,14 @@ document.addEventListener("DOMContentLoaded", function() {
         return row;
     }
 
-    // ★ 渲染表格（四分類）
+    // ★ 渲染表格（四分類）- 已更新順序為 Open, Pending, Overdue, Closed
     function renderInspectionTable() {
-        const CATEGORIES = ['overdue', 'pending', 'closed', 'other'];
+        const CATEGORIES = ['other', 'pending', 'overdue', 'closed'];
         const TBODY_IDS = {
-            overdue: 'overdue-table-body',
+            other:   'other-table-body',
             pending: 'pending-table-body',
-            closed:  'closed-table-body',
-            other:   'other-table-body'
+            overdue: 'overdue-table-body',
+            closed:  'closed-table-body'
         };
 
         CATEGORIES.forEach(function (key) {
@@ -357,7 +357,7 @@ document.addEventListener("DOMContentLoaded", function() {
             return true;
         });
 
-        const buckets = { overdue: [], pending: [], closed: [], other: [] };
+        const buckets = { other: [], pending: [], overdue: [], closed: [] };
         filtered.forEach(function (item) {
             const key = categorize(item);
             (buckets[key] || (buckets[key] = [])).push(item);
