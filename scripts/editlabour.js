@@ -224,12 +224,13 @@ function ensureGF5272003Style() {
     style.textContent =
         '.gf527-2003-view { background:#fff; padding:10px; border-radius:8px; max-width: 100%; overflow-x: auto; }' +
         '.gf527-2003-header { margin-bottom:10px; padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; }' +
-        '.gf527-2003-header .hdr-row { display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; margin-bottom:8px; }' +
-        '.gf527-2003-header .hdr-row:last-child { margin-bottom:0; }' +
-        '.gf527-2003-header label { font-weight:600; color:#334155; }' +
-        '.gf527-2003-header input[type=text] { border:1px solid #cbd5e1; border-radius:4px; padding:4px 6px; font-size:12px; min-width:90px; }' +
-        '.gf527-2003-header input.short { width:50px; min-width:50px; }' +
-        '.gf527-2003-header input.wide { flex:1; min-width:180px; }' +
+        '.gf527-2003-header .hdr-row { display:flex; align-items:center; gap:16px; margin-bottom:0; width: 100%; overflow-x: auto; white-space: nowrap; padding-bottom:4px; }' +
+        '.gf527-2003-header .hdr-group { display:flex; align-items:center; gap:6px; }' +
+        '.gf527-2003-header label { font-weight:600; color:#334155; margin:0; white-space:nowrap; }' +
+        '.gf527-2003-header input[type=text] { border:1px solid #cbd5e1; border-radius:4px; padding:4px 6px; font-size:12px; box-sizing:border-box; }' +
+        '.gf527-2003-header input.xshort { width:40px; min-width:40px; }' +
+        '.gf527-2003-header input.short { width:90px; min-width:90px; }' +
+        '.gf527-2003-header input.w-100 { width:100%; }' +
         
         /* 表格容器：限制高度，允許滾動 */
         '.gf527-2003-table-wrap { width:100%; overflow:auto; max-height:calc(100vh - 300px); border:1px solid #cbd5e1; border-radius:6px; }' +
@@ -284,19 +285,15 @@ function renderGF527_2003View() {
 
     hdr.innerHTML =
         '<div class="hdr-row">' +
-            '<label>Dept/Div:</label>' + hdrInput('dept', 'short') + ' / ' + hdrInput('div', 'short') +
-            '<label style="margin-left:16px;">Month/Year:</label>' + hdrInput('month', 'short') + ' / ' + hdrInput('year', 'short') +
-            '<label style="margin-left:16px;">Contract No.:</label>' + hdrInput('contractNo') +
-        '</div>' +
-        '<div class="hdr-row">' +
-            '<label>Contract Title:</label>' + hdrInput('contractTitle', 'wide') +
-            '<label style="margin-left:16px;">Contractor:</label>' + hdrInput('contractor', 'wide') +
-        '</div>' +
-        '<div class="hdr-row">' +
-            '<label><input type="checkbox" class="gf5272003-hdr-check" data-hdr-key="nominated"' +
+            '<div class="hdr-group"><label>Dept/Div :</label>' + hdrInput('dept', 'xshort') + ' / ' + hdrInput('div', 'xshort') + '</div>' +
+            '<div class="hdr-group"><label>Month/Year:</label>' + hdrInput('month', 'xshort') + ' / ' + hdrInput('year', 'xshort') + '</div>' +
+            '<div class="hdr-group"><label>Contract No. :</label>' + hdrInput('contractNo', 'short') + '</div>' +
+            '<div class="hdr-group" style="flex:1.5;"><label>Contract Title :</label>' + hdrInput('contractTitle', 'w-100') + '</div>' +
+            '<div class="hdr-group" style="flex:1.5;"><label>Contractor :</label>' + hdrInput('contractor', 'w-100') + '</div>' +
+            '<div class="hdr-group"><label><input type="checkbox" class="gf5272003-hdr-check" data-hdr-key="nominated"' +
                 (formData['gf5272003_nominated'] === '1' ? ' checked' : '') +
-                '> Nominated Sub-contractor</label>' +
-            '<label style="margin-left:16px;">Works Code 7:</label>' + hdrInput('worksCode') +
+                '> # Nominated Sub-contractor</label></div>' +
+            '<div class="hdr-group"><label>Works Code 7 :</label>' + hdrInput('worksCode', 'short') + '</div>' +
         '</div>';
 
     hdr.querySelectorAll('.gf5272003-hdr').forEach(function (el) {

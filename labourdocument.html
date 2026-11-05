@@ -1677,26 +1677,30 @@
             var style = document.createElement('style');
             style.id = 'gf527-2003-style';
             style.textContent = `
-                .gf527-2003-view { background:#fff; padding:10px; border-radius:8px; width: 100%; }
+                .gf527-2003-view { background:#fff; padding:10px; border-radius:8px; max-width: 100%; overflow-x: auto; }
                 .gf527-2003-header { margin-bottom:10px; padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; }
-                .gf527-2003-header .hdr-row { display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; margin-bottom:8px; }
-                .gf527-2003-header .hdr-row:last-child { margin-bottom:0; }
-                .gf527-2003-header label { font-weight:600; color:#334155; margin-bottom:0; }
-                .readonly-text { border-bottom: 1px solid #94a3b8; padding: 0 4px; color: #0f172a; min-width: 50px; display: inline-block; min-height: 18px; }
-                .readonly-text.wide { min-width: 200px; }
                 
-                /* 移除 max-height 限制，讓頁面自然滾動 */
+                /* ★ 表頭強制單行並允許橫向滾動 */
+                .gf527-2003-header .hdr-row { display:flex; flex-wrap:nowrap; overflow-x:auto; gap:12px; align-items:center; padding-bottom:4px; }
+                .gf527-2003-header .hdr-group { display:flex; align-items:center; gap:6px; flex-shrink: 0; }
+                .gf527-2003-header label { font-weight:600; color:#334155; margin-bottom:0; white-space:nowrap; }
+                
+                .readonly-text { border-bottom: 1px solid #94a3b8; padding: 0 4px; color: #0f172a; min-width: 40px; display: inline-block; min-height: 18px; text-align: center; }
+                .readonly-text.wide { width: 220px; text-align: left; }
+                
+                /* ★ 表格容器允許橫向滾動 */
                 .gf527-2003-table-wrap { width:100%; overflow-x:auto; border:1px solid #cbd5e1; border-radius:6px; }
                 
-                .gf527-2003-table { border-collapse:collapse; font-size:11px; width:100%; table-layout:fixed; background: #fff; }
+                /* ★ 表格自然撐開 */
+                .gf527-2003-table { border-collapse:collapse; font-size:11px; width: max-content; min-width: 100%; background:#fff; }
                 .gf527-2003-table th, .gf527-2003-table td { border:1px solid #cbd5e1; padding:4px 2px; text-align:center; vertical-align:middle; }
-                .gf527-2003-table thead th { background:#e2e8f0; font-weight:600; }
-                .gf527-2003-table .cell-trade { text-align:left; width: 220px; line-height:1.2; }
+                .gf527-2003-table thead th { background:#e2e8f0; font-weight:600; white-space: nowrap; }
+                .gf527-2003-table .cell-trade { text-align:left; min-width: 220px; line-height:1.2; padding-left:4px; }
                 .gf527-2003-table .cell-note { background:#fef9c3; text-align:left; font-style:italic; font-size:10px; padding:4px 6px; white-space:normal; }
                 .gf527-2003-table .cell-no { width:30px; background:#f1f5f9; font-weight:600; }
                 .gf527-2003-table .cell-orig { width:30px; font-size:14px; }
                 .gf527-2003-table .cell-rev { width:50px; }
-                .gf527-2003-table .day-col { width:20px; min-width:20px; }
+                .gf527-2003-table .day-col { width:22px; min-width:22px; }
                 .gf527-2003-table .total-col { width:50px; }
                 .gf527-2003-table .wage-col { width:50px; }
                 .gf527-2003-table tbody tr:nth-child(even) td { background:#fafbfc; }
@@ -1719,17 +1723,13 @@
             hdr.className = 'gf527-2003-header';
             hdr.innerHTML = `
                 <div class="hdr-row">
-                    <label>Dept/Div:</label><span class="readonly-text">${escapeHTML(getVal('dept'))}</span> / <span class="readonly-text">${escapeHTML(getVal('div'))}</span>
-                    <label style="margin-left:16px;">Month/Year:</label><span class="readonly-text">${escapeHTML(getVal('month'))}</span> / <span class="readonly-text">${escapeHTML(getVal('year'))}</span>
-                    <label style="margin-left:16px;">Contract No.:</label><span class="readonly-text">${escapeHTML(getVal('contractNo'))}</span>
-                </div>
-                <div class="hdr-row">
-                    <label>Contract Title:</label><span class="readonly-text wide">${escapeHTML(getVal('contractTitle'))}</span>
-                    <label style="margin-left:16px;">Contractor:</label><span class="readonly-text wide">${escapeHTML(getVal('contractor'))}</span>
-                </div>
-                <div class="hdr-row">
-                    <label>Nominated Sub-contractor: <span style="font-size:16px;">${getVal('nominated') === '1' ? '☑' : '☐'}</span></label>
-                    <label style="margin-left:16px;">Works Code 7:</label><span class="readonly-text">${escapeHTML(getVal('worksCode'))}</span>
+                    <div class="hdr-group"><label>Dept/Div :</label><span class="readonly-text">${escapeHTML(getVal('dept'))}</span> / <span class="readonly-text">${escapeHTML(getVal('div'))}</span></div>
+                    <div class="hdr-group"><label>Month/Year:</label><span class="readonly-text">${escapeHTML(getVal('month'))}</span> / <span class="readonly-text">${escapeHTML(getVal('year'))}</span></div>
+                    <div class="hdr-group"><label>Contract No. :</label><span class="readonly-text" style="min-width:100px;">${escapeHTML(getVal('contractNo'))}</span></div>
+                    <div class="hdr-group" style="flex:1.5;"><label>Contract Title :</label><span class="readonly-text w-100">${escapeHTML(getVal('contractTitle'))}</span></div>
+                    <div class="hdr-group" style="flex:1.5;"><label>Contractor :</label><span class="readonly-text w-100">${escapeHTML(getVal('contractor'))}</span></div>
+                    <div class="hdr-group"><label><input type="checkbox" disabled ${getVal('nominated') === '1' ? 'checked' : ''} style="margin-right:4px;"> # Nominated Sub-contractor</label></div>
+                    <div class="hdr-group"><label>Works Code 7 :</label><span class="readonly-text">${escapeHTML(getVal('worksCode'))}</span></div>
                 </div>
             `;
             view.appendChild(hdr);
