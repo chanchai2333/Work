@@ -1933,55 +1933,78 @@
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 產生 PDF...';
             }
 
-            // 1. 建立臨時容器，使用 absolute 並設定透明度為 0，避免被截斷
-            var tempWrapper = document.createElement('div');
-            tempWrapper.style.cssText = 'position:absolute; top:0; left:0; z-index:-9999; background:#ffffff; padding:20px; width: 1500px; opacity:0; pointer-events:none;';
-            
-            var clonedView = container.cloneNode(true);
-            
-            // 2. 解除內部滾動條限制，讓內容完全展開
-            var tableWrap = clonedView.querySelector('.gf527-2003-table-wrap');
+            // 1. 顯示遮罩
+            var loading = document.createElement('div');
+            loading.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255,255,255,0.98); z-index: 10000000; display: flex; justify-content: center; align-items: center; font-size: 20px; color: #1e40af; font-weight: bold;';
+            loading.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:12px;"></i> 正在生成單頁 A3 PDF，請稍候...';
+            document.body.appendChild(loading);
+
+            // 2. 紀錄並解除原表格限制
+            var tableWrap = container.querySelector('.gf527-2003-table-wrap');
+            var oldMaxHeight = '', oldOverflow = '';
             if (tableWrap) {
+                oldMaxHeight = tableWrap.style.maxHeight;
+                oldOverflow = tableWrap.style.overflow;
                 tableWrap.style.maxHeight = 'none';
                 tableWrap.style.overflow = 'visible';
-                tableWrap.style.height = 'auto';
             }
+
+            // 取消 sticky，並去除容器的 padding 與邊框避免截出多餘白邊
+            var ths = container.querySelectorAll('thead th');
+            ths.forEach(function(th) { th.style.position = 'static'; th.style.top = 'auto'; });
+
+            var oldWidth = container.style.width;
+            var oldPadding = container.style.padding;
+            // 設定足夠寬的容器避免欄位擠壓成亂碼
+            container.style.width = '2500px'; 
+            container.style.padding = '0';    
             
-            // 3. 取消 sticky，防止截圖時表頭位移
-            var ths = clonedView.querySelectorAll('thead th');
-            ths.forEach(function(th) { th.style.position = 'static'; });
-
-            tempWrapper.appendChild(clonedView);
-            document.body.appendChild(tempWrapper);
-
-            // 等待 300ms 讓瀏覽器重新計算排版高度
-            await new Promise(function(r) { setTimeout(r, 300); });
+            // 3. 等待渲染完成
+            await new Promise(function(r) { setTimeout(r, 800); });
 
             try {
-                var canvas = await html2canvas(tempWrapper, {
-                    scale: 2,
+                // 4. 截圖
+                var realWidth = container.scrollWidth;
+                var realHeight = container.scrollHeight;
+
+                var canvas = await html2canvas(container, {
+                    scale: 2, 
                     useCORS: true,
                     backgroundColor: '#ffffff',
                     logging: false,
-                    windowWidth: 1500,
-                    windowHeight: tempWrapper.scrollHeight,
-                    height: tempWrapper.scrollHeight
+                    width: realWidth,
+                    height: realHeight,
+                    windowWidth: realWidth,
+                    windowHeight: realHeight, 
+                    scrollY: -window.scrollY, 
+                    scrollX: -window.scrollX
                 });
 
                 var imgData = canvas.toDataURL('image/jpeg', 0.95);
                 
-                // 使用 A3 橫向確保 31 天欄位清晰
+                // 5. 創建 A3 橫向 PDF 並強制拉伸填滿
                 var pdf = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
-                var pdfWidth = pdf.internal.pageSize.getWidth();
-                var pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                
+                var pdfWidth = pdf.internal.pageSize.getWidth();  // 420mm
+                var pdfHeight = pdf.internal.pageSize.getHeight(); // 297mm
+
+                // ★ 核心：強制設定圖片尺寸為 A3 尺寸，確保零白邊
                 pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+
                 pdf.save((currentDoc.id || 'GF527-2003') + '.pdf');
+                
             } catch (e) {
                 console.error('PDF 下載失敗', e);
                 alert('PDF 下載失敗: ' + e.message);
             } finally {
-                document.body.removeChild(tempWrapper);
+                // 6. 恢復原樣
+                if (tableWrap) {
+                    tableWrap.style.maxHeight = oldMaxHeight;
+                    tableWrap.style.overflow = oldOverflow;
+                }
+                container.style.width = oldWidth;
+                container.style.padding = oldPadding;
+                
+                document.body.removeChild(loading);
                 if (btn) {
                     btn.disabled = false;
                     btn.innerHTML = origHTML;
