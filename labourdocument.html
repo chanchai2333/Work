@@ -567,7 +567,14 @@
 
             var xlsxOptText = downloadXlsxOpt ? downloadXlsxOpt.querySelector('span') : null;
             if (downloadXlsxOpt) {
-                var hasXlsx = (doc.type === 'GF527-2017') || (doc.excelData && doc.excelData.length > 100);
+                // var hasXlsx = (doc.type === 'GF527-2017') || (doc.excelData && doc.excelData.length > 100);
+
+                // 改成這樣：
+                // 找到這行：
+// var hasXlsx = (doc.type === 'GF527-2017') || (doc.excelData && doc.excelData.length > 100);
+
+// 改成：
+                var hasXlsx = (doc.type === 'GF527-2017') || (doc.type === 'GF527-2003') || (doc.excelData && doc.excelData.length > 100);
                 downloadXlsxOpt.disabled = !hasXlsx;
                 if (xlsxOptText) {
                     xlsxOptText.textContent = hasXlsx ? 'Download as Excel (.xlsx)' : 'Excel 不適用於此文件類型';
@@ -1302,6 +1309,13 @@
         }
 
         async function downloadPdfWithOverlay() {
+
+            if (!currentDoc) return;
+            if (currentDoc.type === 'GF527-2003') {
+                await exportGF5272003Pdf();
+                return;
+            }
+
             if (!pageImages.length) { alert('尚未載入文件'); return; }
             if (typeof html2canvas === 'undefined' || !window.jspdf) {
                 alert('PDF 引擎未載入'); return;
@@ -1408,6 +1422,10 @@
 
         function downloadXlsx() {
             if (!currentDoc) return;
+            if (currentDoc.type === 'GF527-2003') {
+                exportGF5272003Excel();
+                return;
+            }
             var xlsxB64 = null;
             if (currentDoc.type === 'GF527-2017') {
                 xlsxB64 = (currentDoc.excelData && currentDoc.excelData.length > 100) ? currentDoc.excelData : window.GF527_REV_1_2017_PROTECTED_FONT_SIZE_26_BASE64;
@@ -1557,6 +1575,19 @@
                 updateDocInfo(doc);
                 setLoading('載入中...');
 
+                                // ★ 新增：如果是 GF527-2003，直接渲染只讀表格
+                if (doc.type === 'GF527-2003') {
+                    renderGF5272003ReadOnly(doc.formData || {});
+                    hideLoading();
+                    pdfControls.style.display = 'none';
+                    setupRecordNavigation();
+                    var printBtn = document.getElementById('print-pdf-btn');
+                    if (printBtn) printBtn.addEventListener('click', function() { window.print(); }); // 或者用 Pdf 導出
+                    var backBtn = document.getElementById('back-btn');
+                    if (backBtn) backBtn.addEventListener('click', function () { window.location.href = 'labourwage.html'; });
+                    return;
+                }
+
                 var blob = await preparePdfBlob(doc);
                 currentPdfBlob = blob;
                 await renderPdfBlobToImages(blob);
@@ -1578,6 +1609,385 @@
                 showError('載入失敗：' + (err && err.message ? err.message : 'unknown'));
             }
         });
+
+            // ==========================================
+        // ★ 新增：GF527-2003 專用邏輯 (只讀預覽與導出)
+        // ==========================================
+        var GF527_2003_TRADES = [
+            [1, 'Bar Bender & Fixer [or Steelbender] 6', 'ü', 'C304', 'normal'],
+            [2, 'Concretor', 'ü', 'C309', 'normal'],
+            [3, 'Drainlayer', 'ü', 'C314', 'normal'],
+            [4, 'Plumber', 'ü', 'C338', 'normal'],
+            [5, 'Leveller', '---', 'C323', 'normal'],
+            [6, 'Bamboo Scaffolder', 'ü', 'C303', 'normal'],
+            [7, 'Carpenter & Joiner 3', 'ü', '---', 'note', 'No. of workers/total man-days/overtime need not be entered. The total of Items 8 and 9 below will be adopted by C&SD in the compilation of labour wage indices. Please enter daily wage rates where applicable.'],
+            [8, 'Carpenter (Formwork)', '---', 'C307', 'normal'],
+            [9, 'Joiner', '---', 'C322', 'normal'],
+            [10, 'Plant & Equipment Operator (Load Shifting) [or Plant Operator (exc. driver, bulldozer driver, etc.)] 6', 'ü', 'C333', 'normal'],
+            [11, 'Truck Driver', 'ü', 'C349', 'normal'],
+            [12, 'Rock-Breaking Driller [or Pneumatic Driller] 6', 'ü', 'C339', 'normal'],
+            [13, 'Blacksmith 3', 'ü', '---', 'note', 'No. of workers/total man-days/overtime need not be entered. The total of Items 14 and 15 below will be adopted by C&SD in the compilation of labour wage indices. Please enter daily wage rates where applicable.'],
+            [14, 'General Welder', '---', 'C318', 'normal'],
+            [15, 'Metal Worker', '---', 'C328', 'normal'],
+            [16, 'Glazier', 'ü', 'C319', 'normal'],
+            [17, 'Excavator (male)', 'ü', 'C406', 'normal'],
+            [18, 'Excavator (female)', 'ü', '', 'normal'],
+            [19, 'Labourer (male)', 'ü', '', 'normal'],
+            [20, 'Labourer (female)', 'ü', '', 'normal'],
+            [21, "Concretor's Labourer (male)", 'ü', '', 'normal'],
+            [22, "Concretor's Labourer (female)", 'ü', '', 'normal'],
+            [23, 'Heavy Load Labourer [or Heavy Load Coolie] 6', 'ü', '', 'normal'],
+            [24, "Diver's Linesman", 'ü', '', 'normal'],
+            [25, 'Painter & Decorator', 'ü', 'C329', 'normal'],
+            [26, 'Plasterer', 'ü', 'C337', 'normal'],
+            [27, 'Terrazzo & Granolithic Worker', 'ü', '', 'normal'],
+            [28, "Plasterer's Labourer (male)", 'ü', '---', 'normal'],
+            [29, "Plasterer's Labourer (female)", 'ü', '---', 'normal'],
+            [30, 'Bricklayer', 'ü', 'C305', 'normal'],
+            [31, "Bricklayer's Labourer (male)", 'ü', '---', 'normal'],
+            [32, "Bricklayer's Labourer (female)", 'ü', '---', 'normal'],
+            [33, 'Marble Worker', '---', 'C324', 'normal'],
+            [34, 'Mason (incl. rubble mason, splitting mason and ashlar mason)', 'ü', 'C326', 'normal'],
+            [35, 'Structural Steel Welder', '---', 'C346', 'normal'],
+            [36, 'Structural Steel Erector', 'ü', 'C345', 'normal'],
+            [37, 'Rigger/Metal Formwork Erector', '---', 'C341', 'normal'],
+            [38, 'Asphalter (Road Construction)', '---', 'C302', 'normal'],
+            [39, 'Construction Plant Mechanic [or Fitter] 6', 'ü', 'C310', 'normal'],
+            [40, 'Diver', 'ü', 'C313', 'normal'],
+            [41, 'Electrical Fitter (incl. Electrician)', 'ü', 'E305', 'normal'],
+            [42, 'Mechanical Fitter', '---', 'E310', 'normal'],
+            [43, 'Refrigeration/AC/Ventilation Mechanic', '---', 'E314', 'normal'],
+            [44, 'Fire Service Mechanic', '---', 'E306', 'normal'],
+            [45, 'Lift and Escalator Mechanic', '---', 'E309', 'normal'],
+            [46, 'Building Services Maintenance Mechanic', '---', 'E302', 'normal'],
+            [47, 'Cable Jointer (Power)', '---', 'E303', 'normal'],
+            [48, 'Others 4', '', '', 'other'],
+            [49, 'Others 4', '', '', 'other'],
+            [50, 'Others 4', '', '', 'other'],
+            [51, 'Others 4', '', '', 'other'],
+            [52, 'Others 4', '', '', 'other']
+        ];
+
+        function escapeHTML(s) {
+            return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function ensureGF5272003Style() {
+            if (document.getElementById('gf527-2003-style')) return;
+            var style = document.createElement('style');
+            style.id = 'gf527-2003-style';
+            style.textContent = `
+                .gf527-2003-view { background:#fff; padding:10px; border-radius:8px; width: 100%; }
+                .gf527-2003-header { margin-bottom:10px; padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; }
+                .gf527-2003-header .hdr-row { display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; margin-bottom:8px; }
+                .gf527-2003-header .hdr-row:last-child { margin-bottom:0; }
+                .gf527-2003-header label { font-weight:600; color:#334155; margin-bottom:0; }
+                .readonly-text { border-bottom: 1px solid #94a3b8; padding: 0 4px; color: #0f172a; min-width: 50px; display: inline-block; min-height: 18px; }
+                .readonly-text.wide { min-width: 200px; }
+                
+                /* 移除 max-height 限制，讓頁面自然滾動 */
+                .gf527-2003-table-wrap { width:100%; overflow-x:auto; border:1px solid #cbd5e1; border-radius:6px; }
+                
+                .gf527-2003-table { border-collapse:collapse; font-size:11px; width:100%; table-layout:fixed; background: #fff; }
+                .gf527-2003-table th, .gf527-2003-table td { border:1px solid #cbd5e1; padding:4px 2px; text-align:center; vertical-align:middle; }
+                .gf527-2003-table thead th { background:#e2e8f0; font-weight:600; }
+                .gf527-2003-table .cell-trade { text-align:left; width: 220px; line-height:1.2; }
+                .gf527-2003-table .cell-note { background:#fef9c3; text-align:left; font-style:italic; font-size:10px; padding:4px 6px; white-space:normal; }
+                .gf527-2003-table .cell-no { width:30px; background:#f1f5f9; font-weight:600; }
+                .gf527-2003-table .cell-orig { width:30px; font-size:14px; }
+                .gf527-2003-table .cell-rev { width:50px; }
+                .gf527-2003-table .day-col { width:20px; min-width:20px; }
+                .gf527-2003-table .total-col { width:50px; }
+                .gf527-2003-table .wage-col { width:50px; }
+                .gf527-2003-table tbody tr:nth-child(even) td { background:#fafbfc; }
+            `;
+            document.head.appendChild(style);
+        }
+
+        function renderGF5272003ReadOnly(formData) {
+            ensureGF5272003Style();
+            var pageWrapper = document.getElementById('page-wrapper');
+            pageWrapper.innerHTML = '';
+
+            var view = document.createElement('div');
+            view.className = 'gf527-2003-view';
+
+            function getVal(key) { return formData['gf5272003_' + key] || ''; }
+
+            // 头部
+            var hdr = document.createElement('div');
+            hdr.className = 'gf527-2003-header';
+            hdr.innerHTML = `
+                <div class="hdr-row">
+                    <label>Dept/Div:</label><span class="readonly-text">${escapeHTML(getVal('dept'))}</span> / <span class="readonly-text">${escapeHTML(getVal('div'))}</span>
+                    <label style="margin-left:16px;">Month/Year:</label><span class="readonly-text">${escapeHTML(getVal('month'))}</span> / <span class="readonly-text">${escapeHTML(getVal('year'))}</span>
+                    <label style="margin-left:16px;">Contract No.:</label><span class="readonly-text">${escapeHTML(getVal('contractNo'))}</span>
+                </div>
+                <div class="hdr-row">
+                    <label>Contract Title:</label><span class="readonly-text wide">${escapeHTML(getVal('contractTitle'))}</span>
+                    <label style="margin-left:16px;">Contractor:</label><span class="readonly-text wide">${escapeHTML(getVal('contractor'))}</span>
+                </div>
+                <div class="hdr-row">
+                    <label>Nominated Sub-contractor: <span style="font-size:16px;">${getVal('nominated') === '1' ? '☑' : '☐'}</span></label>
+                    <label style="margin-left:16px;">Works Code 7:</label><span class="readonly-text">${escapeHTML(getVal('worksCode'))}</span>
+                </div>
+            `;
+            view.appendChild(hdr);
+
+            // 表格
+            var wrap = document.createElement('div');
+            wrap.className = 'gf527-2003-table-wrap';
+            var table = document.createElement('table');
+            table.className = 'gf527-2003-table';
+
+            var thead = document.createElement('thead');
+            var dayHeaders = '';
+            for (var d = 1; d <= 31; d++) dayHeaders += '<th class="day-col">' + d + '</th>';
+
+            thead.innerHTML = `
+                <tr>
+                    <th rowspan="2" class="cell-no" style="white-space:nowrap;">Item<br>No.</th>
+                    <th rowspan="2" class="cell-trade" style="white-space:nowrap;">Trade</th>
+                    <th rowspan="2" class="cell-orig" style="white-space:nowrap;">Orig.</th>
+                    <th rowspan="2" class="cell-rev" style="white-space:nowrap;">Rev.<br>(Code 2)</th>
+                    <th colspan="31" style="padding-bottom:0; border-bottom:none; white-space:nowrap;">Number of workers engaged on site on each calendar day</th>
+                    <th rowspan="2" class="total-col" style="white-space:nowrap;">Total<br>Man-days</th>
+                    <th rowspan="2" class="total-col" style="white-space:nowrap;">Overtime<br>(hours)</th>
+                    <th colspan="3" style="white-space:nowrap;">Daily Wage Rate ($)</th>
+                    <th rowspan="2" class="cell-no" style="white-space:nowrap;">Item<br>No.</th>
+                </tr>
+                <tr>
+                    ${dayHeaders}
+                    <th class="wage-col" style="white-space:nowrap;">Av.</th>
+                    <th class="wage-col" style="white-space:nowrap;">High</th>
+                    <th class="wage-col" style="white-space:nowrap;">Low</th>
+                </tr>
+            `;
+            table.appendChild(thead);
+
+            var tbody = document.createElement('tbody');
+            GF527_2003_TRADES.forEach(function(t) {
+                var no = t[0], name = t[1], orig = t[2], rev = t[3], type = t[4], note = t[5] || '';
+                var isNote = (type === 'note');
+                var isOther = (type === 'other');
+
+                var tr = document.createElement('tr');
+                tr.innerHTML = `<td class="cell-no" ${isNote ? 'rowspan="2"' : ''}>${no}</td>`;
+
+                if (isOther) {
+                    var nm = formData['gf5272003_row_' + no + '_name'] || '';
+                    var cd = formData['gf5272003_row_' + no + '_code'] || '';
+                    tr.innerHTML += `
+                        <td class="cell-trade" colspan="3" style="padding:2px 6px;">
+                            Others: trade name <span class="readonly-text" style="min-width:80px;">${escapeHTML(nm)}</span>
+                            &nbsp;code <span class="readonly-text" style="min-width:40px;">${escapeHTML(cd)}</span>
+                        </td>
+                    `;
+                } else {
+                    var origDisplay = (orig === 'ü') ? '✓' : orig;
+                    tr.innerHTML += `
+                        <td class="cell-trade" title="${escapeHTML(name)}">${escapeHTML(name)}</td>
+                        <td class="cell-orig">${origDisplay}</td>
+                        <td class="cell-rev">${escapeHTML(rev)}</td>
+                    `;
+                }
+
+                for (var d = 1; d <= 31; d++) {
+                    var v = formData['gf5272003_row_' + no + '_day_' + d] || '';
+                    tr.innerHTML += `<td class="day-col">${escapeHTML(v)}</td>`;
+                }
+
+                var md = formData['gf5272003_row_' + no + '_mandays'] || '';
+                var ot = formData['gf5272003_row_' + no + '_overtime'] || '';
+                var avg = formData['gf5272003_row_' + no + '_avg'] || '';
+                var high = formData['gf5272003_row_' + no + '_high'] || '';
+                var low = formData['gf5272003_row_' + no + '_low'] || '';
+
+                tr.innerHTML += `
+                    <td class="total-col">${escapeHTML(md)}</td>
+                    <td class="total-col">${escapeHTML(ot)}</td>
+                    <td class="wage-col">${escapeHTML(avg)}</td>
+                    <td class="wage-col">${escapeHTML(high)}</td>
+                    <td class="wage-col">${escapeHTML(low)}</td>
+                    <td class="cell-no">${no}</td>
+                `;
+                tbody.appendChild(tr);
+
+                if (isNote && note) {
+                    var ntr = document.createElement('tr');
+                    ntr.innerHTML = `
+                        <td class="cell-note" colspan="${4 + 31 + 2 + 3}">${escapeHTML(note)}</td>
+                        <td class="cell-no"></td>
+                    `;
+                    tbody.appendChild(ntr);
+                }
+            });
+
+            table.appendChild(tbody);
+            wrap.appendChild(table);
+            view.appendChild(wrap);
+            pageWrapper.appendChild(view);
+        }
+
+        function exportGF5272003Excel() {
+            var btn = document.getElementById('download-btn');
+            var origHTML = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 產生 Excel...';
+            }
+
+            try {
+                var formData = currentDoc.formData || {};
+                var wb = XLSX.utils.book_new();
+                var ws_data = [];
+                var merges = [];
+
+                // 1. 表頭 (建構排版)
+                ws_data.push(["", "", "", "", "", "", "", "", "", "", "Monthly Return of Site Labour Deployment and Wage Rates for Construction Works"]);
+                ws_data.push([]);
+                ws_data.push(["Dept/Div :", formData['gf5272003_dept'] || '', "/", formData['gf5272003_div'] || '', "Month/Year:", formData['gf5272003_month'] || '', "/", formData['gf5272003_year'] || '', "Contract No. :", formData['gf5272003_contractNo'] || '']);
+                ws_data.push(["Contract Title :", formData['gf5272003_contractTitle'] || '', "Contractor :", formData['gf5272003_contractor'] || '', "# Nominated Sub-contractor", formData['gf5272003_nominated'] === '1' ? '✓' : '']);
+                ws_data.push(["Works Code 7 :", formData['gf5272003_worksCode'] || '']);
+                ws_data.push([]);
+
+                // 2. 構建表頭
+                var headerRow1 = ["Item No.", "Trade", "Orig.", "Rev.(Code 2)"];
+                var headerRow2 = ["", "", "", ""];
+                for (var d = 1; d <= 31; d++) {
+                    headerRow1.push("Number of workers engaged on site on each calendar day");
+                    headerRow2.push(d);
+                }
+                headerRow1.push("Total Man-days", "Overtime (hours)", "Daily Wage Rate ($)", "", "", "Item No.");
+                headerRow2.push("", "", "Av.", "High", "Low", "");
+                
+                ws_data.push(headerRow1);
+                ws_data.push(headerRow2);
+
+                // 3. 填入資料
+                GF527_2003_TRADES.forEach(function(t) {
+                    var no = t[0], name = t[1], orig = t[2], rev = t[3], type = t[4], note = t[5] || '';
+                    if (type === 'note') {
+                        ws_data.push([no, name, orig, rev, note]);
+                    } else if (type === 'other') {
+                        var n = formData['gf5272003_row_' + no + '_name'] || '';
+                        var c = formData['gf5272003_row_' + no + '_code'] || '';
+                        var row = [no, "Others: trade name " + n + " code " + c, "", ""];
+                        for (var d = 1; d <= 31; d++) row.push(formData['gf5272003_row_' + no + '_day_' + d] || '');
+                        row.push(formData['gf5272003_row_' + no + '_mandays'] || '');
+                        row.push(formData['gf5272003_row_' + no + '_overtime'] || '');
+                        row.push(formData['gf5272003_row_' + no + '_avg'] || '');
+                        row.push(formData['gf5272003_row_' + no + '_high'] || '');
+                        row.push(formData['gf5272003_row_' + no + '_low'] || '');
+                        row.push(no);
+                        ws_data.push(row);
+                    } else {
+                        var row = [no, name, orig === 'ü' ? '✓' : orig, rev];
+                        for (var d = 1; d <= 31; d++) row.push(formData['gf5272003_row_' + no + '_day_' + d] || '');
+                        row.push(formData['gf5272003_row_' + no + '_mandays'] || '');
+                        row.push(formData['gf5272003_row_' + no + '_overtime'] || '');
+                        row.push(formData['gf5272003_row_' + no + '_avg'] || '');
+                        row.push(formData['gf5272003_row_' + no + '_high'] || '');
+                        row.push(formData['gf5272003_row_' + no + '_low'] || '');
+                        row.push(no);
+                        ws_data.push(row);
+                    }
+                });
+
+                var ws = XLSX.utils.aoa_to_sheet(ws_data);
+                
+                // 設定列寬，避免文字被擠壓
+                var wscols = [{wch:8}, {wch:45}, {wch:6}, {wch:10}];
+                for (var i=0; i<31; i++) wscols.push({wch:3.5});
+                wscols.push({wch:12}, {wch:12}, {wch:8}, {wch:8}, {wch:8}, {wch:8});
+                ws['!cols'] = wscols;
+
+                // 合併儲存格
+                merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 40 } }); // 大標題
+                merges.push({ s: { r: 6, c: 4 }, e: { r: 6, c: 34 } }); // 1~31天標題
+                merges.push({ s: { r: 6, c: 37 }, e: { r: 6, c: 39 } }); // 每日薪水標題
+                ws['!merges'] = merges;
+
+                XLSX.utils.book_append_sheet(wb, ws, "GF527-2003");
+                var wbout = XLSX.write(wb, {bookType:'xlsx', type: 'array'});
+                downloadBlob(new Blob([wbout], {type: "application/octet-stream"}), (currentDoc.id || 'GF527-2003') + '.xlsx');
+            } catch (e) {
+                console.error('Excel 下載失敗', e);
+                alert('Excel 下載失敗: ' + e.message);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = origHTML;
+                }
+            }
+        }
+
+        async function exportGF5272003Pdf() {
+            var container = document.querySelector('.gf527-2003-view');
+            if (!container) { alert('找不到表格'); return; }
+
+            var btn = document.getElementById('download-btn');
+            var origHTML = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 產生 PDF...';
+            }
+
+            // 1. 建立臨時容器，使用 absolute 並設定透明度為 0，避免被截斷
+            var tempWrapper = document.createElement('div');
+            tempWrapper.style.cssText = 'position:absolute; top:0; left:0; z-index:-9999; background:#ffffff; padding:20px; width: 1500px; opacity:0; pointer-events:none;';
+            
+            var clonedView = container.cloneNode(true);
+            
+            // 2. 解除內部滾動條限制，讓內容完全展開
+            var tableWrap = clonedView.querySelector('.gf527-2003-table-wrap');
+            if (tableWrap) {
+                tableWrap.style.maxHeight = 'none';
+                tableWrap.style.overflow = 'visible';
+                tableWrap.style.height = 'auto';
+            }
+            
+            // 3. 取消 sticky，防止截圖時表頭位移
+            var ths = clonedView.querySelectorAll('thead th');
+            ths.forEach(function(th) { th.style.position = 'static'; });
+
+            tempWrapper.appendChild(clonedView);
+            document.body.appendChild(tempWrapper);
+
+            // 等待 300ms 讓瀏覽器重新計算排版高度
+            await new Promise(function(r) { setTimeout(r, 300); });
+
+            try {
+                var canvas = await html2canvas(tempWrapper, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    windowWidth: 1500,
+                    windowHeight: tempWrapper.scrollHeight,
+                    height: tempWrapper.scrollHeight
+                });
+
+                var imgData = canvas.toDataURL('image/jpeg', 0.95);
+                
+                // 使用 A3 橫向確保 31 天欄位清晰
+                var pdf = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
+                var pdfWidth = pdf.internal.pageSize.getWidth();
+                var pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                
+                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                pdf.save((currentDoc.id || 'GF527-2003') + '.pdf');
+            } catch (e) {
+                console.error('PDF 下載失敗', e);
+                alert('PDF 下載失敗: ' + e.message);
+            } finally {
+                document.body.removeChild(tempWrapper);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = origHTML;
+                }
+            }
+        }
 
     })();
     </script>

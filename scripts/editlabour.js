@@ -147,6 +147,294 @@
          格子 8 → #29~#32
          格子 9 → #33~#36
        ============================================================ */
+    /* ============================================================
+   ★ GF527-2003 表格視圖（取代 PDF 覆蓋層）
+   ------------------------------------------------------------
+   結構: [no, trade name, orig, rev, type, note?]
+     type: 'normal' | 'note' | 'other'
+   ============================================================ */
+var GF527_2003_TRADES = [
+    [1,  'Bar Bender & Fixer [or Steelbender] 6', 'ü', 'C304', 'normal'],
+    [2,  'Concretor', 'ü', 'C309', 'normal'],
+    [3,  'Drainlayer', 'ü', 'C314', 'normal'],
+    [4,  'Plumber', 'ü', 'C338', 'normal'],
+    [5,  'Leveller', '---', 'C323', 'normal'],
+    [6,  'Bamboo Scaffolder', 'ü', 'C303', 'normal'],
+    [7,  'Carpenter & Joiner 3', 'ü', '---', 'note',
+         'No. of workers/total man-days/overtime need not be entered. The total of Items 8 and 9 below will be adopted by C&SD in the compilation of labour wage indices. Please enter daily wage rates where applicable.'],
+    [8,  'Carpenter (Formwork)', '---', 'C307', 'normal'],
+    [9,  'Joiner', '---', 'C322', 'normal'],
+    [10, 'Plant & Equipment Operator (Load Shifting) [or Plant Operator (exc. driver, bulldozer driver, etc.)] 6', 'ü', 'C333', 'normal'],
+    [11, 'Truck Driver', 'ü', 'C349', 'normal'],
+    [12, 'Rock-Breaking Driller [or Pneumatic Driller] 6', 'ü', 'C339', 'normal'],
+    [13, 'Blacksmith 3', 'ü', '---', 'note',
+         'No. of workers/total man-days/overtime need not be entered. The total of Items 14 and 15 below will be adopted by C&SD in the compilation of labour wage indices. Please enter daily wage rates where applicable.'],
+    [14, 'General Welder', '---', 'C318', 'normal'],
+    [15, 'Metal Worker', '---', 'C328', 'normal'],
+    [16, 'Glazier', 'ü', 'C319', 'normal'],
+    [17, 'Excavator (male)', 'ü', 'C406', 'normal'],
+    [18, 'Excavator (female)', 'ü', '', 'normal'],
+    [19, 'Labourer (male)', 'ü', '', 'normal'],
+    [20, 'Labourer (female)', 'ü', '', 'normal'],
+    [21, "Concretor's Labourer (male)", 'ü', '', 'normal'],
+    [22, "Concretor's Labourer (female)", 'ü', '', 'normal'],
+    [23, 'Heavy Load Labourer [or Heavy Load Coolie] 6', 'ü', '', 'normal'],
+    [24, "Diver's Linesman", 'ü', '', 'normal'],
+    [25, 'Painter & Decorator', 'ü', 'C329', 'normal'],
+    [26, 'Plasterer', 'ü', 'C337', 'normal'],
+    [27, 'Terrazzo & Granolithic Worker', 'ü', '', 'normal'],
+    [28, "Plasterer's Labourer (male)", 'ü', '---', 'normal'],
+    [29, "Plasterer's Labourer (female)", 'ü', '---', 'normal'],
+    [30, 'Bricklayer', 'ü', 'C305', 'normal'],
+    [31, "Bricklayer's Labourer (male)", 'ü', '---', 'normal'],
+    [32, "Bricklayer's Labourer (female)", 'ü', '---', 'normal'],
+    [33, 'Marble Worker', '---', 'C324', 'normal'],
+    [34, 'Mason (incl. rubble mason, splitting mason and ashlar mason)', 'ü', 'C326', 'normal'],
+    [35, 'Structural Steel Welder', '---', 'C346', 'normal'],
+    [36, 'Structural Steel Erector', 'ü', 'C345', 'normal'],
+    [37, 'Rigger/Metal Formwork Erector', '---', 'C341', 'normal'],
+    [38, 'Asphalter (Road Construction)', '---', 'C302', 'normal'],
+    [39, 'Construction Plant Mechanic [or Fitter] 6', 'ü', 'C310', 'normal'],
+    [40, 'Diver', 'ü', 'C313', 'normal'],
+    [41, 'Electrical Fitter (incl. Electrician)', 'ü', 'E305', 'normal'],
+    [42, 'Mechanical Fitter', '---', 'E310', 'normal'],
+    [43, 'Refrigeration/AC/Ventilation Mechanic', '---', 'E314', 'normal'],
+    [44, 'Fire Service Mechanic', '---', 'E306', 'normal'],
+    [45, 'Lift and Escalator Mechanic', '---', 'E309', 'normal'],
+    [46, 'Building Services Maintenance Mechanic', '---', 'E302', 'normal'],
+    [47, 'Cable Jointer (Power)', '---', 'E303', 'normal'],
+    [48, 'Others 4', '', '', 'other'],
+    [49, 'Others 4', '', '', 'other'],
+    [50, 'Others 4', '', '', 'other'],
+    [51, 'Others 4', '', '', 'other'],
+    [52, 'Others 4', '', '', 'other']
+];
+
+function escHTML(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function ensureGF5272003Style() {
+    if (document.getElementById('gf527-2003-style')) return;
+    var style = document.createElement('style');
+    style.id = 'gf527-2003-style';
+    style.textContent =
+        '.gf527-2003-view { background:#fff; padding:10px; border-radius:8px; max-width: 100%; overflow-x: auto; }' +
+        '.gf527-2003-header { margin-bottom:10px; padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; }' +
+        '.gf527-2003-header .hdr-row { display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; margin-bottom:8px; }' +
+        '.gf527-2003-header .hdr-row:last-child { margin-bottom:0; }' +
+        '.gf527-2003-header label { font-weight:600; color:#334155; }' +
+        '.gf527-2003-header input[type=text] { border:1px solid #cbd5e1; border-radius:4px; padding:4px 6px; font-size:12px; min-width:90px; }' +
+        '.gf527-2003-header input.short { width:50px; min-width:50px; }' +
+        '.gf527-2003-header input.wide { flex:1; min-width:180px; }' +
+        
+        /* 表格容器：限制高度，允許滾動 */
+        '.gf527-2003-table-wrap { width:100%; overflow:auto; max-height:calc(100vh - 300px); border:1px solid #cbd5e1; border-radius:6px; }' +
+        
+        /* 表格本體：強制壓縮佈局 */
+        '.gf527-2003-table { border-collapse:collapse; font-size:10px; width:100%; table-layout:fixed; }' +
+        '.gf527-2003-table th, .gf527-2003-table td { border:1px solid #cbd5e1; padding:2px 1px; text-align:center; vertical-align:middle; }' +
+        
+        /* 表頭 */
+        '.gf527-2003-table thead th { background:#e2e8f0; font-weight:600; position:sticky; top:0; z-index:5; padding: 4px 1px; }' +
+        '.gf527-2003-table thead tr:nth-child(2) th { top:26px; padding: 2px 1px; }' +
+        
+        /* 特定欄位寬度 */
+        '.gf527-2003-table .cell-trade { text-align:left; width: 180px; font-size:10px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }' +
+        '.gf527-2003-table .cell-note { background:#fef9c3; text-align:left; font-style:italic; font-size:9px; padding:4px 6px; white-space:normal; }' +
+        '.gf527-2003-table .cell-no { width:24px; background:#f1f5f9; font-weight:600; }' +
+        '.gf527-2003-table .cell-orig { width:24px; font-size:12px; }' + /* 勾號稍微大一點 */
+        '.gf527-2003-table .cell-rev { width:40px; }' +
+        '.gf527-2003-table .day-col { width:18px; min-width:18px; padding: 1px 0; }' + /* 天數欄位極限壓縮 */
+        '.gf527-2003-table .total-col { width:40px; }' +
+        '.gf527-2003-table .wage-col { width:40px; }' +
+        
+        /* 輸入框 */
+        '.gf527-2003-table input { width:100%; border:none; background:transparent; text-align:center; font-size:10px; padding:2px 0; box-sizing:border-box; }' +
+        '.gf527-2003-table input:focus { outline:2px solid #3498db; background:#fffbeb; }' +
+        '.gf527-2003-table input:disabled { background:#f1f5f9; color:#94a3b8; cursor:not-allowed; }' +
+        '.gf527-2003-table input[type=number]::-webkit-inner-spin-button,' +
+        '.gf527-2003-table input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }' +
+        '.gf527-2003-table input[type=number] { -moz-appearance:textfield; }' +
+        '.gf527-2003-table tbody tr:nth-child(even) td { background:#fafbfc; }' +
+        '.gf527-2003-table tbody tr:hover td { background:#eff6ff; }' +
+        '.gf527-2003-table .cell-other-input { width:100px; border:1px solid #cbd5e1 !important; background:#fff; padding:1px 3px; text-align:left; font-size:10px; }';
+    document.head.appendChild(style);
+}
+
+function renderGF527_2003View() {
+    ensureGF5272003Style();
+    pageWrapper.innerHTML = '';
+
+    var view = document.createElement('div');
+    view.className = 'gf527-2003-view';
+
+    /* ---------- 頭部 ---------- */
+    var hdr = document.createElement('div');
+    hdr.className = 'gf527-2003-header';
+
+    function hdrInput(key, cls) {
+        var v = formData['gf5272003_' + key] || '';
+        return '<input type="text" class="gf5272003-hdr' + (cls ? ' ' + cls : '') +
+               '" data-hdr-key="' + key + '" value="' + escHTML(v) + '">';
+    }
+
+    hdr.innerHTML =
+        '<div class="hdr-row">' +
+            '<label>Dept/Div:</label>' + hdrInput('dept', 'short') + ' / ' + hdrInput('div', 'short') +
+            '<label style="margin-left:16px;">Month/Year:</label>' + hdrInput('month', 'short') + ' / ' + hdrInput('year', 'short') +
+            '<label style="margin-left:16px;">Contract No.:</label>' + hdrInput('contractNo') +
+        '</div>' +
+        '<div class="hdr-row">' +
+            '<label>Contract Title:</label>' + hdrInput('contractTitle', 'wide') +
+            '<label style="margin-left:16px;">Contractor:</label>' + hdrInput('contractor', 'wide') +
+        '</div>' +
+        '<div class="hdr-row">' +
+            '<label><input type="checkbox" class="gf5272003-hdr-check" data-hdr-key="nominated"' +
+                (formData['gf5272003_nominated'] === '1' ? ' checked' : '') +
+                '> Nominated Sub-contractor</label>' +
+            '<label style="margin-left:16px;">Works Code 7:</label>' + hdrInput('worksCode') +
+        '</div>';
+
+    hdr.querySelectorAll('.gf5272003-hdr').forEach(function (el) {
+        el.addEventListener('input', function () {
+            formData['gf5272003_' + el.dataset.hdrKey] = el.value;
+            persistFormData();
+        });
+    });
+    hdr.querySelectorAll('.gf5272003-hdr-check').forEach(function (el) {
+        el.addEventListener('change', function () {
+            formData['gf5272003_' + el.dataset.hdrKey] = el.checked ? '1' : '';
+            persistFormData();
+        });
+    });
+    view.appendChild(hdr);
+
+    /* ---------- 表格 ---------- */
+    var wrap = document.createElement('div');
+    wrap.className = 'gf527-2003-table-wrap';
+
+    var table = document.createElement('table');
+    table.className = 'gf527-2003-table';
+
+    var thead = document.createElement('thead');
+    var dayHeaders = '';
+    for (var d = 1; d <= 31; d++) dayHeaders += '<th class="day-col">' + d + '</th>';
+
+    // 找到原本的 thead.innerHTML，替換成以下：
+    thead.innerHTML =
+        '<tr>' +
+            '<th rowspan="2" class="cell-no">Item<br>No.</th>' +
+            '<th rowspan="2" class="cell-trade">Trade</th>' +
+            '<th rowspan="2" class="cell-orig">Orig.</th>' +
+            '<th rowspan="2" class="cell-rev">Rev.<br>(Code 2)</th>' +
+            '<th colspan="31" style="padding-bottom:0; border-bottom:none;">Number of workers engaged on site on each calendar day</th>' + // 調整這裡
+            '<th rowspan="2" class="total-col">Total<br>Man-days</th>' +
+            '<th rowspan="2" class="total-col">Overtime<br>(hours)</th>' +
+            '<th colspan="3">Daily Wage Rate ($)</th>' +
+            '<th rowspan="2" class="cell-no">Item<br>No.</th>' +
+        '</tr>' +
+        '<tr>' +
+            dayHeaders +
+            '<th class="wage-col">Av.</th><th class="wage-col">High</th><th class="wage-col">Low</th>' +
+        '</tr>';
+    table.appendChild(thead);
+
+    var tbody = document.createElement('tbody');
+
+    GF527_2003_TRADES.forEach(function (t) {
+        var no = t[0], name = t[1], orig = t[2], rev = t[3], type = t[4], note = t[5] || '';
+        var isNote  = (type === 'note');
+        var isOther = (type === 'other');
+
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td class="cell-no"' + (isNote ? ' rowspan="2"' : '') + '>' + no + '</td>';
+
+        if (isOther) {
+            var nm = formData['gf5272003_row_' + no + '_name'] || '';
+            var cd = formData['gf5272003_row_' + no + '_code'] || '';
+            tr.innerHTML +=
+                '<td class="cell-trade" colspan="3">' +
+                    'Others: trade name ' +
+                    '<input type="text" class="gf5272003-other-name cell-other-input" data-row="' + no + '" value="' + escHTML(nm) + '" placeholder="trade name">' +
+                    '&nbsp;code ' +
+                    '<input type="text" class="gf5272003-other-code cell-other-input" data-row="' + no + '" value="' + escHTML(cd) + '" placeholder="code">' +
+                '</td>';
+        } else {
+var origDisplay = (orig === 'ü') ? '✓' : orig;
+
+tr.innerHTML +=
+    '<td class="cell-trade" title="' + escHTML(name) + '">' + escHTML(name) + '</td>' +
+    '<td class="cell-orig">' + origDisplay + '</td>' +
+    '<td class="cell-rev">' + escHTML(rev) + '</td>';
+        }
+
+        /* 31 天 */
+        for (var d = 1; d <= 31; d++) {
+            var v = formData['gf5272003_row_' + no + '_day_' + d] || '';
+            tr.innerHTML +=
+                '<td class="day-col">' +
+                    '<input type="text" inputmode="numeric" maxlength="3" class="gf5272003-day" data-row="' + no + '" data-day="' + d + '" value="' + escHTML(v) + '"' + (isNote ? ' disabled' : '') + '>' +
+                '</td>';
+        }
+
+        var md = formData['gf5272003_row_' + no + '_mandays'] || '';
+        var ot = formData['gf5272003_row_' + no + '_overtime'] || '';
+        tr.innerHTML +=
+            '<td class="total-col"><input type="text" inputmode="numeric" class="gf5272003-mandays" data-row="' + no + '" value="' + escHTML(md) + '"' + (isNote ? ' disabled' : '') + '></td>' +
+            '<td class="total-col"><input type="text" inputmode="numeric" class="gf5272003-overtime" data-row="' + no + '" value="' + escHTML(ot) + '"' + (isNote ? ' disabled' : '') + '></td>';
+
+        var avg  = formData['gf5272003_row_' + no + '_avg']  || '';
+        var high = formData['gf5272003_row_' + no + '_high'] || '';
+        var low  = formData['gf5272003_row_' + no + '_low']  || '';
+        tr.innerHTML +=
+            '<td class="wage-col"><input type="text" inputmode="decimal" class="gf5272003-avg"  data-row="' + no + '" value="' + escHTML(avg)  + '"></td>' +
+            '<td class="wage-col"><input type="text" inputmode="decimal" class="gf5272003-high" data-row="' + no + '" value="' + escHTML(high) + '"></td>' +
+            '<td class="wage-col"><input type="text" inputmode="decimal" class="gf5272003-low"  data-row="' + no + '" value="' + escHTML(low)  + '"></td>';
+
+        tr.innerHTML += '<td class="cell-no">' + no + '</td>';
+        tbody.appendChild(tr);
+
+        if (isNote && note) {
+            var ntr = document.createElement('tr');
+            ntr.innerHTML =
+                '<td class="cell-note" colspan="' + (4 + 31 + 2 + 3) + '">' + escHTML(note) + '</td>' +
+                '<td class="cell-no"></td>';
+            tbody.appendChild(ntr);
+        }
+    });
+
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    view.appendChild(wrap);
+
+    /* ---------- 綁定所有輸入 ---------- */
+    function bind(selector, keyFn) {
+        view.querySelectorAll(selector).forEach(function (el) {
+            el.addEventListener('input', function () {
+                formData[keyFn(el)] = el.value;
+                persistFormData();
+            });
+        });
+    }
+    bind('.gf5272003-day',      function (el) { return 'gf5272003_row_' + el.dataset.row + '_day_' + el.dataset.day; });
+    bind('.gf5272003-mandays',  function (el) { return 'gf5272003_row_' + el.dataset.row + '_mandays'; });
+    bind('.gf5272003-overtime', function (el) { return 'gf5272003_row_' + el.dataset.row + '_overtime'; });
+    bind('.gf5272003-avg',      function (el) { return 'gf5272003_row_' + el.dataset.row + '_avg'; });
+    bind('.gf5272003-high',     function (el) { return 'gf5272003_row_' + el.dataset.row + '_high'; });
+    bind('.gf5272003-low',      function (el) { return 'gf5272003_row_' + el.dataset.row + '_low'; });
+    bind('.gf5272003-other-name', function (el) { return 'gf5272003_row_' + el.dataset.row + '_name'; });
+    bind('.gf5272003-other-code', function (el) { return 'gf5272003_row_' + el.dataset.row + '_code'; });
+
+    pageWrapper.appendChild(view);
+    currentPageObj = { pageNum: 1, container: view };
+    updatePageInfo();
+}
+    
+
     var GF527_2017_FORM_LAYOUT = {
         fields: [
             /* 格子 1 (#1~#4)   */ { id: 'g17_01', label: '', left: '5.57%',  top: '5.17%',  width: '2.57%',  height: '1.08%' },
@@ -1876,6 +2164,7 @@
        - gf45        ：對應中部主要欄位
        ============================================================ */
     var GF527_2003_FORM_LAYOUT = {
+        
         fields: [
             { id: 'gf_01', label: '', left: '5.20%',  top: '5.90%',  width: '2.57%',  height: '1.08%' },
             { id: 'gf_02', label: '', left: '8.16%',  top: '5.90%',  width: '2.57%',  height: '1.27%' },
@@ -4706,11 +4995,21 @@ function refreshLabourSignatureCell(fieldId) {
         });
     }
 
-    function loadTemplate() {
-        var type = currentDoc && currentDoc.type;
-        console.log('[Labour] 載入模板：' + type);
-        return loadPdfTemplate();
+function loadTemplate() {
+    var type = currentDoc && currentDoc.type;
+
+    /* ★ GF527-2003 走表格視圖，不載入 PDF */
+    if (type === 'GF527-2003') {
+        console.log('[Labour] GF527-2003 使用表格視圖，跳過 PDF 載入');
+        totalVirtualPages = 1;
+        templateImages = [];
+        pageCssSizes   = [];
+        return Promise.resolve();
     }
+
+    console.log('[Labour] 載入模板：' + type);
+    return loadPdfTemplate();
+}
 
     /* ========== 顯示尺寸：容器自適應 + 縮放 ========== */
     function computeDisplaySize(naturalSize) {
@@ -4734,6 +5033,12 @@ function refreshLabourSignatureCell(fieldId) {
     }
 
     function renderCurrentPage() {
+
+            /* ★ GF527-2003 → 表格視圖 */
+    if (currentDoc && currentDoc.type === 'GF527-2003') {
+        renderGF527_2003View();
+        return;
+    }
         var idx = activePageNum - 1;
         var imgData = templateImages[idx];
         var naturalSize = pageCssSizes[idx];
@@ -4823,6 +5128,32 @@ function refreshLabourSignatureCell(fieldId) {
     function captureFormDataFromDom() {
         if (!currentDoc) return;
         var docType = currentDoc.type || 'GF527A';
+
+    /* ★ GF527-2003 從表格擷取 */
+    if (docType === 'GF527-2003') {
+        var view = pageWrapper.querySelector('.gf527-2003-view');
+        if (!view) return;
+        function grab(sel, keyFn) {
+            view.querySelectorAll(sel).forEach(function (el) {
+                formData[keyFn(el)] = el.value;
+            });
+        }
+        grab('.gf5272003-hdr',        function (el) { return 'gf5272003_' + el.dataset.hdrKey; });
+        grab('.gf5272003-day',        function (el) { return 'gf5272003_row_' + el.dataset.row + '_day_' + el.dataset.day; });
+        grab('.gf5272003-mandays',    function (el) { return 'gf5272003_row_' + el.dataset.row + '_mandays'; });
+        grab('.gf5272003-overtime',   function (el) { return 'gf5272003_row_' + el.dataset.row + '_overtime'; });
+        grab('.gf5272003-avg',        function (el) { return 'gf5272003_row_' + el.dataset.row + '_avg'; });
+        grab('.gf5272003-high',       function (el) { return 'gf5272003_row_' + el.dataset.row + '_high'; });
+        grab('.gf5272003-low',        function (el) { return 'gf5272003_row_' + el.dataset.row + '_low'; });
+        grab('.gf5272003-other-name', function (el) { return 'gf5272003_row_' + el.dataset.row + '_name'; });
+        grab('.gf5272003-other-code', function (el) { return 'gf5272003_row_' + el.dataset.row + '_code'; });
+        view.querySelectorAll('.gf5272003-hdr-check').forEach(function (el) {
+            formData['gf5272003_' + el.dataset.hdrKey] = el.checked ? '1' : '';
+        });
+        persistFormData();
+        return;
+    }
+
         if (docType !== 'GF527A' && docType !== 'GF527-2017') return;
 
         var overlay = pageWrapper.querySelector('.pdf-form-overlay');
