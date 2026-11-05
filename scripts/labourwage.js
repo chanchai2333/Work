@@ -489,6 +489,17 @@ document.addEventListener("DOMContentLoaded", function () {
                     DWSS_Auth.adjustFormStatusOptions('input-status');
                     DWSS_Auth.autoFillSubmittedBy('input-submitted-by');
                 }
+
+                // ★ 額外兜底：如果還是 undefined，強制從 sessionStorage 抓
+                var submitInput = document.getElementById('input-submitted-by');
+                if (submitInput && (!submitInput.value || submitInput.value === 'undefined')) {
+                    try {
+                        var session = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+                        submitInput.value = session.userName || session.fullName || 'Admin User';
+                    } catch(e) {
+                        submitInput.value = 'Admin User';
+                    }
+                }
                 
                 // 設定預設年份
                 var currYear = new Date().getFullYear();

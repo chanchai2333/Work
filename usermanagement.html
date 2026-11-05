@@ -127,8 +127,6 @@
         }
         .permissions-list li i { margin-top: 3px; flex-shrink: 0; }
 
-        .sidebar.collapsed .logo { display: none !important; }
-
         .user-department {
             font-size: 12px;
             color: #7f8c8d;
@@ -318,37 +316,7 @@
     </style>
 </head>
 <body>
-    <!-- 側邊欄 -->
-    <div class="sidebar">
-        <div class="logo">
-            <img src="AEL Logo.png" alt="AEL Logo" class="logo-img" style="height: 45px; width: auto; object-fit: contain; margin-right: 8px;">
-            <h2>DWSS</h2>
-        </div>
-        <button class="toggle-btn"><i class="fas fa-chevron-left"></i></button>
-        <ul class="menu">
-            <li><a href="index.html" id="menu-dashboard"><i class="fas fa-home"></i><span class="menu-text" data-i18n="dashboard">Dashboard</span></a></li>
-            <li><a href="sitediary.html" id="menu-sitediary"><i class="fas fa-book"></i><span class="menu-text" data-i18n="site.diary">Site Diary</span></a></li>
-            <li><a href="safetyinspect.html" id="menu-safetyinspect"><i class="fas fa-clipboard-check"></i><span class="menu-text" data-i18n="safety.inspection">Safety Inspection</span></a></li>
-            <li><a href="sitelocations.html" id="menu-sitelocations"><i class="fas fa-map-marked-alt"></i><span class="menu-text" data-i18n="site.locations">Site Locations</span></a></li>
-            <li><a href="labourwage.html" id="menu-labourwage"><i class="fas fa-money-bill-wave"></i><span class="menu-text" data-i18n="labour.wage">Labour Wage</span></a></li>
-            <li><a href="settings.html" id="menu-settings"><i class="fas fa-cogs"></i><span class="menu-text" data-i18n="system.settings">System Settings</span></a></li>
-            <li class="menu-item-with-submenu">
-                <a href="#" class="submenu-toggle" id="menu-usermanagement">
-                    <i class="fas fa-users"></i><span class="menu-text" data-i18n="user.management">User Management</span><i class="fas fa-chevron-down submenu-arrow"></i>
-                </a>
-                <ul class="submenu">
-                    <li><a href="usermanagement.html" id="submenu-users" class="active"><i class="fas fa-user"></i><span class="menu-text">Users</span></a></li>
-                    <li><a href="teams.html" id="submenu-teams"><i class="fas fa-user-friends"></i><span class="menu-text">Teams</span></a></li>
-                </ul>
-            </li>
-        </ul>
-        <div class="sidebar-footer">
-            <button id="logout-btn" class="logout-btn">
-                <i class="fas fa-sign-out-alt"></i>
-                <span class="menu-text">Logout</span>
-            </button>
-        </div>
-    </div>
+    <!-- ★ 移除原本寫死的側邊欄，交給 sidebar.js 動態生成 -->
 
     <!-- 主內容 -->
     <div class="main-content">
@@ -567,13 +535,13 @@
                             </div>
                         </div>
 
-                        <!-- ★ Projects — populated from storage by JS -->
+                        <!-- ★ Projects -->
                         <div class="form-group">
                             <label>Projects</label>
                             <div class="project-checkboxes" id="project-checkboxes-container"></div>
                         </div>
 
-                        <!-- ★ Groups — checkbox picker (no Ctrl/Shift needed) -->
+                        <!-- ★ Groups -->
                         <div class="form-group">
                             <label>Groups</label>
                             <div class="team-picker" id="user-groups-picker">
@@ -629,26 +597,6 @@
                     year: 'numeric', month: 'long', day: 'numeric'
                 });
             }
-
-            // Sidebar toggle
-            var sidebarToggleBtn = document.querySelector('.toggle-btn');
-            var sidebar = document.querySelector('.sidebar');
-            if (sidebarToggleBtn && sidebar) {
-                sidebarToggleBtn.addEventListener('click', function () {
-                    sidebar.classList.toggle('collapsed');
-                });
-            }
-
-            // Submenu
-            var submenuItems = document.querySelectorAll('.menu-item-with-submenu > .submenu-toggle');
-            submenuItems.forEach(function(item) {
-                item.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    var parentItem = this.parentElement;
-                    parentItem.classList.toggle('active');
-                });
-            });
         });
     </script>
 </body>
