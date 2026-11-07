@@ -592,6 +592,36 @@ document.addEventListener("DOMContentLoaded", function () {
                             }
                             if (sourceRecord.formData) {
                                 copiedFormData = JSON.parse(JSON.stringify(sourceRecord.formData));
+
+                                // ★ 強制清空 GF527A 的簽名與名字區塊 (ai27 ~ ai30)
+                                if (copiedFormData['ai27'] !== undefined) copiedFormData['ai27'] = '';
+                                if (copiedFormData['ai28'] !== undefined) copiedFormData['ai28'] = '';
+                                if (copiedFormData['ai29'] !== undefined) copiedFormData['ai29'] = '';
+                                if (copiedFormData['ai30'] !== undefined) copiedFormData['ai30'] = '';
+
+                                // ★ 強制清空 GF527-2017 的 Completed by 區塊 (g17_1451 ~ g17_1459)
+                                if (copiedFormData['g17_1451'] !== undefined) copiedFormData['g17_1451'] = '';
+                                if (copiedFormData['g17_1452'] !== undefined) copiedFormData['g17_1452'] = '';
+                                if (copiedFormData['g17_1453'] !== undefined) copiedFormData['g17_1453'] = '';
+                                if (copiedFormData['g17_1454'] !== undefined) copiedFormData['g17_1454'] = '';
+                                if (copiedFormData['g17_1455'] !== undefined) copiedFormData['g17_1455'] = '';
+                                if (copiedFormData['g17_1456'] !== undefined) copiedFormData['g17_1456'] = '';
+                                if (copiedFormData['g17_1457'] !== undefined) copiedFormData['g17_1457'] = '';
+                                if (copiedFormData['g17_1458'] !== undefined) copiedFormData['g17_1458'] = '';
+                                if (copiedFormData['g17_1459'] !== undefined) copiedFormData['g17_1459'] = '';
+
+                                // ★ 強制清空 GF527-2003 的 Completed by 區塊 (gf_1913 ~ gf_1922)
+                                if (copiedFormData['gf_1913'] !== undefined) copiedFormData['gf_1913'] = '';
+                                if (copiedFormData['gf_1914'] !== undefined) copiedFormData['gf_1914'] = '';
+                                if (copiedFormData['gf_1915'] !== undefined) copiedFormData['gf_1915'] = '';
+                                if (copiedFormData['gf_1916'] !== undefined) copiedFormData['gf_1916'] = '';
+                                if (copiedFormData['gf_1917'] !== undefined) copiedFormData['gf_1917'] = '';
+                                if (copiedFormData['gf_1918'] !== undefined) copiedFormData['gf_1918'] = '';
+                                if (copiedFormData['gf_1919'] !== undefined) copiedFormData['gf_1919'] = '';
+                                if (copiedFormData['gf_1920'] !== undefined) copiedFormData['gf_1920'] = '';
+                                if (copiedFormData['gf_1921'] !== undefined) copiedFormData['gf_1921'] = '';
+                                if (copiedFormData['gf_1922'] !== undefined) copiedFormData['gf_1922'] = '';
+                    
                             }
                         }
                     } catch (err) {

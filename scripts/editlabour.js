@@ -221,48 +221,73 @@ function ensureGF5272003Style() {
     if (document.getElementById('gf527-2003-style')) return;
     var style = document.createElement('style');
     style.id = 'gf527-2003-style';
-    style.textContent =
-        '.gf527-2003-view { background:#fff; padding:10px; border-radius:8px; max-width: 100%; overflow-x: auto; }' +
-        '.gf527-2003-header { margin-bottom:10px; padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; }' +
-        '.gf527-2003-header .hdr-row { display:flex; align-items:center; gap:16px; margin-bottom:0; width: 100%; overflow-x: auto; white-space: nowrap; padding-bottom:4px; }' +
-        '.gf527-2003-header .hdr-group { display:flex; align-items:center; gap:6px; }' +
-        '.gf527-2003-header label { font-weight:600; color:#334155; margin:0; white-space:nowrap; }' +
-        '.gf527-2003-header input[type=text] { border:1px solid #cbd5e1; border-radius:4px; padding:4px 6px; font-size:12px; box-sizing:border-box; }' +
-        '.gf527-2003-header input.xshort { width:40px; min-width:40px; }' +
-        '.gf527-2003-header input.short { width:90px; min-width:90px; }' +
-        '.gf527-2003-header input.w-100 { width:100%; }' +
+    style.textContent = 
+        /* 主容器：模擬 A3 紙張寬度 */
+        '.gf527-2003-view { background: #fff; padding: 20px; font-family: "Times New Roman", SimSun, serif; color: #000; min-width: 1650px; box-sizing: border-box; }' +
         
-        /* 表格容器：限制高度，允許滾動 */
-        '.gf527-2003-table-wrap { width:100%; overflow:auto; max-height:calc(100vh - 300px); border:1px solid #cbd5e1; border-radius:6px; }' +
+        /* 頂部標頭區 */
+        '.gf527-2003-header { margin-bottom: 5px; font-size: 11px; }' +
+        '.gf527-2003-header .top-meta { display: flex; justify-content: flex-start; gap: 80px; margin-bottom: 10px; }' +
+        '.gf527-2003-header .title { text-align: center; font-size: 16px; font-weight: bold; margin: 10px 0 15px 0; }' +
+        '.gf527-2003-header .info-row { display: flex; flex-wrap: nowrap; gap: 20px; align-items: flex-end; margin-bottom: 5px; }' +
+        '.gf527-2003-header .info-group { display: flex; align-items: center; flex-shrink: 0; }' +
+        '.gf527-2003-header label { font-weight: normal; margin-right: 5px; white-space: nowrap; font-size: 11px; }' +
         
-        /* 表格本體：強制壓縮佈局 */
-        '.gf527-2003-table { border-collapse:collapse; font-size:10px; width:100%; table-layout:fixed; }' +
-        '.gf527-2003-table th, .gf527-2003-table td { border:1px solid #cbd5e1; padding:2px 1px; text-align:center; vertical-align:middle; }' +
+        /* 模擬 Excel 下劃線輸入框 */
+        '.gf527-2003-header .underline-input { border: none; border-bottom: 1px solid #000; background: transparent; font-family: inherit; font-size: 11px; outline: none; padding: 0 2px; color: #000; box-sizing: border-box; height: 18px; }' +
+        '.gf527-2003-header .underline-input:focus { background: #f0f8ff; }' +
+        '.gf527-2003-header .w-30 { width: 30px; }' +
+        '.gf527-2003-header .w-40 { width: 40px; }' +
+        '.gf527-2003-header .w-60 { width: 60px; }' +
+        '.gf527-2003-header .w-100 { width: 100px; }' +
+        '.gf527-2003-header .w-150 { width: 150px; }' +
+        '.gf527-2003-header .w-250 { width: 250px; }' +
+        '.gf527-2003-header .w-350 { width: 350px; }' +
         
-        /* 表頭 */
-        '.gf527-2003-table thead th { background:#e2e8f0; font-weight:600; position:sticky; top:0; z-index:5; padding: 4px 1px; }' +
-        '.gf527-2003-table thead tr:nth-child(2) th { top:26px; padding: 2px 1px; }' +
+        /* 表格外層 */
+        '.gf527-2003-table-wrap { width: 100%; overflow-x: auto; border: 2px solid #000; border-bottom: none; }' +
         
-        /* 特定欄位寬度 */
-        '.gf527-2003-table .cell-trade { text-align:left; width: 180px; font-size:10px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }' +
-        '.gf527-2003-table .cell-note { background:#fef9c3; text-align:left; font-style:italic; font-size:9px; padding:4px 6px; white-space:normal; }' +
-        '.gf527-2003-table .cell-no { width:24px; background:#f1f5f9; font-weight:600; }' +
-        '.gf527-2003-table .cell-orig { width:24px; font-size:12px; }' + /* 勾號稍微大一點 */
-        '.gf527-2003-table .cell-rev { width:40px; }' +
-        '.gf527-2003-table .day-col { width:18px; min-width:18px; padding: 1px 0; }' + /* 天數欄位極限壓縮 */
-        '.gf527-2003-table .total-col { width:40px; }' +
-        '.gf527-2003-table .wage-col { width:40px; }' +
+        /* 表格本體：嚴格網格 */
+        '.gf527-2003-table { border-collapse: collapse; width: 100%; table-layout: fixed; font-size: 10px; }' +
+        '.gf527-2003-table th, .gf527-2003-table td { border: 1px solid #000; padding: 2px 1px; text-align: center; vertical-align: middle; }' +
         
-        /* 輸入框 */
-        '.gf527-2003-table input { width:100%; border:none; background:transparent; text-align:center; font-size:10px; padding:2px 0; box-sizing:border-box; }' +
-        '.gf527-2003-table input:focus { outline:2px solid #3498db; background:#fffbeb; }' +
-        '.gf527-2003-table input:disabled { background:#f1f5f9; color:#94a3b8; cursor:not-allowed; }' +
-        '.gf527-2003-table input[type=number]::-webkit-inner-spin-button,' +
-        '.gf527-2003-table input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }' +
-        '.gf527-2003-table input[type=number] { -moz-appearance:textfield; }' +
-        '.gf527-2003-table tbody tr:nth-child(even) td { background:#fafbfc; }' +
-        '.gf527-2003-table tbody tr:hover td { background:#eff6ff; }' +
-        '.gf527-2003-table .cell-other-input { width:100px; border:1px solid #cbd5e1 !important; background:#fff; padding:1px 3px; text-align:left; font-size:10px; }';
+        /* 表頭背景色 */
+        '.gf527-2003-table thead th { background: #fff; font-weight: bold; padding: 4px 1px; }' +
+        
+        /* 上標樣式 */
+        '.gf527-2003-table sup { font-size: 8px; vertical-align: super; line-height: 0; }' +
+        
+        /* 欄位寬度調整：加寬 Trade 欄位 */
+        '.gf527-2003-table .cell-no { width: 25px; font-weight: bold; }' +
+        '.gf527-2003-table .cell-trade { width: 320px; text-align: left; padding-left: 4px; }' +
+        '.gf527-2003-table .cell-orig { width: 25px; font-size: 11px; }' +
+        '.gf527-2003-table .cell-rev { width: 40px; }' +
+        '.gf527-2003-table .day-col { width: 18px; min-width: 18px; padding: 0; }' +
+        '.gf527-2003-table .total-col { width: 45px; }' +
+        '.gf527-2003-table .wage-col { width: 45px; }' +
+        
+        /* 備註行 (Notes) - 點狀底紋 */
+        '.gf527-2003-table .cell-note {' +
+            'background: #fff url("data:image/svg+xml;utf8,<svg width=\'4\' height=\'4\' xmlns=\'http://www.w3.org/2000/svg\'><circle cx=\'1\' cy=\'1\' r=\'0.4\' fill=\'%23999\'/></svg>");' +
+            'text-align: center; font-style: italic; font-size: 10px; padding: 2px 4px; white-space: normal; line-height: 1.2; color: #000;' +
+        '}' +
+        
+        /* 儲存格內的輸入框 */
+        '.gf527-2003-table input { width: 100%; height: 100%; border: none; background: transparent; text-align: center; font-family: inherit; font-size: 10px; padding: 0; box-sizing: border-box; outline: none; color: #000; }' +
+        '.gf527-2003-table input:focus { background: #e8f0fe; outline: 1px solid #1a73e8; }' +
+        '.gf527-2003-table input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }' +
+        '.gf527-2003-table input:disabled { background: transparent; color: transparent; }' +
+        
+        /* Others 4 輸入框：使用 flex:1 平分剩餘空間 */
+        '.gf527-2003-table .cell-other-input { flex: 1; min-width: 60px; border: 1px solid #999 !important; background: #fff; padding: 0 2px; text-align: left; font-size: 9px; height: 14px; }' +
+        
+        /* 底部說明文字 */
+        '.gf527-2003-footer { margin-top: 10px; font-size: 10px; padding: 5px; }' +
+        '.gf527-2003-footer .tick-text { text-align: center; margin-bottom: 20px; font-weight: bold; }' +
+        '.gf527-2003-footer .bottom-text-wrap { position: relative; width: 100%; }' +
+        '.gf527-2003-footer .left-text { position: absolute; left: 0; }' +
+        '.gf527-2003-footer .center-text { text-align: center; }';
+
     document.head.appendChild(style);
 }
 
@@ -270,30 +295,39 @@ function renderGF527_2003View() {
     ensureGF5272003Style();
     pageWrapper.innerHTML = '';
 
+    
+
     var view = document.createElement('div');
     view.className = 'gf527-2003-view';
 
-    /* ---------- 頭部 ---------- */
+    /* ---------- 1. 頂部標頭與資訊 ---------- */
     var hdr = document.createElement('div');
     hdr.className = 'gf527-2003-header';
 
     function hdrInput(key, cls) {
         var v = formData['gf5272003_' + key] || '';
-        return '<input type="text" class="gf5272003-hdr' + (cls ? ' ' + cls : '') +
-               '" data-hdr-key="' + key + '" value="' + escHTML(v) + '">';
+        return '<input type="text" class="underline-input ' + (cls || '') + '" data-hdr-key="' + key + '" value="' + escHTML(v) + '">';
     }
 
     hdr.innerHTML =
-        '<div class="hdr-row">' +
-            '<div class="hdr-group"><label>Dept/Div :</label>' + hdrInput('dept', 'xshort') + ' / ' + hdrInput('div', 'xshort') + '</div>' +
-            '<div class="hdr-group"><label>Month/Year:</label>' + hdrInput('month', 'xshort') + ' / ' + hdrInput('year', 'xshort') + '</div>' +
-            '<div class="hdr-group"><label>Contract No. :</label>' + hdrInput('contractNo', 'short') + '</div>' +
-            '<div class="hdr-group" style="flex:1.5;"><label>Contract Title :</label>' + hdrInput('contractTitle', 'w-100') + '</div>' +
-            '<div class="hdr-group" style="flex:1.5;"><label>Contractor :</label>' + hdrInput('contractor', 'w-100') + '</div>' +
-            '<div class="hdr-group"><label><input type="checkbox" class="gf5272003-hdr-check" data-hdr-key="nominated"' +
-                (formData['gf5272003_nominated'] === '1' ? ' checked' : '') +
-                '> # Nominated Sub-contractor</label></div>' +
-            '<div class="hdr-group"><label>Works Code 7 :</label>' + hdrInput('worksCode', 'short') + '</div>' +
+        '<div class="top-meta">' +
+            '<div>Original - to C&amp;SD<br>Duplicate - to Project Office</div>' +
+            '<div>Triplicate - filed as Site Record<br>Quadruplicate - kept by Contractor</div>' +
+        '</div>' +
+        '<div class="title">Monthly Return of Site Labour Deployment and Wage Rates for Construction Works</div>' +
+        
+        /* 全部放在同一行，使用 nowrap 強制不換行 */
+        '<div class="info-row">' +
+            '<div class="info-group"><label>Dept/Div :</label>' + hdrInput('dept', 'w-60') + ' / ' + hdrInput('div', 'w-60') + '</div>' +
+            '<div class="info-group"><label>Month/Year:</label>' + hdrInput('month', 'w-30') + ' / ' + hdrInput('year', 'w-40') + '</div>' +
+            '<div class="info-group"><label>Contract No. :</label>' + hdrInput('contractNo', 'w-150') + '</div>' +
+            '<div class="info-group"><label>Contract Title :</label>' + hdrInput('contractTitle', 'w-350') + '</div>' +
+            '<div class="info-group"><label>Contractor :</label>' + hdrInput('contractor', 'w-250') + '</div>' +
+            '<div class="info-group" style="display: flex; align-items: center; gap: 5px;">' +
+                '<input type="checkbox" class="gf5272003-hdr-check" data-hdr-key="nominated" ' + (formData['gf5272003_nominated'] === '1' ? 'checked' : '') + '>' +
+                '<label style="margin: 0; width: auto;"># Nominated Sub-contractor</label>' +
+            '</div>' +
+            '<div class="info-group"><label>Works Code 7  :</label>' + hdrInput('worksCode', 'w-100') + '</div>' +
         '</div>';
 
     hdr.querySelectorAll('.gf5272003-hdr').forEach(function (el) {
@@ -310,31 +344,34 @@ function renderGF527_2003View() {
     });
     view.appendChild(hdr);
 
-    /* ---------- 表格 ---------- */
     var wrap = document.createElement('div');
     wrap.className = 'gf527-2003-table-wrap';
+    wrap.style.borderLeft = 'none'; // ★ 核心：直接切斷最外層的左側黑線
 
     var table = document.createElement('table');
     table.className = 'gf527-2003-table';
-
+    // ... 這裡保留你原本的 thead, tbody 創建代碼 ...
+    // ... 直到 table.appendChild(tbody); wrap.appendChild(table); view.appendChild(wrap); ...
+    
+    /* 以下是為了確保你替換正確，我提供完整的這部分： */
     var thead = document.createElement('thead');
     var dayHeaders = '';
     for (var d = 1; d <= 31; d++) dayHeaders += '<th class="day-col">' + d + '</th>';
 
-    // 找到原本的 thead.innerHTML，替換成以下：
     thead.innerHTML =
         '<tr>' +
             '<th rowspan="2" class="cell-no">Item<br>No.</th>' +
-            '<th rowspan="2" class="cell-trade">Trade</th>' +
-            '<th rowspan="2" class="cell-orig">Orig.</th>' +
-            '<th rowspan="2" class="cell-rev">Rev.<br>(Code 2)</th>' +
-            '<th colspan="31" style="padding-bottom:0; border-bottom:none;">Number of workers engaged on site on each calendar day</th>' + // 調整這裡
+            '<th rowspan="2" class="cell-trade" style="text-align:center;">Trade</th>' +
+            '<th colspan="2">Trade List <sup>1</sup></th>' +
+            '<th colspan="31">Number of workers engaged on site on each calendar day <sup>b,c</sup></th>' +
             '<th rowspan="2" class="total-col">Total<br>Man-days</th>' +
-            '<th rowspan="2" class="total-col">Overtime<br>(hours)</th>' +
-            '<th colspan="3">Daily Wage Rate ($)</th>' +
+            '<th rowspan="2" class="total-col">Overtime <sup>d</sup><br>(hours)</th>' +
+            '<th colspan="3">Daily Wage Rate ($) <sup>e</sup></th>' +
             '<th rowspan="2" class="cell-no">Item<br>No.</th>' +
         '</tr>' +
         '<tr>' +
+            '<th class="cell-orig">Orig.</th>' +
+            '<th class="cell-rev">Rev.<br>(Code <sup>2</sup>)</th>' +
             dayHeaders +
             '<th class="wage-col">Av.</th><th class="wage-col">High</th><th class="wage-col">Low</th>' +
         '</tr>';
@@ -348,67 +385,148 @@ function renderGF527_2003View() {
         var isOther = (type === 'other');
 
         var tr = document.createElement('tr');
-        tr.innerHTML = '<td class="cell-no"' + (isNote ? ' rowspan="2"' : '') + '>' + no + '</td>';
+        tr.innerHTML = '<td class="cell-no">' + no + '</td>';
 
         if (isOther) {
             var nm = formData['gf5272003_row_' + no + '_name'] || '';
             var cd = formData['gf5272003_row_' + no + '_code'] || '';
             tr.innerHTML +=
-                '<td class="cell-trade" colspan="3">' +
-                    'Others: trade name ' +
-                    '<input type="text" class="gf5272003-other-name cell-other-input" data-row="' + no + '" value="' + escHTML(nm) + '" placeholder="trade name">' +
-                    '&nbsp;code ' +
-                    '<input type="text" class="gf5272003-other-code cell-other-input" data-row="' + no + '" value="' + escHTML(cd) + '" placeholder="code">' +
+                '<td class="cell-trade" colspan="3" style="padding: 2px 4px;">' +
+                    '<div style="display:flex; justify-content:space-between; align-items:center; width:100%; line-height:1.2;">' +
+                        '<span style="font-size: 9px; white-space:nowrap;">Others <sup>4</sup>: trade name -</span>' +
+                        '<input type="text" class="gf5272003-other-name cell-other-input" data-row="' + no + '" value="' + escHTML(nm) + '" style="flex: 1; margin: 0 4px;">' +
+                        '<span style="font-size: 9px; white-space:nowrap;">code -</span>' +
+                        '<input type="text" class="gf5272003-other-code cell-other-input" data-row="' + no + '" value="' + escHTML(cd) + '" style="flex: 1; margin-left: 4px;">' +
+                    '</div>' +
                 '</td>';
         } else {
-var origDisplay = (orig === 'ü') ? '✓' : orig;
-
-tr.innerHTML +=
-    '<td class="cell-trade" title="' + escHTML(name) + '">' + escHTML(name) + '</td>' +
-    '<td class="cell-orig">' + origDisplay + '</td>' +
-    '<td class="cell-rev">' + escHTML(rev) + '</td>';
-        }
-
-        /* 31 天 */
-        for (var d = 1; d <= 31; d++) {
-            var v = formData['gf5272003_row_' + no + '_day_' + d] || '';
+            var origDisplay = (orig === 'ü') ? '✓' : orig;
+            var formattedName = escHTML(name).replace(/ (\d)$/, ' <sup>$1</sup>');
+            
             tr.innerHTML +=
-                '<td class="day-col">' +
-                    '<input type="text" inputmode="numeric" maxlength="3" class="gf5272003-day" data-row="' + no + '" data-day="' + d + '" value="' + escHTML(v) + '"' + (isNote ? ' disabled' : '') + '>' +
-                '</td>';
+                '<td class="cell-trade" title="' + escHTML(name) + '">' + formattedName + '</td>' +
+                '<td class="cell-orig">' + origDisplay + '</td>';
+            
+            // C406 (17~24) 跨行合併
+            if (no === 17) {
+                tr.innerHTML += '<td class="cell-rev" rowspan="8">' + escHTML(rev) + '</td>';
+            } else if (no >= 18 && no <= 24) {
+                // 被 rowspan 佔用，跳過
+            } else {
+                tr.innerHTML += '<td class="cell-rev">' + escHTML(rev) + '</td>';
+            }
         }
 
-        var md = formData['gf5272003_row_' + no + '_mandays'] || '';
-        var ot = formData['gf5272003_row_' + no + '_overtime'] || '';
-        tr.innerHTML +=
-            '<td class="total-col"><input type="text" inputmode="numeric" class="gf5272003-mandays" data-row="' + no + '" value="' + escHTML(md) + '"' + (isNote ? ' disabled' : '') + '></td>' +
-            '<td class="total-col"><input type="text" inputmode="numeric" class="gf5272003-overtime" data-row="' + no + '" value="' + escHTML(ot) + '"' + (isNote ? ' disabled' : '') + '></td>';
+        // 處理備註行
+        if (isNote && note) {
+            tr.innerHTML += '<td class="cell-note" colspan="36">' + escHTML(note) + '</td>';
+        } else {
+            for (var d = 1; d <= 31; d++) {
+                var v = formData['gf5272003_row_' + no + '_day_' + d] || '';
+                tr.innerHTML +=
+                    '<td class="day-col">' +
+                        '<input type="text" inputmode="numeric" maxlength="3" class="gf5272003-day" data-row="' + no + '" data-day="' + d + '" value="' + escHTML(v) + '">' +
+                    '</td>';
+            }
 
-        var avg  = formData['gf5272003_row_' + no + '_avg']  || '';
-        var high = formData['gf5272003_row_' + no + '_high'] || '';
-        var low  = formData['gf5272003_row_' + no + '_low']  || '';
-        tr.innerHTML +=
-            '<td class="wage-col"><input type="text" inputmode="decimal" class="gf5272003-avg"  data-row="' + no + '" value="' + escHTML(avg)  + '"></td>' +
-            '<td class="wage-col"><input type="text" inputmode="decimal" class="gf5272003-high" data-row="' + no + '" value="' + escHTML(high) + '"></td>' +
-            '<td class="wage-col"><input type="text" inputmode="decimal" class="gf5272003-low"  data-row="' + no + '" value="' + escHTML(low)  + '"></td>';
+            var md = formData['gf5272003_row_' + no + '_mandays'] || '';
+            var ot = formData['gf5272003_row_' + no + '_overtime'] || '';
+            tr.innerHTML +=
+                '<td class="total-col"><input type="text" inputmode="numeric" class="gf5272003-mandays" data-row="' + no + '" value="' + escHTML(md) + '"></td>' +
+                '<td class="total-col"><input type="text" inputmode="numeric" class="gf5272003-overtime" data-row="' + no + '" value="' + escHTML(ot) + '"></td>';
+
+            var avg  = formData['gf5272003_row_' + no + '_avg']  || '';
+            var high = formData['gf5272003_row_' + no + '_high'] || '';
+            var low  = formData['gf5272003_row_' + no + '_low']  || '';
+            tr.innerHTML +=
+                '<td class="wage-col"><input type="text" inputmode="decimal" class="gf5272003-avg"  data-row="' + no + '" value="' + escHTML(avg)  + '"></td>' +
+                '<td class="wage-col"><input type="text" inputmode="decimal" class="gf5272003-high" data-row="' + no + '" value="' + escHTML(high) + '"></td>' +
+                '<td class="wage-col"><input type="text" inputmode="decimal" class="gf5272003-low"  data-row="' + no + '" value="' + escHTML(low)  + '"></td>';
+        }
 
         tr.innerHTML += '<td class="cell-no">' + no + '</td>';
         tbody.appendChild(tr);
-
-        if (isNote && note) {
-            var ntr = document.createElement('tr');
-            ntr.innerHTML =
-                '<td class="cell-note" colspan="' + (4 + 31 + 2 + 3) + '">' + escHTML(note) + '</td>' +
-                '<td class="cell-no"></td>';
-            tbody.appendChild(ntr);
-        }
     });
+
+    // ★ 底部簽名行：統一高度與寬度，確保點擊區域完整
+    tbody.innerHTML += 
+        // 53行：Completed by Agent of Contractor
+        '<tr>' +
+            '<td class="cell-no" style="border: none !important; position: relative; padding: 0;">' +
+                '<div style="position: absolute; left: -2px; top: 0; bottom: 0; width: 2px; background: #ffffff; z-index: 10;"></div>' +
+            '</td>' +
+            '<td class="cell-trade" style="text-align:left; padding: 4px; border: 1px solid #000 !important;" colspan="3">' +
+                '<div style="display: flex; width: 100%; align-items: center; height: 22px;">' +
+                    '<span style="padding-left: 4px; white-space: nowrap;">Completed by Agent of Contractor</span>' +
+                    '<div class="table-sig-cell" data-field-id="gf5272003_row_53_signature" style="flex: 1; height: 100%; margin: 0 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px dashed #94a3b8; background: #f8fafc;"></div>' +
+                '</div>' +
+            '</td>' +
+            '<td></td>'.repeat(31) +
+            '<td class="total-col"></td>' +
+            '<td></td>'.repeat(4) +
+            '<td style="border: none !important; position: relative; padding: 0;">' + 
+                '<div style="position: absolute; left: 0; right: -2px; top: 0; bottom: -1px; background: #ffffff; z-index: 10;"></div>' + 
+            '</td>' +
+        '</tr>' +
+        
+        // 54行：Checked by IOW/COW
+        '<tr>' +
+            '<td class="cell-no" style="border: none !important; position: relative; padding: 0;">' +
+                '<div style="position: absolute; left: -2px; top: 0; bottom: -2px; width: 2px; background: #ffffff; z-index: 10;"></div>' +
+            '</td>' +
+            '<td class="cell-trade" style="text-align:left; padding: 4px; border: 1px solid #000 !important;" colspan="3">' +
+                '<div style="display: flex; width: 100%; align-items: center; height: 22px;">' +
+                    '<span style="padding-left: 4px; white-space: nowrap;">Checked by IOW/COW</span>' +
+                    '<div class="table-sig-cell" data-field-id="gf5272003_row_54_signature" style="flex: 1; height: 100%; margin: 0 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px dashed #94a3b8; background: #f8fafc;"></div>' +
+                '</div>' +
+            '</td>' +
+            '<td></td>'.repeat(31) +
+            '<td class="total-col"></td>' +
+            '<td colspan="5" style="border: none !important; position: relative; padding: 0;">' + 
+                '<div style="position: absolute; left: 0; right: -2px; top: 0; bottom: -2px; background: #ffffff; z-index: 10;"></div>' + 
+            '</td>' +
+        '</tr>';
 
     table.appendChild(tbody);
     wrap.appendChild(table);
     view.appendChild(wrap);
 
-    /* ---------- 綁定所有輸入 ---------- */
+    // ★ 新增：初始化簽名格內容並綁定點擊事件（必須在 view 組裝完成後執行）
+    view.querySelectorAll('.table-sig-cell').forEach(function(cell) {
+        // 1. 初始化內容
+        refreshLabourSignatureCell(cell.dataset.fieldId);
+        
+        // 2. 綁定點擊事件彈出畫板
+        cell.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            openLabourSignatureModal(cell.dataset.fieldId);
+        });
+    });
+
+     // ★ 新增：底部文字說明 (將右側文字完美置中)
+    var footer = document.createElement('div');
+    footer.style.cssText = 'margin-top: 5px; font-size: 10px; font-family: "Times New Roman", SimSun, serif; color: #000;';
+    footer.innerHTML = 
+        '<div style="text-align: center; margin-bottom: 20px; font-weight: bold;"># Tick in the box only for a nominated sub-contractor</div>' +
+        '<div style="display: flex; align-items: center;">' +
+            '<div style="width: 150px;">G.F. 527 (Rev. 1/2003)</div>' +
+            '<div style="flex: 1; text-align: center;">Please refer to the overleaf for filling this return</div>' +
+            '<div style="width: 150px;"></div>' + // ★ 右側隱形佔位塊，確保文字是相對於整張紙「絕對置中」
+        '</div>';
+    view.appendChild(footer);
+
+    /* ---------- 4. 綁定表格內所有輸入 ---------- */
+    // ... 下方保留原有的 bind 邏輯 ...
+
+    footer.querySelectorAll('.footer-input').forEach(function(el) {
+        el.addEventListener('input', function() {
+            formData['gf5272003_footer_' + el.dataset.footerKey] = el.value;
+            persistFormData();
+        });
+    });
+
+    /* ---------- 4. 綁定表格內所有輸入 ---------- */
     function bind(selector, keyFn) {
         view.querySelectorAll(selector).forEach(function (el) {
             el.addEventListener('input', function () {
@@ -4589,11 +4707,35 @@ function saveLabourSignature() {
     closeLabourSignatureModal();
 }
 function refreshLabourSignatureCell(fieldId) {
+    // 先找 PDF 覆蓋層的簽名格
     var cell = document.querySelector('.pdf-signature-cell[data-field-id="' + fieldId + '"]');
+    if (!cell) {
+        // 如果找不到，再找 2003 表格內的簽名格
+        cell = document.querySelector('.table-sig-cell[data-field-id="' + fieldId + '"]');
+    }
     if (!cell) return;
-    renderLabourSignatureCellContent(cell, formData[fieldId]);
-}
 
+    var val = formData[fieldId];
+    cell.innerHTML = '';
+
+    if (val && typeof val === 'string' && val.indexOf('data:image') === 0) {
+        var img = document.createElement('img');
+        img.src = val;
+        img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;';
+        if (cell.classList.contains('pdf-signature-cell')) img.className = 'signature-img';
+        cell.appendChild(img);
+    } else {
+        var span = document.createElement('span');
+        if (cell.classList.contains('pdf-signature-cell')) {
+            span.className = 'signature-placeholder';
+            span.textContent = '點擊簽名';
+        } else {
+            span.style.cssText = 'font-size:9px;color:#64748b;font-style:italic;user-select:none;';
+            span.textContent = '點擊簽名';
+        }
+        cell.appendChild(span);
+    }
+}
 
 
         function buildField(field) {
@@ -5144,6 +5286,10 @@ function loadTemplate() {
         grab('.gf5272003-low',        function (el) { return 'gf5272003_row_' + el.dataset.row + '_low'; });
         grab('.gf5272003-other-name', function (el) { return 'gf5272003_row_' + el.dataset.row + '_name'; });
         grab('.gf5272003-other-code', function (el) { return 'gf5272003_row_' + el.dataset.row + '_code'; });
+        
+        // ★ 新增：抓取底部簽名區
+        grab('.footer-input',         function (el) { return 'gf5272003_footer_' + el.dataset.footerKey; });
+
         view.querySelectorAll('.gf5272003-hdr-check').forEach(function (el) {
             formData['gf5272003_' + el.dataset.hdrKey] = el.checked ? '1' : '';
         });
