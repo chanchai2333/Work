@@ -144,6 +144,27 @@
             .action-btn { width: 100%; margin: 2px 0; }
             .status-change-select { width: 100%; margin: 2px 0; }
         }
+
+                /* ★ 修正 Add New Inspection Modal 高度，加入縱向滾動 */
+        #add-inspect-modal .modal-content {
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+
+        /* 美化滾動條樣式 (選用) */
+        #add-inspect-modal .modal-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        #add-inspect-modal .modal-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #add-inspect-modal .modal-content::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 10px;
+        }
+        #add-inspect-modal .modal-content::-webkit-scrollbar-thumb:hover {
+            background-color: #94a3b8;
+        }
     </style>
 </head>
 <body>

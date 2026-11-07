@@ -611,7 +611,6 @@
                     <label>Status</label>
                     <select id="site-status">
                         <option value="active">Active</option>
-                        <option value="in-progress">In Progress</option>
                         <option value="attention">Needs Attention</option>
                         <option value="completed">Completed</option>
                     </select>
@@ -621,13 +620,10 @@
                     <textarea id="site-description" rows="2" placeholder="Brief description of works..."></textarea>
                 </div>
                 <div class="dwss-form-group">
-                    <label>Site Manager</label>
+                    <label>Engineer</label>
                     <input type="text" id="site-contact" placeholder="e.g. Mr. Chan">
                 </div>
-                <div class="dwss-form-group">
-                    <label>Progress (%)</label>
-                    <input type="number" id="site-progress" min="0" max="100" placeholder="0 - 100">
-                </div>
+
             </form>
         </div>
         <div class="panel-footer">
@@ -690,7 +686,7 @@
         status: 'active',
         description: 'Major sewage treatment facility serving Kowloon and Hong Kong Island. Phase 2 expansion in progress.',
         contact: 'Mr. Chan Tai Man',
-        progress: 78
+
     },
     {
         id: 2,
@@ -703,7 +699,7 @@
         status: 'in-progress',
         description: 'Replacement of aging water mains along Nathan Road. Night work to minimize traffic disruption.',
         contact: 'Mr. Lee Kwok Wai',
-        progress: 45
+   
     },
     {
         id: 3,
@@ -716,7 +712,7 @@
         status: 'active',
         description: 'Routine maintenance and structural inspection of Kowloon Reservoir dam and overflow systems.',
         contact: 'Ms. Wong Siu Ling',
-        progress: 92
+   
     },
     {
         id: 4,
@@ -729,7 +725,7 @@
         status: 'active',
         description: 'Fresh water service reservoir supplying Western District. Valve and pipeline upgrades ongoing.',
         contact: 'Mr. Ho Cheuk Yin',
-        progress: 60
+        
     },
     {
         id: 5,
@@ -742,7 +738,7 @@
         status: 'attention',
         description: 'High-pressure pumping station serving northern New Territories. Equipment replacement required.',
         contact: 'Ms. Cheung Mei Ling',
-        progress: 33
+       
     }
 ];
             
@@ -894,7 +890,6 @@
                         <div class="site-popup">
                             <h4><i class="fas ${site.icon}"></i> ${site.name}</h4>
                             <p><b>Status:</b> ${site.status}</p>
-                            <p><b>Progress:</b> ${site.progress}%</p>
                             <p><b>Updated:</b> ${site.lastUpdated}</p>
                             <p>${site.description||''}</p>
                             <p><b>${site.contact||''}</b></p>
@@ -1001,7 +996,6 @@
                     document.getElementById('site-lng').value = site.lng;
                     document.getElementById('site-description').value = site.description || '';
                     document.getElementById('site-contact').value = site.contact || '';
-                    document.getElementById('site-progress').value = site.progress || 0;
                     updateSelectedLocation(site.lat, site.lng);
                     exitPickMode();
                     if (pickMarker) map.removeLayer(pickMarker);
@@ -1067,15 +1061,14 @@
                 const lng = parseFloat(document.getElementById('site-lng').value);
                 const description = document.getElementById('site-description').value.trim();
                 const contact = document.getElementById('site-contact').value.trim();
-                const progress = parseInt(document.getElementById('site-progress').value) || 0;
                 const icon = getIconForCategory(category);
                 const lastUpdated = formatDate();
                 
                 if (id) {
                     const site = siteData.find(s => s.id == id);
-                    if (site) Object.assign(site, { name, category, icon, lat, lng, status, description, contact, progress, lastUpdated });
+                    if (site) Object.assign(site, { name, category, icon, lat, lng, status, description, contact, lastUpdated });
                 } else {
-                    const newSite = { id: getNextId(), name, category, icon, lat, lng, lastUpdated, status, description, contact, progress };
+                    const newSite = { id: getNextId(), name, category, icon, lat, lng, lastUpdated, status, description, contact };
                     siteData.push(newSite);
                     currentSiteId = newSite.id;
                 }
