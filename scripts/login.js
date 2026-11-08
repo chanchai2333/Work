@@ -102,16 +102,80 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function loadContractNameMap() {
+        var map = {};
+        // Always include testing defaults
+        ['DE/2026/05', 'DE/2024/06', 'DE/2025/07'].forEach(function (id) {
+            map[id] = id;
+        });
+        ['dwss_contracts', 'dwss_projects', 'projects', 'ael_dwss_projects'].forEach(function (key) {
+            try {
+                var arr = JSON.parse(localStorage.getItem(key) || '[]');
+                if (!Array.isArray(arr)) return;
+                arr.forEach(function (p) {
+                    var id = p.contractNo || p.id || p.code;
+                    if (id) map[id] = p.name || id;
+                });
+            } catch (e) {}
+        });
+        return map;
+    }
+
+    function findLocalUser(user) {
+        if (!user) return null;
+        try {
+            var keys = ['dwss_users_db', 'ael_dwss_users'];
+            for (var i = 0; i < keys.length; i++) {
+                var arr = JSON.parse(localStorage.getItem(keys[i]) || '[]');
+                if (!Array.isArray(arr)) continue;
+                var found = arr.find(function (u) {
+                    if (!u) return false;
+                    if (user.username && u.username && String(u.username).toLowerCase() === String(user.username).toLowerCase()) return true;
+                    if (user.id != null && u.id != null && String(u.id) === String(user.id)) return true;
+                    return false;
+                });
+                if (found) return found;
+            }
+        } catch (e) {}
+        return null;
+    }
+
+    function resolveLoginProjects(user) {
+        var isAdmin = user && (user.role === 'admin' || user.userRole === 'admin');
+        var contractMap = loadContractNameMap();
+
+        // System Admin: every contract currently in local contract store
+        if (isAdmin) {
+            var all = Object.keys(contractMap);
+            return all.sort();
+        }
+
+        // Prefer localStorage user (updated when admin assigns/deletes contracts)
+        var local = findLocalUser(user);
+        var pids = [];
+        if (local && Array.isArray(local.projectIds) && local.projectIds.length) {
+            pids = local.projectIds.slice();
+        } else if (user && Array.isArray(user.projectIds)) {
+            pids = user.projectIds.slice();
+        }
+
+        // Only show contracts that still exist (deleted contracts disappear)
+        pids = pids.filter(function (pid) { return pid && contractMap[pid]; });
+        return pids;
+    }
+
     function showProjectPicker(user) {
         document.getElementById('pm-user-name').textContent = user.name;
-        const projects = user.projectIds || [];
+        const nameMap = loadContractNameMap();
+        const projects = resolveLoginProjects(user);
         
         projectListEl.innerHTML = '';
         projects.forEach(pid => {
             const div = document.createElement('div');
             div.className = 'project-option';
             div.style.cssText = 'padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px; cursor: pointer; font-weight: 600;';
-            div.innerHTML = `<span>${pid}</span><span class="po-check" style="float:right; opacity:0;"><i class="fas fa-check"></i></span>`;
+            const label = nameMap[pid] && nameMap[pid] !== pid ? (pid + ' — ' + nameMap[pid]) : pid;
+            div.innerHTML = `<span>${label}</span><span class="po-check" style="float:right; opacity:0;"><i class="fas fa-check"></i></span>`;
             
             div.onclick = () => {
                 projectListEl.querySelectorAll('.project-option').forEach(el => {
@@ -130,7 +194,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         if (projects.length === 0) {
-            projectListEl.innerHTML = '<p style="text-align:center;">No projects assigned.</p>';
+            projectListEl.innerHTML = '<p style="text-align:center;">No projects assigned. Ask System Admin to assign you to a contract.</p>';
             pmEnterBtn.disabled = true;
         } else {
             pmEnterBtn.disabled = true;
@@ -140,7 +204,6 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('pm-user-info').style.display = 'flex';
         projectModal.style.display = 'flex';
         
-        // Reset submit button
         document.querySelector('button[type="submit"]').disabled = false;
         document.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
     }

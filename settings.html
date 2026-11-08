@@ -187,7 +187,7 @@
                         <div class="card-icon"><i class="fas fa-lock"></i></div>
                         <span>Security Settings</span>
                     </div>
-                    <div class="card-badge"><i class="fas fa-shield-alt"></i> Admin Only</div>
+                    <div class="card-badge"><i class="fas fa-shield-alt"></i> Admin / Project Admin</div>
                 </div>
                 <div class="settings-form">
                     <div class="form-group">
@@ -491,8 +491,25 @@
             var v = localStorage.getItem('dwss_require_submit_password');
             sel.value = (v === 'false') ? 'false' : 'true';
         }
+
+        function canEditSecurity() {
+            try {
+                if (window.DWSS_Permissions) {
+                    if (window.DWSS_Permissions.isAdmin && window.DWSS_Permissions.isAdmin()) return true;
+                    if (window.DWSS_Permissions.isProjectAdmin && window.DWSS_Permissions.isProjectAdmin()) return true;
+                    var u = window.DWSS_Permissions.getCurrentUser && window.DWSS_Permissions.getCurrentUser();
+                    if (u && (u.role === 'admin' || u.role === 'project_admin')) return true;
+                }
+            } catch (e) {}
+            return false;
+        }
+
         var saveBtn = document.getElementById('save-security-settings');
-        if (saveBtn) {
+        var card = document.querySelector('.security-settings');
+        if (!canEditSecurity()) {
+            // Hide Security Settings entirely for roles that cannot edit it
+            if (card) card.style.display = 'none';
+        } else if (saveBtn) {
             saveBtn.addEventListener('click', function () {
                 localStorage.setItem('dwss_require_submit_password',
                     document.getElementById('require-submit-password').value);

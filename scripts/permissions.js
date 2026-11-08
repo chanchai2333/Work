@@ -49,6 +49,7 @@
         'sa': { id: 'sa', name: 'Site Agent', shortName: 'SA', organization: 'CONTRACTOR' },
         'ssa': { id: 'ssa', name: 'Sub-Site Agent', shortName: 'SSA', organization: 'CONTRACTOR' },
         'rso': { id: 'rso', name: 'Registered Safety Officer', shortName: 'RSO', organization: 'CONTRACTOR' },
+        'project_admin': { id: 'project_admin', name: 'Project Admin (Project Manager)', shortName: 'PM', organization: 'CONTRACTOR' },
         'subcontractor': { id: 'subcontractor', name: 'Subcontractor User', shortName: 'SUB', organization: 'SUBCONTRACTOR' },
         'supplier': { id: 'supplier', name: 'Supplier User', shortName: 'SUP', organization: 'SUPPLIER' },
         'admin': { id: 'admin', name: 'System Administrator', shortName: 'ADMIN', organization: 'SYSTEM_VENDOR' }
@@ -83,14 +84,17 @@
     // 5. 角色預設權限 (Role Templates)
     // ============================================================
     var ROLE_TEMPLATES = {
-        'eg': { modules: { dashboard:'view', sitediary:'view', safetyinspect:'view', sitelocations:'view', labourwage:'view', settings:'none', usermanagement:'none', ssss:'view' } },
-        'ig': { modules: { dashboard:'view', sitediary:'approve', safetyinspect:'approve', sitelocations:'view', labourwage:'approve', settings:'none', usermanagement:'none', ssss:'view' } },
-        'wsg': { modules: { dashboard:'view', sitediary:'approve', safetyinspect:'view', sitelocations:'view', labourwage:'view', settings:'none', usermanagement:'none', ssss:'view' } },
-        'sa': { modules: { dashboard:'view', sitediary:'edit', safetyinspect:'edit', sitelocations:'edit', labourwage:'edit', settings:'none', usermanagement:'none', ssss:'view' } },
-        'ssa': { modules: { dashboard:'view', sitediary:'edit', safetyinspect:'edit', sitelocations:'view', labourwage:'edit', settings:'none', usermanagement:'none', ssss:'view' } },
-        'rso': { modules: { dashboard:'view', sitediary:'view', safetyinspect:'edit', sitelocations:'view', labourwage:'view', settings:'none', usermanagement:'none', ssss:'view' } },
-        'subcontractor': { modules: { dashboard:'view', sitediary:'view', safetyinspect:'view', sitelocations:'view', labourwage:'view', settings:'none', usermanagement:'none', ssss:'none' } },
-        'supplier': { modules: { dashboard:'none', sitediary:'none', safetyinspect:'none', sitelocations:'view', labourwage:'view', settings:'none', usermanagement:'none', ssss:'none' } },
+        'eg': { modules: { dashboard:'view', sitediary:'view', safetyinspect:'view', sitelocations:'view', labourwage:'view', settings:'view', usermanagement:'view', ssss:'view' } },
+        'ig': { modules: { dashboard:'view', sitediary:'approve', safetyinspect:'approve', sitelocations:'view', labourwage:'approve', settings:'view', usermanagement:'view', ssss:'view' } },
+        'wsg': { modules: { dashboard:'view', sitediary:'approve', safetyinspect:'view', sitelocations:'view', labourwage:'view', settings:'view', usermanagement:'view', ssss:'view' } },
+        'sa': { modules: { dashboard:'view', sitediary:'edit', safetyinspect:'edit', sitelocations:'edit', labourwage:'edit', settings:'view', usermanagement:'view', ssss:'view' } },
+        'ssa': { modules: { dashboard:'view', sitediary:'edit', safetyinspect:'edit', sitelocations:'view', labourwage:'edit', settings:'view', usermanagement:'view', ssss:'view' } },
+        'rso': { modules: { dashboard:'view', sitediary:'view', safetyinspect:'edit', sitelocations:'view', labourwage:'view', settings:'view', usermanagement:'view', ssss:'view' } },
+        // Project Admin (PM): full ops on contract modules + can manage people on own contract team only
+        'project_admin': { modules: { dashboard:'edit', sitediary:'edit', safetyinspect:'edit', sitelocations:'edit', labourwage:'edit', settings:'edit', usermanagement:'edit', ssss:'edit' } },
+        'subcontractor': { modules: { dashboard:'view', sitediary:'view', safetyinspect:'view', sitelocations:'view', labourwage:'view', settings:'view', usermanagement:'view', ssss:'none' } },
+        'supplier': { modules: { dashboard:'none', sitediary:'none', safetyinspect:'none', sitelocations:'view', labourwage:'view', settings:'view', usermanagement:'view', ssss:'none' } },
+        // System Admin: can add new contracts and people (full control)
         'admin': { modules: { dashboard:'admin', sitediary:'admin', safetyinspect:'admin', sitelocations:'admin', labourwage:'admin', settings:'admin', usermanagement:'admin', ssss:'admin' } }
     };
 
@@ -182,11 +186,51 @@
         return user && (user.role === 'admin' || user.userRole === 'admin');
     }
 
+    function isProjectAdmin() {
+        var user = getCurrentUser();
+        return user && (user.role === 'project_admin' || user.userRole === 'project_admin');
+    }
+
     function canManageUsers() {
         var user = getCurrentUser();
         if (!user) return false;
+        // System Admin: full control
         if (user.role === 'admin') return true;
+        // Project Admin: may manage members on own project only (not create global users)
+        if (user.role === 'project_admin') return true;
         return canAccess(user, 'usermanagement', 'admin');
+    }
+
+    /** Only System Admin can create brand-new user accounts. */
+    function canCreateUsers() {
+        var user = getCurrentUser();
+        return !!(user && user.role === 'admin');
+    }
+
+    /** Only System Admin can create new projects / teams. */
+    function canCreateProjects() {
+        var user = getCurrentUser();
+        return !!(user && user.role === 'admin');
+    }
+
+    /** System Admin: all projects. Others: only assigned projectIds. */
+    function canAccessAllProjects() {
+        return isAdmin();
+    }
+
+    /** Project Admin may only manage users that share at least one of their projectIds (or same contractNo). Never manage System Admin accounts. */
+    function canManageThisUser(targetUser) {
+        var user = getCurrentUser();
+        if (!user || !targetUser) return false;
+        if (targetUser.role === 'admin') return user.role === 'admin';
+        if (user.role === 'admin') return true;
+        if (user.role !== 'project_admin') return false;
+        // Project Admin scope: overlapping project or same contract
+        var myPids = user.projectIds || [];
+        var theirPids = targetUser.projectIds || [];
+        if (myPids.length && theirPids.some(function (pid) { return myPids.indexOf(pid) !== -1; })) return true;
+        if (user.contractNo && targetUser.contractNo && user.contractNo === targetUser.contractNo) return true;
+        return false;
     }
 
     function getRoleName() {
@@ -551,7 +595,12 @@
         requirePageAccess: requirePageAccess,
         canChangeStatus: canChangeStatus,
         isAdmin: isAdmin,
+        isProjectAdmin: isProjectAdmin,
         canManageUsers: canManageUsers,
+        canCreateUsers: canCreateUsers,
+        canCreateProjects: canCreateProjects,
+        canAccessAllProjects: canAccessAllProjects,
+        canManageThisUser: canManageThisUser,
         getRoleName: getRoleName,
         getUserName: getUserName,
         getOrganization: getOrganization,
