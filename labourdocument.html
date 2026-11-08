@@ -20,7 +20,8 @@
     <link rel="stylesheet" href="styles/main.css">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -1676,35 +1677,62 @@
             if (document.getElementById('gf527-2003-style')) return;
             var style = document.createElement('style');
             style.id = 'gf527-2003-style';
-            style.textContent = `
-                .gf527-2003-view { background:#fff; padding:10px; border-radius:8px; max-width: 100%; overflow-x: auto; }
-                .gf527-2003-header { margin-bottom:10px; padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; }
+            style.textContent = 
+                /* 主容器：模擬 A3 紙張寬度 */
+                '.gf527-2003-view { background: #fff; padding: 20px; font-family: "Times New Roman", SimSun, serif; color: #000; min-width: 1650px; box-sizing: border-box; }' +
                 
-                /* ★ 表頭強制單行並允許橫向滾動 */
-                .gf527-2003-header .hdr-row { display:flex; flex-wrap:nowrap; overflow-x:auto; gap:12px; align-items:center; padding-bottom:4px; }
-                .gf527-2003-header .hdr-group { display:flex; align-items:center; gap:6px; flex-shrink: 0; }
-                .gf527-2003-header label { font-weight:600; color:#334155; margin-bottom:0; white-space:nowrap; }
+                /* 頂部標頭區 */
+                '.gf527-2003-header { margin-bottom: 5px; font-size: 11px; }' +
+                '.gf527-2003-header .top-meta { display: flex; justify-content: flex-start; gap: 80px; margin-bottom: 10px; }' +
+                '.gf527-2003-header .title { text-align: center; font-size: 16px; font-weight: bold; margin: 10px 0 15px 0; }' +
+                '.gf527-2003-header .info-row { display: flex; flex-wrap: nowrap; gap: 20px; align-items: baseline; margin-bottom: 5px; }' +
+                '.gf527-2003-header .info-group { display: flex; align-items: baseline; flex-shrink: 0; }' +
+                '.gf527-2003-header label { font-weight: normal; margin-right: 5px; white-space: nowrap; font-size: 11px; }' +
                 
-                .readonly-text { border-bottom: 1px solid #94a3b8; padding: 0 4px; color: #0f172a; min-width: 40px; display: inline-block; min-height: 18px; text-align: center; }
-                .readonly-text.wide { width: 220px; text-align: left; }
+                /* 模擬 Excel 下劃線文字 */
+                '.gf527-2003-header .underline-text { display: inline-block; border-bottom: 1px solid #000; background: transparent; font-family: inherit; font-size: 11px; padding: 0 2px; color: #000; box-sizing: border-box; line-height: 14px; text-align: left; vertical-align: baseline; min-width: 20px; }' +
+                '.gf527-2003-header .w-30 { width: 30px; }' +
+                '.gf527-2003-header .w-40 { width: 40px; }' +
+                '.gf527-2003-header .w-60 { width: 60px; }' +
+                '.gf527-2003-header .w-100 { width: 100px; }' +
+                '.gf527-2003-header .w-150 { width: 150px; }' +
+                '.gf527-2003-header .w-250 { width: 250px; }' +
+                '.gf527-2003-header .w-350 { width: 350px; }' +
                 
-                /* ★ 表格容器允許橫向滾動 */
-                .gf527-2003-table-wrap { width:100%; overflow-x:auto; border:1px solid #cbd5e1; border-radius:6px; }
+                /* 表格外層 */
+                '.gf527-2003-table-wrap { width: 100%; overflow-x: auto; border: 2px solid #000; border-bottom: none; }' +
                 
-                /* ★ 表格自然撐開 */
-                .gf527-2003-table { border-collapse:collapse; font-size:11px; width: max-content; min-width: 100%; background:#fff; }
-                .gf527-2003-table th, .gf527-2003-table td { border:1px solid #cbd5e1; padding:4px 2px; text-align:center; vertical-align:middle; }
-                .gf527-2003-table thead th { background:#e2e8f0; font-weight:600; white-space: nowrap; }
-                .gf527-2003-table .cell-trade { text-align:left; min-width: 220px; line-height:1.2; padding-left:4px; }
-                .gf527-2003-table .cell-note { background:#fef9c3; text-align:left; font-style:italic; font-size:10px; padding:4px 6px; white-space:normal; }
-                .gf527-2003-table .cell-no { width:30px; background:#f1f5f9; font-weight:600; }
-                .gf527-2003-table .cell-orig { width:30px; font-size:14px; }
-                .gf527-2003-table .cell-rev { width:50px; }
-                .gf527-2003-table .day-col { width:22px; min-width:22px; }
-                .gf527-2003-table .total-col { width:50px; }
-                .gf527-2003-table .wage-col { width:50px; }
-                .gf527-2003-table tbody tr:nth-child(even) td { background:#fafbfc; }
-            `;
+                /* 表格本體：嚴格網格 */
+                '.gf527-2003-table { border-collapse: collapse; width: 100%; table-layout: fixed; font-size: 10px; }' +
+                '.gf527-2003-table th, .gf527-2003-table td { border: 1px solid #000; padding: 2px 1px; text-align: center; vertical-align: middle; }' +
+                
+                /* 表頭背景色 */
+                '.gf527-2003-table thead th { background: #fff; font-weight: bold; padding: 4px 1px; }' +
+                
+                /* 上標樣式 */
+                '.gf527-2003-table sup { font-size: 8px; vertical-align: super; line-height: 0; }' +
+                
+                /* 欄位寬度調整：加寬 Trade 欄位 */
+                '.gf527-2003-table .cell-no { width: 25px; font-weight: bold; }' +
+                '.gf527-2003-table .cell-trade { width: 320px; text-align: left; padding-left: 4px; }' +
+                '.gf527-2003-table .cell-orig { width: 25px; font-size: 11px; }' +
+                '.gf527-2003-table .cell-rev { width: 40px; }' +
+                '.gf527-2003-table .day-col { width: 18px; min-width: 18px; padding: 0; }' +
+                '.gf527-2003-table .total-col { width: 45px; }' +
+                '.gf527-2003-table .wage-col { width: 45px; }' +
+                
+                /* 備註行 (Notes) - 點狀底紋 */
+                '.gf527-2003-table .cell-note {' +
+                    'background: #fff url("data:image/svg+xml;utf8,<svg width=\'4\' height=\'4\' xmlns=\'http://www.w3.org/2000/svg\'><circle cx=\'1\' cy=\'1\' r=\'0.4\' fill=\'%23999\'/></svg>");' +
+                    'text-align: center; font-style: italic; font-size: 10px; padding: 2px 4px; white-space: normal; line-height: 1.2; color: #000;' +
+                '}' +
+                
+                /* 底部說明文字 */
+                '.gf527-2003-footer { margin-top: 10px; font-size: 10px; padding: 5px; }' +
+                '.gf527-2003-footer .tick-text { text-align: center; margin-bottom: 20px; font-weight: bold; }' +
+                '.gf527-2003-footer .bottom-text-wrap { position: relative; width: 100%; }' +
+                '.gf527-2003-footer .left-text { position: absolute; left: 0; }' +
+                '.gf527-2003-footer .center-text { text-align: center; }';
             document.head.appendChild(style);
         }
 
@@ -1716,211 +1744,438 @@
             var view = document.createElement('div');
             view.className = 'gf527-2003-view';
 
-            function getVal(key) { return formData['gf5272003_' + key] || ''; }
+            function hdrInput(key, cls) {
+                var v = formData['gf5272003_' + key] || '';
+                // 改用 span 標籤，徹底移除 input 的邊框和內邊距干擾
+                return '<span class="underline-text ' + (cls || '') + '">' + escapeHTML(v) + '&nbsp;</span>';
+            }
 
-            // 头部
             var hdr = document.createElement('div');
             hdr.className = 'gf527-2003-header';
-            hdr.innerHTML = `
-                <div class="hdr-row">
-                    <div class="hdr-group"><label>Dept/Div :</label><span class="readonly-text">${escapeHTML(getVal('dept'))}</span> / <span class="readonly-text">${escapeHTML(getVal('div'))}</span></div>
-                    <div class="hdr-group"><label>Month/Year:</label><span class="readonly-text">${escapeHTML(getVal('month'))}</span> / <span class="readonly-text">${escapeHTML(getVal('year'))}</span></div>
-                    <div class="hdr-group"><label>Contract No. :</label><span class="readonly-text" style="min-width:100px;">${escapeHTML(getVal('contractNo'))}</span></div>
-                    <div class="hdr-group" style="flex:1.5;"><label>Contract Title :</label><span class="readonly-text w-100">${escapeHTML(getVal('contractTitle'))}</span></div>
-                    <div class="hdr-group" style="flex:1.5;"><label>Contractor :</label><span class="readonly-text w-100">${escapeHTML(getVal('contractor'))}</span></div>
-                    <div class="hdr-group"><label><input type="checkbox" disabled ${getVal('nominated') === '1' ? 'checked' : ''} style="margin-right:4px;"> # Nominated Sub-contractor</label></div>
-                    <div class="hdr-group"><label>Works Code 7 :</label><span class="readonly-text">${escapeHTML(getVal('worksCode'))}</span></div>
-                </div>
-            `;
+            hdr.innerHTML =
+                '<div class="top-meta">' +
+                    '<div>Original - to C&amp;SD<br>Duplicate - to Project Office</div>' +
+                    '<div>Triplicate - filed as Site Record<br>Quadruplicate - kept by Contractor</div>' +
+                '</div>' +
+                '<div class="title">Monthly Return of Site Labour Deployment and Wage Rates for Construction Works</div>' +
+                '<div class="info-row">' +
+                    '<div class="info-group"><label>Dept/Div :</label>' + hdrInput('dept', 'w-60') + ' / ' + hdrInput('div', 'w-60') + '</div>' +
+                    '<div class="info-group"><label>Month/Year:</label>' + hdrInput('month', 'w-30') + ' / ' + hdrInput('year', 'w-40') + '</div>' +
+                    '<div class="info-group"><label>Contract No. :</label>' + hdrInput('contractNo', 'w-150') + '</div>' +
+                    '<div class="info-group"><label>Contract Title :</label>' + hdrInput('contractTitle', 'w-350') + '</div>' +
+                    '<div class="info-group"><label>Contractor :</label>' + hdrInput('contractor', 'w-250') + '</div>' +
+                    '<div class="info-group" style="display: flex; align-items: center; gap: 5px;">' +
+                        '<input type="checkbox" disabled ' + (formData['gf5272003_nominated'] === '1' ? 'checked' : '') + '>' +
+                        '<label style="margin: 0; width: auto;"># Nominated Sub-contractor</label>' +
+                    '</div>' +
+                    '<div class="info-group"><label>Works Code 7  :</label>' + hdrInput('worksCode', 'w-100') + '</div>' +
+                '</div>';
             view.appendChild(hdr);
 
-            // 表格
             var wrap = document.createElement('div');
             wrap.className = 'gf527-2003-table-wrap';
+            wrap.style.borderLeft = 'none'; // editlabour.js 中去除了左侧粗线
+
             var table = document.createElement('table');
             table.className = 'gf527-2003-table';
-
+            
             var thead = document.createElement('thead');
             var dayHeaders = '';
             for (var d = 1; d <= 31; d++) dayHeaders += '<th class="day-col">' + d + '</th>';
 
-            thead.innerHTML = `
-                <tr>
-                    <th rowspan="2" class="cell-no" style="white-space:nowrap;">Item<br>No.</th>
-                    <th rowspan="2" class="cell-trade" style="white-space:nowrap;">Trade</th>
-                    <th rowspan="2" class="cell-orig" style="white-space:nowrap;">Orig.</th>
-                    <th rowspan="2" class="cell-rev" style="white-space:nowrap;">Rev.<br>(Code 2)</th>
-                    <th colspan="31" style="padding-bottom:0; border-bottom:none; white-space:nowrap;">Number of workers engaged on site on each calendar day</th>
-                    <th rowspan="2" class="total-col" style="white-space:nowrap;">Total<br>Man-days</th>
-                    <th rowspan="2" class="total-col" style="white-space:nowrap;">Overtime<br>(hours)</th>
-                    <th colspan="3" style="white-space:nowrap;">Daily Wage Rate ($)</th>
-                    <th rowspan="2" class="cell-no" style="white-space:nowrap;">Item<br>No.</th>
-                </tr>
-                <tr>
-                    ${dayHeaders}
-                    <th class="wage-col" style="white-space:nowrap;">Av.</th>
-                    <th class="wage-col" style="white-space:nowrap;">High</th>
-                    <th class="wage-col" style="white-space:nowrap;">Low</th>
-                </tr>
-            `;
+            thead.innerHTML =
+                '<tr>' +
+                    '<th rowspan="2" class="cell-no">Item<br>No.</th>' +
+                    '<th rowspan="2" class="cell-trade" style="text-align:center;">Trade</th>' +
+                    '<th colspan="2">Trade List <sup>1</sup></th>' +
+                    '<th colspan="31">Number of workers engaged on site on each calendar day <sup>b,c</sup></th>' +
+                    '<th rowspan="2" class="total-col">Total<br>Man-days</th>' +
+                    '<th rowspan="2" class="total-col">Overtime <sup>d</sup><br>(hours)</th>' +
+                    '<th colspan="3">Daily Wage Rate ($) <sup>e</sup></th>' +
+                    '<th rowspan="2" class="cell-no">Item<br>No.</th>' +
+                '</tr>' +
+                '<tr>' +
+                    '<th class="cell-orig">Orig.</th>' +
+                    '<th class="cell-rev">Rev.<br>(Code <sup>2</sup>)</th>' +
+                    dayHeaders +
+                    '<th class="wage-col">Av.</th><th class="wage-col">High</th><th class="wage-col">Low</th>' +
+                '</tr>';
             table.appendChild(thead);
 
             var tbody = document.createElement('tbody');
-            GF527_2003_TRADES.forEach(function(t) {
+
+            GF527_2003_TRADES.forEach(function (t) {
                 var no = t[0], name = t[1], orig = t[2], rev = t[3], type = t[4], note = t[5] || '';
-                var isNote = (type === 'note');
+                var isNote  = (type === 'note');
                 var isOther = (type === 'other');
 
                 var tr = document.createElement('tr');
-                tr.innerHTML = `<td class="cell-no" ${isNote ? 'rowspan="2"' : ''}>${no}</td>`;
+                tr.innerHTML = '<td class="cell-no">' + no + '</td>';
 
                 if (isOther) {
                     var nm = formData['gf5272003_row_' + no + '_name'] || '';
                     var cd = formData['gf5272003_row_' + no + '_code'] || '';
-                    tr.innerHTML += `
-                        <td class="cell-trade" colspan="3" style="padding:2px 6px;">
-                            Others: trade name <span class="readonly-text" style="min-width:80px;">${escapeHTML(nm)}</span>
-                            &nbsp;code <span class="readonly-text" style="min-width:40px;">${escapeHTML(cd)}</span>
-                        </td>
-                    `;
+                    tr.innerHTML +=
+                        '<td class="cell-trade" colspan="3" style="padding: 2px 4px;">' +
+                            '<div style="display:flex; justify-content:space-between; align-items:center; width:100%; line-height:1.2;">' +
+                                '<span style="font-size: 9px; white-space:nowrap;">Others <sup>4</sup>: trade name -</span>' +
+                                '<span style="flex: 1; margin: 0 4px; text-align:left; font-size:10px;">' + escapeHTML(nm) + '</span>' +
+                                '<span style="font-size: 9px; white-space:nowrap;">code -</span>' +
+                                '<span style="flex: 1; margin-left: 4px; text-align:left; font-size:10px;">' + escapeHTML(cd) + '</span>' +
+                            '</div>' +
+                        '</td>';
                 } else {
                     var origDisplay = (orig === 'ü') ? '✓' : orig;
-                    tr.innerHTML += `
-                        <td class="cell-trade" title="${escapeHTML(name)}">${escapeHTML(name)}</td>
-                        <td class="cell-orig">${origDisplay}</td>
-                        <td class="cell-rev">${escapeHTML(rev)}</td>
-                    `;
+                    var formattedName = escapeHTML(name).replace(/ (\d)$/, ' <sup>$1</sup>');
+                    
+                    tr.innerHTML +=
+                        '<td class="cell-trade" title="' + escapeHTML(name) + '">' + formattedName + '</td>' +
+                        '<td class="cell-orig">' + origDisplay + '</td>';
+                    
+                    // C406 (17~24) 跨行合併
+                    if (no === 17) {
+                        tr.innerHTML += '<td class="cell-rev" rowspan="8">' + escapeHTML(rev) + '</td>';
+                    } else if (no >= 18 && no <= 24) {
+                        // 被 rowspan 佔用，跳過
+                    } else {
+                        tr.innerHTML += '<td class="cell-rev">' + escapeHTML(rev) + '</td>';
+                    }
                 }
 
-                for (var d = 1; d <= 31; d++) {
-                    var v = formData['gf5272003_row_' + no + '_day_' + d] || '';
-                    tr.innerHTML += `<td class="day-col">${escapeHTML(v)}</td>`;
-                }
-
-                var md = formData['gf5272003_row_' + no + '_mandays'] || '';
-                var ot = formData['gf5272003_row_' + no + '_overtime'] || '';
-                var avg = formData['gf5272003_row_' + no + '_avg'] || '';
-                var high = formData['gf5272003_row_' + no + '_high'] || '';
-                var low = formData['gf5272003_row_' + no + '_low'] || '';
-
-                tr.innerHTML += `
-                    <td class="total-col">${escapeHTML(md)}</td>
-                    <td class="total-col">${escapeHTML(ot)}</td>
-                    <td class="wage-col">${escapeHTML(avg)}</td>
-                    <td class="wage-col">${escapeHTML(high)}</td>
-                    <td class="wage-col">${escapeHTML(low)}</td>
-                    <td class="cell-no">${no}</td>
-                `;
-                tbody.appendChild(tr);
-
+                // 處理備註行
                 if (isNote && note) {
-                    var ntr = document.createElement('tr');
-                    ntr.innerHTML = `
-                        <td class="cell-note" colspan="${4 + 31 + 2 + 3}">${escapeHTML(note)}</td>
-                        <td class="cell-no"></td>
-                    `;
-                    tbody.appendChild(ntr);
+                    tr.innerHTML += '<td class="cell-note" colspan="36">' + escapeHTML(note) + '</td>';
+                } else {
+                    for (var d = 1; d <= 31; d++) {
+                        var v = formData['gf5272003_row_' + no + '_day_' + d] || '';
+                        tr.innerHTML += '<td class="day-col">' + escapeHTML(v) + '</td>';
+                    }
+
+                    var md = formData['gf5272003_row_' + no + '_mandays'] || '';
+                    var ot = formData['gf5272003_row_' + no + '_overtime'] || '';
+                    var avg  = formData['gf5272003_row_' + no + '_avg']  || '';
+                    var high = formData['gf5272003_row_' + no + '_high'] || '';
+                    var low  = formData['gf5272003_row_' + no + '_low']  || '';
+                    tr.innerHTML +=
+                        '<td class="total-col">' + escapeHTML(md) + '</td>' +
+                        '<td class="total-col">' + escapeHTML(ot) + '</td>' +
+                        '<td class="wage-col">' + escapeHTML(avg)  + '</td>' +
+                        '<td class="wage-col">' + escapeHTML(high) + '</td>' +
+                        '<td class="wage-col">' + escapeHTML(low)  + '</td>';
                 }
+
+                tr.innerHTML += '<td class="cell-no">' + no + '</td>';
+                tbody.appendChild(tr);
             });
+
+            // ★ 底部簽名行
+            var sig53 = formData['gf5272003_row_53_signature'] || '';
+            var sig54 = formData['gf5272003_row_54_signature'] || '';
+
+            tbody.innerHTML += 
+                '<tr>' +
+                    '<td class="cell-no" style="border: none !important; position: relative; padding: 0;">' +
+                        '<div style="position: absolute; left: -2px; top: 0; bottom: 0; width: 2px; background: #ffffff; z-index: 10;"></div>' +
+                    '</td>' +
+                    '<td class="cell-trade" style="text-align:left; padding: 4px; border: 1px solid #000 !important;" colspan="3">' +
+                        '<div style="display: flex; width: 100%; align-items: center; height: 22px;">' +
+                            '<span style="padding-left: 4px; white-space: nowrap;">Completed by Agent of Contractor</span>' +
+                            '<div style="flex: 1; height: 100%; margin: 0 10px; display: flex; align-items: center; justify-content: center;">' +
+                                (sig53 ? '<img src="' + sig53 + '" style="max-width:100%;max-height:100%;object-fit:contain;">' : '') +
+                            '</div>' +
+                        '</div>' +
+                    '</td>' +
+                    '<td></td>'.repeat(31) +
+                    '<td class="total-col"></td>' +
+                    '<td></td>'.repeat(4) +
+                    '<td style="border: none !important; position: relative; padding: 0;">' + 
+                        '<div style="position: absolute; left: 0; right: -2px; top: 0; bottom: -1px; background: #ffffff; z-index: 10;"></div>' + 
+                    '</td>' +
+                '</tr>' +
+                
+                '<tr>' +
+                    '<td class="cell-no" style="border: none !important; position: relative; padding: 0;">' +
+                        '<div style="position: absolute; left: -2px; top: 0; bottom: -2px; width: 2px; background: #ffffff; z-index: 10;"></div>' +
+                    '</td>' +
+                    '<td class="cell-trade" style="text-align:left; padding: 4px; border: 1px solid #000 !important;" colspan="3">' +
+                        '<div style="display: flex; width: 100%; align-items: center; height: 22px;">' +
+                            '<span style="padding-left: 4px; white-space: nowrap;">Checked by IOW/COW</span>' +
+                            '<div style="flex: 1; height: 100%; margin: 0 10px; display: flex; align-items: center; justify-content: center;">' +
+                                (sig54 ? '<img src="' + sig54 + '" style="max-width:100%;max-height:100%;object-fit:contain;">' : '') +
+                            '</div>' +
+                        '</div>' +
+                    '</td>' +
+                    '<td></td>'.repeat(31) +
+                    '<td class="total-col"></td>' +
+                    '<td colspan="5" style="border: none !important; position: relative; padding: 0;">' + 
+                        '<div style="position: absolute; left: 0; right: -2px; top: 0; bottom: -2px; background: #ffffff; z-index: 10;"></div>' + 
+                    '</td>' +
+                '</tr>';
 
             table.appendChild(tbody);
             wrap.appendChild(table);
             view.appendChild(wrap);
+
+            // ★ 底部文字說明
+            var footer = document.createElement('div');
+            footer.style.cssText = 'margin-top: 5px; font-size: 10px; font-family: "Times New Roman", SimSun, serif; color: #000;';
+            footer.innerHTML = 
+                '<div style="text-align: center; margin-bottom: 20px; font-weight: bold;"># Tick in the box only for a nominated sub-contractor</div>' +
+                '<div style="display: flex; align-items: center;">' +
+                    '<div style="width: 150px;">G.F. 527 (Rev. 1/2003)</div>' +
+                    '<div style="flex: 1; text-align: center;">Please refer to the overleaf for filling this return</div>' +
+                    '<div style="width: 150px;"></div>' +
+                '</div>';
+            view.appendChild(footer);
+
             pageWrapper.appendChild(view);
         }
 
-        function exportGF5272003Excel() {
-            var btn = document.getElementById('download-btn');
-            var origHTML = btn ? btn.innerHTML : '';
-            if (btn) {
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 產生 Excel...';
+async function exportGF5272003Excel() {
+    var btn = document.getElementById('download-btn');
+    var origHTML = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 寫入數據中...';
+    }
+
+    try {
+        var fileUrl = 'gf527_rev_1_2003_protected_r2.xlsx';
+        var response = await fetch(fileUrl);
+        if (!response.ok) throw new Error('找不到原版 Excel 檔案，請確認伺服器有 ' + fileUrl);
+        var arrayBuffer = await response.arrayBuffer();
+
+        var wb = XLSX.read(arrayBuffer, { type: 'array' });
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        var range = XLSX.utils.decode_range(ws['!ref']);
+        var formData = getFormData() || {};
+
+        var zip = await JSZip.loadAsync(arrayBuffer);
+        var sheetFile = zip.file('xl/worksheets/sheet1.xml');
+        if (!sheetFile) throw new Error('Excel 結構異常，找不到 sheet1.xml');
+        var sheetXml = await sheetFile.async('string');
+
+        var parser = new DOMParser();
+        var xmlDoc = parser.parseFromString(sheetXml, "text/xml");
+        var ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+
+        function getRowNode(rowNum) {
+            var rows = xmlDoc.getElementsByTagNameNS(ns, "row");
+            for (var i = 0; i < rows.length; i++) {
+                if (rows[i].getAttribute("r") === String(rowNum)) return rows[i];
+            }
+            return null;
+        }
+
+        function setXmlCell(r, c, val) {
+            if (val === undefined || val === null) return;
+            var strVal = String(val);
+            var isNum = !isNaN(strVal) && strVal !== '';
+            var colLetter = XLSX.utils.encode_col(c);
+            var cellRef = colLetter + (r + 1);
+            
+            var rowNode = getRowNode(r + 1);
+            if (!rowNode) return;
+
+            var cNode = null;
+            var cells = rowNode.getElementsByTagNameNS(ns, "c");
+            for (var i = 0; i < cells.length; i++) {
+                if (cells[i].getAttribute("r") === cellRef) {
+                    cNode = cells[i];
+                    break;
+                }
             }
 
-            try {
-                var formData = currentDoc.formData || {};
-                var wb = XLSX.utils.book_new();
-                var ws_data = [];
-                var merges = [];
-
-                // 1. 表頭 (建構排版)
-                ws_data.push(["", "", "", "", "", "", "", "", "", "", "Monthly Return of Site Labour Deployment and Wage Rates for Construction Works"]);
-                ws_data.push([]);
-                ws_data.push(["Dept/Div :", formData['gf5272003_dept'] || '', "/", formData['gf5272003_div'] || '', "Month/Year:", formData['gf5272003_month'] || '', "/", formData['gf5272003_year'] || '', "Contract No. :", formData['gf5272003_contractNo'] || '']);
-                ws_data.push(["Contract Title :", formData['gf5272003_contractTitle'] || '', "Contractor :", formData['gf5272003_contractor'] || '', "# Nominated Sub-contractor", formData['gf5272003_nominated'] === '1' ? '✓' : '']);
-                ws_data.push(["Works Code 7 :", formData['gf5272003_worksCode'] || '']);
-                ws_data.push([]);
-
-                // 2. 構建表頭
-                var headerRow1 = ["Item No.", "Trade", "Orig.", "Rev.(Code 2)"];
-                var headerRow2 = ["", "", "", ""];
-                for (var d = 1; d <= 31; d++) {
-                    headerRow1.push("Number of workers engaged on site on each calendar day");
-                    headerRow2.push(d);
-                }
-                headerRow1.push("Total Man-days", "Overtime (hours)", "Daily Wage Rate ($)", "", "", "Item No.");
-                headerRow2.push("", "", "Av.", "High", "Low", "");
-                
-                ws_data.push(headerRow1);
-                ws_data.push(headerRow2);
-
-                // 3. 填入資料
-                GF527_2003_TRADES.forEach(function(t) {
-                    var no = t[0], name = t[1], orig = t[2], rev = t[3], type = t[4], note = t[5] || '';
-                    if (type === 'note') {
-                        ws_data.push([no, name, orig, rev, note]);
-                    } else if (type === 'other') {
-                        var n = formData['gf5272003_row_' + no + '_name'] || '';
-                        var c = formData['gf5272003_row_' + no + '_code'] || '';
-                        var row = [no, "Others: trade name " + n + " code " + c, "", ""];
-                        for (var d = 1; d <= 31; d++) row.push(formData['gf5272003_row_' + no + '_day_' + d] || '');
-                        row.push(formData['gf5272003_row_' + no + '_mandays'] || '');
-                        row.push(formData['gf5272003_row_' + no + '_overtime'] || '');
-                        row.push(formData['gf5272003_row_' + no + '_avg'] || '');
-                        row.push(formData['gf5272003_row_' + no + '_high'] || '');
-                        row.push(formData['gf5272003_row_' + no + '_low'] || '');
-                        row.push(no);
-                        ws_data.push(row);
-                    } else {
-                        var row = [no, name, orig === 'ü' ? '✓' : orig, rev];
-                        for (var d = 1; d <= 31; d++) row.push(formData['gf5272003_row_' + no + '_day_' + d] || '');
-                        row.push(formData['gf5272003_row_' + no + '_mandays'] || '');
-                        row.push(formData['gf5272003_row_' + no + '_overtime'] || '');
-                        row.push(formData['gf5272003_row_' + no + '_avg'] || '');
-                        row.push(formData['gf5272003_row_' + no + '_high'] || '');
-                        row.push(formData['gf5272003_row_' + no + '_low'] || '');
-                        row.push(no);
-                        ws_data.push(row);
-                    }
+            if (!cNode) {
+                if (strVal === '') return; 
+                cNode = xmlDoc.createElementNS(ns, "c");
+                cNode.setAttribute("r", cellRef);
+                rowNode.appendChild(cNode);
+                var children = Array.from(rowNode.getElementsByTagNameNS(ns, "c"));
+                children.sort((a, b) => {
+                    var aCol = a.getAttribute("r").replace(/\d+/g, '');
+                    var bCol = b.getAttribute("r").replace(/\d+/g, '');
+                    return aCol.localeCompare(bCol);
                 });
+                children.forEach(child => rowNode.appendChild(child));
+            }
 
-                var ws = XLSX.utils.aoa_to_sheet(ws_data);
+            while (cNode.firstChild) {
+                cNode.removeChild(cNode.firstChild);
+            }
+
+            if (strVal === '') {
+                cNode.removeAttribute("t"); 
+                return;
+            }
+
+            if (isNum) {
+                cNode.removeAttribute("t");
+                var vNode = xmlDoc.createElementNS(ns, "v");
+                vNode.textContent = strVal;
+                cNode.appendChild(vNode);
+            } else {
+                cNode.setAttribute("t", "inlineStr");
+                var isNode = xmlDoc.createElementNS(ns, "is");
+                var tNode = xmlDoc.createElementNS(ns, "t");
+                tNode.textContent = strVal;
+                isNode.appendChild(tNode);
+                cNode.appendChild(isNode);
+            }
+        }
+
+        // 處理表頭 (含打勾框)
+        for (var R = range.s.r; R <= Math.min(range.e.r, 15); R++) {
+            for (var C = range.s.c; C <= Math.min(range.e.c, 40); C++) {
+                var addr = XLSX.utils.encode_cell({ r: R, c: C });
+                var cell = ws[addr];
+                if (!cell || !cell.v) continue;
                 
-                // 設定列寬，避免文字被擠壓
-                var wscols = [{wch:8}, {wch:45}, {wch:6}, {wch:10}];
-                for (var i=0; i<31; i++) wscols.push({wch:3.5});
-                wscols.push({wch:12}, {wch:12}, {wch:8}, {wch:8}, {wch:8}, {wch:8});
-                ws['!cols'] = wscols;
+                var text = String(cell.v);
+                var modified = false;
 
-                // 合併儲存格
-                merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 40 } }); // 大標題
-                merges.push({ s: { r: 6, c: 4 }, e: { r: 6, c: 34 } }); // 1~31天標題
-                merges.push({ s: { r: 6, c: 37 }, e: { r: 6, c: 39 } }); // 每日薪水標題
-                ws['!merges'] = merges;
+                if (text.indexOf('Dept/Div') !== -1) {
+                    var dept = formData['gf5272003_dept'] || '';
+                    var div = formData['gf5272003_div'] || '';
+                    if (dept || div) {
+                        text = text.replace(/Dept\/Div\s*:.*?(?=(?:Month\/Year|$))/, 'Dept/Div : ' + dept + ' / ' + div + '  ');
+                        modified = true;
+                    }
+                }
 
-                XLSX.utils.book_append_sheet(wb, ws, "GF527-2003");
-                var wbout = XLSX.write(wb, {bookType:'xlsx', type: 'array'});
-                downloadBlob(new Blob([wbout], {type: "application/octet-stream"}), (currentDoc.id || 'GF527-2003') + '.xlsx');
-            } catch (e) {
-                console.error('Excel 下載失敗', e);
-                alert('Excel 下載失敗: ' + e.message);
-            } finally {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = origHTML;
+                if (text.indexOf('Month/Year') !== -1) {
+                    var month = formData['gf5272003_month'] || '';
+                    var year = formData['gf5272003_year'] || '';
+                    if (month || year) {
+                        text = text.replace(/Month\/Year\s*:.*?(?=(?:$))/, 'Month/Year : ' + month + ' / ' + year + '  ');
+                        modified = true;
+                    }
+                }
+
+                if (text.indexOf('Contract No.') !== -1) {
+                    var val = formData['gf5272003_contractNo'] || '';
+                    if (val) {
+                        text = text.replace(/Contract No\.\s*:.*?(?=(?:$))/, 'Contract No. : ' + val + '  ');
+                        modified = true;
+                    }
+                }
+
+                if (text.indexOf('Contract Title') !== -1) {
+                    var val = formData['gf5272003_contractTitle'] || '';
+                    if (val) {
+                        text = text.replace(/Contract Title\s*:.*?(?=(?:$))/, 'Contract Title : ' + val + '  ');
+                        modified = true;
+                    }
+                }
+
+                if (text.indexOf('Contractor') !== -1) {
+                    var val = formData['gf5272003_contractor'] || '';
+                    if (val) {
+                        text = text.replace(/Contractor\s*:.*?(?=(?:$))/, 'Contractor : ' + val + '  ');
+                        modified = true;
+                    }
+                }
+
+                if (text.indexOf('Works Code') !== -1) {
+                    var val = formData['gf5272003_worksCode'] || '';
+                    if (val) {
+                        text = text.replace(/Works Code(?:\s*7)?\s*:.*?(?=(?:$))/, 'Works Code 7 : ' + val + '  ');
+                        modified = true;
+                    }
+                }
+
+                // ★★★ 終極暴力覆寫 Nominated 打勾框 ★★★
+                if (text.indexOf('Nominated') !== -1) {
+                    var isChecked = formData['gf5272003_nominated'] === '1';
+                    var tickChar = isChecked ? '☑' : '☐';
+
+                    // 不管原本是甚麼鬼符號，直接重寫整個字串！
+                    text = tickChar + ' # Nominated Sub-contractor';
+                    modified = true;
+
+                    // 檢查左邊一格，如果有殘留的符號，直接清空它！
+                    if (C > 0) {
+                        var leftAddr = XLSX.utils.encode_cell({ r: R, c: C - 1 });
+                        var leftCell = ws[leftAddr];
+                        if (leftCell && leftCell.v) {
+                            var leftText = String(leftCell.v).trim();
+                            if (/^[☐□☑■oOþ\s]*$/.test(leftText)) {
+                                setXmlCell(R, C - 1, ''); // 清空隔壁的舊框
+                            }
+                        }
+                    }
+                }
+
+                if (modified) {
+                    setXmlCell(R, C, text);
                 }
             }
         }
+
+        // 寫入 Item 數據
+        var itemRowMap = {};
+        for (var R = range.s.r; R <= range.e.r; R++) {
+            var aCell = ws[XLSX.utils.encode_cell({ r: R, c: 0 })];
+            if (!aCell) continue;
+            var raw = String(aCell.v).trim();
+            var numV = parseInt(raw, 10);
+            if (isNaN(numV) || numV < 1 || numV > 52) continue;
+            if (String(numV) !== raw) continue;
+
+            var bCell = ws[XLSX.utils.encode_cell({ r: R, c: 1 })];
+            if (!bCell || String(bCell.v || '').trim().length < 3) continue;
+
+            if (!itemRowMap[numV]) itemRowMap[numV] = R;
+        }
+
+        Object.keys(itemRowMap).forEach(function (noStr) {
+            var no = parseInt(noStr, 10);
+            var R = itemRowMap[no];
+
+            for (var d = 1; d <= 31; d++) {
+                var v = formData['gf5272003_row_' + no + '_day_' + d];
+                if (v) setXmlCell(R, 4 + (d - 1), v);
+            }
+            var md = formData['gf5272003_row_' + no + '_mandays'];
+            if (md) setXmlCell(R, 35, md);
+            var ot = formData['gf5272003_row_' + no + '_overtime'];
+            if (ot) setXmlCell(R, 36, ot);
+            var avg = formData['gf5272003_row_' + no + '_avg'];
+            if (avg) setXmlCell(R, 37, avg);
+            var high = formData['gf5272003_row_' + no + '_high'];
+            if (high) setXmlCell(R, 38, high);
+            var low = formData['gf5272003_row_' + no + '_low'];
+            if (low) setXmlCell(R, 39, low);
+        });
+
+        // 輸出並下載
+        var serializer = new XMLSerializer();
+        var newSheetXml = serializer.serializeToString(xmlDoc);
+        if (!newSheetXml.startsWith('<?xml')) {
+            newSheetXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' + newSheetXml;
+        }
+
+        zip.file('xl/worksheets/sheet1.xml', newSheetXml);
+
+        var outBlob = await zip.generateAsync({
+            type: 'blob',
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            compression: 'DEFLATE'
+        });
+
+        downloadBlob(outBlob, (currentDoc.id || 'GF527-2003') + '.xlsx');
+        console.log('[Excel] ✓ 完美寫入與打勾');
+
+    } catch (e) {
+        console.error('Excel 生成失敗', e);
+        alert('Excel 生成失敗: ' + e.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHTML;
+        }
+    }
+}
 
         async function exportGF5272003Pdf() {
             var container = document.querySelector('.gf527-2003-view');
@@ -1930,13 +2185,13 @@
             var origHTML = btn ? btn.innerHTML : '';
             if (btn) {
                 btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 產生 PDF...';
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 產生高畫質 A3 PDF...';
             }
 
             // 1. 顯示遮罩
             var loading = document.createElement('div');
             loading.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255,255,255,0.98); z-index: 10000000; display: flex; justify-content: center; align-items: center; font-size: 20px; color: #1e40af; font-weight: bold;';
-            loading.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:12px;"></i> 正在生成單頁 A3 PDF，請稍候...';
+            loading.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:12px;"></i> 正在生成高畫質單頁 A3 PDF，請稍候...';
             document.body.appendChild(loading);
 
             // 2. 紀錄並解除原表格限制
@@ -1949,26 +2204,25 @@
                 tableWrap.style.overflow = 'visible';
             }
 
-            // 取消 sticky，並去除容器的 padding 與邊框避免截出多餘白邊
             var ths = container.querySelectorAll('thead th');
             ths.forEach(function(th) { th.style.position = 'static'; th.style.top = 'auto'; });
 
             var oldWidth = container.style.width;
             var oldPadding = container.style.padding;
-            // 設定足夠寬的容器避免欄位擠壓成亂碼
-            container.style.width = '2500px'; 
+            // ★ 關鍵：不要亂改寬度，讓它保持原本的自然寬度（約 1650px）
+            container.style.width = 'auto'; 
             container.style.padding = '0';    
             
-            // 3. 等待渲染完成
+            // 3. 等待瀏覽器重新排版
             await new Promise(function(r) { setTimeout(r, 800); });
 
             try {
-                // 4. 截圖
+                // 4. 進行截圖 (調高 scale 保證清晰)
                 var realWidth = container.scrollWidth;
                 var realHeight = container.scrollHeight;
 
                 var canvas = await html2canvas(container, {
-                    scale: 2, 
+                    scale: 3, 
                     useCORS: true,
                     backgroundColor: '#ffffff',
                     logging: false,
@@ -1980,15 +2234,26 @@
                     scrollX: -window.scrollX
                 });
 
-                var imgData = canvas.toDataURL('image/jpeg', 0.95);
+                var imgData = canvas.toDataURL('image/png');
                 
-                // 5. 創建 A3 橫向 PDF 並強制拉伸填滿
+                // 5. 創建 A3 橫向 PDF
                 var pdf = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
                 var pdfWidth = pdf.internal.pageSize.getWidth();  // 420mm
                 var pdfHeight = pdf.internal.pageSize.getHeight(); // 297mm
 
-                // ★ 核心：強制設定圖片尺寸為 A3 尺寸，確保零白邊
-                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                // ★ 核心：等比例縮放，保持圖片原比例，絕不壓扁
+                var imgWidth = canvas.width;
+                var imgHeight = canvas.height;
+                var ratioX = pdfWidth / imgWidth;
+                var ratioY = pdfHeight / imgHeight;
+                var scale = Math.min(ratioX, ratioY); 
+
+                var finalWidth = imgWidth * scale;
+                var finalHeight = imgHeight * scale;
+                var marginX = (pdfWidth - finalWidth) / 2;
+                var marginY = (pdfHeight - finalHeight) / 2;
+
+                pdf.addImage(imgData, 'PNG', marginX, marginY, finalWidth, finalHeight);
 
                 pdf.save((currentDoc.id || 'GF527-2003') + '.pdf');
                 

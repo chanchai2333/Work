@@ -306,7 +306,8 @@ function renderGF527_2003View() {
 
     function hdrInput(key, cls) {
         var v = formData['gf5272003_' + key] || '';
-        return '<input type="text" class="underline-input ' + (cls || '') + '" data-hdr-key="' + key + '" value="' + escHTML(v) + '">';
+        // ★ 修改：增加了 gf5272003-hdr 这个 class
+        return '<input type="text" class="underline-input gf5272003-hdr ' + (cls || '') + '" data-hdr-key="' + key + '" value="' + escHTML(v) + '">';
     }
 
     hdr.innerHTML =
@@ -5274,7 +5275,10 @@ function loadTemplate() {
         if (!view) return;
         function grab(sel, keyFn) {
             view.querySelectorAll(sel).forEach(function (el) {
-                formData[keyFn(el)] = el.value;
+                // ★ 修改：确保只抓取 input 元素的 value，防止报错或数据异常
+                if (el.value !== undefined) {
+                    formData[keyFn(el)] = el.value;
+                }
             });
         }
         grab('.gf5272003-hdr',        function (el) { return 'gf5272003_' + el.dataset.hdrKey; });
