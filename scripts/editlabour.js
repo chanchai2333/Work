@@ -800,7 +800,7 @@ function ensureGF5272017Style() {
         '.gf527-2017-table-wrap { width:100%; overflow-x:auto; border:2px solid #000; border-bottom:none; }' +
 
         /* 表格本體 */
-        '.gf527-2017-table { border-collapse:collapse; width:100%; table-layout:fixed; font-size:10px; }' +
+        '.gf527-2017-table { border-collapse:collapse; width:100%; min-width:2400px; table-layout:fixed; font-size:10px; }' +
         '.gf527-2017-table th, .gf527-2017-table td { border:1px solid #000; padding:2px 1px; text-align:center; vertical-align:middle; }' +
         '.gf527-2017-table thead th { background:#fff; font-weight:bold; padding:4px 1px; }' +
         '.gf527-2017-table sup { font-size:8px; vertical-align:super; line-height:0; }' +
@@ -808,9 +808,12 @@ function ensureGF5272017Style() {
         /* 欄寬 */
         '.gf527-2017-table .cell-no { width:25px; font-weight:bold; }' +
         '.gf527-2017-table .cell-trade { width:130px; text-align:left; padding-left:4px; font-size:10px; }' +
-        '.gf527-2017-table .cell-division { width:200px; text-align:left; padding-left:4px; font-size:10px; }' +
-        '.gf527-2017-table .cell-orig { width:40px; font-size:10px; }' +
-        '.gf527-2017-table .cell-rev { width:65px; font-size:10px; }' +
+        // 2. Trade Division 保持 240px
+        '.gf527-2017-table .cell-division { width:240px; text-align:left; padding-left:4px; font-size:10px; }' +
+        
+        // 3. 移除了 white-space:nowrap，並設定合理的寬度，這樣文字就不會重疊了
+        '.gf527-2017-table .cell-orig { width:65px; font-size:10px; }' +
+        '.gf527-2017-table .cell-rev { width:100px; font-size:10px; }' +
         '.gf527-2017-table .day-col { width:20px; min-width:20px; padding:0; }' +
         '.gf527-2017-table .total-col { width:42px; }' +
         '.gf527-2017-table .ot-col { width:46px; }' +
@@ -1002,30 +1005,34 @@ function renderGF527_2017View() {
         });
     });
 
-    function buildSignatureRow(labelText, rowKey, telKey) {
-        var telVal = formData[telKey] || '';
-        return '' +
-            '<tr>' +
-                '<td class="cell-no" style="border:none !important;"></td>' +
-                '<td colspan="4" style="text-align:left;padding:4px;border:1px solid #000 !important;">' +
-                    '<div style="display:flex;width:100%;align-items:center;height:22px;">' +
-                        '<span style="padding-left:4px;white-space:nowrap;font-size:10px;">' + labelText + '</span>' +
-                        '<div class="table-sig-cell" data-field-id="' + rowKey + '_signature" ' +
-                            'style="flex:1;height:100%;margin:0 10px;display:flex;align-items:center;justify-content:center;' +
-                            'cursor:pointer;border:1px dashed #94a3b8;background:#f8fafc;"></div>' +
-                    '</div>' +
-                '</td>' +
-                '<td></td>'.repeat(31) +
-                '<td class="total-col" style="border:1px solid #000;"></td>' +
-                // ★ 修改這裡：將 colspan 設為 5，並移除後面的空 <td>，解決右側多線問題
-                '<td colspan="5" style="padding:4px;border:1px solid #000;white-space:nowrap;font-size:10px;">' +
-                    'Tel. No.: ' +
-                    '<input type="text" class="gf5272017-telno" data-row="' + telKey + '" ' +
-                    'value="' + escHTML(telVal) + '" ' +
-                    'style="width:80%;border:none;background:transparent;outline:none;font-family:inherit;font-size:10px;">' +
-                '</td>' +
-            '</tr>';
-    }
+        function buildSignatureRow(labelText, rowKey, telKey) {
+            var telVal = formData[telKey] || '';
+            return '' +
+                '<tr>' +
+                    // 1. 左側文字與簽名區 (3欄)
+                    '<td colspan="3" style="text-align:left; padding:4px; border:1px solid #000 !important; vertical-align:middle;">' +
+                        '<div style="display:flex; width:100%; align-items:center; height:22px;">' +
+                            '<span style="white-space:nowrap; font-size:10px; padding-right:10px;">' + labelText + '</span>' +
+                            '<div class="table-sig-cell" data-field-id="' + rowKey + '_signature" ' +
+                                'style="flex:1; height:100%; display:flex; align-items:center; justify-content:center;' +
+                                'cursor:pointer; border:1px dashed #94a3b8; background:#f8fafc;"></div>' +
+                        '</div>' +
+                    '</td>' +
+                    
+                    // 2. Tel. No. 單獨佔 2 欄，與上方的 code 對齊，保留正常網格線
+                    '<td colspan="2" style="text-align:left; padding:4px 8px; border:1px solid #000 !important; vertical-align:middle;">' +
+                        '<div style="display:inline-flex; align-items:center; white-space:nowrap; font-size:10px;">' +
+                            '<span style="margin-right:4px;">Tel. No.:</span>' +
+                            '<input type="text" class="gf5272017-telno" data-row="' + telKey + '" ' +
+                                'value="' + escHTML(telVal) + '" ' +
+                                'style="width:100%; max-width:120px; border:none; background:transparent; outline:none; font-family:inherit; font-size:10px;">' +
+                        '</div>' +
+                    '</td>' +
+                    
+                    // 3. 右側的長格子 (剩餘 37 欄) 變為透明：移除左右邊框，只保留上下底線以防表格斷開
+                    '<td colspan="37" style="border: 1px solid transparent !important; border-top: 1px solid #000 !important; border-bottom: 1px solid #000 !important; border-right: 1px solid #000 !important; background: transparent;"></td>' +
+                '</tr>';
+        }
 
     tbody.innerHTML += buildSignatureRow(
         'Completed by Agent of Contractor&nbsp;&nbsp;Name (in block letters) &amp; Signature:',
