@@ -239,9 +239,10 @@ var DWSS_Auth = {
             span.textContent = displayName;
         });
 
-        ['#header-username', '.user-name', '.username', '.header-username'].forEach(function(sel) {
+        // Only update HEADER user labels — never table cells like .user-name in User Management
+        ['#header-username', '#header-user-name', '.header-username'].forEach(function(sel) {
             document.querySelectorAll(sel).forEach(function(el) {
-                if (el.hasAttribute('data-record-user')) return;
+                if (el.closest && el.closest('#users-table-body, #users-table, .diary-table tbody')) return;
                 el.textContent = displayName;
             });
         });

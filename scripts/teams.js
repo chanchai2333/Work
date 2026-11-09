@@ -499,7 +499,18 @@
         }
         if (noResults) noResults.style.display = 'none';
 
-        teams.forEach(team => {
+        var viewList = teams;
+        var curPid = getCurrentProjectId();
+        if (curPid && !currentIsSystemAdmin()) {
+            viewList = teams.filter(function (tm) { return tm.contractNo === curPid; });
+        } else if (curPid && currentIsSystemAdmin()) {
+            // Admin still can filter to current login contract for clarity
+            viewList = teams.filter(function (tm) { return tm.contractNo === curPid; });
+            // If none match, show all so admin is not stuck
+            if (!viewList.length) viewList = teams;
+        }
+
+        viewList.forEach(team => {
             const row = tbody.insertRow();
             row.innerHTML = `
                 <td>${team.id}</td>
@@ -769,7 +780,14 @@
         var tbody = document.getElementById('contracts-table-body');
         if (!tbody) return;
         tbody.innerHTML = '';
-        contracts.forEach(function (c) {
+        var curPid = getCurrentProjectId();
+        var contractView = contracts;
+        if (curPid && !currentIsSystemAdmin()) {
+            contractView = contracts.filter(function (c) {
+                return (c.contractNo || c.id) === curPid;
+            });
+        }
+        contractView.forEach(function (c) {
             var code = c.contractNo || c.id;
             var teamCount = teams.filter(function (tm) { return tm.contractNo === code; }).length;
             var row = tbody.insertRow();

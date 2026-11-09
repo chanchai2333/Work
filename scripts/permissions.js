@@ -204,7 +204,7 @@
     /** Only System Admin can create brand-new user accounts. */
     function canCreateUsers() {
         var user = getCurrentUser();
-        return !!(user && user.role === 'admin');
+        return !!(user && (user.role === 'admin' || user.role === 'project_admin'));
     }
 
     /** Only System Admin can create new projects / teams. */
@@ -537,6 +537,54 @@
 
             var oldStatus = record.status || 'draft';
             var user = getCurrentUser();
+
+            // Optional password re-entry — per project (Security Settings for the logged-in project)
+            var needPwd = true;
+            try {
+                var pid = null;
+                try {
+                    if (typeof getCurrentProject === 'function') pid = getCurrentProject();
+                } catch (e0) {}
+                if (!pid || pid === 'ALL') {
+                    pid = sessionStorage.getItem('currentProjectId');
+                }
+                if (pid === 'ALL') pid = null;
+                var v = null;
+                if (pid) v = localStorage.getItem('dwss_require_submit_password:' + pid);
+                // legacy global fallback only if per-project never set
+                if (v == null) v = localStorage.getItem('dwss_require_submit_password');
+                // default = enabled (require password) when unset
+                needPwd = v !== 'false';
+            } catch (err) { needPwd = true; }
+            if (needPwd) {
+                var entered = prompt(
+                    'Password confirmation required\n\n' +
+                    'Record: ' + recordId + '\n' +
+                    oldStatus + ' → ' + newStatus + '\n\n' +
+                    'Re-enter your login password to continue:'
+                );
+                if (entered == null) { e.target.value = ''; return; }
+                var expected = user && (user.password || user.userPassword || '');
+                // session often has no password — fall back to local users db
+                if (!expected) {
+                    try {
+                        var arr = JSON.parse(localStorage.getItem('dwss_users_db') || '[]');
+                        var found = arr.find(function (u) {
+                            return u && user && (
+                                (u.username && user.username && u.username === user.username) ||
+                                (u.username && user.userName && u.username === user.userName) ||
+                                String(u.id) === String(user.id)
+                            );
+                        });
+                        if (found) expected = found.password || '';
+                    } catch (err2) {}
+                }
+                if (!expected || entered !== expected) {
+                    alert('❌ Password incorrect. Status not changed.');
+                    e.target.value = '';
+                    return;
+                }
+            }
 
             if (confirm(
                 '⚠️ Change Status Confirmation\n\n' +

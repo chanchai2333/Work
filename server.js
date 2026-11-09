@@ -817,6 +817,55 @@ app.post('/api/records/:collection/bulk', requireActiveSession, async (req, res)
   }
 });
 
+
+app.post('/api/users/upsert', async (req, res) => {
+  if (!pool) return res.status(400).json({ error: 'no_database' });
+  const body = req.body || {};
+  const username = String(body.username || '').trim();
+  if (!username) return res.status(400).json({ error: 'missing_username' });
+  try {
+    const [rows] = await pool.query(
+      'SELECT collection, record_id, data FROM records WHERE collection IN (?, ?)',
+      ['usersDb', 'users']
+    );
+    let matched = null;
+    for (const r of rows) {
+      const u = parseRecord(r.data);
+      if (body.id != null && (String(r.record_id) === String(body.id) || String(u.id) === String(body.id))) {
+        matched = r; break;
+      }
+      if (u.username && String(u.username).toLowerCase() === username.toLowerCase()) {
+        matched = r; break;
+      }
+    }
+    const userData = Object.assign({}, matched ? parseRecord(matched.data) : {}, body);
+    userData.username = username;
+    if (!userData.id) userData.id = body.id || Date.now();
+    if (!userData.status) userData.status = 'online';
+    if (!Array.isArray(userData.projectIds)) userData.projectIds = body.projectIds || [];
+    // never wipe password if client omitted it on update
+    if (matched) {
+      const prev = parseRecord(matched.data);
+      if (!body.password && prev.password) userData.password = prev.password;
+      await pool.query(
+        'UPDATE records SET data = ?, version = version + 1 WHERE collection = ? AND record_id = ?',
+        [JSON.stringify(userData), matched.collection, matched.record_id]
+      );
+      return res.json({ ok: true, id: userData.id, updated: true });
+    }
+    if (!userData.password) userData.password = 'Welcome@123';
+    const recordId = String(userData.id);
+    await pool.query(
+      'INSERT INTO records (collection, record_id, data, version) VALUES (?, ?, ?, 1)',
+      ['usersDb', recordId, JSON.stringify(userData)]
+    );
+    res.json({ ok: true, id: userData.id, created: true });
+  } catch (e) {
+    console.error('[users/upsert]', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/users/set-password', async (req, res) => {
   if (!pool) return res.status(400).json({ error: 'no_database' });
   const userId = String(req.body.userId || '');
