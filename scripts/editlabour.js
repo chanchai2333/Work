@@ -210,6 +210,229 @@ var GF527_2003_TRADES = [
     [52, 'Others 4', '', '', 'other']
 ];
 
+/* ============================================================
+   ★ GF527-2017 表格視圖資料（完全按 Excel GF527 Rev.1-2017 轉錄）
+   ------------------------------------------------------------
+   每組 = { no, trade, items: [{division, orig, rev, isOther?}] }
+   - no / trade 會在 HTML 中用 rowspan 合併
+   - items 陣列長度 = 該組的列數
+   ============================================================ */
+var GF527_2017_TRADES = [
+    { no: 1,  trade: 'Bar Bender & Fixer', items: [
+        { division: 'Bar Bender & Fixer', orig: 'C304 / C404', rev: 'C304 / C404' }
+    ]},
+    { no: 2,  trade: 'Concretor 3', items: [
+        { division: 'Concrete and Grouting Worker (Master)', orig: '---', rev: 'C3016' },
+        { division: 'Concretor', orig: 'C309 / C409', rev: 'C309 / C409' },
+        { division: 'Concrete Repairer (Spalling Concrete)', orig: '---', rev: 'C308' },
+        { division: 'Shotcretor', orig: '---', rev: 'C342' },
+        { division: 'Grouting Worker', orig: '---', rev: 'C321' }
+    ]},
+    { no: 3,  trade: 'Drainlayer 4', items: [
+        { division: 'Drain and Pipe Layer (Master)', orig: '---', rev: 'C3006' },
+        { division: 'Drainlayer', orig: 'C314', rev: 'C314 / C414' },
+        { division: 'Pipelayer', orig: '---', rev: 'C331' }
+    ]},
+    { no: 4,  trade: 'Plumber 5', items: [
+        { division: 'Plumber', orig: 'C338 / C438', rev: 'C338 / C438' }
+    ]},
+    { no: 5,  trade: 'Leveller', items: [
+        { division: 'Leveller', orig: 'C323 / C423', rev: 'C323 / C423' }
+    ]},
+    { no: 6,  trade: 'Scaffolder 6', items: [
+        { division: 'Scaffolder (Master)', orig: '---', rev: 'C3019 / C4019' },
+        { division: 'Bamboo Scaffolder', orig: 'C303 / C403', rev: 'C303 / C403' },
+        { division: 'Metal Scaffolder', orig: '---', rev: 'C327 / C427' }
+    ]},
+    { no: 7,  trade: 'General Workers 7', items: [
+        { division: '---', orig: 'C406', rev: '---' }
+    ]},
+    { no: 8,  trade: 'Carpenter (Formwork) 8', items: [
+        { division: 'Carpenter (Fender)', orig: '---', rev: 'C306' },
+        { division: 'Carpenter (Formwork) (Master)', orig: 'C307 / C407', rev: 'C307 / C407' },
+        { division: 'Carpenter (Formwork - Civil Construction)', orig: '---', rev: 'C307b / C407b' },
+        { division: 'Carpenter (Formwork - Civil Construction) (Striking)', orig: '---', rev: 'C307d' },
+        { division: 'Carpenter (Formwork - Building Construction)', orig: '---', rev: 'C307a / C407a' },
+        { division: 'Carpenter (Formwork - Building Construction) (Striking)', orig: '---', rev: 'C307c' }
+    ]},
+    { no: 9,  trade: 'Joiner 9', items: [
+        { division: 'Joiner', orig: 'C322 / C422', rev: 'C322 / C422' },
+        { division: 'Joiner (Assembling)', orig: '---', rev: 'C322a' }
+    ]},
+    { no: 10, trade: 'Plant & Equipment Operator (General) 10', items: [
+        { division: 'Ground Investigation Operator/Driller/Borer', orig: '---', rev: 'C320 / C420' },
+        { division: 'Plant and Equipment Operator (Fork-lift Truck)', orig: '---', rev: 'C333f' },
+        { division: 'Plant and Equipment Operator (Mini-loader)', orig: '---', rev: 'C333d' },
+        { division: 'Plant and Equipment Operator (Mini-loader (with Attachments))', orig: '---', rev: 'C333e' },
+        { division: 'Plant and Equipment Operator (Grader)', orig: '---', rev: 'C333g' },
+        { division: 'Plant and Equipment Operator (Suspended Working Platform)', orig: '---', rev: 'C357' },
+        { division: 'Plant and Equipment Operator (Demolition) - Excavator', orig: '---', rev: 'C356' },
+        { division: 'Plant and Equipment Operator (Excavator)', orig: '---', rev: 'C333b' },
+        { division: "Builder's Lift Operator", orig: '---', rev: 'C332' },
+        { division: 'Plant and Equipment Operator (Bulldozer)', orig: '---', rev: 'C333a' },
+        { division: 'Plant and Equipment Operator (Truck-mounted Crane)', orig: '---', rev: 'C334d' },
+        { division: 'Plant and Equipment Operator (Dumper)', orig: '---', rev: 'C333h' },
+        { division: 'Plant and Equipment Operator (Loader)', orig: '---', rev: 'C333c' },
+        { division: 'Plant and Equipment Operator (Locomotive)', orig: '---', rev: 'C333i' },
+        { division: 'Plant and Equipment Operator (Compactor)', orig: '---', rev: 'C333j' },
+        { division: 'Plant and Equipment Operator (Scraper)', orig: '---', rev: 'C333k' }
+    ]},
+    { no: 11, trade: 'Truck Driver 11', items: [
+        { division: 'Construction Goods Vehicle Driver (Master)', orig: 'C349', rev: 'C349' },
+        { division: 'Truck Driver (Medium Goods Vehicles)', orig: '---', rev: 'C349c' },
+        { division: 'Truck Driver (Heavy Goods Vehicles)', orig: '---', rev: 'C349a' },
+        { division: 'Truck Driver (Special Purpose Vehicles)', orig: '---', rev: 'C349b' },
+        { division: 'Truck Driver (Articulated Vehicles)', orig: '---', rev: 'C349d' }
+    ]},
+    { no: 12, trade: 'Flooring Worker 12', items: [
+        { division: 'Floor Layer (Master)', orig: '---', rev: 'C316 / C416' },
+        { division: 'Floor Layer (Timber Flooring)', orig: '---', rev: 'C316b / C416b' },
+        { division: 'Floor Layer (PVC Flooring)', orig: '---', rev: 'C316a / C416a' }
+    ]},
+    { no: 13, trade: 'Plant & Equipment Operator (Heavy) 13', items: [
+        { division: 'Plant and Equipment Operator (Piling)(Master)', orig: '---', rev: 'C335 / C435' },
+        { division: 'Plant and Equipment Operator (Percussive Pile)', orig: '---', rev: 'C335b / C435b' },
+        { division: 'Plant and Equipment Operator (Bored Pile)', orig: '---', rev: 'C335a / C435a' },
+        { division: 'Plant and Equipment Operator (Tower Crane)', orig: '---', rev: 'C334c' },
+        { division: 'Plant and Equipment Operator (Crawler-mounted Mobile Crane)', orig: '---', rev: 'C334a' },
+        { division: 'Plant and Equipment Operator (Wheeled Telescopic Mobile Crane)', orig: '---', rev: 'C334e' },
+        { division: 'Plant and Equipment Operator (Gantry Crane)', orig: '---', rev: 'C334b' },
+        { division: 'Plant and Equipment Operator (Tunneling) - Jumbo Drilling', orig: '---', rev: 'C336a / C436a' },
+        { division: 'Plant and Equipment Operator (Tunneling) - Segment Erection', orig: '---', rev: 'C336c / C436c' },
+        { division: 'Plant and Equipment Operator (Tunneling) - Tunnel Boring Machine', orig: '---', rev: 'C336d / C436d' }
+    ]},
+    { no: 14, trade: 'General Welder', items: [
+        { division: 'General Welder', orig: 'C318 / C418', rev: 'C318 / C418' }
+    ]},
+    { no: 15, trade: 'Metal Worker 14', items: [
+        { division: 'Metal-steel Worker (Master)', orig: '---', rev: 'C3010 / C4010' },
+        { division: 'Metal Worker', orig: 'C328 / C428', rev: 'C328 / C428' }
+    ]},
+    { no: 16, trade: 'Equipment and System Mechanic 15', items: [
+        { division: 'Electronic Equipment Mechanic (Construction Work) (Master)', orig: '---', rev: 'E3036 / E4036' },
+        { division: 'Building Security System Mechanic', orig: '---', rev: 'E323 / E423' },
+        { division: 'Communication System Mechanic', orig: '---', rev: 'E324 / E424' },
+        { division: 'Plant and Equipment Mechanic (Construction Work) (Master)', orig: '---', rev: 'CE310 / CE410' }
+    ]},
+    { no: 17, trade: 'Piling Worker 16', items: [
+        { division: 'Piling Operative (Master)', orig: '---', rev: 'C330 / C430' },
+        { division: 'Piling Operative (Percussive Pile)', orig: '---', rev: 'C330b / C430b' },
+        { division: 'Piling Operative (Bored Pile)', orig: '---', rev: 'C330a / C430a' }
+    ]},
+    { no: 18, trade: 'Waterproofing Worker 17', items: [
+        { division: 'Waterproofing Worker (Master)', orig: '---', rev: 'C301' },
+        { division: 'Waterproofing Worker (Liquid Membrane)', orig: '---', rev: 'C301c' },
+        { division: 'Waterproofing Worker (Burntype Felt)', orig: '---', rev: 'C301b / C401b' },
+        { division: 'Waterproofing Worker (Adhesive-type Felt)', orig: '---', rev: 'C301a' }
+    ]},
+    { no: 19, trade: 'Paving Block Layer', items: [
+        { division: 'Paving Block Layer', orig: '---', rev: 'C355' }
+    ]},
+    { no: 20, trade: 'Tiler 18', items: [
+        { division: 'Tiler', orig: '---', rev: 'C347 / C447' },
+        { division: 'Tiler (Mosaic)', orig: '---', rev: 'C347a / C447a' },
+        { division: 'Tiler (Tile)', orig: '---', rev: 'C347b / C447b' }
+    ]},
+    { no: 21, trade: 'Demolition Worker 19', items: [
+        { division: 'Demolition Worker (Master)', orig: '---', rev: 'C312' },
+        { division: 'Demolition Worker (Building)', orig: '---', rev: 'C312a' },
+        { division: 'Demolition Worker (Unauthorised Building Works)', orig: '---', rev: 'C312b' }
+    ]},
+    { no: 22, trade: 'Marine Construction Plant Operator 20', items: [
+        { division: 'Marine Construction Plant Operator (Lifting) (Master)', orig: '---', rev: 'C325 / C425' },
+        { division: 'Marine Construction Plant Operator (Derrick)', orig: '---', rev: 'C325c / C425c' },
+        { division: 'Marine Construction Plant Operator (Boom-grab Bucket)', orig: '---', rev: 'C325a / C425a' },
+        { division: 'Marine Construction Plant Operator (Boom-hook)', orig: '---', rev: 'C325b / C425b' }
+    ]},
+    { no: 23, trade: 'Aluminum Window Installer', items: [
+        { division: 'Window Frame Installer', orig: '---', rev: 'C350 / C450' }
+    ]},
+    { no: 24, trade: 'Curtain Wall and Glass Installer 21', items: [
+        { division: 'Curtain Wall and Glass Panes Installer (Master)', orig: '---', rev: 'C3021 / C4021' },
+        { division: 'Glazier', orig: 'C319', rev: 'C319 / C419' },
+        { division: 'Curtain Wall Installer', orig: '---', rev: 'C311 / C411' }
+    ]},
+    { no: 25, trade: 'Painter & Decorator 22', items: [
+        { division: 'Painter and Decorator (Master)', orig: 'C329 / C429', rev: 'C329 / C429' },
+        { division: 'Painter and Decorator (Roller Painting)', orig: '---', rev: 'C329a' },
+        { division: 'Painter and Decorator (Surface Filling)', orig: '---', rev: 'C329b' },
+        { division: 'Painter and Decorator (Emulsion Painting)', orig: '---', rev: 'C329c' },
+        { division: 'Painter and Decorator (Brushing Lacquering)', orig: '---', rev: 'C329d' },
+        { division: 'Painter and Decorator (Synthetic Painting)', orig: '---', rev: 'C329e' },
+        { division: 'Painter and Decorator (Clear Lacquering)', orig: '---', rev: 'C329f' },
+        { division: 'Painter and Decorator (Texture-spray)', orig: '---', rev: 'C329g' },
+        { division: 'Painter and Decorator (Metal Paint Spray)', orig: '---', rev: 'C329h' },
+        { division: 'Painter and Decorator (Paperhanging)', orig: '---', rev: 'C329i' },
+        { division: 'Painter and Decorator (Sign Writing)', orig: '---', rev: 'C329j' }
+    ]},
+    { no: 26, trade: 'Plasterer 23', items: [
+        { division: 'Cement Sand Mortar Worker (Master)', orig: '---', rev: 'C3008 / C4008' },
+        { division: 'Plasterer', orig: 'C337 / C437', rev: 'C337 / C437' },
+        { division: 'Plasterer (Floor)', orig: '---', rev: 'C337a / C437a' }
+    ]},
+    { no: 27, trade: 'Trackworker', items: [
+        { division: 'Trackworker', orig: '---', rev: 'C348' }
+    ]},
+    { no: 28, trade: 'False Ceiling Installer', items: [
+        { division: 'False Ceiling Installer', orig: '---', rev: 'C358 / C458' }
+    ]},
+    { no: 29, trade: 'Gas Installer', items: [
+        { division: 'Gas Installer', orig: '---', rev: 'E375' }
+    ]},
+    { no: 30, trade: 'Bricklayer', items: [
+        { division: 'Bricklayer', orig: 'C305 / C405', rev: 'C305 / C405' }
+    ]},
+    { no: 31, trade: 'Structural Steel Welder', items: [
+        { division: 'Structural Steel Welder', orig: 'C346', rev: 'C346' }
+    ]},
+    { no: 32, trade: 'Rigger/Metal Formwork Erector', items: [
+        { division: 'Rigger / Metal Formwork Erector', orig: 'C341', rev: 'C341 / C441' }
+    ]},
+    { no: 33, trade: 'Asphalter (Road Construction)', items: [
+        { division: 'Asphalter (Road Construction)', orig: 'C302', rev: 'C302 / C402' }
+    ]},
+    { no: 34, trade: 'Construction Plant Mechanic', items: [
+        { division: 'Construction Plant Mechanic', orig: 'C310 / C410', rev: 'C310 / C410' }
+    ]},
+    { no: 35, trade: 'Electrical Fitter (incl. Electrician) 24', items: [
+        { division: 'Control Panel Assembler', orig: '---', rev: 'E305a / E405a' },
+        { division: 'Electrical Wireman', orig: '', rev: 'E305b / E405b' },
+        { division: 'Electrical Fitter', orig: 'E305', rev: 'E305' }
+    ]},
+    { no: 36, trade: 'Mechanical Fitter', items: [
+        { division: 'Mechanical Fitter', orig: 'E310 / E410', rev: 'E310 / E410' }
+    ]},
+    { no: 37, trade: 'Refrigeration/AC/Ventilation Mechanic 25', items: [
+        { division: 'Refrigeration/AC/Ventilation Mechanic (Master)', orig: 'E314 / E414', rev: 'E314' },
+        { division: 'Refrigeration/AC/Ventilation Mechanic (Water System)', orig: '---', rev: 'E314e / E414e' },
+        { division: 'Refrigeration/AC/Ventilation Mechanic (Air System)', orig: '---', rev: 'E314a / E414a' },
+        { division: 'Refrigeration/AC/Ventilation Mechanic (Thermal Insulation)', orig: '---', rev: 'E314c / E414c' },
+        { division: 'Refrigeration/AC/Ventilation Mechanic (Electrical Control)', orig: '---', rev: 'E314b / E414b' },
+        { division: 'Refrigeration/AC/Ventilation Mechanic (Unitary System)', orig: '---', rev: 'E314d / E414d' }
+    ]},
+    { no: 38, trade: 'Fire Service Mechanic 26', items: [
+        { division: 'Fire Service Mechanic (Master)', orig: 'E306', rev: 'E306' },
+        { division: 'Fire Service Portable Equipment Fitter', orig: '---', rev: 'E306c' },
+        { division: 'Fire Service Electrical Fitter', orig: '---', rev: 'E306a / E406a' },
+        { division: 'Fire Service Mechanical Fitter', orig: '---', rev: 'E306b / E406b' }
+    ]},
+    { no: 39, trade: 'Lift and Escalator Mechanic 27', items: [
+        { division: 'Lift and Escalator Mechanic (Master)', orig: 'E309', rev: 'E309' },
+        { division: 'Lift Mechanic', orig: '---', rev: 'E309a' },
+        { division: 'Escalator Mechanic', orig: '---', rev: 'E309b' }
+    ]},
+    { no: 40, trade: 'Building Services Maintenance Mechanic 28', items: [
+        { division: '---', orig: 'E302 / E402', rev: '---' }
+    ]},
+    { no: 41, trade: 'Others 29: trade name -', items: [{ isOther: true }] },
+    { no: 42, trade: 'Others 29: trade name -', items: [{ isOther: true }] },
+    { no: 43, trade: 'Others 29: trade name -', items: [{ isOther: true }] },
+    { no: 44, trade: 'Others 29: trade name -', items: [{ isOther: true }] },
+    { no: 45, trade: 'Others 29: trade name -', items: [{ isOther: true }] }
+];
+
+
+
 function escHTML(s) {
     return String(s == null ? '' : s)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -544,6 +767,322 @@ function renderGF527_2003View() {
     bind('.gf5272003-low',      function (el) { return 'gf5272003_row_' + el.dataset.row + '_low'; });
     bind('.gf5272003-other-name', function (el) { return 'gf5272003_row_' + el.dataset.row + '_name'; });
     bind('.gf5272003-other-code', function (el) { return 'gf5272003_row_' + el.dataset.row + '_code'; });
+
+    pageWrapper.appendChild(view);
+    currentPageObj = { pageNum: 1, container: view };
+    updatePageInfo();
+}
+
+/* ============================================================
+   ★ GF527-2017 表格視圖樣式
+   ============================================================ */
+function ensureGF5272017Style() {
+    if (document.getElementById('gf527-2017-style')) return;
+    var style = document.createElement('style');
+    style.id = 'gf527-2017-style';
+    style.textContent =
+        /* 主容器：模擬 A3 橫向紙張寬度 */
+        '.gf527-2017-view { background:#fff; padding:20px; font-family:"Times New Roman", SimSun, serif; color:#000; min-width:1650px; box-sizing:border-box; }' +
+        '.gf527-2017-header { margin-bottom:5px; font-size:11px; }' +
+        '.gf527-2017-header .top-meta { display:flex; justify-content:flex-start; gap:80px; margin-bottom:10px; }' +
+        '.gf527-2017-header .title { text-align:center; font-size:16px; font-weight:bold; margin:10px 0 15px 0; }' +
+        '.gf527-2017-header .info-row { display:flex; flex-wrap:nowrap; gap:20px; align-items:flex-end; margin-bottom:5px; }' +
+        '.gf527-2017-header .info-group { display:flex; align-items:center; flex-shrink:0; }' +
+        '.gf527-2017-header label { font-weight:normal; margin-right:5px; white-space:nowrap; font-size:11px; }' +
+        '.gf527-2017-header .underline-input { border:none; border-bottom:1px solid #000; background:transparent; font-family:inherit; font-size:11px; outline:none; padding:0 2px; color:#000; box-sizing:border-box; height:18px; }' +
+        '.gf527-2017-header .underline-input:focus { background:#f0f8ff; }' +
+        '.gf527-2017-header .w-30 { width:30px; } .gf527-2017-header .w-40 { width:40px; }' +
+        '.gf527-2017-header .w-60 { width:60px; } .gf527-2017-header .w-100 { width:100px; }' +
+        '.gf527-2017-header .w-150 { width:150px; } .gf527-2017-header .w-250 { width:250px; }' +
+        '.gf527-2017-header .w-350 { width:350px; }' +
+
+        /* 表格外層 */
+        '.gf527-2017-table-wrap { width:100%; overflow-x:auto; border:2px solid #000; border-bottom:none; }' +
+
+        /* 表格本體 */
+        '.gf527-2017-table { border-collapse:collapse; width:100%; table-layout:fixed; font-size:10px; }' +
+        '.gf527-2017-table th, .gf527-2017-table td { border:1px solid #000; padding:2px 1px; text-align:center; vertical-align:middle; }' +
+        '.gf527-2017-table thead th { background:#fff; font-weight:bold; padding:4px 1px; }' +
+        '.gf527-2017-table sup { font-size:8px; vertical-align:super; line-height:0; }' +
+
+        /* 欄寬 */
+        '.gf527-2017-table .cell-no { width:25px; font-weight:bold; }' +
+        '.gf527-2017-table .cell-trade { width:130px; text-align:left; padding-left:4px; font-size:10px; }' +
+        '.gf527-2017-table .cell-division { width:200px; text-align:left; padding-left:4px; font-size:10px; }' +
+        '.gf527-2017-table .cell-orig { width:40px; font-size:10px; }' +
+        '.gf527-2017-table .cell-rev { width:65px; font-size:10px; }' +
+        '.gf527-2017-table .day-col { width:20px; min-width:20px; padding:0; }' +
+        '.gf527-2017-table .total-col { width:42px; }' +
+        '.gf527-2017-table .ot-col { width:46px; }' +
+        '.gf527-2017-table .wage-col { width:45px; }' +
+
+        /* 儲存格輸入框 */
+        '.gf527-2017-table input { width:100%; height:100%; border:none; background:transparent; text-align:center; font-family:inherit; font-size:10px; padding:0; box-sizing:border-box; outline:none; color:#000; }' +
+        '.gf527-2017-table input:focus { background:#e8f0fe; outline:1px solid #1a73e8; }' +
+        '.gf527-2017-table input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; }' +
+        '.gf527-2017-table .cell-other-input { border:1px solid #999 !important; background:#fff; padding:0 2px; text-align:left; font-size:9px; height:14px; }' +
+
+        /* 底部說明 */
+        '.gf527-2017-footer { margin-top:10px; font-size:10px; padding:5px; }' +
+        '.gf527-2017-footer .tick-text { text-align:center; margin-bottom:20px; font-weight:bold; }';
+    document.head.appendChild(style);
+}
+
+/* ============================================================
+   ★ GF527-2017 表格視圖渲染
+   ============================================================ */
+function renderGF527_2017View() {
+    ensureGF5272017Style();
+    pageWrapper.innerHTML = '';
+
+    var view = document.createElement('div');
+    view.className = 'gf527-2017-view';
+
+    /* ---------- 1. 頂部標頭 ---------- */
+    var hdr = document.createElement('div');
+    hdr.className = 'gf527-2017-header';
+
+    function hdrInput(key, cls) {
+        var v = formData['gf5272017_' + key] || '';
+        return '<input type="text" class="underline-input gf5272017-hdr ' + (cls || '') +
+               '" data-hdr-key="' + key + '" value="' + escHTML(v) + '">';
+    }
+
+    hdr.innerHTML =
+        '<div class="top-meta">' +
+            '<div>Original - by e-mail to C&amp;SD<br>Duplicate - to Project Office</div>' +
+            '<div>Triplicate - filed as Site Record<br>Quadruplicate - kept by Contractor</div>' +
+        '</div>' +
+        '<div class="title">Monthly Return of Site Labour Deployment and Wage Rates for Construction Works</div>' +
+        '<div class="info-row">' +
+            '<div class="info-group"><label>Dept/Div :</label>' + hdrInput('dept', 'w-60') + ' / ' + hdrInput('div', 'w-60') + '</div>' +
+            '<div class="info-group"><label>Month/Year:</label>' + hdrInput('month', 'w-30') + ' / ' + hdrInput('year', 'w-40') + '</div>' +
+            '<div class="info-group"><label>Contract No. :</label>' + hdrInput('contractNo', 'w-150') + '</div>' +
+            '<div class="info-group"><label>Contract Title :</label>' + hdrInput('contractTitle', 'w-350') + '</div>' +
+            '<div class="info-group"><label>Contractor :</label>' + hdrInput('contractor', 'w-250') + '</div>' +
+            '<div class="info-group" style="display:flex;align-items:center;gap:5px;">' +
+                '<input type="checkbox" class="gf5272017-hdr-check" data-hdr-key="nominated" ' +
+                    (formData['gf5272017_nominated'] === '1' ? 'checked' : '') + '>' +
+                '<label style="margin:0;width:auto;"># Nominated Sub-contractor</label>' +
+            '</div>' +
+            '<div class="info-group"><label>Works Code 31 :</label>' + hdrInput('worksCode', 'w-100') + '</div>' +
+        '</div>';
+
+    hdr.querySelectorAll('.gf5272017-hdr').forEach(function (el) {
+        el.addEventListener('input', function () {
+            formData['gf5272017_' + el.dataset.hdrKey] = el.value;
+            persistFormData();
+        });
+    });
+    hdr.querySelectorAll('.gf5272017-hdr-check').forEach(function (el) {
+        el.addEventListener('change', function () {
+            formData['gf5272017_' + el.dataset.hdrKey] = el.checked ? '1' : '';
+            persistFormData();
+        });
+    });
+    view.appendChild(hdr);
+
+    /* ---------- 2. 表格 ---------- */
+    var wrap = document.createElement('div');
+    wrap.className = 'gf527-2017-table-wrap';
+    wrap.style.borderLeft = 'none';  // 避免外框左線疊加
+
+    var table = document.createElement('table');
+    table.className = 'gf527-2017-table';
+
+    var thead = document.createElement('thead');
+    var dayHeaders = '';
+    for (var d = 1; d <= 31; d++) dayHeaders += '<th class="day-col">' + d + '</th>';
+
+    thead.innerHTML =
+        '<tr>' +
+            '<th rowspan="2" class="cell-no">Item<br>No.</th>' +
+            '<th rowspan="2" class="cell-trade" style="text-align:center;">Trade</th>' +
+            '<th rowspan="2" class="cell-division" style="text-align:center;">Trade Division</th>' +
+            '<th colspan="2">Trade List <sup>1</sup></th>' +
+            '<th colspan="31">Number of workers engaged on site on each calendar day <sup>b,c</sup></th>' +
+            '<th rowspan="2" class="total-col">Total<br>Man-days</th>' +
+            '<th rowspan="2" class="ot-col">Overtime <sup>d</sup><br>(hours)</th>' +
+            '<th colspan="3">Daily Wage Rate ($) <sup>e</sup></th>' +
+            '<th rowspan="2" class="cell-no">Item<br>No.</th>' +
+        '</tr>' +
+        '<tr>' +
+            '<th class="cell-orig">Orig.</th>' +
+            '<th class="cell-rev">Rev.<br>(Code <sup>2</sup>)</th>' +
+            dayHeaders +
+            '<th class="wage-col">Av.</th><th class="wage-col">High</th><th class="wage-col">Low</th>' +
+        '</tr>';
+    table.appendChild(thead);
+
+    var tbody = document.createElement('tbody');
+
+    function buildDayCells(no) {
+        var html = '';
+        for (var day = 1; day <= 31; day++) {
+            var v = formData['gf5272017_row_' + no + '_day_' + day] || '';
+            html +=
+                '<td class="day-col">' +
+                    '<input type="text" inputmode="numeric" maxlength="3" class="gf5272017-day" ' +
+                    'data-row="' + no + '" data-day="' + day + '" value="' + escHTML(v) + '">' +
+                '</td>';
+        }
+        return html;
+    }
+    function buildTailCells(no) {
+        var md = formData['gf5272017_row_' + no + '_mandays'] || '';
+        var ot = formData['gf5272017_row_' + no + '_overtime'] || '';
+        var avg = formData['gf5272017_row_' + no + '_avg'] || '';
+        var high = formData['gf5272017_row_' + no + '_high'] || '';
+        var low = formData['gf5272017_row_' + no + '_low'] || '';
+        return '' +
+            '<td class="total-col"><input type="text" inputmode="numeric" class="gf5272017-mandays" data-row="' + no + '" value="' + escHTML(md) + '"></td>' +
+            '<td class="ot-col"><input type="text" inputmode="numeric" class="gf5272017-overtime" data-row="' + no + '" value="' + escHTML(ot) + '"></td>' +
+            '<td class="wage-col"><input type="text" inputmode="decimal" class="gf5272017-avg"  data-row="' + no + '" value="' + escHTML(avg) + '"></td>' +
+            '<td class="wage-col"><input type="text" inputmode="decimal" class="gf5272017-high" data-row="' + no + '" value="' + escHTML(high) + '"></td>' +
+            '<td class="wage-col"><input type="text" inputmode="decimal" class="gf5272017-low"  data-row="' + no + '" value="' + escHTML(low) + '"></td>';
+    }
+
+    GF527_2017_TRADES.forEach(function (group) {
+        var no = group.no;
+        var trade = group.trade;
+        var items = group.items;
+        var rowSpan = items.length;
+        var isOther = items[0] && items[0].isOther;
+
+        if (isOther) {
+            /* ---- Others 行：Trade 與 Division 合併，Orig 與 Rev 合併 ---- */
+            items.forEach(function () {
+                var nm = formData['gf5272017_row_' + no + '_name'] || '';
+                var cd = formData['gf5272017_row_' + no + '_code'] || '';
+                var tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td class="cell-no">' + no + '</td>' +
+                    '<td colspan="2" style="padding:2px 4px;text-align:left;white-space:nowrap;font-size:10px;">' +
+                        'Others <sup>29</sup>: trade name - ' +
+                        '<input type="text" class="gf5272017-other-name cell-other-input" data-row="' + no + '" ' +
+                        'value="' + escHTML(nm) + '" style="width:55%;display:inline-block;">' +
+                    '</td>' +
+                    // ★ 修改這裡：將 colspan 設為 2 (合併 Orig 和 Rev)，並加大輸入框寬度
+                    '<td colspan="2" style="padding:2px 4px;text-align:left;white-space:nowrap;font-size:10px;">' +
+                        'code - ' +
+                        '<input type="text" class="gf5272017-other-code cell-other-input" data-row="' + no + '" ' +
+                        'value="' + escHTML(cd) + '" style="width:65%;display:inline-block;">' +
+                    '</td>' +
+                    buildDayCells(no) +
+                    buildTailCells(no) +
+                    '<td class="cell-no">' + no + '</td>';
+                tbody.appendChild(tr);
+            });
+            return;
+        }
+
+        /* ---- 一般 group：Item No. + Trade 以 rowspan 合併 ---- */
+        items.forEach(function (item, idx) {
+            var tr = document.createElement('tr');
+
+            if (idx === 0) {
+                tr.innerHTML += '<td class="cell-no" rowspan="' + rowSpan + '">' + no + '</td>';
+                var formattedTrade = escHTML(trade).replace(/ (\d+)$/, ' <sup>$1</sup>');
+                tr.innerHTML += '<td class="cell-trade" rowspan="' + rowSpan + '">' + formattedTrade + '</td>';
+            }
+
+            var orig = item.orig === 'ü' ? '✓' : item.orig;
+            tr.innerHTML +=
+                '<td class="cell-division">' + escHTML(item.division) + '</td>' +
+                '<td class="cell-orig">' + escHTML(orig) + '</td>' +
+                '<td class="cell-rev">' + escHTML(item.rev) + '</td>' +
+                buildDayCells(no) +
+                buildTailCells(no);
+
+            if (idx === 0) {
+                tr.innerHTML += '<td class="cell-no" rowspan="' + rowSpan + '">' + no + '</td>';
+            }
+
+            tbody.appendChild(tr);
+        });
+    });
+
+    function buildSignatureRow(labelText, rowKey, telKey) {
+        var telVal = formData[telKey] || '';
+        return '' +
+            '<tr>' +
+                '<td class="cell-no" style="border:none !important;"></td>' +
+                '<td colspan="4" style="text-align:left;padding:4px;border:1px solid #000 !important;">' +
+                    '<div style="display:flex;width:100%;align-items:center;height:22px;">' +
+                        '<span style="padding-left:4px;white-space:nowrap;font-size:10px;">' + labelText + '</span>' +
+                        '<div class="table-sig-cell" data-field-id="' + rowKey + '_signature" ' +
+                            'style="flex:1;height:100%;margin:0 10px;display:flex;align-items:center;justify-content:center;' +
+                            'cursor:pointer;border:1px dashed #94a3b8;background:#f8fafc;"></div>' +
+                    '</div>' +
+                '</td>' +
+                '<td></td>'.repeat(31) +
+                '<td class="total-col" style="border:1px solid #000;"></td>' +
+                // ★ 修改這裡：將 colspan 設為 5，並移除後面的空 <td>，解決右側多線問題
+                '<td colspan="5" style="padding:4px;border:1px solid #000;white-space:nowrap;font-size:10px;">' +
+                    'Tel. No.: ' +
+                    '<input type="text" class="gf5272017-telno" data-row="' + telKey + '" ' +
+                    'value="' + escHTML(telVal) + '" ' +
+                    'style="width:80%;border:none;background:transparent;outline:none;font-family:inherit;font-size:10px;">' +
+                '</td>' +
+            '</tr>';
+    }
+
+    tbody.innerHTML += buildSignatureRow(
+        'Completed by Agent of Contractor&nbsp;&nbsp;Name (in block letters) &amp; Signature:',
+        'gf5272017_row_46', 'gf5272017_row_46_telno'
+    );
+    tbody.innerHTML += buildSignatureRow(
+        'Checked by IOW/COW&nbsp;&nbsp;Name (in block letters) &amp; Signature:',
+        'gf5272017_row_47', 'gf5272017_row_47_telno'
+    );
+
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    view.appendChild(wrap);
+
+    /* ---------- 4. 初始化簽名格 ---------- */
+    view.querySelectorAll('.table-sig-cell').forEach(function (cell) {
+        refreshLabourSignatureCell(cell.dataset.fieldId);
+        cell.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            openLabourSignatureModal(cell.dataset.fieldId);
+        });
+    });
+
+    /* ---------- 5. 底部說明 ---------- */
+    var footer = document.createElement('div');
+    footer.style.cssText = 'margin-top:5px;font-size:10px;font-family:"Times New Roman", SimSun, serif;color:#000;';
+    footer.innerHTML =
+        '<div style="text-align:center;margin-bottom:20px;font-weight:bold;"># Tick in the box only for a nominated sub-contractor</div>' +
+        '<div style="display:flex;align-items:center;">' +
+            '<div style="width:150px;">G.F. 527 (Rev. 1-2017)</div>' +
+            '<div style="flex:1;text-align:center;">Please refer to the overleaf for filling this return</div>' +
+            '<div style="width:150px;"></div>' +
+        '</div>';
+    view.appendChild(footer);
+
+    /* ---------- 6. 綁定輸入事件 ---------- */
+    function bind(selector, keyFn) {
+        view.querySelectorAll(selector).forEach(function (el) {
+            el.addEventListener('input', function () {
+                formData[keyFn(el)] = el.value;
+                persistFormData();
+            });
+        });
+    }
+    bind('.gf5272017-day',        function (el) { return 'gf5272017_row_' + el.dataset.row + '_day_' + el.dataset.day; });
+    bind('.gf5272017-mandays',    function (el) { return 'gf5272017_row_' + el.dataset.row + '_mandays'; });
+    bind('.gf5272017-overtime',   function (el) { return 'gf5272017_row_' + el.dataset.row + '_overtime'; });
+    bind('.gf5272017-avg',        function (el) { return 'gf5272017_row_' + el.dataset.row + '_avg'; });
+    bind('.gf5272017-high',       function (el) { return 'gf5272017_row_' + el.dataset.row + '_high'; });
+    bind('.gf5272017-low',        function (el) { return 'gf5272017_row_' + el.dataset.row + '_low'; });
+    bind('.gf5272017-other-name', function (el) { return 'gf5272017_row_' + el.dataset.row + '_name'; });
+    bind('.gf5272017-other-code', function (el) { return 'gf5272017_row_' + el.dataset.row + '_code'; });
+    bind('.gf5272017-telno',      function (el) {
+        // row 屬性本身就是完整 key（gf5272017_row_46_telno）
+        return el.dataset.row;
+    });
 
     pageWrapper.appendChild(view);
     currentPageObj = { pageNum: 1, container: view };
@@ -2247,14 +2786,14 @@ function renderGF527_2003View() {
             { id: 'g17_1442', label: '', left: '93.00%', top: '83.50%', width: '1.77%', height: '1.00%' },
             { id: 'g17_1443', label: '', left: '94.80%', top: '83.50%', width: '1.77%', height: '1.00%' },
             //code//
-            { id: 'g17_1444', label: '', left: '33.50%', top: '79.00%', width: '5.50%', height: '1.00%' },
-            { id: 'g17_1445', label: '', left: '33.50%', top: '80.00%', width: '5.50%', height: '1.00%' },
-            { id: 'g17_1446', label: '', left: '33.50%', top: '81.00%', width: '5.50%', height: '1.00%' },
-            { id: 'g17_1447', label: '', left: '33.50%', top: '82.30%', width: '5.50%', height: '1.00%' },
-            { id: 'g17_1448', label: '', left: '33.50%', top: '83.50%', width: '5.50%', height: '1.00%' },
+            { id: 'g17_1444', label: '', left: '32.00%', top: '79.00%', width: '7.00%', height: '1.00%' },
+            { id: 'g17_1445', label: '', left: '32.00%', top: '80.00%', width: '7.00%', height: '1.00%' },
+            { id: 'g17_1446', label: '', left: '32.00%', top: '81.00%', width: '7.00%', height: '1.00%' },
+            { id: 'g17_1447', label: '', left: '32.00%', top: '82.30%', width: '7.00%', height: '1.00%' },
+            { id: 'g17_1448', label: '', left: '32.00%', top: '83.50%', width: '7.00%', height: '1.00%' },
             //telno//
-            { id: 'g17_1449', label: '', left: '34.50%', top: '84.80%', width: '4.00%', height: '1.60%' },
-            { id: 'g17_1450', label: '', left: '34.50%', top: '86.50%', width: '4.00%', height: '1.60%' },
+            { id: 'g17_1449', label: '', left: '34.50%', top: '84.80%', width: '8.00%', height: '1.60%' },
+            { id: 'g17_1450', label: '', left: '34.50%', top: '86.50%', width: '8.00%', height: '1.60%' },
             //tradename//
             { id: 'g17_1451', label: '', left: '9.00%', top: '79.00%', width: '20.50%', height: '1.00%' },
             { id: 'g17_1452', label: '', left: '9.00%', top: '80.00%', width: '20.50%', height: '1.00%' },
@@ -5138,9 +5677,9 @@ function refreshLabourSignatureCell(fieldId) {
 function loadTemplate() {
     var type = currentDoc && currentDoc.type;
 
-    /* ★ GF527-2003 走表格視圖，不載入 PDF */
-    if (type === 'GF527-2003') {
-        console.log('[Labour] GF527-2003 使用表格視圖，跳過 PDF 載入');
+    /* ★ GF527-2003 / GF527-2017 都走表格視圖，不載入 PDF */
+    if (type === 'GF527-2003' || type === 'GF527-2017') {
+        console.log('[Labour] ' + type + ' 使用表格視圖，跳過 PDF 載入');
         totalVirtualPages = 1;
         templateImages = [];
         pageCssSizes   = [];
@@ -5172,46 +5711,51 @@ function loadTemplate() {
         };
     }
 
-    function renderCurrentPage() {
-
-            /* ★ GF527-2003 → 表格視圖 */
+function renderCurrentPage() {
+    /* ★ GF527-2003 → 表格視圖 */
     if (currentDoc && currentDoc.type === 'GF527-2003') {
         renderGF527_2003View();
         return;
     }
-        var idx = activePageNum - 1;
-        var imgData = templateImages[idx];
-        var naturalSize = pageCssSizes[idx];
-        if (!imgData || !naturalSize) {
-            console.warn('[Labour] 第 ' + activePageNum + ' 頁尚未渲染');
-            return;
-        }
 
-        pageWrapper.innerHTML = '';
-
-        var displaySize = computeDisplaySize(naturalSize);
-
-        var pageDiv = document.createElement('div');
-        pageDiv.className = 'pdf-page active-page';
-        pageDiv.dataset.page = activePageNum;
-        pageDiv.style.width  = displaySize.w + 'px';
-        pageDiv.style.height = displaySize.h + 'px';
-
-        pageDiv.style.fontSize = Math.max(10, displaySize.w * 0.015) + 'px';
-
-        var img = document.createElement('img');
-        img.src = imgData;
-        img.className = 'pdf-bg';
-        img.draggable = false;
-        img.alt = 'Labour Wage Template - Page ' + activePageNum;
-        pageDiv.appendChild(img);
-
-        injectFormFields(pageDiv);
-        pageWrapper.appendChild(pageDiv);
-
-        currentPageObj = { pageNum: activePageNum, container: pageDiv };
-        updatePageInfo();
+    /* ★ GF527-2017 → 表格視圖 */
+    if (currentDoc && currentDoc.type === 'GF527-2017') {
+        renderGF527_2017View();
+        return;
     }
+
+    var idx = activePageNum - 1;
+    var imgData = templateImages[idx];
+    var naturalSize = pageCssSizes[idx];
+    if (!imgData || !naturalSize) {
+        console.warn('[Labour] 第 ' + activePageNum + ' 頁尚未渲染');
+        return;
+    }
+
+    pageWrapper.innerHTML = '';
+
+    var displaySize = computeDisplaySize(naturalSize);
+
+    var pageDiv = document.createElement('div');
+    pageDiv.className = 'pdf-page active-page';
+    pageDiv.dataset.page = activePageNum;
+    pageDiv.style.width  = displaySize.w + 'px';
+    pageDiv.style.height = displaySize.h + 'px';
+    pageDiv.style.fontSize = Math.max(10, displaySize.w * 0.015) + 'px';
+
+    var img = document.createElement('img');
+    img.src = imgData;
+    img.className = 'pdf-bg';
+    img.draggable = false;
+    img.alt = 'Labour Wage Template - Page ' + activePageNum;
+    pageDiv.appendChild(img);
+
+    injectFormFields(pageDiv);
+    pageWrapper.appendChild(pageDiv);
+
+    currentPageObj = { pageNum: activePageNum, container: pageDiv };
+    updatePageInfo();
+}
 
     function goToPage(n) {
         if (n < 1 || n > totalVirtualPages) return;
@@ -5264,10 +5808,9 @@ function loadTemplate() {
         });
     }
 
-    /* ========== 儲存 / 提交 / 審批 ========== */
-    function captureFormDataFromDom() {
-        if (!currentDoc) return;
-        var docType = currentDoc.type || 'GF527A';
+function captureFormDataFromDom() {
+    if (!currentDoc) return;
+    var docType = currentDoc.type || 'GF527A';
 
     /* ★ GF527-2003 從表格擷取 */
     if (docType === 'GF527-2003') {
@@ -5275,7 +5818,6 @@ function loadTemplate() {
         if (!view) return;
         function grab(sel, keyFn) {
             view.querySelectorAll(sel).forEach(function (el) {
-                // ★ 修改：确保只抓取 input 元素的 value，防止报错或数据异常
                 if (el.value !== undefined) {
                     formData[keyFn(el)] = el.value;
                 }
@@ -5290,10 +5832,6 @@ function loadTemplate() {
         grab('.gf5272003-low',        function (el) { return 'gf5272003_row_' + el.dataset.row + '_low'; });
         grab('.gf5272003-other-name', function (el) { return 'gf5272003_row_' + el.dataset.row + '_name'; });
         grab('.gf5272003-other-code', function (el) { return 'gf5272003_row_' + el.dataset.row + '_code'; });
-        
-        // ★ 新增：抓取底部簽名區
-        grab('.footer-input',         function (el) { return 'gf5272003_footer_' + el.dataset.footerKey; });
-
         view.querySelectorAll('.gf5272003-hdr-check').forEach(function (el) {
             formData['gf5272003_' + el.dataset.hdrKey] = el.checked ? '1' : '';
         });
@@ -5301,46 +5839,120 @@ function loadTemplate() {
         return;
     }
 
-        if (docType !== 'GF527A' && docType !== 'GF527-2017') return;
-
-        var overlay = pageWrapper.querySelector('.pdf-form-overlay');
-        if (!overlay) return;
-        var inputs = overlay.querySelectorAll('input[data-field-id]');
-        for (var i = 0; i < inputs.length; i++) {
-            var id = inputs[i].dataset.fieldId;
-            if (id) formData[id] = inputs[i].value;
+    /* ★ GF527-2017 從表格擷取 */
+    if (docType === 'GF527-2017') {
+        var v17 = pageWrapper.querySelector('.gf527-2017-view');
+        if (!v17) return;
+        function grab17(sel, keyFn) {
+            v17.querySelectorAll(sel).forEach(function (el) {
+                if (el.value !== undefined) {
+                    formData[keyFn(el)] = el.value;
+                }
+            });
         }
-        var checks = overlay.querySelectorAll('.pdf-checkbox[data-field-id]');
-        for (var j = 0; j < checks.length; j++) {
-            var cid = checks[j].dataset.fieldId;
-            if (cid) formData[cid] = checks[j].classList.contains('checked') ? '1' : '';
-        }
-        
-        // ★ 新增：抓取簽名格的數據（防止點擊 Save 時被覆蓋清空）
-        var sigs = overlay.querySelectorAll('.pdf-signature-cell[data-field-id]');
-        for (var k = 0; k < sigs.length; k++) {
-            var sid = sigs[k].dataset.fieldId;
-            // 如果 formData 裡沒有值，或者已經透過 Modal 寫入了，這裡不需重複寫入
-            // 但為了確保從記憶體同步，只要沒有被手動清空，就保留
-        }
-
+        grab17('.gf5272017-hdr',        function (el) { return 'gf5272017_' + el.dataset.hdrKey; });
+        grab17('.gf5272017-day',        function (el) { return 'gf5272017_row_' + el.dataset.row + '_day_' + el.dataset.day; });
+        grab17('.gf5272017-mandays',    function (el) { return 'gf5272017_row_' + el.dataset.row + '_mandays'; });
+        grab17('.gf5272017-overtime',   function (el) { return 'gf5272017_row_' + el.dataset.row + '_overtime'; });
+        grab17('.gf5272017-avg',        function (el) { return 'gf5272017_row_' + el.dataset.row + '_avg'; });
+        grab17('.gf5272017-high',       function (el) { return 'gf5272017_row_' + el.dataset.row + '_high'; });
+        grab17('.gf5272017-low',        function (el) { return 'gf5272017_row_' + el.dataset.row + '_low'; });
+        grab17('.gf5272017-other-name', function (el) { return 'gf5272017_row_' + el.dataset.row + '_name'; });
+        grab17('.gf5272017-other-code', function (el) { return 'gf5272017_row_' + el.dataset.row + '_code'; });
+        grab17('.gf5272017-telno',      function (el) { return el.dataset.row; });
+        v17.querySelectorAll('.gf5272017-hdr-check').forEach(function (el) {
+            formData['gf5272017_' + el.dataset.hdrKey] = el.checked ? '1' : '';
+        });
         persistFormData();
+        return;
     }
 
-    function saveChanges() {
+    if (docType !== 'GF527A') return;
+
+    var overlay = pageWrapper.querySelector('.pdf-form-overlay');
+    if (!overlay) return;
+    var inputs = overlay.querySelectorAll('input[data-field-id]');
+    for (var i = 0; i < inputs.length; i++) {
+        var id = inputs[i].dataset.fieldId;
+        if (id) formData[id] = inputs[i].value;
+    }
+    var checks = overlay.querySelectorAll('.pdf-checkbox[data-field-id]');
+    for (var j = 0; j < checks.length; j++) {
+        var cid = checks[j].dataset.fieldId;
+        if (cid) formData[cid] = checks[j].classList.contains('checked') ? '1' : '';
+    }
+    persistFormData();
+}
+
+    function saveChanges(isForce) {
         if (!currentDoc) { alert('No document to save.'); return; }
+        
         captureFormDataFromDom();
         currentDoc.totalPages = totalVirtualPages;
         currentDoc.formData = formData;
-        fetch('/api/records/wage/' + encodeURIComponent(currentDoc.id), {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(currentDoc)
-        }).then(function (res) {
-            if (!res.ok) alert('Could not save to the database.');
-            else alert('✅ Changes saved successfully!');
-        }).catch(function () {
-            alert('Could not save to the database.');
+
+        // 如果是強制覆蓋模式，先向伺服器拉取最新的版本號，確保覆蓋能成功
+        var prepare = Promise.resolve();
+        if (isForce) {
+            prepare = fetch('/api/records/wage/' + encodeURIComponent(currentDoc.id), { cache: 'no-store' })
+                .then(function(r) { return r.ok ? r.json() : null; })
+                .then(function(latest) {
+                    if (latest) {
+                        // 兼容各種可能的版本控制欄位
+                        if (latest.version !== undefined) currentDoc.version = latest.version;
+                        if (latest.updatedAt !== undefined) currentDoc.updatedAt = latest.updatedAt;
+                        if (latest.rev !== undefined) currentDoc.rev = latest.rev;
+                        if (latest._version !== undefined) currentDoc._version = latest._version;
+                    }
+                });
+        }
+
+        prepare.then(function() {
+            fetch('/api/records/wage/' + encodeURIComponent(currentDoc.id), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(currentDoc)
+            }).then(async function (res) {
+                if (res.status === 409) {
+                    if (isForce) {
+                        alert('❌ 強制覆蓋失敗。可能是資料已被刪除或版本號欄位不匹配。');
+                        return;
+                    }
+                    if (confirm('⚠️ 保存失敗：此記錄已被其他視窗或其他人修改。\n\n是否要用你當前編輯的內容強制覆蓋？')) {
+                        return saveChanges(true); // 進入強制覆蓋模式
+                    }
+                } else if (!res.ok) {
+                    alert('Could not save to the database. Status: ' + res.status);
+                } else {
+                    // ★★★ 終極修復：成功後自動拉取最新資料，確保本地版本號 100% 同步 ★★★
+                    try {
+                        var getRes = await fetch('/api/records/wage/' + encodeURIComponent(currentDoc.id), { cache: 'no-store' });
+                        if (getRes.ok) {
+                            var latestDoc = await getRes.json();
+                            if (latestDoc && latestDoc.id) {
+                                // 更新本地 currentDoc，這樣下一次 Save 時版本號絕對是最新的
+                                currentDoc = latestDoc;
+                                window.__dwssWageDoc = latestDoc;
+                                // 重新載入表單資料，防止覆蓋你剛剛打的字
+                                formData = loadFormData(); 
+                            }
+                        }
+                    } catch (e) { 
+                        console.warn('同步最新版本失敗', e); 
+                    }
+
+                    // 同步到 sessionStorage，防止重新整理後出錯
+                    try {
+                        sessionStorage.setItem('editDocument', JSON.stringify(currentDoc));
+                        sessionStorage.setItem('currentWageRecord', JSON.stringify(currentDoc));
+                        sessionStorage.setItem('currentRecord', JSON.stringify(currentDoc));
+                    } catch (e) {}
+
+                    alert('✅ Changes saved successfully!');
+                }
+            }).catch(function () {
+                alert('Could not save to the database.');
+            });
         });
     }
 
