@@ -55,6 +55,35 @@
         .role-admin { background: #3498db; }
         .role-project_admin { background: #8e44ad; }
 
+        /* Column sort headers */
+        #users-table thead th.sortable {
+            user-select: none;
+            white-space: nowrap;
+        }
+        #users-table thead th.sortable:hover {
+            background: #e2e8f0;
+        }
+        #users-table thead th.sortable .sort-icon::after {
+            content: '\f0dc'; /* fa-sort */
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            margin-left: 6px;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            opacity: 0.7;
+        }
+        #users-table thead th.sortable.sort-asc .sort-icon::after {
+            content: '\f0de'; /* fa-sort-up */
+            color: #2563eb;
+            opacity: 1;
+        }
+        #users-table thead th.sortable.sort-desc .sort-icon::after {
+            content: '\f0dd'; /* fa-sort-down */
+            color: #2563eb;
+            opacity: 1;
+        }
+
+
         .status-badge {
             padding: 4px 12px;
             border-radius: 12px;
@@ -420,28 +449,6 @@
                         <div class="filter-option" data-filter="role" data-value="admin">Administrator</div>
                     </div>
                 </div>
-
-                <div class="filter-group">
-                    <button class="filter-toggle"><span>Current Project</span><i class="fas fa-chevron-down"></i></button>
-                    <div class="filter-options">
-                        <div class="filter-option active" data-filter="project" data-value="current">Current Project Only</div>
-                        <div class="filter-option" data-filter="project" data-value="all">All Projects</div>
-                        <div class="filter-option" data-filter="project" data-value="DE/2026/05">DE/2026/05</div>
-                        <div class="filter-option" data-filter="project" data-value="DE/2025/02">DE/2025/02</div>
-                        <div class="filter-option" data-filter="project" data-value="DE/2025/09">DE/2025/09</div>
-                    </div>
-                </div>
-
-                <div class="filter-group">
-                    <button class="filter-toggle"><span>Sort by Name</span><i class="fas fa-chevron-down"></i></button>
-                    <div class="filter-options">
-                        <div class="filter-option active" data-filter="sort" data-value="name-asc">Name A-Z</div>
-                        <div class="filter-option" data-filter="sort" data-value="name-desc">Name Z-A</div>
-                        <div class="filter-option" data-filter="sort" data-value="org-asc">Organization A-Z</div>
-                        <div class="filter-option" data-filter="sort" data-value="date-asc">Date Added (Oldest)</div>
-                        <div class="filter-option" data-filter="sort" data-value="date-desc">Date Added (Newest)</div>
-                    </div>
-                </div>
             </div>
 
             <!-- 用戶列表 -->
@@ -454,12 +461,12 @@
                     <table class="diary-table" id="users-table">
                         <thead>
                             <tr>
-                                <th width="18%">User Name & Department</th>
-                                <th width="12%">Login Username</th>
-                                <th width="16%">Email Address</th>
-                                <th width="12%">Organization</th>
-                                <th width="12%">Role</th>
-                                <th width="15%">Projects</th>
+                                <th width="18%" class="sortable sort-asc" data-sort="name">User Name &amp; Department <span class="sort-icon"></span></th>
+                                <th width="12%" class="sortable" data-sort="username">Login Username <span class="sort-icon"></span></th>
+                                <th width="16%" class="sortable" data-sort="email">Email Address <span class="sort-icon"></span></th>
+                                <th width="12%" class="sortable" data-sort="org">Organization <span class="sort-icon"></span></th>
+                                <th width="12%" class="sortable" data-sort="role">Role <span class="sort-icon"></span></th>
+                                <th width="15%" class="sortable" data-sort="project">Projects <span class="sort-icon"></span></th>
                                 <th width="15%">Actions</th>
                             </tr>
                         </thead>

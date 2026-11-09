@@ -249,6 +249,7 @@
             });
             this.renderUserTable();
             this.setupFilterEvents();
+            this.setupColumnSortHeaders();
             this.setupActionButtons();
             this.updateUserStats();
             this.initModalOptions();
@@ -303,6 +304,13 @@
                 return (a.id || 0) - (b.id || 0);
             });
             // Persist merged list so refresh keeps everyone
+            // Testing split for non-CMP seed users
+            var testProjectById = { '2':['DE/2024/06'], '3':['DE/2024/06'], '4':['DE/2025/07'], '10':['DE/2025/07'] };
+            this.users.forEach(function (u) {
+                var key = String(u.id);
+                if (testProjectById[key]) u.projectIds = testProjectById[key].slice();
+                if (u.role === 'admin') u.projectIds = [];
+            });
             this.saveToStorage();
         },
 
@@ -421,17 +429,22 @@
                     projectsHtml = '<span style="color:#999;font-size:0.75rem;">—</span>';
                 }
 
-                var loginName = user.username || (user.email ? String(user.email).split('@')[0] : '—');
+                // Display name vs login username (never use current session user)
+                var displayName = user.name || user.fullName || '—';
+                var loginName = user.username || user.loginUsername || (user.email ? String(user.email).split('@')[0] : '—');
+                if (loginName === 'admin' && user.role !== 'admin' && user.email) {
+                    loginName = String(user.email).split('@')[0];
+                }
 
                 row.innerHTML =
                     '<td>' +
                         '<div class="user-info">' +
-                            '<div class="user-name">' + self.escapeHtml(user.name) + '</div>' +
+                            '<div class="user-name">' + self.escapeHtml(displayName) + '</div>' +
                             (user.department ? '<div class="user-department">' + self.escapeHtml(user.department) + '</div>' : '') +
                             (user.companyName ? '<div class="user-company"><i class="fas fa-building"></i> ' + self.escapeHtml(user.companyName) + '</div>' : '') +
                         '</div>' +
                     '</td>' +
-                    '<td><code style="font-size:0.85rem;background:#f1f5f9;padding:2px 6px;border-radius:4px;">' + self.escapeHtml(loginName) + '</code></td>' +
+                    '<td><code style="font-size:0.85rem;background:#f1f5f9;padding:2px 6px;border-radius:4px;">' + self.escapeHtml(loginName) + '</code>' + (user.status === 'offline' ? ' <span style="color:#b91c1c;font-size:0.7rem;">(disabled)</span>' : '') + '</td>' +
                     '<td>' + self.escapeHtml(user.email) + '</td>' +
                     '<td>' +
                         '<span class="org-badge" style="background:' + orgColor + '15;color:' + orgColor + ';border:1px solid ' + orgColor + '40;">' +
@@ -444,39 +457,95 @@
                     '<td>' + (function () {
                         var cu = (window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser) ? window.DWSS_Permissions.getCurrentUser() : null;
                         var isSysAdmin = cu && cu.role === 'admin';
-                        if (!isSysAdmin) return '<span style="color:#94a3b8;font-size:0.75rem;">—</span>';
-                        return '<button class="action-btn edit-user-btn" data-id="' + user.id + '" title="Edit"><i class="fas fa-edit"></i></button>' +
-                            '<button class="action-btn delete-user-btn" data-id="' + user.id + '" title="Delete" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;"><i class="fas fa-trash"></i></button>';
+                        var isPM = cu && cu.role === 'project_admin';
+                        if (!isSysAdmin && !isPM) return '<span style="color:#94a3b8;font-size:0.75rem;">—</span>';
+                        var html = '<button class="action-btn edit-user-btn" data-id="' + user.id + '" title="Edit"><i class="fas fa-edit"></i></button>';
+                        if (isSysAdmin) {
+                            var st = user.status === 'offline' ? 'offline' : 'online';
+                            if (st === 'online') {
+                                html += '<button class="action-btn disable-user-btn" data-id="' + user.id + '" title="Disable account" style="background:#f59e0b;color:#fff;"><i class="fas fa-user-slash"></i></button>';
+                            } else {
+                                html += '<button class="action-btn enable-user-btn" data-id="' + user.id + '" title="Enable account" style="background:#10b981;color:#fff;"><i class="fas fa-user-check"></i></button>';
+                            }
+                            html += '<button class="action-btn delete-user-btn" data-id="' + user.id + '" title="Delete" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;"><i class="fas fa-trash"></i></button>';
+                        }
+                        return html;
                     })() + '</td>';
 
                 tbody.appendChild(row);
             });
 
             this.attachEventListeners();
+            this.updateSortHeaderUI();
         },
 
         sortUsers: function (users, sortBy) {
             return users.slice().sort(function (a, b) {
+                function str(v) { return String(v || '').toLowerCase(); }
+                function orgName(u) {
+                    var o = ORGANIZATIONS[u.organization];
+                    return o ? o.name : (u.organization || '');
+                }
+                function roleName(u) {
+                    var r = ROLES[u.role];
+                    return r ? r.name : (u.role || '');
+                }
+                function proj(u) {
+                    return (u.projectIds || []).join(',');
+                }
                 switch (sortBy) {
-                    case 'name-asc':  return a.name.localeCompare(b.name);
-            // Testing split for non-CMP seed users
-            var testProjectById = { '2':['DE/2024/06'], '3':['DE/2024/06'], '4':['DE/2025/07'], '10':['DE/2025/07'] };
-            self.users.forEach(function (u) {
-                var key = String(u.id);
-                if (testProjectById[key]) u.projectIds = testProjectById[key].slice();
-                if (u.role === 'admin') u.projectIds = [];
-            });
-
-                    case 'name-desc': return b.name.localeCompare(a.name);
-                    case 'date-asc':  return new Date(a.addedDate) - new Date(b.addedDate);
-                    case 'date-desc': return new Date(b.addedDate) - new Date(a.addedDate);
-                    case 'org-asc':
-                        var orgA = ORGANIZATIONS[a.organization] ? ORGANIZATIONS[a.organization].name : '';
-                        var orgB = ORGANIZATIONS[b.organization] ? ORGANIZATIONS[b.organization].name : '';
-                        return orgA.localeCompare(orgB);
-                    default: return 0;
+                    case 'name-asc':  return str(a.name).localeCompare(str(b.name));
+                    case 'name-desc': return str(b.name).localeCompare(str(a.name));
+                    case 'username-asc':  return str(a.username).localeCompare(str(b.username));
+                    case 'username-desc': return str(b.username).localeCompare(str(a.username));
+                    case 'email-asc':  return str(a.email).localeCompare(str(b.email));
+                    case 'email-desc': return str(b.email).localeCompare(str(a.email));
+                    case 'org-asc':  return str(orgName(a)).localeCompare(str(orgName(b)));
+                    case 'org-desc': return str(orgName(b)).localeCompare(str(orgName(a)));
+                    case 'role-asc':  return str(roleName(a)).localeCompare(str(roleName(b)));
+                    case 'role-desc': return str(roleName(b)).localeCompare(str(roleName(a)));
+                    case 'project-asc':  return str(proj(a)).localeCompare(str(proj(b)));
+                    case 'project-desc': return str(proj(b)).localeCompare(str(proj(a)));
+                    case 'date-asc':  return new Date(a.addedDate || 0) - new Date(b.addedDate || 0);
+                    case 'date-desc': return new Date(b.addedDate || 0) - new Date(a.addedDate || 0);
+                    default: return str(a.name).localeCompare(str(b.name));
                 }
             });
+        },
+
+        /** Toggle sort when clicking a column header */
+        toggleColumnSort: function (column) {
+            var cur = this.currentFilters.sort || 'name-asc';
+            var asc = column + '-asc';
+            var desc = column + '-desc';
+            if (cur === asc) this.currentFilters.sort = desc;
+            else this.currentFilters.sort = asc;
+            this.currentPage = 1;
+            this.updateSortHeaderUI();
+            this.renderUserTable();
+        },
+
+        updateSortHeaderUI: function () {
+            var cur = this.currentFilters.sort || 'name-asc';
+            document.querySelectorAll('#users-table thead th.sortable').forEach(function (th) {
+                th.classList.remove('sort-asc', 'sort-desc');
+                var col = th.getAttribute('data-sort');
+                if (!col) return;
+                if (cur === col + '-asc') th.classList.add('sort-asc');
+                else if (cur === col + '-desc') th.classList.add('sort-desc');
+            });
+        },
+
+        setupColumnSortHeaders: function () {
+            var self = this;
+            document.querySelectorAll('#users-table thead th.sortable').forEach(function (th) {
+                th.style.cursor = 'pointer';
+                th.addEventListener('click', function () {
+                    var col = th.getAttribute('data-sort');
+                    if (col) self.toggleColumnSort(col);
+                });
+            });
+            this.updateSortHeaderUI();
         },
 
         updatePaginationInfo: function (start, end, total) {
@@ -936,13 +1005,9 @@
 
             var addUserBtn = document.getElementById('add-user-btn');
             if (addUserBtn) {
-                var canCreate = window.DWSS_Permissions && window.DWSS_Permissions.canCreateUsers
-                    ? window.DWSS_Permissions.canCreateUsers()
-                    : (function () {
-                        var u = window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser
-                            ? window.DWSS_Permissions.getCurrentUser() : null;
-                        return !!(u && u.role === 'admin');
-                    })();
+                var cu = window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser
+                    ? window.DWSS_Permissions.getCurrentUser() : null;
+                var canCreate = !!(cu && (cu.role === 'admin' || cu.role === 'project_admin'));
                 if (!canCreate) {
                     addUserBtn.style.display = 'none';
                 } else {
@@ -982,13 +1047,10 @@
         // ============================================================
         openAddModal: function () {
             var currentUser = (window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser) ? window.DWSS_Permissions.getCurrentUser() : null;
-            // Only System Admin can create new user accounts
-            var allowed = currentUser && currentUser.role === 'admin';
-            if (!allowed && window.DWSS_Permissions && window.DWSS_Permissions.canCreateUsers) {
-                allowed = window.DWSS_Permissions.canCreateUsers();
-            }
+            // System Admin or Project Admin can create users
+            var allowed = currentUser && (currentUser.role === 'admin' || currentUser.role === 'project_admin');
             if (!allowed) {
-                alert('Only System Admin can add a new user.');
+                alert('Only System Admin or Project Admin can add a new user.');
                 return;
             }
 
@@ -1082,10 +1144,30 @@
             var modulePermissions = this.collectModulePermissions();
 
             var currentUser = (window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser) ? window.DWSS_Permissions.getCurrentUser() : null;
-            // Add and edit user accounts: System Admin only
-            if (!currentUser || currentUser.role !== 'admin') {
-                alert('❌ Only System Admin can add or edit users.');
+            var isAdmin = currentUser && currentUser.role === 'admin';
+            var isPM = currentUser && currentUser.role === 'project_admin';
+            if (!isAdmin && !isPM) {
+                alert('❌ Only System Admin or Project Admin can add or edit users.');
                 return;
+            }
+            // Project Admin: force users onto their own contract(s) only
+            if (isPM && !isAdmin) {
+                var myPids = currentUser.projectIds || [];
+                if (!myPids.length) {
+                    alert('❌ Project Admin has no assigned contract.');
+                    return;
+                }
+                if (!projectIds.length) projectIds = myPids.slice();
+                // Keep only overlapping projects
+                projectIds = projectIds.filter(function (pid) { return myPids.indexOf(pid) !== -1; });
+                if (!projectIds.length) projectIds = myPids.slice();
+                if (role === 'admin') {
+                    alert('❌ Project Admin cannot create System Administrator accounts.');
+                    return;
+                }
+            }
+            if (!username) {
+                username = email.split('@')[0];
             }
 
             if (editingUserId) {
@@ -1141,14 +1223,43 @@
             }
 
             this.saveToStorage();
-            var pwdToSet = password || (editingUserId ? null : 'Welcome@123');
-            if (pwdToSet) {
-                fetch('/api/users/set-password', {
+
+            // Persist to server so login works
+            var savedUser = null;
+            if (editingUserId) {
+                savedUser = this.users.find(function (u) { return String(u.id) === String(editingUserId); });
+            } else {
+                savedUser = this.users[this.users.length - 1];
+            }
+            if (savedUser) {
+                var payload = {
+                    id: savedUser.id,
+                    name: savedUser.name,
+                    email: savedUser.email,
+                    username: savedUser.username,
+                    password: savedUser.password,
+                    organization: savedUser.organization,
+                    companyName: savedUser.companyName,
+                    contractNo: savedUser.contractNo,
+                    role: savedUser.role,
+                    department: savedUser.department,
+                    status: savedUser.status || 'online',
+                    projectIds: savedUser.projectIds || [],
+                    modulePermissions: savedUser.modulePermissions || null,
+                    groupIds: savedUser.groupIds || []
+                };
+                fetch('/api/users/upsert', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: user.id, newPassword: pwdToSet })
-                }).catch(function (e) { console.warn('[UserMgmt] set-password failed', e); });
+                    body: JSON.stringify(payload)
+                }).then(function (res) {
+                    return res.json().then(function (d) {
+                        if (!res.ok) console.warn('[UserMgmt] upsert failed', d);
+                        else console.log('[UserMgmt] user upserted', d);
+                    });
+                }).catch(function (e) { console.warn('[UserMgmt] upsert network', e); });
             }
+
             this.renderUserTable();
             this.updateUserStats();
             this.closeModal();
@@ -1192,6 +1303,38 @@
                     }
                 });
             });
+
+            function setUserStatus(userId, status) {
+                var user = self.users.find(function (u) { return u.id === userId; });
+                if (!user) return;
+                user.status = status;
+                self.saveToStorage();
+                fetch('/api/users/upsert', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: user.id, username: user.username, name: user.name, email: user.email,
+                        role: user.role, status: status, projectIds: user.projectIds || [],
+                        organization: user.organization, companyName: user.companyName,
+                        contractNo: user.contractNo, department: user.department
+                    })
+                }).catch(function () {});
+                self.renderUserTable();
+                self.updateUserStats();
+                alert(status === 'online' ? '✅ Account enabled. User can log in.' : '✅ Account disabled. User cannot log in.');
+            }
+            document.querySelectorAll('.disable-user-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var id = parseInt(this.getAttribute('data-id'), 10);
+                    if (confirm('Disable this account? User will not be able to log in.')) setUserStatus(id, 'offline');
+                });
+            });
+            document.querySelectorAll('.enable-user-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var id = parseInt(this.getAttribute('data-id'), 10);
+                    setUserStatus(id, 'online');
+                });
+            });
         },
 
         // ============================================================
@@ -1199,8 +1342,8 @@
         // ============================================================
         openEditModal: function (userId) {
             var currentUser = (window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser) ? window.DWSS_Permissions.getCurrentUser() : null;
-            if (!currentUser || currentUser.role !== 'admin') {
-                alert('Only System Admin can edit users.');
+            if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'project_admin')) {
+                alert('Only System Admin or Project Admin can edit users.');
                 return;
             }
             var user = this.users.find(function (u) { return u.id === userId; });

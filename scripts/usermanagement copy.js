@@ -58,9 +58,10 @@
         'sa': { id: 'sa', name: 'Site Agent', shortName: 'SA', organization: 'CONTRACTOR', description: 'Submit and revise records', color: '#e74c3c' },
         'ssa': { id: 'ssa', name: 'Sub-Site Agent', shortName: 'SSA', organization: 'CONTRACTOR', description: 'Submit and revise records', color: '#c0392b' },
         'rso': { id: 'rso', name: 'Registered Safety Officer', shortName: 'RSO', organization: 'CONTRACTOR', description: 'Submit safety inspection records', color: '#d35400' },
+        'project_admin': { id: 'project_admin', name: 'Project Admin (Project Manager)', shortName: 'PM', organization: 'CONTRACTOR', description: 'Can add people to own contract team', color: '#8e44ad' },
         'subcontractor': { id: 'subcontractor', name: 'Subcontractor User', shortName: 'SUB', organization: 'SUBCONTRACTOR', description: 'Read-only access', color: '#f39c12' },
         'supplier': { id: 'supplier', name: 'Supplier User', shortName: 'SUP', organization: 'SUPPLIER', description: 'Read-only access', color: '#9b59b6' },
-        'admin': { id: 'admin', name: 'System Administrator', shortName: 'ADMIN', organization: 'SYSTEM_VENDOR', description: 'Full system administration', color: '#3498db' }
+        'admin': { id: 'admin', name: 'System Administrator', shortName: 'ADMIN', organization: 'SYSTEM_VENDOR', description: 'Can add new contracts and people (full system)', color: '#3498db' }
     };
 
     // ============================================================
@@ -92,14 +93,15 @@
     // 5. 角色預設模組權限
     // ============================================================
     var ROLE_TEMPLATES = {
-        'eg':   { modules: { dashboard:'view', sitediary:'view', safetyinspect:'view', sitelocations:'view', labourwage:'view', settings:'none', usermanagement:'none', ssss:'view' } },
-        'ig':   { modules: { dashboard:'view', sitediary:'approve', safetyinspect:'approve', sitelocations:'view', labourwage:'approve', settings:'none', usermanagement:'none', ssss:'view' } },
-        'wsg':  { modules: { dashboard:'view', sitediary:'approve', safetyinspect:'view', sitelocations:'view', labourwage:'view', settings:'none', usermanagement:'none', ssss:'view' } },
-        'sa':   { modules: { dashboard:'view', sitediary:'edit', safetyinspect:'edit', sitelocations:'edit', labourwage:'edit', settings:'none', usermanagement:'none', ssss:'view' } },
-        'ssa':  { modules: { dashboard:'view', sitediary:'edit', safetyinspect:'edit', sitelocations:'view', labourwage:'edit', settings:'none', usermanagement:'none', ssss:'view' } },
-        'rso':  { modules: { dashboard:'view', sitediary:'view', safetyinspect:'edit', sitelocations:'view', labourwage:'view', settings:'none', usermanagement:'none', ssss:'view' } },
-        'subcontractor': { modules: { dashboard:'view', sitediary:'view', safetyinspect:'view', sitelocations:'view', labourwage:'view', settings:'none', usermanagement:'none', ssss:'none' } },
-        'supplier':      { modules: { dashboard:'none', sitediary:'none', safetyinspect:'none', sitelocations:'view', labourwage:'view', settings:'none', usermanagement:'none', ssss:'none' } },
+        'eg':   { modules: { dashboard:'view', sitediary:'view', safetyinspect:'view', sitelocations:'view', labourwage:'view', settings:'view', usermanagement:'view', ssss:'view' } },
+        'ig':   { modules: { dashboard:'view', sitediary:'approve', safetyinspect:'approve', sitelocations:'view', labourwage:'approve', settings:'view', usermanagement:'view', ssss:'view' } },
+        'wsg':  { modules: { dashboard:'view', sitediary:'approve', safetyinspect:'view', sitelocations:'view', labourwage:'view', settings:'view', usermanagement:'view', ssss:'view' } },
+        'sa':   { modules: { dashboard:'view', sitediary:'edit', safetyinspect:'edit', sitelocations:'edit', labourwage:'edit', settings:'view', usermanagement:'view', ssss:'view' } },
+        'ssa':  { modules: { dashboard:'view', sitediary:'edit', safetyinspect:'edit', sitelocations:'view', labourwage:'edit', settings:'view', usermanagement:'view', ssss:'view' } },
+        'rso':  { modules: { dashboard:'view', sitediary:'view', safetyinspect:'edit', sitelocations:'view', labourwage:'view', settings:'view', usermanagement:'view', ssss:'view' } },
+        'project_admin': { modules: { dashboard:'edit', sitediary:'edit', safetyinspect:'edit', sitelocations:'edit', labourwage:'edit', settings:'edit', usermanagement:'edit', ssss:'edit' } },
+        'subcontractor': { modules: { dashboard:'view', sitediary:'view', safetyinspect:'view', sitelocations:'view', labourwage:'view', settings:'view', usermanagement:'view', ssss:'none' } },
+        'supplier':      { modules: { dashboard:'none', sitediary:'none', safetyinspect:'none', sitelocations:'view', labourwage:'view', settings:'view', usermanagement:'view', ssss:'none' } },
         'admin':         { modules: { dashboard:'admin', sitediary:'admin', safetyinspect:'admin', sitelocations:'admin', labourwage:'admin', settings:'admin', usermanagement:'admin', ssss:'admin' } }
     };
 
@@ -181,19 +183,32 @@
     var UserManagement = {
 
         users: [
-            { id: 1,  name:'Admin',              email:'admin@ael-dwss.com',      username:'admin',     password:'admin123',    organization:'SYSTEM_VENDOR',  companyName:'AEL - Associated Engineers Ltd.',    contractNo:'Contract No. DE/2024/12', role:'admin',         department:'System Administration',   status:'online',  addedDate:'2024-01-15', projectIds:[],                  groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
-            { id: 2,  name:'Kenneth Daluz',      email:'kenneth.daluz@dsd.gov.hk', username:'kenneth',  password:'officer123',  organization:'SERVICE_MANAGER', companyName:'Drainage Services Department (DSD)', contractNo:'Contract No. DE/2024/12', role:'eg',            department:'Engineer Grade',         status:'online',  addedDate:'2024-02-10', projectIds:['PROJ-A','PROJ-B'], groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
-            { id: 3,  name:'TANG Chi Long, Gary', email:'gcifang@dsd.gov.hk',       username:'garytang',  password:'aei123',      organization:'SERVICE_MANAGER', companyName:'Drainage Services Department (DSD)', contractNo:'Contract No. DE/2024/12', role:'ig',            department:'Inspector Grade',        status:'online',  addedDate:'2024-02-15', projectIds:['PROJ-A'],          groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
-            { id: 4,  name:'FUNG Wai Ching',     email:'wcfung04@dsd.gov.hk',      username:'wcfung',   password:'wsg123',      organization:'SERVICE_MANAGER', companyName:'Drainage Services Department (DSD)', contractNo:'Contract No. DE/2024/12', role:'wsg',           department:'Works Supervisor Grade', status:'online',  addedDate:'2024-03-01', projectIds:['PROJ-A'],          groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
-            { id: 5,  name:'John Smith',         email:'john.smith@rec-ael.com',   username:'john',     password:'inspector123',organization:'CONTRACTOR',      companyName:'REC - AEL Joint Venture',            contractNo:'Contract No. DE/2024/12', role:'sa',            department:'Site Agent',             status:'online',  addedDate:'2024-03-15', projectIds:['PROJ-B'],          groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
-            { id: 6,  name:'Sarah Johnson',      email:'sarah.j@rec-ael.com',      username:'sarah',    password:'contractor123',organization:'CONTRACTOR',     companyName:'REC - AEL Joint Venture',            contractNo:'Contract No. DE/2024/12', role:'ssa',           department:'Sub-Site Agent',         status:'offline', addedDate:'2024-04-01', projectIds:['PROJ-C'],          groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
-            { id: 7,  name:'Robert Chen',        email:'robert.chen@rec-ael.com',  username:'robert',   password:'rso123',      organization:'CONTRACTOR',      companyName:'REC - AEL Joint Venture',            contractNo:'Contract No. DE/2024/12', role:'rso',           department:'Registered Safety Officer', status:'online', addedDate:'2024-04-05', projectIds:['PROJ-A','PROJ-B'], groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
-            { id: 8,  name:'WONG Lap Pan',       email:'lpwong@abc-eng.com',       username:'lpwong',   password:'sub123',      organization:'SUBCONTRACTOR',   companyName:'ABC Engineering Ltd.',               contractNo:'Contract No. DE/2024/12', role:'subcontractor', department:'Subcontractor Team A',   status:'online',  addedDate:'2024-04-10', projectIds:['PROJ-A'],          groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
-            { id: 9,  name:'Emma Wilson',        email:'emma.w@xyz-supply.com',    username:'emma',     password:'supplier123', organization:'SUPPLIER',        companyName:'XYZ Materials Supply Co.',           contractNo:'Contract No. DE/2024/12', role:'supplier',      department:'Material Supplier',      status:'offline', addedDate:'2024-04-15', projectIds:['PROJ-A'],          groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
-            { id: 10, name:'CHA Chi Ming',       email:'cmcha02@dsd.gov.hk',       username:'cmcha',    password:'ig123',       organization:'SERVICE_MANAGER', companyName:'Drainage Services Department (DSD)', contractNo:'Contract No. DE/2024/12', role:'ig',            department:'Inspector Grade',        status:'online',  addedDate:'2024-04-20', projectIds:['PROJ-A','PROJ-B'], groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null }
+            // System Admin — can add new contracts and people
+            { id: 1,  name:'Admin',              email:'admin@ael-dwss.com',      username:'admin',     password:'admin123',    organization:'SYSTEM_VENDOR',  companyName:'AEL - Associated Engineers Ltd.',    contractNo:'Contract No. DE/2026/05', role:'admin',         department:'System Administration',   status:'online',  addedDate:'2024-01-15', projectIds:[], groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            // DSD (existing)
+            { id: 2,  name:'Kenneth Daluz',      email:'kenneth.daluz@dsd.gov.hk', username:'kenneth',  password:'officer123',  organization:'SERVICE_MANAGER', companyName:'Drainage Services Department (DSD)', contractNo:'Contract No. DE/2024/06', role:'eg',            department:'Engineer Grade',         status:'online',  addedDate:'2024-02-10', projectIds:['DE/2024/06'], groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            { id: 3,  name:'TANG Chi Long, Gary', email:'gcifang@dsd.gov.hk',       username:'garytang',  password:'aei123',      organization:'SERVICE_MANAGER', companyName:'Drainage Services Department (DSD)', contractNo:'Contract No. DE/2024/06', role:'ig',            department:'Inspector Grade',        status:'online',  addedDate:'2024-02-15', projectIds:['DE/2024/06'], groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            { id: 4,  name:'FUNG Wai Ching',     email:'wcfung04@dsd.gov.hk',      username:'wcfung',   password:'wsg123',      organization:'SERVICE_MANAGER', companyName:'Drainage Services Department (DSD)', contractNo:'Contract No. DE/2025/07', role:'wsg',           department:'Works Supervisor Grade', status:'online',  addedDate:'2024-03-01', projectIds:['DE/2025/07'], groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            { id: 10, name:'CHA Chi Ming',       email:'cmcha02@dsd.gov.hk',       username:'cmcha',    password:'ig123',       organization:'SERVICE_MANAGER', companyName:'Drainage Services Department (DSD)', contractNo:'Contract No. DE/2025/07', role:'ig',            department:'Inspector Grade',        status:'online',  addedDate:'2024-04-20', projectIds:['DE/2025/07'], groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            // ---- CMP User List (DE202605) — Contract No. DE/2026/05 ----
+            // Project Admin (Project Manager): can add people to own contract team
+            { id: 11, name:'Eddie Chan',         email:'eddiechan@de202605jv.com', username:'eddiechan', password:'Welcome@123', organization:'CONTRACTOR', companyName:'REC - AEL JV', contractNo:'Contract No. DE/2026/05', role:'project_admin', department:'JV Representative (REC)', status:'online', addedDate:'2026-10-26', projectIds:['DE/2026/05'], groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            { id: 12, name:'Nelson Ng',          email:'nelsonng@de202605jv.com',  username:'nelsonng',  password:'Welcome@123', organization:'CONTRACTOR', companyName:'REC - AEL JV', contractNo:'Contract No. DE/2026/05', role:'project_admin', department:'JV Representative (AEL)', status:'online', addedDate:'2026-10-26', projectIds:['DE/2026/05'], groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            { id: 13, name:'Jeff Wong',          email:'jeffwong@de202605jv.com',  username:'jeffwong',  password:'Welcome@123', organization:'CONTRACTOR', companyName:'REC - AEL JV', contractNo:'Contract No. DE/2026/05', role:'project_admin', department:'Contract Manager, DE/2026/05', status:'online', addedDate:'2026-10-26', projectIds:['DE/2026/05'], groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            // Site Agent (Contract Admin)
+            { id: 14, name:'Kan Cheung',         email:'kancheung@de202605jv.com', username:'kancheung', password:'Welcome@123', organization:'CONTRACTOR', companyName:'REC - AEL JV', contractNo:'Contract No. DE/2026/05', role:'sa', department:'Site Agent', status:'online', addedDate:'2026-10-26', projectIds:['DE/2026/05'], groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            // Sub-Site Agents
+            { id: 15, name:'Alan Wong',          email:'alanwong@de202605jv.com',  username:'alanwong',  password:'Welcome@123', organization:'CONTRACTOR', companyName:'REC - AEL JV', contractNo:'Contract No. DE/2026/05', role:'ssa', department:'Sub-site Agent', status:'online', addedDate:'2026-10-26', projectIds:['DE/2026/05'], groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            { id: 16, name:'Marco Kong',         email:'marcokong@de202605jv.com', username:'marcokong', password:'Welcome@123', organization:'CONTRACTOR', companyName:'REC - AEL JV', contractNo:'Contract No. DE/2026/05', role:'ssa', department:'Sub-site Agent', status:'online', addedDate:'2026-10-26', projectIds:['DE/2026/05'], groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            { id: 17, name:'Wong Chi Keung',     email:'keungwong@de202605jv.com', username:'keungwong', password:'Welcome@123', organization:'CONTRACTOR', companyName:'REC - AEL JV', contractNo:'Contract No. DE/2026/05', role:'ssa', department:'Sub-site Agent', status:'online', addedDate:'2026-10-26', projectIds:['DE/2026/05'], groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            { id: 18, name:'Ivan Lee',           email:'ivanlee@de202605jv.com',   username:'ivanlee',   password:'Welcome@123', organization:'CONTRACTOR', companyName:'REC - AEL JV', contractNo:'Contract No. DE/2026/05', role:'ssa', department:'Sub-site Agent', status:'online', addedDate:'2026-10-26', projectIds:['DE/2026/05'], groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            // Safety Officer
+            { id: 19, name:'Manklin Ho',         email:'manklinho@de202605jv.com', username:'manklinho', password:'Welcome@123', organization:'CONTRACTOR', companyName:'REC - AEL JV', contractNo:'Contract No. DE/2026/05', role:'rso', department:'Safety Officer', status:'online', addedDate:'2026-10-26', projectIds:['DE/2026/05'], groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null },
+            // Contract Supporting Engineer
+            { id: 20, name:'James Chan',         email:'jameschan@de202605jv.com', username:'jameschan', password:'Welcome@123', organization:'CONTRACTOR', companyName:'REC - AEL JV', contractNo:'Contract No. DE/2026/05', role:'ssa', department:'Contract Supporting Engineer', status:'online', addedDate:'2026-10-26', projectIds:['DE/2026/05'], groupIds:[], passwordChanged:false, passwordChangedAt:null, passwordExpiresAt:null }
         ],
 
-        currentFilters: { organization: 'all', role: 'all', status: 'all', sort: 'name-asc' },
+        currentFilters: { organization: 'all', role: 'all', status: 'all', project: 'current', sort: 'name-asc' },
 
         onlineKeys: {},
         isUserOnline: function (user) {
@@ -228,7 +243,7 @@
         init: function () {
             this.loadFromStorage();
             var self = this;
-            this.loadOnlineStatus().then(function () {
+            this.loadFromServer().then(function () {
                 self.renderUserTable();
                 self.updateUserStats();
             });
@@ -245,15 +260,79 @@
         },
 
         loadFromStorage: function () {
+            // Seed list embedded in this.users is the source of truth for new accounts.
+            var seedUsers = (this.users || []).slice();
+            var byId = {};
+            var byName = {};
+            seedUsers.forEach(function (u) {
+                byId[String(u.id)] = u;
+                if (u.username) byName[String(u.username).toLowerCase()] = u;
+            });
             try {
                 var stored = localStorage.getItem(USERS_KEY);
                 if (stored) {
                     var parsed = JSON.parse(stored);
                     if (Array.isArray(parsed) && parsed.length > 0) {
-                        this.users = parsed;
+                        parsed.forEach(function (u) {
+                            if (!u) return;
+                            var key = String(u.id);
+                            var nameKey = u.username ? String(u.username).toLowerCase() : '';
+                            var seedHit = byId[key] || (nameKey && byName[nameKey]);
+                            if (seedHit) {
+                                // Union projectIds so testing assignments on other contracts are kept
+                                var target = byId[key] || byName[nameKey];
+                                var seedPids = target.projectIds || [];
+                                var storedPids = u.projectIds || [];
+                                var seen = {};
+                                var merged = [];
+                                seedPids.concat(storedPids).forEach(function (pid) {
+                                    if (!pid || seen[pid]) return;
+                                    seen[pid] = true;
+                                    merged.push(pid);
+                                });
+                                target.projectIds = merged;
+                                if (u.contractNo && !target.contractNo) target.contractNo = u.contractNo;
+                                return;
+                            }
+                            byId[key] = u;
+                        });
                     }
                 }
             } catch (e) { console.warn('[UserManagement] Failed to load:', e); }
+            this.users = Object.keys(byId).map(function (k) { return byId[k]; }).sort(function (a, b) {
+                return (a.id || 0) - (b.id || 0);
+            });
+            // Persist merged list so refresh keeps everyone
+            this.saveToStorage();
+        },
+
+        loadFromServer: function () {
+            var self = this;
+            return fetch('/api/records/usersDb', { cache: 'no-store' })
+                .then(function (res) { return res.ok ? res.json() : null; })
+                .then(function (body) {
+                    var rows = (body && (body.records || body.data || body)) || [];
+                    if (!Array.isArray(rows) || !rows.length) return;
+                    var byId = {};
+                    self.users.forEach(function (u) { byId[String(u.id)] = u; });
+                    rows.forEach(function (row) {
+                        var u = row.data || row;
+                        if (typeof u === 'string') {
+                            try { u = JSON.parse(u); } catch (e) { return; }
+                        }
+                        if (!u || (!u.id && !u.username)) return;
+                        var id = String(u.id != null ? u.id : u.username);
+                        // Prefer server record if present; fill missing seed users stay
+                        if (!byId[id]) byId[id] = u;
+                        else {
+                            // merge username if missing on stored
+                            if (!byId[id].username && u.username) byId[id].username = u.username;
+                        }
+                    });
+                    self.users = Object.keys(byId).map(function (k) { return byId[k]; });
+                    self.saveToStorage();
+                })
+                .catch(function () { /* local mode */ });
         },
 
         saveToStorage: function () {
@@ -278,10 +357,36 @@
             tbody.innerHTML = '';
             var self = this;
 
+            var currentPid = null;
+            try {
+                if (window.DWSS_Permissions && typeof window.DWSS_Permissions.getCurrentProject === 'function') {
+                    currentPid = window.DWSS_Permissions.getCurrentProject();
+                } else {
+                    currentPid = sessionStorage.getItem('currentProjectId');
+                }
+            } catch (e) { currentPid = sessionStorage.getItem('currentProjectId'); }
+            if (currentPid === 'ALL') currentPid = null;
+
+            var projectLabel = document.getElementById('current-project-label');
+            if (projectLabel) projectLabel.textContent = currentPid || 'All';
+
             var filteredUsers = this.users.filter(function (user) {
                 if (self.currentFilters.organization !== 'all' && user.organization !== self.currentFilters.organization) return false;
                 if (self.currentFilters.role !== 'all' && user.role !== self.currentFilters.role) return false;
-                if (self.currentFilters.status !== 'all' && user.status !== self.currentFilters.status) return false;
+                // Project filter: current | all | specific project id
+                var pf = self.currentFilters.project || 'current';
+                if (pf !== 'all') {
+                    var targetPid = (pf === 'current') ? currentPid : pf;
+                    if (targetPid) {
+                        var pids = user.projectIds || [];
+                        // Admin with empty projectIds = all projects
+                        if (user.role === 'admin' && (!pids || !pids.length)) {
+                            // keep admin visible
+                        } else if (pids.indexOf(targetPid) === -1) {
+                            return false;
+                        }
+                    }
+                }
                 return true;
             });
 
@@ -307,10 +412,6 @@
                 var orgFullName = org ? org.fullName : '—';
                 var orgColor = org ? org.color : '#94a3b8';
 
-                var isOnline = self.isUserOnline(user);
-                var statusText = isOnline ? 'Online' : 'Offline';
-                var statusClass = isOnline ? 'status-online' : 'status-offline';
-
                 var projectsHtml = '';
                 if (user.projectIds && user.projectIds.length > 0) {
                     projectsHtml = user.projectIds.map(function (pid) {
@@ -320,6 +421,8 @@
                     projectsHtml = '<span style="color:#999;font-size:0.75rem;">—</span>';
                 }
 
+                var loginName = user.username || (user.email ? String(user.email).split('@')[0] : '—');
+
                 row.innerHTML =
                     '<td>' +
                         '<div class="user-info">' +
@@ -328,6 +431,7 @@
                             (user.companyName ? '<div class="user-company"><i class="fas fa-building"></i> ' + self.escapeHtml(user.companyName) + '</div>' : '') +
                         '</div>' +
                     '</td>' +
+                    '<td><code style="font-size:0.85rem;background:#f1f5f9;padding:2px 6px;border-radius:4px;">' + self.escapeHtml(loginName) + '</code></td>' +
                     '<td>' + self.escapeHtml(user.email) + '</td>' +
                     '<td>' +
                         '<span class="org-badge" style="background:' + orgColor + '15;color:' + orgColor + ';border:1px solid ' + orgColor + '40;">' +
@@ -337,11 +441,13 @@
                     '</td>' +
                     '<td><span class="role-badge ' + roleClass + '">' + roleText + '</span></td>' +
                     '<td>' + projectsHtml + '</td>' +
-                    '<td><span class="status-badge ' + statusClass + '">' + statusText + '</span></td>' +
-                    '<td>' +
-                        '<button class="action-btn edit-user-btn" data-id="' + user.id + '" title="Edit"><i class="fas fa-edit"></i></button>' +
-                        '<button class="action-btn delete-user-btn" data-id="' + user.id + '" title="Delete" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;"><i class="fas fa-trash"></i></button>' +
-                    '</td>';
+                    '<td>' + (function () {
+                        var cu = (window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser) ? window.DWSS_Permissions.getCurrentUser() : null;
+                        var isSysAdmin = cu && cu.role === 'admin';
+                        if (!isSysAdmin) return '<span style="color:#94a3b8;font-size:0.75rem;">—</span>';
+                        return '<button class="action-btn edit-user-btn" data-id="' + user.id + '" title="Edit"><i class="fas fa-edit"></i></button>' +
+                            '<button class="action-btn delete-user-btn" data-id="' + user.id + '" title="Delete" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;"><i class="fas fa-trash"></i></button>';
+                    })() + '</td>';
 
                 tbody.appendChild(row);
             });
@@ -353,6 +459,14 @@
             return users.slice().sort(function (a, b) {
                 switch (sortBy) {
                     case 'name-asc':  return a.name.localeCompare(b.name);
+            // Testing split for non-CMP seed users
+            var testProjectById = { '2':['DE/2024/06'], '3':['DE/2024/06'], '4':['DE/2025/07'], '10':['DE/2025/07'] };
+            self.users.forEach(function (u) {
+                var key = String(u.id);
+                if (testProjectById[key]) u.projectIds = testProjectById[key].slice();
+                if (u.role === 'admin') u.projectIds = [];
+            });
+
                     case 'name-desc': return b.name.localeCompare(a.name);
                     case 'date-asc':  return new Date(a.addedDate) - new Date(b.addedDate);
                     case 'date-desc': return new Date(b.addedDate) - new Date(a.addedDate);
@@ -380,19 +494,40 @@
         },
 
         updateUserStats: function () {
-            var total = this.users.length;
-            var online = this.users.filter(function (u) { return this.isUserOnline(u); }.bind(this)).length;
-            var fullAccess = this.users.filter(function (u) {
-                return u.role === 'admin' || u.role === 'ig' || u.role === 'wsg';
+            // Count users visible under current project filter (same rules as table)
+            var self = this;
+            var currentPid = null;
+            try {
+                if (window.DWSS_Permissions && typeof window.DWSS_Permissions.getCurrentProject === 'function') {
+                    currentPid = window.DWSS_Permissions.getCurrentProject();
+                } else {
+                    currentPid = sessionStorage.getItem('currentProjectId');
+                }
+            } catch (e) { currentPid = sessionStorage.getItem('currentProjectId'); }
+            if (currentPid === 'ALL') currentPid = null;
+
+            var visible = this.users.filter(function (user) {
+                var pf = self.currentFilters.project || 'current';
+                if (pf === 'all') return true;
+                var targetPid = (pf === 'current') ? currentPid : pf;
+                if (!targetPid) return true;
+                var pids = user.projectIds || [];
+                if (user.role === 'admin' && (!pids || !pids.length)) return true;
+                return pids.indexOf(targetPid) !== -1;
+            });
+
+            var total = visible.length;
+            var fullAccess = visible.filter(function (u) {
+                return u.role === 'admin' || u.role === 'project_admin' || u.role === 'ig' || u.role === 'wsg';
             }).length;
 
             var totalEl = document.getElementById('total-users-count');
-            var onlineEl = document.getElementById('online-users-count');
             var fullAccessEl = document.getElementById('admin-users-count');
+            var projectLabel = document.getElementById('current-project-label');
 
             if (totalEl) totalEl.textContent = total;
-            if (onlineEl) onlineEl.textContent = online;
             if (fullAccessEl) fullAccessEl.textContent = fullAccess;
+            if (projectLabel) projectLabel.textContent = currentPid || 'All';
         },
 
         initModalOptions: function () {
@@ -422,6 +557,7 @@
         },
 
         updateRoleOptions: function (orgId) {
+            var self = this;
             var roleSelect = document.getElementById('input-user-role');
             if (!roleSelect) return;
 
@@ -429,6 +565,7 @@
 
             if (!orgId) {
                 roleSelect.disabled = true;
+                this.renderModulePermissions(null);
                 return;
             }
             roleSelect.disabled = false;
@@ -442,6 +579,29 @@
                     roleSelect.appendChild(opt);
                 }
             });
+
+            // When role changes, apply that role's default module permissions
+            roleSelect.onchange = function () {
+                self.applyRoleModulePermissions(roleSelect.value);
+            };
+            // Org just changed → no role selected yet → clear modules until role is chosen
+            if (!roleSelect.value) {
+                self.renderModulePermissions(null);
+            }
+        },
+
+        /** Fill Module Permissions grid from ROLE_TEMPLATES for the selected role */
+        applyRoleModulePermissions: function (roleId) {
+            var template = roleId && ROLE_TEMPLATES[roleId] ? ROLE_TEMPLATES[roleId].modules : null;
+            this.renderModulePermissions(template);
+            var hint = document.getElementById('module-permissions-hint');
+            if (hint) {
+                if (roleId && ROLES[roleId]) {
+                    hint.textContent = 'Defaults for role: ' + ROLES[roleId].name + ' (you can still adjust)';
+                } else {
+                    hint.textContent = 'Select a role to load default module permissions';
+                }
+            }
         },
 
         renderModulePermissions: function (selectedPermissions) {
@@ -449,6 +609,18 @@
             if (!grid) return;
 
             grid.innerHTML = '';
+
+            // Hint line
+            var existingHint = document.getElementById('module-permissions-hint');
+            if (!existingHint) {
+                var hintEl = document.createElement('p');
+                hintEl.id = 'module-permissions-hint';
+                hintEl.style.cssText = 'font-size:0.8rem;color:#64748b;margin:0 0 8px 0;';
+                hintEl.textContent = selectedPermissions
+                    ? 'Module access based on selected role (adjustable)'
+                    : 'Select a role to load default module permissions';
+                grid.parentNode.insertBefore(hintEl, grid);
+            }
 
             Object.keys(MODULES).forEach(function (moduleId) {
                 var mod = MODULES[moduleId];
@@ -489,23 +661,46 @@
         // PROJECTS (from storage with fallback)
         // ============================================================
         getProjectsFromStorage: function () {
-            var keys = ['projects', 'dwss_projects', 'projectList', 'allProjects', 'ael_dwss_projects'];
-            for (var i = 0; i < keys.length; i++) {
-                try {
-                    var raw = localStorage.getItem(keys[i]);
-                    if (!raw) continue;
-                    var arr = JSON.parse(raw);
-                    if (Array.isArray(arr) && arr.length > 0) {
-                        return arr.map(function (p) {
-                            return {
-                                id: p.id || p.code || p.name,
-                                name: p.name || p.id || p.code
-                            };
-                        });
-                    }
-                } catch (e) { /* try next */ }
+            // Merge ALL known contracts/projects so Add User can assign any contract
+            var byId = {};
+            function add(id, name) {
+                if (!id) return;
+                id = String(id);
+                if (!byId[id]) byId[id] = { id: id, name: name || id };
+                else if (name && name !== id) byId[id].name = name;
             }
-            return [];
+
+            // 1) Dedicated contract/project stores
+            var keys = ['dwss_contracts', 'projects', 'dwss_projects', 'projectList', 'allProjects', 'ael_dwss_projects'];
+            keys.forEach(function (key) {
+                try {
+                    var raw = localStorage.getItem(key);
+                    if (!raw) return;
+                    var arr = JSON.parse(raw);
+                    if (!Array.isArray(arr)) return;
+                    arr.forEach(function (p) {
+                        var id = p.contractNo || p.id || p.code || p.name;
+                        var name = p.name || p.contractNo || p.id || p.code;
+                        add(id, name);
+                    });
+                } catch (e) {}
+            });
+
+            // 2) Any projectIds already assigned to users (recovers testing data on other contracts)
+            try {
+                (this.users || []).forEach(function (u) {
+                    (u.projectIds || []).forEach(function (pid) { add(pid, pid); });
+                });
+            } catch (e) {}
+
+            // 3) Safe defaults if still empty
+            if (!Object.keys(byId).length) {
+                add('DE/2026/05', 'DE202605 Main Works');
+                add('DE/2024/06', 'DE/2024/06');
+                add('DE/2025/07', 'DE/2025/07');
+            }
+
+            return Object.keys(byId).sort().map(function (k) { return byId[k]; });
         },
 
         renderProjectCheckboxes: function (checkedProjectIds) {
@@ -518,17 +713,13 @@
             var projects = this.getProjectsFromStorage();
 
             if (!projects.length) {
-                projects = [
-                    { id: 'PROJ-A', name: 'Treatment Plant Upgrade' },
-                    { id: 'PROJ-B', name: 'Pipeline Replacement' },
-                    { id: 'PROJ-C', name: 'Reservoir Maintenance' },
-                    { id: 'PROJ-D', name: 'Distribution Network' },
-                    { id: 'PROJ-E', name: 'Pump Station Upgrade' }
-                ];
+                container.innerHTML = '<p style="color:#64748b;font-size:0.85rem;">No contracts yet. System Admin can add contracts under Contracts &amp; Teams.</p>';
+                return;
             }
 
             projects.forEach(function (p) {
                 var label = document.createElement('label');
+                label.style.cssText = 'display:block;margin:4px 0;';
                 var cb = document.createElement('input');
                 cb.type = 'checkbox';
                 cb.className = 'project-checkbox';
@@ -536,7 +727,7 @@
                 cb.checked = checkedProjectIds.indexOf(String(p.id)) !== -1;
 
                 label.appendChild(cb);
-                label.appendChild(document.createTextNode(' ' + p.name));
+                label.appendChild(document.createTextNode(' ' + (p.name === p.id ? p.id : (p.id + ' — ' + p.name))));
                 container.appendChild(label);
             });
         },
@@ -697,9 +888,10 @@
                         var filterValue = option.dataset.value;
 
                         UserManagement.currentFilters[filterType] = filterValue;
-                        if (filterType === 'sort') UserManagement.currentPage = 1;
+                        UserManagement.currentPage = 1;
 
                         UserManagement.renderUserTable();
+                        UserManagement.updateUserStats();
                         options.classList.remove('open', 'show');
                     });
                 });
@@ -744,7 +936,18 @@
 
             var addUserBtn = document.getElementById('add-user-btn');
             if (addUserBtn) {
-                addUserBtn.addEventListener('click', function () { self.openAddModal(); });
+                var canCreate = window.DWSS_Permissions && window.DWSS_Permissions.canCreateUsers
+                    ? window.DWSS_Permissions.canCreateUsers()
+                    : (function () {
+                        var u = window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser
+                            ? window.DWSS_Permissions.getCurrentUser() : null;
+                        return !!(u && u.role === 'admin');
+                    })();
+                if (!canCreate) {
+                    addUserBtn.style.display = 'none';
+                } else {
+                    addUserBtn.addEventListener('click', function () { self.openAddModal(); });
+                }
             }
 
             var cancelBtn = document.getElementById('cancel-add-user');
@@ -755,10 +958,13 @@
             var refreshBtn = document.querySelector('.refresh-btn');
             if (refreshBtn) {
                 refreshBtn.addEventListener('click', function () {
-                    self.loadOnlineStatus().then(function () {
+                    self.loadFromStorage();
+                    self.loadFromServer().then(function () {
                         self.renderUserTable();
                         self.updateUserStats();
                     });
+                    self.renderUserTable();
+                    self.updateUserStats();
                 });
             }
 
@@ -775,6 +981,17 @@
         // MODAL
         // ============================================================
         openAddModal: function () {
+            var currentUser = (window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser) ? window.DWSS_Permissions.getCurrentUser() : null;
+            // Only System Admin can create new user accounts
+            var allowed = currentUser && currentUser.role === 'admin';
+            if (!allowed && window.DWSS_Permissions && window.DWSS_Permissions.canCreateUsers) {
+                allowed = window.DWSS_Permissions.canCreateUsers();
+            }
+            if (!allowed) {
+                alert('Only System Admin can add a new user.');
+                return;
+            }
+
             var modalTitle = document.querySelector('#add-user-modal h3 span');
             var submitBtn = document.querySelector('#add-user-form button[type="submit"]');
 
@@ -791,9 +1008,17 @@
             this.renderModulePermissions(null);
 
             var companyInput = document.getElementById('input-user-company');
-            if (companyInput) companyInput.value = '';
+            if (companyInput) companyInput.value = (currentUser && currentUser.companyName) ? currentUser.companyName : '';
             var contractInput = document.getElementById('input-user-contract');
-            if (contractInput) contractInput.value = 'Contract No. DE/2024/12';
+            var defaultContract = (currentUser && currentUser.contractNo) ? currentUser.contractNo : 'Contract No. DE/2026/05';
+            if (contractInput) {
+                contractInput.value = defaultContract;
+                if (currentUser && currentUser.role === 'project_admin') {
+                    contractInput.readOnly = true;
+                } else {
+                    contractInput.readOnly = false;
+                }
+            }
 
             // ★ Reset pickers
             this.renderProjectCheckboxes([]);
@@ -855,6 +1080,13 @@
             var groupIds = this.getSelectedGroups();
 
             var modulePermissions = this.collectModulePermissions();
+
+            var currentUser = (window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser) ? window.DWSS_Permissions.getCurrentUser() : null;
+            // Add and edit user accounts: System Admin only
+            if (!currentUser || currentUser.role !== 'admin') {
+                alert('❌ Only System Admin can add or edit users.');
+                return;
+            }
 
             if (editingUserId) {
                 var userId = parseInt(editingUserId, 10);
@@ -941,6 +1173,12 @@
                 var newBtn = btn.cloneNode(true);
                 btn.parentNode.replaceChild(newBtn, btn);
                 newBtn.addEventListener('click', function () {
+                    var currentUser = (window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser) ? window.DWSS_Permissions.getCurrentUser() : null;
+                    if (!currentUser || currentUser.role !== 'admin') {
+                        alert('Only System Admin can delete users.');
+                        return;
+                    }
+
                     var userId = parseInt(this.getAttribute('data-id'), 10);
                     var user = self.users.find(function (u) { return u.id === userId; });
                     if (!user) return;
@@ -960,6 +1198,11 @@
         // EDIT MODAL
         // ============================================================
         openEditModal: function (userId) {
+            var currentUser = (window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser) ? window.DWSS_Permissions.getCurrentUser() : null;
+            if (!currentUser || currentUser.role !== 'admin') {
+                alert('Only System Admin can edit users.');
+                return;
+            }
             var user = this.users.find(function (u) { return u.id === userId; });
             if (!user) return;
 
@@ -994,7 +1237,7 @@
             if (searchEl) searchEl.value = '';
 
             // Module permissions
-            this.renderModulePermissions(user.modulePermissions);
+            this.renderModulePermissions(user.modulePermissions || (ROLE_TEMPLATES[user.role] && ROLE_TEMPLATES[user.role].modules) || null);
 
             var modalTitle = document.querySelector('#add-user-modal h3 span');
             var submitBtn = document.querySelector('#add-user-form button[type="submit"]');

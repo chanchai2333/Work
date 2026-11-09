@@ -87,18 +87,23 @@ async function seedDefaultUsers() {
     ['usersDb']
   );
   const defaults = [
-    { id: 1, name: 'Admin', email: 'admin@ael-dwss.com', username: 'admin', password: 'admin123', organization: 'SYSTEM_VENDOR', companyName: 'AEL - Associated Engineers Ltd.', role: 'admin', department: 'System Administration', projectIds: ['DE/2026/05', 'DE/2025/02', 'DE/2025/09'], permissions: { level: 5, canChangeStatus: true, canManageUsers: true, name: 'Administrator' } },
-    { id: 2, name: 'Kenneth Daluz', email: 'kenneth.daluz@dsd.gov.hk', username: 'kenneth', password: 'officer123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'eg', department: 'Engineer Grade', projectIds: ['DE/2026/05', 'DE/2025/02'], permissions: { level: 4, canChangeStatus: false, canManageUsers: false, name: 'Engineer Grade' } },
-    { id: 3, name: 'TANG Chi Long, Gary', email: 'gcifang@dsd.gov.hk', username: 'garytang', password: 'aei123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'ig', department: 'Inspector Grade', projectIds: ['DE/2026/05'], permissions: { level: 3, canChangeStatus: true, canManageUsers: false, name: 'Inspector Grade' } },
-    { id: 4, name: 'FUNG Wai Ching', email: 'wcfung04@dsd.gov.hk', username: 'wcfung', password: 'wsg123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'wsg', department: 'Works Supervisor Grade', projectIds: ['DE/2026/05'], permissions: { level: 3, canChangeStatus: true, canManageUsers: false, name: 'Works Supervisor Grade' } },
-    { id: 10, name: 'CHA Chi Ming', email: 'cmcha02@dsd.gov.hk', username: 'cmcha', password: 'ig123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'ig', department: 'Inspector Grade', projectIds: ['DE/2025/02', 'DE/2025/09'], permissions: { level: 3, canChangeStatus: true, canManageUsers: false, name: 'Inspector Grade' } },
-    { id: 5, name: 'John Smith', email: 'john.smith@rec-ael.com', username: 'john', password: 'inspector123', organization: 'CONTRACTOR', companyName: 'REC - AEL Joint Venture', role: 'sa', department: 'Site Agent', projectIds: ['DE/2025/02'], permissions: { level: 2, canChangeStatus: false, canManageUsers: false, name: 'Site Agent' } },
-    { id: 6, name: 'Sarah Johnson', email: 'sarah.j@rec-ael.com', username: 'sarah', password: 'contractor123', organization: 'CONTRACTOR', companyName: 'REC - AEL Joint Venture', role: 'ssa', department: 'Sub-Site Agent', projectIds: ['DE/2025/09'], permissions: { level: 2, canChangeStatus: false, canManageUsers: false, name: 'Sub-Site Agent' } },
-    { id: 7, name: 'Robert Chen', email: 'robert.chen@rec-ael.com', username: 'robert', password: 'rso123', organization: 'CONTRACTOR', companyName: 'REC - AEL Joint Venture', role: 'rso', department: 'Registered Safety Officer', projectIds: ['DE/2026/05', 'DE/2025/02'], permissions: { level: 2, canChangeStatus: false, canManageUsers: false, name: 'Registered Safety Officer' } },
-    { id: 8, name: 'WONG Lap Pan', email: 'lpwong@abc-eng.com', username: 'lpwong', password: 'sub123', organization: 'SUBCONTRACTOR', companyName: 'ABC Engineering Ltd.', role: 'subcontractor', department: 'Subcontractor Team A', projectIds: ['DE/2026/05'], permissions: { level: 1, canChangeStatus: false, canManageUsers: false, name: 'Subcontractor' } },
-    { id: 9, name: 'Emma Wilson', email: 'emma.w@xyz-supply.com', username: 'emma', password: 'supplier123', organization: 'SUPPLIER', companyName: 'XYZ Materials Supply Co.', role: 'supplier', department: 'Material Supplier', projectIds: ['DE/2026/05'], permissions: { level: 1, canChangeStatus: false, canManageUsers: false, name: 'Supplier' } }
-  ].map(u => Object.assign({
-    contractNo: 'Contract No. DE/2024/12',
+    { id: 1, name: 'Admin', email: 'admin@ael-dwss.com', username: 'admin', password: 'admin123', organization: 'SYSTEM_VENDOR', companyName: 'AEL - Associated Engineers Ltd.', role: 'admin', department: 'System Administration', projectIds: [], permissions: { level: 5, canChangeStatus: true, canManageUsers: true, name: 'Administrator' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 2, name: 'Kenneth Daluz', email: 'kenneth.daluz@dsd.gov.hk', username: 'kenneth', password: 'officer123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'eg', department: 'Engineer Grade', projectIds: ['DE/2024/06'], permissions: { level: 4, canChangeStatus: false, canManageUsers: false, name: 'Engineer Grade' }, contractNo: 'Contract No. DE/2024/06' },
+    { id: 3, name: 'TANG Chi Long, Gary', email: 'gcifang@dsd.gov.hk', username: 'garytang', password: 'aei123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'ig', department: 'Inspector Grade', projectIds: ['DE/2024/06'], permissions: { level: 3, canChangeStatus: true, canManageUsers: false, name: 'Inspector Grade' }, contractNo: 'Contract No. DE/2024/06' },
+    { id: 4, name: 'FUNG Wai Ching', email: 'wcfung04@dsd.gov.hk', username: 'wcfung', password: 'wsg123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'wsg', department: 'Works Supervisor Grade', projectIds: ['DE/2025/07'], permissions: { level: 3, canChangeStatus: true, canManageUsers: false, name: 'Works Supervisor Grade' }, contractNo: 'Contract No. DE/2025/07' },
+    { id: 10, name: 'CHA Chi Ming', email: 'cmcha02@dsd.gov.hk', username: 'cmcha', password: 'ig123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'ig', department: 'Inspector Grade', projectIds: ['DE/2025/07'], permissions: { level: 3, canChangeStatus: true, canManageUsers: false, name: 'Inspector Grade' }, contractNo: 'Contract No. DE/2025/07' },
+    // CMP User List DE202605
+    { id: 11, name: 'Eddie Chan', email: 'eddiechan@de202605jv.com', username: 'eddiechan', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'project_admin', department: 'JV Representative (REC)', projectIds: ['DE/2026/05'], permissions: { level: 3, canChangeStatus: false, canManageUsers: true, name: 'Project Admin' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 12, name: 'Nelson Ng', email: 'nelsonng@de202605jv.com', username: 'nelsonng', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'project_admin', department: 'JV Representative (AEL)', projectIds: ['DE/2026/05'], permissions: { level: 3, canChangeStatus: false, canManageUsers: true, name: 'Project Admin' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 13, name: 'Jeff Wong', email: 'jeffwong@de202605jv.com', username: 'jeffwong', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'project_admin', department: 'Contract Manager, DE/2026/05', projectIds: ['DE/2026/05'], permissions: { level: 3, canChangeStatus: false, canManageUsers: true, name: 'Project Admin' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 14, name: 'Kan Cheung', email: 'kancheung@de202605jv.com', username: 'kancheung', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'sa', department: 'Site Agent', projectIds: ['DE/2026/05'], permissions: { level: 2, canChangeStatus: false, canManageUsers: false, name: 'Site Agent' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 15, name: 'Alan Wong', email: 'alanwong@de202605jv.com', username: 'alanwong', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'ssa', department: 'Sub-site Agent', projectIds: ['DE/2026/05'], permissions: { level: 2, canChangeStatus: false, canManageUsers: false, name: 'Sub-Site Agent' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 16, name: 'Marco Kong', email: 'marcokong@de202605jv.com', username: 'marcokong', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'ssa', department: 'Sub-site Agent', projectIds: ['DE/2026/05'], permissions: { level: 2, canChangeStatus: false, canManageUsers: false, name: 'Sub-Site Agent' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 17, name: 'Wong Chi Keung', email: 'keungwong@de202605jv.com', username: 'keungwong', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'ssa', department: 'Sub-site Agent', projectIds: ['DE/2026/05'], permissions: { level: 2, canChangeStatus: false, canManageUsers: false, name: 'Sub-Site Agent' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 18, name: 'Ivan Lee', email: 'ivanlee@de202605jv.com', username: 'ivanlee', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'ssa', department: 'Sub-site Agent', projectIds: ['DE/2026/05'], permissions: { level: 2, canChangeStatus: false, canManageUsers: false, name: 'Sub-Site Agent' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 19, name: 'Manklin Ho', email: 'manklinho@de202605jv.com', username: 'manklinho', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'rso', department: 'Safety Officer', projectIds: ['DE/2026/05'], permissions: { level: 2, canChangeStatus: false, canManageUsers: false, name: 'Registered Safety Officer' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 20, name: 'James Chan', email: 'jameschan@de202605jv.com', username: 'jameschan', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'ssa', department: 'Contract Supporting Engineer', projectIds: ['DE/2026/05'], permissions: { level: 2, canChangeStatus: false, canManageUsers: false, name: 'Sub-Site Agent' }, contractNo: 'Contract No. DE/2026/05' }
+    ].map(u => Object.assign({
     status: 'online',
     passwordChanged: false,
     passwordChangedAt: null,
@@ -126,15 +131,28 @@ async function seedDefaultUsers() {
     }
     const existing = current.user || {};
     const alreadyChanged = existing.passwordChanged === true || existing.passwordChanged === 1 || existing.passwordChanged === 'true';
-    if (alreadyChanged || (existing.password && existing.password !== user.password)) continue;
-    existing.password = user.password;
-    existing.username = user.username;
-    existing.status = existing.status || 'online';
-    await pool.query(
-      'UPDATE records SET data = ? WHERE collection = ? AND record_id = ?',
-      [JSON.stringify(existing), 'usersDb', current.row.record_id]
-    );
-    console.log('[DB] Restored default password for', user.username, '->', user.password);
+    // Always keep seed project assignments in sync for default accounts (login project list)
+    let touched = false;
+    if (Array.isArray(user.projectIds)) {
+      existing.projectIds = user.projectIds.slice();
+      if (user.contractNo) existing.contractNo = user.contractNo;
+      if (user.role) existing.role = user.role;
+      touched = true;
+    }
+    if (!(alreadyChanged || (existing.password && existing.password !== user.password))) {
+      existing.password = user.password;
+      existing.username = user.username;
+      existing.status = existing.status || 'online';
+      touched = true;
+      console.log('[DB] Restored default password for', user.username, '->', user.password);
+    }
+    if (touched) {
+      await pool.query(
+        'UPDATE records SET data = ? WHERE collection = ? AND record_id = ?',
+        [JSON.stringify(existing), 'usersDb', current.row.record_id]
+      );
+      console.log('[DB] Synced projectIds for', user.username, existing.projectIds);
+    }
   }
 }
 

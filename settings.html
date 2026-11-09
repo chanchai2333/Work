@@ -194,12 +194,17 @@
                         <label for="require-submit-password">
                             Require password confirmation on Submit / Approve / Reject
                         </label>
+                        <p id="security-project-hint" style="margin:0 0 8px 0;font-size:0.85rem;color:#334155;">
+                            Applies only to the project you are logged into now:
+                            <strong id="security-current-project">—</strong>
+                        </p>
                         <select id="require-submit-password" class="form-control">
                             <option value="true">Enabled (recommended)</option>
                             <option value="false">Disabled</option>
                         </select>
                         <small style="color:#64748b;display:block;margin-top:6px;">
-                            When enabled, every user must re-enter their password before performing a status-changing action.
+                            When <strong>Enabled</strong>, users working on <em>this project</em> must re-enter their login password
+                            before Submit / Approve / Reject (status change). Other projects are not affected.
                         </small>
                     </div>
                     <div class="settings-actions">
@@ -486,9 +491,30 @@
         }
 
     document.addEventListener('DOMContentLoaded', function () {
+        function getCurrentProjectId() {
+            try {
+                if (window.DWSS_Permissions && typeof window.DWSS_Permissions.getCurrentProject === 'function') {
+                    var p = window.DWSS_Permissions.getCurrentProject();
+                    if (p && p !== 'ALL') return p;
+                }
+            } catch (e) {}
+            var s = sessionStorage.getItem('currentProjectId');
+            return (s && s !== 'ALL') ? s : null;
+        }
+
+        function securityKey(projectId) {
+            return 'dwss_require_submit_password:' + (projectId || 'GLOBAL');
+        }
+
+        var projectId = getCurrentProjectId();
+        var hintEl = document.getElementById('security-current-project');
+        if (hintEl) hintEl.textContent = projectId || '(no project selected — log in to a project first)';
+
         var sel = document.getElementById('require-submit-password');
         if (sel) {
-            var v = localStorage.getItem('dwss_require_submit_password');
+            // Prefer per-project value; fall back to legacy global key once
+            var v = projectId ? localStorage.getItem(securityKey(projectId)) : null;
+            if (v == null) v = localStorage.getItem('dwss_require_submit_password');
             sel.value = (v === 'false') ? 'false' : 'true';
         }
 
@@ -507,13 +533,17 @@
         var saveBtn = document.getElementById('save-security-settings');
         var card = document.querySelector('.security-settings');
         if (!canEditSecurity()) {
-            // Hide Security Settings entirely for roles that cannot edit it
             if (card) card.style.display = 'none';
         } else if (saveBtn) {
             saveBtn.addEventListener('click', function () {
-                localStorage.setItem('dwss_require_submit_password',
-                    document.getElementById('require-submit-password').value);
-                alert('Security settings saved.');
+                var pid = getCurrentProjectId();
+                if (!pid) {
+                    alert('No project selected. Please log in again and choose a project first.');
+                    return;
+                }
+                var val = document.getElementById('require-submit-password').value;
+                localStorage.setItem(securityKey(pid), val);
+                alert('Security setting saved for project:\n' + pid + '\n\nSubmit/Approve password required: ' + (val === 'false' ? 'No' : 'Yes'));
             });
         }
     });
