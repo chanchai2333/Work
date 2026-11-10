@@ -6062,8 +6062,12 @@ function captureFormDataFromDom() {
         currentDoc.statusHistory.push({
             from: oldStatus, to: newStatus,
             fromApproval: oldApproval, toApproval: newApproval,
-            changedBy: userName, changedAt: nowIso, action: 'submit'
+            changedBy: userName, changedAt: nowIso, action: 'submit',
+            comment: window.__currentRejectComment || '' // ★ 補上這行
         });
+
+        // ★ 存檔後清空變數，以免影響下一次拒絕
+        window.__currentRejectComment = null;
 
         currentDoc.status = newStatus;
         currentDoc.approvalStatus = newApproval;

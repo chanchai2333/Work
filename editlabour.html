@@ -13,6 +13,7 @@
 </script>
 
     <script src="scripts/cloud-storage.js"></script>
+    <script src="scripts/security-settings.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AEL DWSS - Labour Wage</title>
@@ -260,6 +261,24 @@
     <script src="scripts/GF527_2003-data.js"></script>
     <script src="scripts/editlabour.js"></script>
 
+        <!-- ★ 新增：Reject Comment 視窗 -->
+    <div class="modal" id="reject-comment-modal" data-lock-exempt="true" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:99998; justify-content:center; align-items:center;">
+        <div class="modal-content" style="background:#fff; border-radius:12px; width:500px; max-width:90vw; box-shadow:0 20px 60px rgba(0,0,0,0.35);">
+            <div style="padding:14px 20px; background:#f1f5f9; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0; color:#1e293b; font-size:1.05rem; font-weight:600;"><i class="fas fa-times-circle" style="color:#e74c3c;"></i> Reject Document</h3>
+                <button type="button" id="reject-comment-close" style="background:transparent; border:none; font-size:1.6rem; cursor:pointer; color:#64748b;">&times;</button>
+            </div>
+            <div style="padding:20px;">
+                <label style="display:block; margin-bottom:8px; font-weight:600; color:#334155;">Rejection Reason / Comment</label>
+                <textarea id="reject-comment-input" data-lock-exempt="true" rows="4" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; font-family:inherit; resize:vertical;" placeholder="Enter reason for rejection..."></textarea>
+                <div id="reject-comment-error" style="color:#dc2626; font-size:0.82rem; margin-top:8px; display:none;">Please enter a comment.</div>
+            </div>
+            <div style="padding:12px 20px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end; gap:8px;">
+                <button type="button" id="reject-comment-cancel" style="padding:8px 18px; border:none; border-radius:6px; font-weight:600; cursor:pointer; background:#e2e8f0; color:#334155;">Cancel</button>
+                <button type="button" id="reject-comment-confirm" style="padding:8px 18px; border:none; border-radius:6px; font-weight:600; cursor:pointer; background:#10b981; color:#fff;">Next</button>
+            </div>
+        </div>
+    </div>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         if (window.DWSS_Auth) DWSS_Auth.updateHeaderUser();
@@ -391,8 +410,16 @@
             }
         }
 
+        // ★ 新增：判斷是否為豁免元素 (彈窗、密碼框、Reject Comment)
+        function isLockExempt(el) {
+            return el.closest('[data-lock-exempt="true"]')
+                || el.id === 'reject-comment-input'
+                || el.id === 'action-pwd-input'
+                || el.id === 'action-pwd-toggle';
+        }
+
         document.querySelectorAll('input, textarea, select').forEach(function (el) {
-            el.disabled = true;
+            if (!isLockExempt(el)) el.disabled = true;   // ★ 加豁免判断
         });
 
         var obs = new MutationObserver(function (mutations) {
@@ -400,11 +427,11 @@
                 m.addedNodes.forEach(function (n) {
                     if (n.nodeType !== 1) return;
                     if (n.matches && n.matches('input, textarea, select')) {
-                        n.disabled = true;
+                        if (!isLockExempt(n)) n.disabled = true;   // ★ 加豁免判断
                     }
                     if (n.querySelectorAll) {
                         n.querySelectorAll('input, textarea, select').forEach(function (el) {
-                            el.disabled = true;
+                            if (!isLockExempt(el)) el.disabled = true;   // ★ 加豁免判断
                         });
                     }
                 });
@@ -652,8 +679,12 @@
     };
 
     // ---------- read the admin flag ----------
+    // ---------- read the admin flag (共享模組，支援項目級 + 全局回退) ----------
     function isPasswordRequired() {
-        // Default = required. Only the exact string 'false' disables it.
+        if (window.DWSS_Security && typeof window.DWSS_Security.isPasswordRequired === 'function') {
+            return window.DWSS_Security.isPasswordRequired();
+        }
+        // fallback：模組未載入時退回舊邏輯
         try {
             return localStorage.getItem('dwss_require_submit_password') !== 'false';
         } catch (e) {
@@ -661,10 +692,87 @@
         }
     }
 
-    function getSession() {
-        try { return JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); }
-        catch (e) { return {}; }
+function getSession() {
+    try { return JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); }
+    catch (e) { return {}; }
+}
+
+/**
+ * 從 session + dwss_users_db 找出「登入身分識別碼」
+ * 支援多種欄位命名：
+ *   userEmail / email / user.email / data.email
+ *   userName / username / name / user.name / user.username / data.name
+ * 都找不到時，退回 users_db 比對 userId
+ */
+function getLoginIdentifier() {
+    var s = getSession();
+
+    var email    = s.userEmail || s.email    || (s.user && s.user.email)    || (s.data && s.data.email)    || '';
+    var username = s.userName  || s.username || s.name                     || (s.user && (s.user.name || s.user.username))
+                                                                           || (s.data && (s.data.name || s.data.username)) || '';
+
+    // 都空就從 dwss_users_db 反查
+    if (!email && !username) {
+        try {
+            var users = JSON.parse(localStorage.getItem('dwss_users_db') || '[]');
+            var uid = s.userId || s.id || (s.user && s.user.id) || (s.data && s.data.userId);
+            if (Array.isArray(users)) {
+                for (var i = 0; i < users.length; i++) {
+                    var u = users[i];
+                    if ((uid && String(u.id) === String(uid)) ||
+                        (s.userEmail && u.email    === s.userEmail) ||
+                        (s.userName  && (u.name === s.userName || u.username === s.userName))) {
+                        email    = u.email    || '';
+                        username = u.username || u.name || '';
+                        break;
+                    }
+                }
+            }
+        } catch (e) {}
     }
+
+    // 印出來看，方便排查
+    console.log('[ActionPwd] Session =', s);
+    console.log('[ActionPwd] Resolved email =', email, '| username =', username);
+
+    return { email: email, username: username, identifier: email || username };
+}
+
+async function verifyPassword(pwd) {
+    var creds = getLoginIdentifier();
+    var identifier = creds.identifier;
+
+    if (!identifier) {
+        console.error('[ActionPwd] 無法從 Session 確定登入身分，請重新登入。');
+        alert('無法驗證身分，請重新整理並重新登入。');
+        return false;
+    }
+
+    try {
+        var payload = {
+            username: identifier,
+            email: identifier,          // 有些後端只認 email
+            password: pwd,
+            projectId: sessionStorage.getItem('currentProjectId') || ''
+        };
+
+        var res = await fetch('/api/auth/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+            var errText = await res.text();
+            console.warn('[ActionPwd] /api/auth/verify 失敗', res.status, errText, 'Payload:', payload);
+        }
+
+        return res.ok;
+    } catch (e) {
+        console.error('[ActionPwd] /api/auth/verify 網路錯誤', e);
+        return false;
+    }
+}
 
     function isAdminSession() {
         var s = getSession();
@@ -865,25 +973,6 @@
         return null;
     }
 
-    async function verifyPassword(pwd) {
-        var session = getSession();
-        var username = session.userEmail || session.userName || '';
-        if (!username) return false;
-        try {
-            var res = await fetch('/api/auth/verify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: username,
-                    password: pwd,
-                    projectId: sessionStorage.getItem('currentProjectId') || ''
-                })
-            });
-            return res.ok;
-        } catch (e) {
-            return false;
-        }
-    }
 
     function openModal(btn) {
         ensureModal();
@@ -1001,6 +1090,7 @@
     }
 
     // ---------- Capture-phase click interceptor ----------
+    // ---------- Capture-phase click interceptor ----------
     document.addEventListener('click', function (e) {
         if (bypass) return;
 
@@ -1013,29 +1103,50 @@
         var st = window.getComputedStyle(btn);
         if (st.display === 'none' || st.visibility === 'hidden') return;
 
-        // ★ Admin flag: skip password prompt when admin turned it off,
-        //   except admins themselves (admins always get the prompt).
-        var requirePwd = isPasswordRequired();
-        if (!requirePwd && !isAdminSession()) {
-            return;  // Let the original handler run unimpeded
-        }
-
-        e.stopImmediatePropagation();
-        e.preventDefault();
-
+        // ★ 先攔截 Reject：無論有沒有開啟密碼驗證，都必須先彈出 Comment 視窗
         if (btn.id === 'reject-btn' && rejectModal) {
-            // ★ Reject flow: capture a comment first, then verify password
+            e.stopImmediatePropagation();
+            e.preventDefault();
             pendingRejectBtn = btn;
             rejectInput.value = '';
             if (rejectError) rejectError.style.display = 'none';
             rejectModal.style.display = 'flex';
-        } else {
-            openModal(btn);
+
+            // ★ 强制启用弹窗内所有控件，防止被 document-lock 禁用
+            setTimeout(function () {
+                if (rejectInput) {
+                    rejectInput.disabled = false;
+                    rejectInput.readOnly = false;
+                    rejectInput.style.pointerEvents = 'auto';
+                    try { rejectInput.focus(); } catch (e) {}
+                }
+                rejectModal.querySelectorAll('button, input, textarea').forEach(function (el) {
+                    el.disabled = false;
+                });
+            }, 50);
+            setTimeout(function () {
+                if (rejectInput) {
+                    rejectInput.disabled = false;
+                    rejectInput.readOnly = false;
+                }
+            }, 200);
+
+            return;
         }
+
+        // ★ 其他按鈕（或 Comment 按下 Next 後重放的 Reject）：若關閉了密碼驗證，直接放行
+        if (!isPasswordRequired()) {
+            return;
+        }
+
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        openModal(btn);
     }, true);
 
     console.log('[ActionPwd] ✓ v3 installed — respects admin flag (dwss_require_submit_password)');
 })();
 </script>
+
 </body>
 </html>

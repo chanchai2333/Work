@@ -13,6 +13,7 @@
 </script>
 
     <script src="scripts/cloud-storage.js"></script>
+    <script src="scripts/security-settings.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AEL DWSS - Edit Site Diary (DSD)</title>
@@ -1642,8 +1643,12 @@
     };
 
     // ---------- read the admin flag ----------
+    // ---------- read the admin flag (共享模組，支援項目級 + 全局回退) ----------
     function isPasswordRequired() {
-        // Default = required. Only the exact string 'false' disables it.
+        if (window.DWSS_Security && typeof window.DWSS_Security.isPasswordRequired === 'function') {
+            return window.DWSS_Security.isPasswordRequired();
+        }
+        // fallback：模組未載入時退回舊邏輯
         try {
             return localStorage.getItem('dwss_require_submit_password') !== 'false';
         } catch (e) {
@@ -1651,10 +1656,87 @@
         }
     }
 
-    function getSession() {
-        try { return JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); }
-        catch (e) { return {}; }
+function getSession() {
+    try { return JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); }
+    catch (e) { return {}; }
+}
+
+/**
+ * 從 session + dwss_users_db 找出「登入身分識別碼」
+ * 支援多種欄位命名：
+ *   userEmail / email / user.email / data.email
+ *   userName / username / name / user.name / user.username / data.name
+ * 都找不到時，退回 users_db 比對 userId
+ */
+function getLoginIdentifier() {
+    var s = getSession();
+
+    var email    = s.userEmail || s.email    || (s.user && s.user.email)    || (s.data && s.data.email)    || '';
+    var username = s.userName  || s.username || s.name                     || (s.user && (s.user.name || s.user.username))
+                                                                           || (s.data && (s.data.name || s.data.username)) || '';
+
+    // 都空就從 dwss_users_db 反查
+    if (!email && !username) {
+        try {
+            var users = JSON.parse(localStorage.getItem('dwss_users_db') || '[]');
+            var uid = s.userId || s.id || (s.user && s.user.id) || (s.data && s.data.userId);
+            if (Array.isArray(users)) {
+                for (var i = 0; i < users.length; i++) {
+                    var u = users[i];
+                    if ((uid && String(u.id) === String(uid)) ||
+                        (s.userEmail && u.email    === s.userEmail) ||
+                        (s.userName  && (u.name === s.userName || u.username === s.userName))) {
+                        email    = u.email    || '';
+                        username = u.username || u.name || '';
+                        break;
+                    }
+                }
+            }
+        } catch (e) {}
     }
+
+    // 印出來看，方便排查
+    console.log('[ActionPwd] Session =', s);
+    console.log('[ActionPwd] Resolved email =', email, '| username =', username);
+
+    return { email: email, username: username, identifier: email || username };
+}
+
+async function verifyPassword(pwd) {
+    var creds = getLoginIdentifier();
+    var identifier = creds.identifier;
+
+    if (!identifier) {
+        console.error('[ActionPwd] 無法從 Session 確定登入身分，請重新登入。');
+        alert('無法驗證身分，請重新整理並重新登入。');
+        return false;
+    }
+
+    try {
+        var payload = {
+            username: identifier,
+            email: identifier,          // 有些後端只認 email
+            password: pwd,
+            projectId: sessionStorage.getItem('currentProjectId') || ''
+        };
+
+        var res = await fetch('/api/auth/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+            var errText = await res.text();
+            console.warn('[ActionPwd] /api/auth/verify 失敗', res.status, errText, 'Payload:', payload);
+        }
+
+        return res.ok;
+    } catch (e) {
+        console.error('[ActionPwd] /api/auth/verify 網路錯誤', e);
+        return false;
+    }
+}
 
     function isAdminSession() {
         var s = getSession();
@@ -1855,25 +1937,7 @@
         return null;
     }
 
-    async function verifyPassword(pwd) {
-        var session = getSession();
-        var username = session.userEmail || session.userName || '';
-        if (!username) return false;
-        try {
-            var res = await fetch('/api/auth/verify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: username,
-                    password: pwd,
-                    projectId: sessionStorage.getItem('currentProjectId') || ''
-                })
-            });
-            return res.ok;
-        } catch (e) {
-            return false;
-        }
-    }
+
 
     function openModal(btn) {
         ensureModal();
@@ -1990,39 +2054,57 @@
         });
     }
 
-    // ---------- Capture-phase click interceptor ----------
-    document.addEventListener('click', function (e) {
-        if (bypass) return;
+        document.addEventListener('click', function (e) {
+            if (bypass) return;
 
-        var btn = e.target && e.target.closest
-            ? e.target.closest('#submit-btn, #approve-btn, #reject-btn')
-            : null;
-        if (!btn) return;
+            var btn = e.target && e.target.closest
+                ? e.target.closest('#submit-btn, #approve-btn, #reject-btn')
+                : null;
+            if (!btn) return;
 
-        if (btn.disabled) return;
-        var st = window.getComputedStyle(btn);
-        if (st.display === 'none' || st.visibility === 'hidden') return;
+            if (btn.disabled) return;
+            var st = window.getComputedStyle(btn);
+            if (st.display === 'none' || st.visibility === 'hidden') return;
 
-        // ★ Admin flag: skip password prompt when admin turned it off,
-        //   except admins themselves (admins always get the prompt).
-        var requirePwd = isPasswordRequired();
-        if (!requirePwd && !isAdminSession()) {
-            return;  // Let the original handler run unimpeded
-        }
+            // 1. 永遠先攔截 Reject 按鈕，彈出填寫理由的視窗
+            if (btn.id === 'reject-btn' && rejectModal) {
+                e.stopImmediatePropagation();
+                e.preventDefault();
+                pendingRejectBtn = btn;
+                rejectInput.value = '';
+                if (rejectError) rejectError.style.display = 'none';
+                rejectModal.style.display = 'flex';
 
-        e.stopImmediatePropagation();
-        e.preventDefault();
+                setTimeout(function () {
+                    if (rejectInput) {
+                        rejectInput.disabled = false;
+                        rejectInput.readOnly = false;
+                        rejectInput.style.pointerEvents = 'auto';
+                        try { rejectInput.focus(); } catch (e) {}
+                    }
+                    rejectModal.querySelectorAll('button, input, textarea').forEach(function (el) {
+                        el.disabled = false;
+                    });
+                }, 50);
+                setTimeout(function () {
+                    if (rejectInput) {
+                        rejectInput.disabled = false;
+                        rejectInput.readOnly = false;
+                    }
+                }, 200);
 
-        if (btn.id === 'reject-btn' && rejectModal) {
-            // ★ Reject flow: capture a comment first, then verify password
-            pendingRejectBtn = btn;
-            rejectInput.value = '';
-            if (rejectError) rejectError.style.display = 'none';
-            rejectModal.style.display = 'flex';
-        } else {
+                return;
+            }
+
+            // 2. 檢查是否需要密碼（針對 Submit / Approve）
+            if (!isPasswordRequired()) {
+                return;  // 不需要密碼就直接放行原按鈕事件
+            }
+
+            e.stopImmediatePropagation();
+            e.preventDefault();
             openModal(btn);
-        }
-    }, true);
+        }, true);
 
     console.log('[ActionPwd] ✓ v3 installed — respects admin flag (dwss_require_submit_password)');
 })();

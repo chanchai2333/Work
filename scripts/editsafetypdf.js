@@ -2105,8 +2105,10 @@
             changedBy: userName,
             changedRole: userRole,
             changedAt: nowIso,
-            action: 'reject'
+            action: 'reject',
+            comment: window.__currentRejectComment || ''   // ★ 新增：存下 reject 理由
         });
+        window.__currentRejectComment = null;              // ★ 新增：清空，避免污染下一次
 
         currentDoc.status = 'draft';
         currentDoc.approvalStatus = 'rejected';
