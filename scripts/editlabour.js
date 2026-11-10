@@ -807,6 +807,9 @@ function renderGF527_2003View() {
     pageWrapper.appendChild(view);
     currentPageObj = { pageNum: 1, container: view };
     updatePageInfo();
+
+        // ★ 新增這行：讓表格視圖支援縮放
+    view.style.zoom = zoomLevel;
 }
 
 /* ============================================================
@@ -1163,6 +1166,9 @@ function renderGF527_2017View() {
     pageWrapper.appendChild(view);
     currentPageObj = { pageNum: 1, container: view };
     updatePageInfo();
+
+        // ★ 新增這行：讓表格視圖支援縮放
+    view.style.zoom = zoomLevel;
 }
     
 
