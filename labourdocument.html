@@ -1462,73 +1462,77 @@
                     arrayBuffer = await response.arrayBuffer();
                 }
 
-                // ★ 核心修改：用 XLSX 讀取一次，動態掃描所有 Item 的行號與表頭座標
-                var wbTemp = XLSX.read(arrayBuffer, { type: 'array' });
-                var wsTemp = wbTemp.Sheets[wbTemp.SheetNames[0]];
-                var rangeTemp = XLSX.utils.decode_range(wsTemp['!ref']);
-                
-                var targetCoords = {};
-                var itemRows = [];
-
-                for (var R = rangeTemp.s.r; R <= rangeTemp.e.r; R++) {
-                    var aCell = wsTemp[XLSX.utils.encode_cell({ r: R, c: 0 })];
-                    
-                    // 找表頭座標
-                    for (var C = rangeTemp.s.c; C <= rangeTemp.e.c; C++) {
-                        var cellTemp = wsTemp[XLSX.utils.encode_cell({ r: R, c: C })];
-                        if (cellTemp && cellTemp.v) {
-                            var val = String(cellTemp.v).trim();
-                            if (val.indexOf('Dept/Div') !== -1) targetCoords['Dept/Div'] = { r: R, c: C };
-                            if (val.indexOf('Month/Year') !== -1) targetCoords['Month/Year'] = { r: R, c: C };
-                            if (val.indexOf('Contract No.') !== -1) targetCoords['Contract No.'] = { r: R, c: C };
-                            if (val.indexOf('Contract Title') !== -1) targetCoords['Contract Title'] = { r: R, c: C };
-                            if (val.indexOf('Contractor :') !== -1 || val === 'Contractor') targetCoords['Contractor'] = { r: R, c: C };
-                            if (val.indexOf('Works Code') !== -1) targetCoords['Works Code'] = { r: R, c: C };
-                            if (val.indexOf('Nominated Sub-contractor') !== -1) targetCoords['Nominated'] = { r: R, c: C };
-                        }
-                    }
-
-                    // 找 Item 行
-                    if (aCell && aCell.v) {
-                        var raw = String(aCell.v).trim();
-                        var num = parseInt(raw, 10);
-                        if (!isNaN(num) && num >= 1 && num <= 45 && String(num) === raw) {
-                            itemRows.push({ r: R, no: num });
-                        }
-                    }
-                }
-
-                // 開始解析 XML 並修改
                 var zip = await JSZip.loadAsync(arrayBuffer);
                 var sheetFile = zip.file('xl/worksheets/sheet1.xml');
-                if (!sheetFile) throw new Error('Excel 結構異常，找不到 sheet1.xml');
+                if (!sheetFile) throw new Error('Excel 結構異常');
                 var sheetXml = await sheetFile.async('string');
 
                 var parser = new DOMParser();
                 var xmlDoc = parser.parseFromString(sheetXml, "text/xml");
                 var ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
-                
                 var formData = getFormData() || {};
 
-                function getRowNode(rowNum) {
-                    var rows = xmlDoc.getElementsByTagNameNS(ns, "row");
+                var rows = xmlDoc.getElementsByTagNameNS(ns, "row");
+                
+                // --- 輔助函數：取得 Cell 的文字 ---
+                // --- 輔助函數：取得 Cell 的文字 (修復富文本被截斷的問題) ---
+                function getNodeText(node) {
+                    if (!node) return "";
+                    var isNode = node.getElementsByTagNameNS(ns, "is")[0];
+                    var vNode = node.getElementsByTagNameNS(ns, "v")[0];
+                    if (isNode) {
+                        var tNodes = isNode.getElementsByTagNameNS(ns, "t");
+                        var text = "";
+                        for (var i = 0; i < tNodes.length; i++) {
+                            text += tNodes[i].textContent;
+                        }
+                        return text;
+                    } else if (vNode) {
+                        return vNode.textContent;
+                    }
+                    return "";
+                }
+
+                // --- 輔助函數：尋找特定 Column 的 Cell (例如 A7, E143) ---
+                function findCellByRef(ref) {
+                    var rowNum = ref.replace(/\D+/g, '');
                     for (var i = 0; i < rows.length; i++) {
-                        if (rows[i].getAttribute("r") === String(rowNum)) return rows[i];
+                        if (rows[i].getAttribute("r") === rowNum) {
+                            var cells = rows[i].getElementsByTagNameNS(ns, "c");
+                            for (var j = 0; j < cells.length; j++) {
+                                if (cells[j].getAttribute("r") === ref) return cells[j];
+                            }
+                        }
                     }
                     return null;
                 }
 
-                // ★ 保留原本的樣式 s，並根據指定的座標覆蓋文字
-                function setXmlCellByCoord(r, c, text) {
-                    if (text === undefined || text === null) return;
-                    var cellRef = XLSX.utils.encode_col(c) + (r + 1);
-                    var rowNode = getRowNode(r + 1);
-                    if (!rowNode) return;
+                // --- 輔助函數：精準寫入 Cell 並保留原樣式 ---
+                function setXmlCellByRef(ref, text, isNum) {
+                    if (text === undefined || text === null || String(text).trim() === '') return;
+                    var strVal = String(text).trim();
+                    if (isNum && !isNaN(strVal)) strVal = String(Math.round(Number(strVal)));
+
+                    var rowNum = parseInt(ref.replace(/\D+/g, ''), 10);
+                    var rowNode = null;
+                    
+                    for (var i = 0; i < rows.length; i++) {
+                        if (rows[i].getAttribute("r") === String(rowNum)) {
+                            rowNode = rows[i];
+                            break;
+                        }
+                    }
+                    if (!rowNode) {
+                        rowNode = xmlDoc.createElementNS(ns, "row");
+                        rowNode.setAttribute("r", rowNum);
+                        var sheetData = xmlDoc.getElementsByTagNameNS(ns, "sheetData")[0];
+                        sheetData.appendChild(rowNode);
+                    }
 
                     var cNode = null;
                     var cells = rowNode.getElementsByTagNameNS(ns, "c");
                     for (var i = 0; i < cells.length; i++) {
-                        if (cells[i].getAttribute("r") === cellRef) {
+                        if (cells[i].getAttribute("r") === ref) {
                             cNode = cells[i];
                             break;
                         }
@@ -1536,161 +1540,220 @@
 
                     if (!cNode) {
                         cNode = xmlDoc.createElementNS(ns, "c");
-                        cNode.setAttribute("r", cellRef);
+                        cNode.setAttribute("r", ref);
                         rowNode.appendChild(cNode);
                     }
 
-                    // 保留樣式
                     var originalStyle = cNode.getAttribute("s");
-
                     while (cNode.firstChild) cNode.removeChild(cNode.firstChild);
                     if (originalStyle) cNode.setAttribute("s", originalStyle);
                     
                     cNode.setAttribute("t", "inlineStr");
                     var isNode = xmlDoc.createElementNS(ns, "is");
                     var tNode = xmlDoc.createElementNS(ns, "t");
-                    tNode.textContent = text;
+                    tNode.textContent = strVal;
                     isNode.appendChild(tNode);
                     cNode.appendChild(isNode);
                 }
 
-                // 1. 寫入表頭資料
-                if (targetCoords['Dept/Div']) {
-                    var deptTxt = 'Dept/Div : ' + (formData['gf5272017_dept'] || '') + ' / ' + (formData['gf5272017_div'] || '') + '    Month/Year: ' + (formData['gf5272017_month'] || '') + ' / ' + (formData['gf5272017_year'] || '');
-                    setXmlCellByCoord(targetCoords['Dept/Div'].r, targetCoords['Dept/Div'].c, deptTxt);
-                }
-                if (targetCoords['Contract No.']) {
-                    setXmlCellByCoord(targetCoords['Contract No.'].r, targetCoords['Contract No.'].c, 'Contract No. : ' + (formData['gf5272017_contractNo'] || ''));
-                }
-                if (targetCoords['Contract Title']) {
-                    setXmlCellByCoord(targetCoords['Contract Title'].r, targetCoords['Contract Title'].c, 'Contract Title : ' + (formData['gf5272017_contractTitle'] || ''));
-                }
-                if (targetCoords['Contractor']) {
-                    setXmlCellByCoord(targetCoords['Contractor'].r, targetCoords['Contractor'].c, 'Contractor : ' + (formData['gf5272017_contractor'] || ''));
-                }
-                if (targetCoords['Works Code']) {
-                    setXmlCellByCoord(targetCoords['Works Code'].r, targetCoords['Works Code'].c, 'Works Code 31 : ' + (formData['gf5272017_worksCode'] || ''));
-                }
-                if (targetCoords['Nominated']) {
-                    var isChecked = formData['gf5272017_nominated'] === '1';
-                    var tick = isChecked ? '☑ ' : '☐ ';
-                    setXmlCellByCoord(targetCoords['Nominated'].r, targetCoords['Nominated'].c, tick + 'Nominated Sub-contractor');
+                // ============================================================
+                // 1. 寫入表頭 (Row 7)
+                // ============================================================
+                var dept = (formData['gf5272017_dept'] || '').trim();
+                var div = (formData['gf5272017_div'] || '').trim();
+                var month = (formData['gf5272017_month'] || '').trim();
+                var year = (formData['gf5272017_year'] || '').trim();
+                var cNo = (formData['gf5272017_contractNo'] || '').replace(/Contract No.*/, '').replace(':', '').trim();
+                var cTitle = (formData['gf5272017_contractTitle'] || '').replace(/Contract Title.*/, '').replace(':', '').trim();
+                var cont = (formData['gf5272017_contractor'] || '').replace(/Contractor.*/, '').replace(':', '').trim();
+                var wCode = (formData['gf5272017_worksCode'] || '').replace(/Works Code.*/, '').replace(':', '').trim();
+
+                // A7: 正則原位替換，保留下劃線排版，絕不截斷
+                var a7Node = findCellByRef('A7');
+                var a7Text = getNodeText(a7Node);
+                if (a7Text && a7Text.indexOf('Dept/Div') !== -1) {
+                    var newA7 = a7Text.replace(/Dept\/Div\s*:.*?(?=Month\/Year)/, 'Dept/Div : ' + dept + ' / ' + div + '    ');
+                    newA7 = newA7.replace(/Month\/Year\s*:.*/, 'Month/Year: ' + month + ' / ' + year);
+                    setXmlCellByRef('A7', newA7, false);
+                } else {
+                    setXmlCellByRef('A7', 'Dept/Div : ' + dept + ' / ' + div + '    Month/Year: ' + month + ' / ' + year, false);
                 }
 
-                // 2. 寫入表格主體數據
-                function setXmlCell(r, c, val) {
-                    if (val === undefined || val === null || String(val).trim() === '') return;
-                    var strVal = String(val).trim();
+                // 其他表頭 (直接覆蓋合併格子的起始格，避免重複前綴)
+                setXmlCellByRef('E7', cNo, false);
+                setXmlCellByRef('M4', cTitle, false);
+                setXmlCellByRef('X4', cont, false);
+                setXmlCellByRef('AM7', wCode, false);
+
+                // ============================================================
+                // 打勾與清理圖形 (解決空框與位置太低)
+                // ============================================================
+                // ============================================================
+                // 打勾與清理 (解決變小、位置太低、殘留空框)
+                // ============================================================
+                var isChecked = formData['gf5272017_nominated'] === '1';
+                var tickChar = isChecked ? '☑' : '☐';
+
+                // 1. 嘗試從 drawing1.xml 中移除第 7 行的圖形 (解決上方灰框)
+                var drawingFile = zip.file('xl/drawings/drawing1.xml');
+                if (drawingFile) {
+                    var drawingXml = await drawingFile.async('string');
+                    var drawingDoc = parser.parseFromString(drawingXml, "text/xml");
+                    var anchors = Array.from(drawingDoc.getElementsByTagNameNS("*", "twoCellAnchor"))
+                        .concat(Array.from(drawingDoc.getElementsByTagNameNS("*", "oneCellAnchor")));
                     
-                    if (!isNaN(strVal) && /^[0-9.]+$/.test(strVal)) {
-                        strVal = String(Math.round(Number(strVal)));
+                    var removedCount = 0;
+                    for (var a = 0; a < anchors.length; a++) {
+                        var anchor = anchors[a];
+                        var fromNode = anchor.getElementsByTagNameNS("*", "from")[0];
+                        if (fromNode) {
+                            var rowNode = fromNode.getElementsByTagNameNS("*", "row")[0];
+                            var colNode = fromNode.getElementsByTagNameNS("*", "col")[0];
+                            // 如果在第 7 行 (row=6) 且靠近 AD 欄 (col 約 29-30)
+                            if (rowNode && rowNode.textContent === '6' && colNode && parseInt(colNode.textContent) >= 27 && parseInt(colNode.textContent) <= 32) {
+                                if (anchor.parentNode) {
+                                    anchor.parentNode.removeChild(anchor);
+                                    removedCount++;
+                                }
+                            }
+                        }
                     }
+                    if (removedCount > 0) {
+                        var newDrawingXml = new XMLSerializer().serializeToString(drawingDoc);
+                        if (!newDrawingXml.startsWith('<?xml')) {
+                            newDrawingXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' + newDrawingXml;
+                        }
+                        zip.file('xl/drawings/drawing1.xml', newDrawingXml);
+                    }
+                }
 
-                    var colLetter = XLSX.utils.encode_col(c);
-                    var cellRef = colLetter + (r + 1);
-                    
-                    var rowNode = getRowNode(r + 1);
-                    if (!rowNode) return;
-
+                // 2. 覆寫 AD7 (保留原大小，透過空格提行位置)
+                var row7Node = rows[6];
+                if (row7Node) {
                     var cNode = null;
-                    var cells = rowNode.getElementsByTagNameNS(ns, "c");
-                    for (var i = 0; i < cells.length; i++) {
-                        if (cells[i].getAttribute("r") === cellRef) {
-                            cNode = cells[i];
+                    var cells7 = row7Node.getElementsByTagNameNS(ns, "c");
+                    for (var j = 0; j < cells7.length; j++) {
+                        if (cells7[j].getAttribute("r") === 'AD7') {
+                            cNode = cells7[j];
                             break;
                         }
                     }
-
+                    
                     if (!cNode) {
-                        if (strVal === '') return; 
                         cNode = xmlDoc.createElementNS(ns, "c");
-                        cNode.setAttribute("r", cellRef);
-                        rowNode.appendChild(cNode);
+                        cNode.setAttribute("r", "AD7");
+                        row7Node.appendChild(cNode);
                     }
 
-                    var originalStyle = cNode.getAttribute("s");
-
-                    while (cNode.firstChild) {
-                        cNode.removeChild(cNode.firstChild);
-                    }
-                    if (originalStyle) cNode.setAttribute("s", originalStyle);
-
-                    if (!isNaN(strVal) && strVal !== '') {
-                        cNode.removeAttribute("t");
-                        var vNode = xmlDoc.createElementNS(ns, "v");
-                        vNode.textContent = strVal;
-                        cNode.appendChild(vNode);
-                    } else {
-                        cNode.setAttribute("t", "inlineStr");
-                        var isNode = xmlDoc.createElementNS(ns, "is");
-                        var tNode = xmlDoc.createElementNS(ns, "t");
-                        tNode.textContent = strVal;
-                        isNode.appendChild(tNode);
-                        cNode.appendChild(isNode);
-                    }
+                    // 清除原有內容 (不管它是圖還是字，全部清空)
+                    while (cNode.firstChild) cNode.removeChild(cNode.firstChild);
+                    cNode.setAttribute("t", "inlineStr");
+                    
+                    var isNode = xmlDoc.createElementNS(ns, "is");
+                    var tNode = xmlDoc.createElementNS(ns, "t");
+                    // ★ 核心：使用 XML 空格換行來把它「頂」上去，不改變字體大小
+                    tNode.textContent = '\n' + tickChar; 
+                    tNode.setAttribute("xml:space", "preserve");
+                    isNode.appendChild(tNode);
+                    cNode.appendChild(isNode);
                 }
 
-                // 動態計算每個 item 的 span，寫入數據
-                for (var i = 0; i < itemRows.length; i++) {
-                    var current = itemRows[i];
-                    var next = itemRows[i + 1];
+                // ============================================================
+                // 2. 寫入 Items 1~40 (動態掃描 A 列)
+                // ============================================================
+
+
+                // ============================================================
+                // 2. 寫入 Items 1~40 (動態掃描 A 列)
+                // ============================================================
+                var itemRows = [];
+                for (var i = 0; i < rows.length; i++) {
+                    var rNum = parseInt(rows[i].getAttribute("r"), 10);
+                    if (rNum >= 138) continue; // 跳過 41-45 的專用行
                     
-                    var span = 1;
-                    if (next) {
-                        span = next.r - current.r;
-                    } else {
-                        span = 1;
+                    var aCell = findCellByRef('A' + rNum);
+                    if (aCell) {
+                        var txt = getNodeText(aCell);
+                        var numV = parseInt(txt, 10);
+                        if (!isNaN(numV) && numV >= 1 && numV <= 40 && String(numV) === txt) {
+                            itemRows.push({ r: rNum, no: numV });
+                        }
                     }
+                }
+                itemRows.sort(function(a,b) { return a.r - b.r; });
+
+                for (var i = 0; i < itemRows.length; i++) {
+                    var cur = itemRows[i];
+                    var next = itemRows[i + 1];
+                    var span = next ? next.r - cur.r : 1;
                     
-                    var no = current.no;
-                    var startRow = current.r;
+                    var no = cur.no;
+                    for (var j = 0; j < span; j++) {
+                        var rowKey = no + '_' + j;
+                        var r = cur.r + j;
 
-                    for (var idx = 0; idx < span; idx++) {
-                        var rowKey = no + '_' + idx;
-                        var excelRowIdx = startRow + idx;
-
-                        // 寫入 31 天
                         for (var d = 1; d <= 31; d++) {
                             var v = formData['gf5272017_row_' + rowKey + '_day_' + d];
                             if (v === undefined) v = formData['gf5272017_row_' + no + '_day_' + d];
-                            if (v !== undefined && v !== null && String(v).trim() !== '') {
-                                setXmlCell(excelRowIdx, 5 + (d - 1), v);
-                            }
+                            if (v !== undefined && v !== null && v !== '') setXmlCellByRef(XLSX.utils.encode_col(5 + (d - 1)) + r, v, true);
                         }
-
-                        // 寫入尾部
-                        var md = formData['gf5272017_row_' + rowKey + '_mandays'];
-                        if (md === undefined) md = formData['gf5272017_row_' + no + '_mandays'];
-                        if (md) setXmlCell(excelRowIdx, 36, md);
-                        
-                        var ot = formData['gf5272017_row_' + rowKey + '_overtime'];
-                        if (ot === undefined) ot = formData['gf5272017_row_' + no + '_overtime'];
-                        if (ot) setXmlCell(excelRowIdx, 37, ot);
-                        
-                        var avg = formData['gf5272017_row_' + rowKey + '_avg'];
-                        if (avg === undefined) avg = formData['gf5272017_row_' + no + '_avg'];
-                        if (avg) setXmlCell(excelRowIdx, 38, avg);
-                        
-                        var high = formData['gf5272017_row_' + rowKey + '_high'];
-                        if (high === undefined) high = formData['gf5272017_row_' + no + '_high'];
-                        if (high) setXmlCell(excelRowIdx, 39, high);
-                        
-                        var low = formData['gf5272017_row_' + rowKey + '_low'];
-                        if (low === undefined) low = formData['gf5272017_row_' + no + '_low'];
-                        if (low) setXmlCell(excelRowIdx, 40, low);
+                        var md = formData['gf5272017_row_' + rowKey + '_mandays'] || formData['gf5272017_row_' + no + '_mandays'];
+                        if (md !== undefined && md !== null && md !== '') setXmlCellByRef('AK' + r, md, true);
+                        var ot = formData['gf5272017_row_' + rowKey + '_overtime'] || formData['gf5272017_row_' + no + '_overtime'];
+                        if (ot !== undefined && ot !== null && ot !== '') setXmlCellByRef('AL' + r, ot, true);
+                        var avg = formData['gf5272017_row_' + rowKey + '_avg'] || formData['gf5272017_row_' + no + '_avg'];
+                        if (avg !== undefined && avg !== null && avg !== '') setXmlCellByRef('AM' + r, avg, true);
+                        var high = formData['gf5272017_row_' + rowKey + '_high'] || formData['gf5272017_row_' + no + '_high'];
+                        if (high !== undefined && high !== null && high !== '') setXmlCellByRef('AN' + r, high, true);
+                        var low = formData['gf5272017_row_' + rowKey + '_low'] || formData['gf5272017_row_' + no + '_low'];
+                        if (low !== undefined && low !== null && low !== '') setXmlCellByRef('AO' + r, low, true);
                     }
                 }
 
-                // 3. 寫入簽名區的電話號碼 (找到最後一個 Item 行號，往下推算)
-                var tel46 = formData['gf5272017_row_46_telno'];
-                var tel47 = formData['gf5272017_row_47_telno'];
-                if (itemRows.length > 0) {
-                    var lastItemR = itemRows[itemRows.length - 1].r;
-                    if (tel46) setXmlCell(lastItemR + 1, 36, tel46);
-                    if (tel47) setXmlCell(lastItemR + 2, 36, tel47);
+                // ============================================================
+                // 3. 寫入 Items 41~45 (寫死 138-142 行，填寫在 C 欄和 E 欄)
+                // ============================================================
+                for (var i = 0; i < 5; i++) {
+                    var no = 41 + i;
+                    var rNum = 138 + i;
+                    var rowKey = no + '_0';
+
+                    var nm = formData['gf5272017_row_' + rowKey + '_name'] || formData['gf5272017_row_' + no + '_name'] || '';
+                    var cd = formData['gf5272017_row_' + rowKey + '_code'] || formData['gf5272017_row_' + no + '_code'] || '';
+                    
+                    // 填入 C 欄 (Others trade name) 和 E 欄 (Code-)
+                    setXmlCellByRef('C' + rNum, nm, false);
+                    setXmlCellByRef('E' + rNum, cd, false);
+
+                    for (var d = 1; d <= 31; d++) {
+                        var v = formData['gf5272017_row_' + rowKey + '_day_' + d];
+                        if (v === undefined) v = formData['gf5272017_row_' + no + '_day_' + d];
+                        if (v !== undefined && v !== null && v !== '') setXmlCellByRef(XLSX.utils.encode_col(5 + (d - 1)) + rNum, v, true);
+                    }
+                    var md = formData['gf5272017_row_' + rowKey + '_mandays'] || formData['gf5272017_row_' + no + '_mandays'];
+                    if (md !== undefined && md !== null && md !== '') setXmlCellByRef('AK' + rNum, md, true);
+                    var ot = formData['gf5272017_row_' + rowKey + '_overtime'] || formData['gf5272017_row_' + no + '_overtime'];
+                    if (ot !== undefined && ot !== null && ot !== '') setXmlCellByRef('AL' + rNum, ot, true);
+                    var avg = formData['gf5272017_row_' + rowKey + '_avg'] || formData['gf5272017_row_' + no + '_avg'];
+                    if (avg !== undefined && avg !== null && avg !== '') setXmlCellByRef('AM' + rNum, avg, true);
+                    var high = formData['gf5272017_row_' + rowKey + '_high'] || formData['gf5272017_row_' + no + '_high'];
+                    if (high !== undefined && high !== null && high !== '') setXmlCellByRef('AN' + rNum, high, true);
+                    var low = formData['gf5272017_row_' + rowKey + '_low'] || formData['gf5272017_row_' + no + '_low'];
+                    if (low !== undefined && low !== null && low !== '') setXmlCellByRef('AO' + rNum, low, true);
                 }
 
-                // 4. 序列化並保存
+                // ============================================================
+                // 4. 寫入 Tel No (寫死 E143, E144，只寫數字)
+                // ============================================================
+                var tel46 = formData['gf5272017_row_46_telno'];
+                if (tel46) setXmlCellByRef('E143', tel46, false);
+                
+                var tel47 = formData['gf5272017_row_47_telno'];
+                if (tel47) setXmlCellByRef('E144', tel47, false);
+
+                // ============================================================
+                // 5. 保存
+                // ============================================================
                 var serializer = new XMLSerializer();
                 var newSheetXml = serializer.serializeToString(xmlDoc);
                 if (!newSheetXml.startsWith('<?xml')) {
@@ -2290,15 +2353,51 @@ async function exportGF5272003Excel() {
             return null;
         }
 
+        // ★ 補上遺失的輔助函數：尋找特定 Cell
+        function findCellByRef(ref) {
+            var rowNum = ref.replace(/\D+/g, '');
+            var rowNode = getRowNode(rowNum);
+            if (!rowNode) return null;
+            var cells = rowNode.getElementsByTagNameNS(ns, "c");
+            for (var j = 0; j < cells.length; j++) {
+                if (cells[j].getAttribute("r") === ref) return cells[j];
+            }
+            return null;
+        }
+
+        // ★ 補上遺失的輔助函數：取得文字內容
+        function getNodeText(node) {
+            if (!node) return "";
+            var isNode = node.getElementsByTagNameNS(ns, "is")[0];
+            var vNode = node.getElementsByTagNameNS(ns, "v")[0];
+            if (isNode) {
+                var tNodes = isNode.getElementsByTagNameNS(ns, "t");
+                var text = "";
+                for (var i = 0; i < tNodes.length; i++) {
+                    text += tNodes[i].textContent;
+                }
+                return text;
+            } else if (vNode) {
+                return vNode.textContent;
+            }
+            return "";
+        }
+
         function setXmlCell(r, c, val) {
             if (val === undefined || val === null) return;
-            var strVal = String(val);
+            var strVal = String(val).trim();
+            
+            // ★ 處理數字，去掉 .0
             var isNum = !isNaN(strVal) && strVal !== '';
-
-                        // ★ 如果為數字，強制移除小數點 (例如 111.0 -> 111)
-            if (isNum && Number.isInteger(Number(strVal))) {
-                strVal = String(Math.floor(Number(strVal)));
+            if (isNum) {
+                var num = parseFloat(strVal);
+                if (!isNaN(num) && Number.isInteger(num)) {
+                    strVal = String(num); // 111.0 -> 111
+                } else if (!isNaN(num)) {
+                    strVal = String(num); // 111.5 保持 111.5
+                }
             }
+            
             var colLetter = XLSX.utils.encode_col(c);
             var cellRef = colLetter + (r + 1);
             
@@ -2319,39 +2418,25 @@ async function exportGF5272003Excel() {
                 cNode = xmlDoc.createElementNS(ns, "c");
                 cNode.setAttribute("r", cellRef);
                 rowNode.appendChild(cNode);
-                var children = Array.from(rowNode.getElementsByTagNameNS(ns, "c"));
-                children.sort((a, b) => {
-                    var aCol = a.getAttribute("r").replace(/\d+/g, '');
-                    var bCol = b.getAttribute("r").replace(/\d+/g, '');
-                    return aCol.localeCompare(bCol);
-                });
-                children.forEach(child => rowNode.appendChild(child));
             }
 
-            while (cNode.firstChild) {
-                cNode.removeChild(cNode.firstChild);
-            }
+            var originalStyle = cNode.getAttribute("s");
+            while (cNode.firstChild) cNode.removeChild(cNode.firstChild);
+            if (originalStyle) cNode.setAttribute("s", originalStyle);
 
             if (strVal === '') {
                 cNode.removeAttribute("t"); 
                 return;
             }
 
-            if (isNum) {
-                cNode.removeAttribute("t");
-                var vNode = xmlDoc.createElementNS(ns, "v");
-                vNode.textContent = strVal;
-                cNode.appendChild(vNode);
-            } else {
-                cNode.setAttribute("t", "inlineStr");
-                var isNode = xmlDoc.createElementNS(ns, "is");
-                var tNode = xmlDoc.createElementNS(ns, "t");
-                tNode.textContent = strVal;
-                isNode.appendChild(tNode);
-                cNode.appendChild(isNode);
-            }
+            // ★ 核心：參考 2017 寫法，全部使用 inlineStr（文字格式），強制避免套用原本的 0.0 格式
+            cNode.setAttribute("t", "inlineStr");
+            var isNode = xmlDoc.createElementNS(ns, "is");
+            var tNode = xmlDoc.createElementNS(ns, "t");
+            tNode.textContent = strVal;
+            isNode.appendChild(tNode);
+            cNode.appendChild(isNode);
         }
-
         // 處理表頭 (含打勾框)
         for (var R = range.s.r; R <= Math.min(range.e.r, 15); R++) {
             for (var C = range.s.c; C <= Math.min(range.e.c, 40); C++) {
@@ -2442,6 +2527,8 @@ async function exportGF5272003Excel() {
 
         // 寫入 Item 數據
         var itemRowMap = {};
+        
+        // 1. 動態掃描 A 列來找行號 (1~52)
         for (var R = range.s.r; R <= range.e.r; R++) {
             var aCell = ws[XLSX.utils.encode_cell({ r: R, c: 0 })];
             if (!aCell) continue;
@@ -2450,20 +2537,44 @@ async function exportGF5272003Excel() {
             if (isNaN(numV) || numV < 1 || numV > 52) continue;
             if (String(numV) !== raw) continue;
 
+            // 如果是 48-52，直接記錄
+            if (numV >= 48 && numV <= 52) {
+                itemRowMap[numV] = R;
+                continue;
+            }
+
+            // 其他行 (1-47) 檢查 B 列，避免抓到空行
             var bCell = ws[XLSX.utils.encode_cell({ r: R, c: 1 })];
             if (!bCell || String(bCell.v || '').trim().length < 3) continue;
 
             if (!itemRowMap[numV]) itemRowMap[numV] = R;
         }
 
+        // 2. 寫入數據
         Object.keys(itemRowMap).forEach(function (noStr) {
             var no = parseInt(noStr, 10);
             var R = itemRowMap[no];
 
+            // ★ 針對 Others (48~52)，直接用固定英文前綴 + 用戶輸入的值
+            if (no >= 48 && no <= 52) {
+                var nm = formData['gf5272003_row_' + no + '_name'] || '';
+                var cd = formData['gf5272003_row_' + no + '_code'] || '';
+                
+                // 強制寫入：B列 (名稱) 和 D列 (代碼)
+                var bText = 'Others 4: trade name - ' + (nm ? nm : '');
+                var dText = 'code - ' + (cd ? cd : '');
+
+                setXmlCell(R, 1, bText); // 寫入 B 列
+                setXmlCell(R, 3, dText); // 寫入 D 列
+            }
+
+            // 寫入 1~31 天的數據
             for (var d = 1; d <= 31; d++) {
                 var v = formData['gf5272003_row_' + no + '_day_' + d];
                 if (v) setXmlCell(R, 4 + (d - 1), v);
             }
+            
+            // 寫入後方數據
             var md = formData['gf5272003_row_' + no + '_mandays'];
             if (md) setXmlCell(R, 35, md);
             var ot = formData['gf5272003_row_' + no + '_overtime'];
@@ -2623,113 +2734,54 @@ async function exportGF5272003Excel() {
 
             try {
                 var pdf = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
-                var pdfWidth = pdf.internal.pageSize.getWidth();
-                var pdfHeight = pdf.internal.pageSize.getHeight();
+                var pdfWidth = pdf.internal.pageSize.getWidth();  // 420mm
+                var pdfHeight = pdf.internal.pageSize.getHeight(); // 297mm
                 var isFirstPage = true;
 
-                // 準備兩段文字頁的 HTML
-                var textPage1Html = `<div style="padding:20px; font-family:'Times New Roman', serif; font-size:11px; line-height:1.5; width:2400px; background:#fff; box-sizing:border-box;">
-                    <p><strong>11. Item 11 "Truck Driver"</strong> in the revised GFS27 covers trade code C349 "Construction Goods Vehicle Driver (Master)", trade code C349c "Truck Driver (Medium Goods Vehicles)", trade code C349a "Truck Driver (Heavy Goods Vehicles)", trade code C349b "Truck Driver (Special Purpose Vehicles)" and trade code C349d "Truck Driver (Articulated Vehicles)".</p>
-                    <p>a. Complete the form and submit to the site supervisory staff within the first four working days of the succeeding month.</p>
-                    <p>b. Enter the number of workers engaged on the Site on each calendar day. Include only workers who have worked for at least three hours on that day.</p>
-                    <p>c. Include all construction workers employed by him and his sub-contractors, but not those by Nominate Sub-contractors. The number of workers engaged includes all levels of skill for a particular trade (see also Explanatory Note 2). Their wages are reflected in the range between the High and Low Daily Wage Rates.</p>
-                    <p>d. Enter the total number of hours of overtime during the month for the respective trades. For the purpose of this return, overtime shall mean working hours in excess of the normal working hours agreed between the employer and the employee. The Contractor should note the provisions in the Employment Ordinance governing employees' entitlement to statutory holidays, annual leave and rest days.</p>
-                    <p>e. Enter daily wage rates which include basic daily wages (employees' contributions to Mandatory Pendant Fund (MPF) included) plus guaranteed allowances per day (e.g. meal and transportation allowances) and paid leave (if applicable). Overtime pay and employees' contributions to MPF should not be included.</p>
-                    <p>The average daily wage rate (Av.) should be a weighted value which can be obtained by dating the total wage bill incurred by the total number of man-days employed for the trade concerned over the month. The total wage bill should exclude overtime pay and the employers' contributions to MPF. For monthly-paid workers, their monthly salary can be converted to daily wage rate by using the following method:</p>
-                    <p>To calculate total yearly wage bill (a): = (Monthly salary + Monthly Guaranteed allowances) x 12 + Paid leave (if applicable) Corresponding number of man-day (b): = [365 days - 12 (statutory holidays) - 52 (Sundays)] Average daily wage rate = (a) / (b)</p>
-                    <p>The High (Low) "Daily Wage Rate" required to be entered in GFS27 forms means the average of the highest (lowest) rate in each trade division within a designated trade. For example, the High "Daily Wage Rate" of item 6 "Scaffolder" means the average of the highest rate in each trade division of "Scaffolder (Master)", "Bamboo Scaffolder" and "Metal Scaffolder".</p>
-                    <p>b. Be responsible for the accuracy of the data entered by him and, as far as practicable, provide supporting evidence if so required by the site supervisory staff.</p>
-                    <p>Nominated Sub-contractor</p>
-                    <p>c. Complete and submit a separate return covering their workers as (a) to (f) above.</p>
-                    <p>Site Supervisory Staff</p>
-                    <p>h. Check and sign the returns and forward them to the project office. Where more than one discipline of site supervisory staff, e.g. building works and building services, are involved, they should check entries for the trades under their purview and sign separately on the form.</p>
-                    <p>Project Office (Includes Representatives of Architect/Engineer/Supervising Officer/Maintenance Surveyor) 1. Consolidate all returns of their sites and deliver the returns to the Census and Statistics Department within the first two weeks of the succeeding month by email.</p>
-                    <p>C&SD accepts only GFS27 forms which have been properly signed by the site supervisory staff and are sent to C&SD by the Project Office before the 18th day in the month following the reference month for compilation of the GFS27 statistics.</p>
-                    <p><strong>B. Explanatory Notes</strong></p>
-                    <p>1. GFS27 (Rev. 1/2017) incorporates the revised list of trades ("Trade List - Rev.") under the Construction Workers Registration Ordinance (Cap 583).</p>
-                    <p>2. Please refer to the Construction Industry Council website http://cwr.hkic.org/registration/DesignatedTrades.asp for trade codes and Schedule 1 to the Construction Workers Registration Ordinance (Cap 583) for skills descriptions for designated trade divisions in the revised list. C3xx/C3xxx and E3xx/E3xxx are series of trade codes for Skilled Workers for building and civil engineering disciplines, and E&M disciplines, respectively with specific x/xox for each individual trade. The corresponding series for Semi-skilled Workers are C4xx/C4xxx and E4xx/E4xxx. For example, C3xx and C4xx are trade codes for skilled bar bender & fixer and semi-skilled bar bender & fixer respectively. The entry for the no. of bar bender & fixer in the return should therefore be the total no. of skilled and semi-skilled bar bender & fixers. However, not all trades, e.g. Trackworker (C348), have the corresponding semi-skilled workers.</p>
-                    <p>3. Item 2 "Concrete" in the revised GFS27 covers trade code C3016 "Concrete and Grouting Workers" (Master), trade code C309 and "Concrete" (Code C309 and C409 in the GFS27 (Rev. 1/2003)), trade code C308 "Concrete Repairer (Spalling Concrete)" trade code C342 "Shotcrete" and trade code C321 "Grouting Worker".</p>
-                    <p>4. Item 3 "Drainlayer" in the revised GFS27 covers trade code C3006 "Drain and Pipe Layer (Master)", trade code C314 and "Drainlayer" (Code C314 in the GFS27 (Rev. 1/2003)) and trade code C311 "Pipelayer".</p>
-                    <p>5. Item 4 "Plumber" in the revised GFS27 covers trade code C338 and C438 "Plumber" (Code C338 and C438 in the GFS27 (Rev. 1/2003)) in installation and capital works.</p>
-                    <p>6. Item 6 "Scaffolder" in the revised GFS27 covers trade code C3019 and C4019 "Scaffolder (Master)" trade code C303 and C403 in the GFS27 (Rev. 1/2003) and trade code C327 and C427 "Metal Scaffolder".</p>
-                    <p>7. Item 7 "General Workers" refers to "Registered General Worker" which means a person whose name is entered in the Register of Construction Workers established under section 37(1)(a) of the Construction Workers Registration Ordinance (Cap 583) as a registered general worker.</p>
-                    <p>8. Item 8 "Carpenter (Formwork)" in the revised GFS27 covers trade code C306 "Carpenter (Fender)", trade code C307 and "Carpenter (Formwork) (Master)" (Code C307 and C407 in the GFS27 (Rev. 1/2003)), trade code C307a and C407a "Carpenter (Formwork - Building Construction) (Striking)", trade code C307a and C407a "Carpenter (Formwork - Building Construction)".</p>
-                    <p>9. Item 9 "Joiner" in the revised GFS27 covers trade code C322 and C422 "Joiner" (Code C322 and C422 in the GFS27 (Rev. 1/2003)) and trade code C322a "Joint (Assembling)".</p>
-                    <p>10. Item 10 "Plant & Equipment Operator (General)" in the revised GFS27 covers trade code C320 and C400 "Ground Investigation Operator/Driller/Borer" trade code C333d "Plant and Equipment Operator (Fork-lift Truck)", trade code C333d "Plant and Equipment Operator (Mini-loader) (with Attachments)", trade code C333g "Plant and Equipment Operator (Graders)", trade code C357 "Plant and Equipment Operator (Suspended Working Platform)", trade code C356 "Plant and Equipment Operator (Demolition) - Excavator", trade code C333b "Plant and Equipment Operator (Excavator)", trade code C332 "Builder's Lift Operator", trade code C333a "Plant and Equipment Operator (Bulldozer)", trade code C334d "Plant and Equipment Operator (Truck-mounted Crane)", trade code C333h "Plant and Equipment Operator (Dumpers)", trade code C333c "Plant and Equipment Operator (Locomotive)", trade code C333i "Plant and Equipment Operator (Compactor)" and trade code C333k "Plant and Equipment Operator (Scraper)".</p>
-                    <p>11. Item 11 "Truck Driver" in the revised GFS27 covers trade code C349 "Construction Goods Vehicle Driver (Master)", trade code C349c "Truck Driver trade code C349d "Truck Driver (Articulated Vehicles)".</p>
-                    <p>12. Item 12 "Flooring Worker" in the revised GFS27 covers trade code C316 and C416 "Floor Layer (Master)", trade code C316b and C416b "Floor Layer (Timber Flooring)" and trade code C316a and C416a "Floor Layer (PVC Flooring)".</p>
-                    <p>13. Item 13 "Plant & Equipment Operator (Heavy)" in the revised GFS27 covers trade code C335 and C435 "Plant and Equipment Operator (Piling) (Master)", trade code C335b and C435b "Plant and Equipment Operator (Perceptive Pile)", trade code C335a and C435a "Plant and Equipment Operator (Crawler-mounted Pile)", trade code C334c "Plant and Equipment Operator (Tower Crane)", trade code C334a "Plant and Equipment Operator (Crawler-mounted Pile)", trade code C334c "Plant and Equipment Operator (Wheeled Telescopic Mobile Crane)", trade code C334b "Plant and Equipment Operator (Gantry Crane)", trade code C336a and C416a "Plant and Equipment Operator (Tunneling) - Jumbo Drilling", trade code C336c and C436c "Plant and Equipment Operator (Tunneling) - Segment (Tunnel) and trade code C336d and C436d "Plant and Equipment Operator (Tunneling) - Tunnel Boring Machine".</p>
-                    <p>14. Item 15 "Metal Worker" in the revised GFS27 covers trade code C3010 and C4010 "Metal-steel Worker (Master)" and trade code C328 and C428 "Metal Worker" (Code C328 and C428 in the GFS27 (Rev. 1/2003)).</p>
-                    <p>15. Item 16 "Equipment and System Mechanics" in the revised GFS27 covers trade code E3036 and E4036 "Electronic Equipment Mechanic (Construction Work) (Master)", trade code E323 and E423 "Building Security System Mechanic", trade code E324 and E424 "Communication System Mechanic" and trade code C310 and C410 "Plant and Equipment Mechanic (Construction Work) (Master)".</p>
-                    <p>16. Item 17 "Piling Worker" in the revised GFS27 covers trade code C330 and C430 "Piling Operative (Master)", trade code C330b and C430b "Piling Operative (Master)", trade code C330a and C430a "Piling Operative (Bored Pile)".</p>
-                    <p>17. Item 18 "Waterproofing Worker" in the revised GFS27 covers trade code C301 "Waterproofing Worker (Master)", trade code C301c "Waterproofing Worker (L</p>
-                </div>`;
+                // 嘗試獲取原始 PDF 的第 2 和第 4 頁圖片
+                var originalImages = null;
+                var b64_17 = window.GF527_2017_BASE64;
+                
+                if (b64_17 && b64_17.length > 100 && b64_17.substring(0, 12).indexOf('JVBERi0') === 0) {
+                    try {
+                        loading.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:12px;"></i> 載入原始 PDF 文字頁...';
+                        var blob = new Blob([base64ToUint8(b64_17)], { type: 'application/pdf' });
+                        var ab = await blob.arrayBuffer();
+                        var origPdf = await pdfjsLib.getDocument({ data: ab }).promise;
+                        
+                        if (origPdf.numPages >= 4) {
+                            originalImages = [];
+                            var targetPages = [2, 4]; // 目標：第 2 頁與第 4 頁
+                            for (var i = 0; i < targetPages.length; i++) {
+                                var pNum = targetPages[i];
+                                loading.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:12px;"></i> 渲染原始 PDF 第 ' + pNum + ' 頁...';
+                                var page = await origPdf.getPage(pNum);
+                                var viewport = page.getViewport({ scale: 2.0 }); // 2.0 倍解析度已足夠清晰
+                                var canvas = document.createElement('canvas');
+                                canvas.width = viewport.width;
+                                canvas.height = viewport.height;
+                                var ctx = canvas.getContext('2d');
+                                ctx.fillStyle = '#ffffff';
+                                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                                await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                                
+                                originalImages.push({
+                                    dataUrl: canvas.toDataURL('image/jpeg', 0.95),
+                                    width: canvas.width,
+                                    height: canvas.height
+                                });
+                            }
+                        }
+                    } catch (err) {
+                        console.warn('無法載入或渲染原始 PDF，將使用預設 HTML 文字頁', err);
+                    }
+                }
 
-                var textPage2Html = `<div style="padding:20px; font-family:'Times New Roman', serif; font-size:11px; line-height:1.5; column-count:2; column-gap:40px; width:2400px; background:#fff; box-sizing:border-box;">
-                    <p><strong>A. Instructions</strong><br>Contractor<br>a. Complete the form and submit to the site supervisory staff within the first four working days of the succeeding month.</p>
-                    <p>b. Enter the number of workers engaged on the Site on each calendar day. Include only workers who have worked for at least three hours on that day.</p>
-                    <p>c. Include all construction workers employed by him and his sub-contractors, but not those by Nominated Sub-contractors. The number of workers engaged includes all levels of skill for a particular trade (see also Explanatory Note 2). Their wages are reflected in the range between the High and Low Daily Wage Rates.</p>
-                    <p>d. Enter the total number of hours of overtime during the month for the respective trades. For the purpose of this return, overtime shall mean working hours in excess of the normal working hours agreed between the employer and the employee. The Contractor should note the provisions in the Employment Ordinance governing employees' entitlement to statutory holidays, annual leave and rest days.</p>
-                    <p>e. Enter daily wage rates which include basic daily wages (employees' contributions to Mandatory Provident Fund (MPF) included) plus guaranteed allowances per day (e.g. meal and transportation allowances) and paid leave (if applicable). Overtime pay and employers' contributions to MPF should not be included.</p>
-                    <p>The average daily wage rate (Av.) should be a weighted value which can be obtained by dividing the total wage bill incurred for the trade concerned over the month by the total number of man-days employed for the trade concerned over the month. The total wage bill should exclude overtime pay and the employers' contributions to MPF. For monthly-paid workers, their monthly salary can be converted to daily wage rate by using the following method:<br>To calculate total yearly wage bill (a): = (Monthly salary + Monthly Guaranteed allowances) x 12 + Paid leave (if applicable)<br>Corresponding number of man-day (b): = [365 days - 12 (statutory holidays) - 52 (Sundays)]<br>Average daily wage rate = (a) / (b)</p>
-                    <p>The High (Low) "Daily Wage Rate" required to be entered in GFS27 forms means the average of the highest (lowest) rate in each trade division within a designated trade. For example, the High "Daily Wage Rate" of item 6 "Scaffolder" means the average of the highest rate in each trade division of "Scaffolder (Master)", "Bamboo Scaffolder" and "Metal Scaffolder".</p>
-                    <p>f. Be responsible for the accuracy of the data entered by him and, as far as practicable, provide supporting evidence if so required by the site supervisory staff.</p>
-                    <p>Nominated Sub-contractor<br>g. Complete and submit a separate return covering their workers as (a) to (f) above.</p>
-                    <p>Site Supervisory Staff<br>h. Check and sign the returns and forward them to the project office. Where more than one discipline of site supervisory staff, e.g. building works and building services, are involved, they should check entries for the trades under their purview and sign separately on the form.</p>
-                    <p>Project Office (Includes Representatives of Architect/Engineer/Supervising Officer/Maintenance Surveyor)<br>i. Consolidate all returns of their sites and deliver the returns to the Census and Statistics Department within the first two weeks of the succeeding month by e-mail.</p>
-                    <p>C&amp;SD<br>C&amp;SD accepts only GFS27 forms which have been properly signed by the site supervisory staff and are sent to C&amp;SD by the Project Office before the 18th day in the month following the reference month for compilation of the GFS27 statistics.</p>
-                    <p><strong>B. Explanatory Notes</strong></p>
-                    <p>1. GFS27 (Rev. 1/2017) incorporates the revised list of trades ("Trade List - Rev.") under the Construction Workers Registration Ordinance (Cap 583).</p>
-                    <p>2. Please refer to the Construction Industry Council website http://www.cic.hk/registration/DesignatedTrades.asp for trade codes and Schedule 1 to the Construction Workers Registration Ordinance (Cap 583) for skills descriptions for designated trade divisions in the revised list. C3xx/C3xxx and E3xx/E3xxx are series of trade codes for Skilled Workers for building and civil engineering disciplines, and E&amp;M disciplines respectively, with specific x/xxx for each individual trade. The corresponding series for Semi-skilled Workers are C4xx/C4xxx and E4xx/E4xxx. For example, C304 and C404 are trade codes for skilled bar bender &amp; fixer and semi-skilled bar bender &amp; fixer respectively. The entry for the no. of bar bender &amp; fixer in the return should therefore be the total no. of skilled and semi-skilled bar bender &amp; fixers. However, not all trades, e.g. Trackworker (C348), have the corresponding semi-skilled workers.</p>
-                    <p>3. Item 2 "Concretor" in the revised GFS27 covers trade code C3016 "Concrete and Grouting Worker (Master)", trade code C309 and C409 "Concretor" (Code C309 in the GFS27 (Rev. 1/2003)), trade code C308 "Concrete Repairer (Spalling Concrete)", trade code C342 "Shotcretor" and trade code C321 "Grouting Worker".</p>
-                    <p>4. Item 3 "Drainlayer" in the revised GFS27 covers trade code C3006 "Drain and Pipe Layer (Master)", trade code C314 and C414 "Drainlayer" (Code C314 in the GFS27 (Rev. 1/2003)) and trade code C331 "Pipelayer".</p>
-                    <p>5. Item 4 "Plumber" in the revised GFS27 covers trade code C338 and C438 "Plumber" (Code C338 and C438 in the GFS27 (Rev. 1/2003)) in installation and capital works.</p>
-                    <p>6. Item 6 "Scaffolder" in the revised GFS27 covers trade code C3019 and C4019 "Scaffolder (Master)", trade code C303 and C403 "Bamboo Scaffolder" (Code C303 and C403 in the GFS27 (Rev. 1/2003)) and trade code C327 and C427 "Metal Scaffolder".</p>
-                    <p>7. Item 7 "General Workers" refers to "Registered General Worker" which means a person whose name is entered in the Register of Construction Workers established under section 37(1)(a) of the Construction Workers Registration Ordinance (Cap 583) as a registered general worker.</p>
-                    <p>8. Item 8 "Carpenter (Formwork)" in the revised GFS27 covers trade code C306 "Carpenter (Fender)", trade code C307 and C407 "Carpenter (Formwork) (Master)" (Code C307 and C407 in the GFS27 (Rev. 1/2003)), trade code C307b and C407b "Carpenter (Formwork - Civil Construction)", trade code C307d "Carpenter (Formwork - Civil Construction) (Striking)", trade code C307a and C407a "Carpenter (Formwork - Building Construction)" and trade code C307c "Carpenter (Formwork - Building Construction) (Striking)".</p>
-                    <p>9. Item 9 "Joiner" in the revised GFS27 covers trade code C322 and C422 "Joiner" (Code C322 and C422 in the GFS27 (Rev. 1/2003)) and trade code C322a "Joiner (Assembling)".</p>
-                    <p>10. Item 10 "Plant &amp; Equipment Operator (General)" in the revised GFS27 covers trade code C320 and C420 "Ground Investigation Operator/Driller/Borer", trade code C333f "Plant and Equipment Operator (Fork-lift Truck)", trade code C333d "Plant and Equipment Operator (Mini-loader)", trade code C333e "Plant and Equipment Operator (Mini-loader (with Attachments))", trade code C333g "Plant and Equipment Operator (Grader)", trade code C357 "Plant and Equipment Operator (Suspended Working Platform)", trade code C356 "Plant and Equipment Operator (Demolition) - Excavator", trade code C333b "Plant and Equipment Operator (Excavator)", trade code C332 "Builder's Lift Operator", trade code C333a "Plant and Equipment Operator (Bulldozer)", trade code C334d "Plant and Equipment Operator (Truck-mounted Crane)", trade code C333h "Plant and Equipment Operator (Dumper)", trade code C333c "Plant and Equipment Operator (Loader)", trade code C333i "Plant and Equipment Operator (Locomotive)", trade code C333j "Plant and Equipment Operator (Compactor)" and trade code C333k "Plant and Equipment Operator (Scraper)".</p>
-                    <p>11. Item 11 "Truck Driver" in the revised GFS27 covers trade code C349 "Construction Goods Vehicle Driver (Master)", trade code C349c "Truck Driver (Medium Goods Vehicles)", trade code C349a "Truck Driver (Heavy Goods Vehicles)", trade code C349b "Truck Driver (Special Purpose Vehicles)" and trade code C349d "Truck Driver (Articulated Vehicles)".</p>
-                    <p>12. Item 12 "Flooring Worker" in the revised GFS27 covers trade code C316 and C416 "Floor Layer (Master)", trade code C316b and C416b "Floor Layer (Timber Flooring)" and trade code C316a and C416a "Floor Layer (PVC Flooring)".</p>
-                    <p>13. Item 13 "Plant &amp; Equipment Operator (Heavy)" in the revised GFS27 covers trade code C335 and C435 "Plant and Equipment Operator (Piling) (Master)", trade code C335b and C435b "Plant and Equipment Operator (Percussive Pile)", trade code C335a and C435a "Plant and Equipment Operator (Bored Pile)", trade code C334c "Plant and Equipment Operator (Tower Crane)", trade code C334a "Plant and Equipment Operator (Crawler-mounted Mobile Crane)", trade code C334e "Plant and Equipment Operator (Wheeled Telescopic Mobile Crane)", trade code C334b "Plant and Equipment Operator (Gantry Crane)", trade code C336a and C436a "Plant and Equipment Operator (Tunneling) - Jumbo Drilling", trade code C336c and C436c "Plant and Equipment Operator (Tunneling) - Segment Erection" and trade code C336d and C436d "Plant and Equipment Operator (Tunneling) - Tunnel Boring Machine".</p>
-                    <p>14. Item 15 "Metal Worker" in the revised GFS27 covers trade code C3010 and C4010 "Metal-steel Worker (Master)" and trade code C328 and C428 "Metal Worker" (Code C328 and C428 in the GFS27 (Rev. 1/2003)).</p>
-                    <p>15. Item 16 "Equipment and System Mechanic" in the revised GFS27 covers trade code E3036 and E4036 "Electronic Equipment Mechanic (Construction Work) (Master)", trade code E323 and E423 "Building Security System Mechanic", trade code E324 and E424 "Communication System Mechanic" and trade code CE310 and CE410 "Plant and Equipment Mechanic (Construction Work) (Master)".</p>
-                    <p>16. Item 17 "Piling Worker" in the revised GFS27 covers trade code C330 and C430 "Piling Operative (Master)", trade code C330b and C430b "Piling Operative (Percussive Pile)" and trade code C330a and C430a "Piling Operative (Bored Pile)".</p>
-                    <p>17. Item 18 "Waterproofing Worker" in the revised GFS27 covers trade code C301 "Waterproofing Worker (Master)", trade code C301c "Waterproofing Worker (Liquid Membrane)", trade code C301b and C401b "Waterproofing Worker (Burntype Felt)" and trade code C301a "Waterproofing Worker (Adhesive-type Felt)".</p>
-                    <p>18. Item 20 "Tiler" in the revised GFS27 covers trade code C347 and C447 "Tiler", trade code C347a and C447a "Tiler (Mosaic)" and trade code C347b and C447b "Tiler (Tile)".</p>
-                    <p>19. Item 21 "Demolition Worker" in the revised GFS27 covers trade code C312 "Demolition Worker (Master)", trade code C312a "Demolition Worker (Building)" and trade code C312b "Demolition Worker (Unauthorised Building Works)".</p>
-                    <p>20. Item 22 "Marine Construction Plant Operator" in the revised GFS27 covers trade code C325 and C425 "Marine Construction Plant Operator (Lifting) (Master)", trade code C325c and C425c "Marine Construction Plant Operator (Derrick)", trade code C325a and C425a "Marine Construction Plant Operator (Boom-grab Bucket)" and trade code C325b and C425b "Marine Construction Plant Operator (Boom-hook)".</p>
-                    <p>21. Item 24 "Curtain Wall and Glass Installer" in the revised GFS27 covers trade code C3021 and C4021 "Curtain Wall and Glass Panes Installer (Master)", trade code C319 and C419 "Glazier" (Code C319 in the GFS27 (Rev. 1/2003)) and trade code C311 and C411 "Curtain Wall Installer".</p>
-                    <p>22. Item 25 "Painter &amp; Decorator" in the revised GFS27 covers trade code C329 and C429 "Painter and Decorator (Master)" (Code C329 and C429 in the GFS27 (Rev. 1/2003)), trade code C329a "Painter and Decorator (Roller Painting)", trade code C329b "Painter and Decorator (Surface Filling)", trade code C329c "Painter and Decorator (Emulsion Painting)", trade code C329d "Painter and Decorator (Brushing Lacquering)", trade code C329e "Painter and Decorator (Synthetic Painting)", trade code C329f "Painter and Decorator (Clear Lacquering)", trade code C329g "Painter and Decorator (Texture-spray)", trade code C329h "Painter and Decorator (Metal Paint Spray)", trade code C329i "Painter and Decorator (Paperhanging)" and trade code C329j "Painter and Decorator (Sign Writing)".</p>
-                    <p>23. Item 26 "Plasterer" in the revised GFS27 covers trade code C3008 and C4008 "Cement Sand Mortar Worker (Master)", trade code C337 and C437 "Plasterer" (Code C337 and C437 in the GFS27 (Rev. 1/2003)) and trade code C337a and C437a "Plasterer (Floor)".</p>
-                    <p>24. Item 35 "Electrical Fitter (incl. Electrician)" in the revised GFS27 covers trade code E305a and E405a "Control Panel Assembler", trade code E305b and E405b "Electrical Wireman" and trade code E305 "Electrical Fitter" (Code E305 in the GFS27 (Rev. 1/2003)) in installation and capital works.</p>
-                    <p>25. Item 37 "Refrigeration/AC/Ventilation Mechanic" in the revised GFS27 covers trade code E314 and E414 "Refrigeration/AC/Ventilation Mechanic (Master)" (Code E314 and E414 in the GFS27 (Rev. 1/2003)), trade code E314e and E414e "Refrigeration/AC/Ventilation Mechanic (Water System)", trade code E314a and E414a "Refrigeration/AC/Ventilation Mechanic (Air System)", trade code E314c and E414c "Refrigeration/AC/Ventilation Mechanic (Thermal Insulation)", trade code E314b and E414b "Refrigeration/AC/Ventilation Mechanic (Electrical Control)" and trade code E314d and E414d "Refrigeration/AC/Ventilation Mechanic (Unitary System)" in installation and capital works.</p>
-                    <p>26. Item 38 "Fire Service Mechanic" in the revised GFS27 covers trade code E306 "Fire Service Mechanic (Master)" (Code E306 in the GFS27 (Rev. 1/2003)), trade code E306c "Fire Service Portable Equipment Fitter", trade code E306a and E406a "Fire Service Electrical Fitter" and trade code E306b and E406b "Fire Service Mechanical Fitter" in installation and capital works.</p>
-                    <p>27. Item 39 "Lift and Escalator Mechanic" in the revised GFS27 covers trade code E309 "Lift and Escalator Mechanic (Master)" (Code E309 in the GFS27 (Rev. 1/2003)), trade code E309a "Lift Mechanic" and trade code E309b "Escalator Mechanic".</p>
-                    <p>28. Item 40 "Building Services Maintenance Mechanic" in the revised GFS27 covers the repair and maintenance sectors of the following trades -<br>a. Refrigeration/AC/Ventilation Mechanic;<br>b. Electrical Fitter (incl. Electrician);<br>c. Fire Service Mechanic; and<br>d. Plumber.</p>
-                    <p>29. Trades available under the Construction Workers Registration Ordinance (Cap 583) but not specified in this form should be entered against "Others" in items 41 to 45 of the form.</p>
-                    <p>30. The following trades are not considered to be construction workers and should not be included in the return: mariners of vessels, contract car drivers, office attendants, amahs and watchmen.</p>
-                    <p>31. "Works Code" is used for classifying the main type of work covered in the contract, and is specified by the project office. Only one works code is to be entered and adopted throughout the whole contract. Nominated Sub-contractor shall also use the same works code in their returns. Where the Contractor or Nominated Sub-contractor has contract contains more than one works types, the works code for the dominant work type should be used.</p>
-                </div>`;
-
-                // 建立隱藏容器來轉換文字頁
-                var tempText1 = document.createElement('div'); tempText1.innerHTML = textPage1Html; document.body.appendChild(tempText1);
-                var tempText2 = document.createElement('div'); tempText2.innerHTML = textPage2Html; document.body.appendChild(tempText2);
-                tempText1.style.cssText = 'position:absolute; top:-9999px; left:-9999px; background:#fff; padding:20px;';
-                tempText2.style.cssText = 'position:absolute; top:-9999px; left:-9999px; background:#fff; padding:20px;';
-
-                // 截圖函數
-                async function captureAndAdd(element) {
-                    var canvas = await html2canvas(element, {
-                        scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false,
-                        windowWidth: 2400, windowHeight: element.scrollHeight
-                    });
-                    var imgData = canvas.toDataURL('image/jpeg', 0.95);
-                    var imgWidth = canvas.width;
-                    var imgHeight = canvas.height;
+                // 圖片加入 PDF 的輔助函數（自動等比例縮放並置中）
+                async function addImageToPdf(imgData, imgWidth, imgHeight) {
                     var ratioX = pdfWidth / imgWidth;
                     var ratioY = pdfHeight / imgHeight;
-                    var scale = Math.min(ratioX, ratioY);
+                    var scale = Math.min(ratioX, ratioY); 
                     var finalWidth = imgWidth * scale;
                     var finalHeight = imgHeight * scale;
                     var marginX = (pdfWidth - finalWidth) / 2;
@@ -2740,15 +2792,134 @@ async function exportGF5272003Excel() {
                     isFirstPage = false;
                 }
 
-                // 依序處理：P1(表格) -> P2(文字) -> P3(表格) -> P4(文字)
-                await captureAndAdd(pages[0]);
-                await captureAndAdd(tempText1);
-                await captureAndAdd(pages[1]);
-                await captureAndAdd(tempText2);
+                // 截圖 HTML 元素的輔助函數
+                async function captureElement(element) {
+                    var canvas = await html2canvas(element, {
+                        scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false,
+                        windowWidth: 2400, windowHeight: element.scrollHeight
+                    });
+                    return { dataUrl: canvas.toDataURL('image/jpeg', 0.95), width: canvas.width, height: canvas.height };
+                }
 
-                document.body.removeChild(tempText1);
-                document.body.removeChild(tempText2);
+                // ===== P1 (我們的表格) =====
+                loading.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:12px;"></i> 生成第 1 頁 (表格)...';
+                var img1 = await captureElement(pages[0]);
+                await addImageToPdf(img1.dataUrl, img1.width, img1.height);
 
+                // ===== P2 (原始 PDF 第 2 頁 或 Fallback) =====
+                if (originalImages && originalImages[0]) {
+                    await addImageToPdf(originalImages[0].dataUrl, originalImages[0].width, originalImages[0].height);
+                } else {
+                    var textPage1Html = `<div style="padding:20px; font-family:'Times New Roman', serif; font-size:11px; line-height:1.5; width:2400px; background:#fff; box-sizing:border-box;">
+                        <p><strong>11. Item 11 "Truck Driver"</strong> in the revised GFS27 covers trade code C349 "Construction Goods Vehicle Driver (Master)", trade code C349c "Truck Driver (Medium Goods Vehicles)", trade code C349a "Truck Driver (Heavy Goods Vehicles)", trade code C349b "Truck Driver (Special Purpose Vehicles)" and trade code C349d "Truck Driver (Articulated Vehicles)".</p>
+                        <p>a. Complete the form and submit to the site supervisory staff within the first four working days of the succeeding month.</p>
+                        <p>b. Enter the number of workers engaged on the Site on each calendar day. Include only workers who have worked for at least three hours on that day.</p>
+                        <p>c. Include all construction workers employed by him and his sub-contractors, but not those by Nominate Sub-contractors. The number of workers engaged includes all levels of skill for a particular trade (see also Explanatory Note 2). Their wages are reflected in the range between the High and Low Daily Wage Rates.</p>
+                        <p>d. Enter the total number of hours of overtime during the month for the respective trades. For the purpose of this return, overtime shall mean working hours in excess of the normal working hours agreed between the employer and the employee. The Contractor should note the provisions in the Employment Ordinance governing employees' entitlement to statutory holidays, annual leave and rest days.</p>
+                        <p>e. Enter daily wage rates which include basic daily wages (employees' contributions to Mandatory Pendant Fund (MPF) included) plus guaranteed allowances per day (e.g. meal and transportation allowances) and paid leave (if applicable). Overtime pay and employees' contributions to MPF should not be included.</p>
+                        <p>The average daily wage rate (Av.) should be a weighted value which can be obtained by dating the total wage bill incurred by the total number of man-days employed for the trade concerned over the month. The total wage bill should exclude overtime pay and the employers' contributions to MPF. For monthly-paid workers, their monthly salary can be converted to daily wage rate by using the following method:</p>
+                        <p>To calculate total yearly wage bill (a): = (Monthly salary + Monthly Guaranteed allowances) x 12 + Paid leave (if applicable) Corresponding number of man-day (b): = [365 days - 12 (statutory holidays) - 52 (Sundays)] Average daily wage rate = (a) / (b)</p>
+                        <p>The High (Low) "Daily Wage Rate" required to be entered in GFS27 forms means the average of the highest (lowest) rate in each trade division within a designated trade. For example, the High "Daily Wage Rate" of item 6 "Scaffolder" means the average of the highest rate in each trade division of "Scaffolder (Master)", "Bamboo Scaffolder" and "Metal Scaffolder".</p>
+                        <p>b. Be responsible for the accuracy of the data entered by him and, as far as practicable, provide supporting evidence if so required by the site supervisory staff.</p>
+                        <p>Nominated Sub-contractor</p>
+                        <p>c. Complete and submit a separate return covering their workers as (a) to (f) above.</p>
+                        <p>Site Supervisory Staff</p>
+                        <p>h. Check and sign the returns and forward them to the project office. Where more than one discipline of site supervisory staff, e.g. building works and building services, are involved, they should check entries for the trades under their purview and sign separately on the form.</p>
+                        <p>Project Office (Includes Representatives of Architect/Engineer/Supervising Officer/Maintenance Surveyor) 1. Consolidate all returns of their sites and deliver the returns to the Census and Statistics Department within the first two weeks of the succeeding month by email.</p>
+                        <p>C&SD accepts only GFS27 forms which have been properly signed by the site supervisory staff and are sent to C&SD by the Project Office before the 18th day in the month following the reference month for compilation of the GFS27 statistics.</p>
+                        <p><strong>B. Explanatory Notes</strong></p>
+                        <p>1. GFS27 (Rev. 1/2017) incorporates the revised list of trades ("Trade List - Rev.") under the Construction Workers Registration Ordinance (Cap 583).</p>
+                        <p>2. Please refer to the Construction Industry Council website http://cwr.hkic.org/registration/DesignatedTrades.asp for trade codes and Schedule 1 to the Construction Workers Registration Ordinance (Cap 583) for skills descriptions for designated trade divisions in the revised list. C3xx/C3xxx and E3xx/E3xxx are series of trade codes for Skilled Workers for building and civil engineering disciplines, and E&M disciplines, respectively with specific x/xox for each individual trade. The corresponding series for Semi-skilled Workers are C4xx/C4xxx and E4xx/E4xxx. For example, C3xx and C4xx are trade codes for skilled bar bender & fixer and semi-skilled bar bender & fixer respectively. The entry for the no. of bar bender & fixer in the return should therefore be the total no. of skilled and semi-skilled bar bender & fixers. However, not all trades, e.g. Trackworker (C348), have the corresponding semi-skilled workers.</p>
+                        <p>3. Item 2 "Concrete" in the revised GFS27 covers trade code C3016 "Concrete and Grouting Workers" (Master), trade code C309 and "Concrete" (Code C309 and C409 in the GFS27 (Rev. 1/2003)), trade code C308 "Concrete Repairer (Spalling Concrete)" trade code C342 "Shotcrete" and trade code C321 "Grouting Worker".</p>
+                        <p>4. Item 3 "Drainlayer" in the revised GFS27 covers trade code C3006 "Drain and Pipe Layer (Master)", trade code C314 and "Drainlayer" (Code C314 in the GFS27 (Rev. 1/2003)) and trade code C311 "Pipelayer".</p>
+                        <p>5. Item 4 "Plumber" in the revised GFS27 covers trade code C338 and C438 "Plumber" (Code C338 and C438 in the GFS27 (Rev. 1/2003)) in installation and capital works.</p>
+                        <p>6. Item 6 "Scaffolder" in the revised GFS27 covers trade code C3019 and C4019 "Scaffolder (Master)" trade code C303 and C403 in the GFS27 (Rev. 1/2003) and trade code C327 and C427 "Metal Scaffolder".</p>
+                        <p>7. Item 7 "General Workers" refers to "Registered General Worker" which means a person whose name is entered in the Register of Construction Workers established under section 37(1)(a) of the Construction Workers Registration Ordinance (Cap 583) as a registered general worker.</p>
+                        <p>8. Item 8 "Carpenter (Formwork)" in the revised GFS27 covers trade code C306 "Carpenter (Fender)", trade code C307 and "Carpenter (Formwork) (Master)" (Code C307 and C407 in the GFS27 (Rev. 1/2003)), trade code C307a and C407a "Carpenter (Formwork - Building Construction) (Striking)", trade code C307a and C407a "Carpenter (Formwork - Building Construction)".</p>
+                        <p>9. Item 9 "Joiner" in the revised GFS27 covers trade code C322 and C422 "Joiner" (Code C322 and C422 in the GFS27 (Rev. 1/2003)) and trade code C322a "Joint (Assembling)".</p>
+                        <p>10. Item 10 "Plant & Equipment Operator (General)" in the revised GFS27 covers trade code C320 and C400 "Ground Investigation Operator/Driller/Borer" trade code C333d "Plant and Equipment Operator (Fork-lift Truck)", trade code C333d "Plant and Equipment Operator (Mini-loader) (with Attachments)", trade code C333g "Plant and Equipment Operator (Graders)", trade code C357 "Plant and Equipment Operator (Suspended Working Platform)", trade code C356 "Plant and Equipment Operator (Demolition) - Excavator", trade code C333b "Plant and Equipment Operator (Excavator)", trade code C332 "Builder's Lift Operator", trade code C333a "Plant and Equipment Operator (Bulldozer)", trade code C334d "Plant and Equipment Operator (Truck-mounted Crane)", trade code C333h "Plant and Equipment Operator (Dumpers)", trade code C333c "Plant and Equipment Operator (Locomotive)", trade code C333i "Plant and Equipment Operator (Compactor)" and trade code C333k "Plant and Equipment Operator (Scraper)".</p>
+                        <p>11. Item 11 "Truck Driver" in the revised GFS27 covers trade code C349 "Construction Goods Vehicle Driver (Master)", trade code C349c "Truck Driver trade code C349d "Truck Driver (Articulated Vehicles)".</p>
+                        <p>12. Item 12 "Flooring Worker" in the revised GFS27 covers trade code C316 and C416 "Floor Layer (Master)", trade code C316b and C416b "Floor Layer (Timber Flooring)" and trade code C316a and C416a "Floor Layer (PVC Flooring)".</p>
+                        <p>13. Item 13 "Plant & Equipment Operator (Heavy)" in the revised GFS27 covers trade code C335 and C435 "Plant and Equipment Operator (Piling) (Master)", trade code C335b and C435b "Plant and Equipment Operator (Perceptive Pile)", trade code C335a and C435a "Plant and Equipment Operator (Crawler-mounted Pile)", trade code C334c "Plant and Equipment Operator (Tower Crane)", trade code C334a "Plant and Equipment Operator (Crawler-mounted Pile)", trade code C334c "Plant and Equipment Operator (Wheeled Telescopic Mobile Crane)", trade code C334b "Plant and Equipment Operator (Gantry Crane)", trade code C336a and C416a "Plant and Equipment Operator (Tunneling) - Jumbo Drilling", trade code C336c and C436c "Plant and Equipment Operator (Tunneling) - Segment (Tunnel) and trade code C336d and C436d "Plant and Equipment Operator (Tunneling) - Tunnel Boring Machine".</p>
+                        <p>14. Item 15 "Metal Worker" in the revised GFS27 covers trade code C3010 and C4010 "Metal-steel Worker (Master)" and trade code C328 and C428 "Metal Worker" (Code C328 and C428 in the GFS27 (Rev. 1/2003)).</p>
+                        <p>15. Item 16 "Equipment and System Mechanics" in the revised GFS27 covers trade code E3036 and E4036 "Electronic Equipment Mechanic (Construction Work) (Master)", trade code E323 and E423 "Building Security System Mechanic", trade code E324 and E424 "Communication System Mechanic" and trade code C310 and C410 "Plant and Equipment Mechanic (Construction Work) (Master)".</p>
+                        <p>16. Item 17 "Piling Worker" in the revised GFS27 covers trade code C330 and C430 "Piling Operative (Master)", trade code C330b and C430b "Piling Operative (Master)", trade code C330a and C430a "Piling Operative (Bored Pile)".</p>
+                        <p>17. Item 18 "Waterproofing Worker" in the revised GFS27 covers trade code C301 "Waterproofing Worker (Master)", trade code C301c "Waterproofing Worker (L</p>
+                    </div>`;
+                    var tempText1 = document.createElement('div');
+                    tempText1.innerHTML = textPage1Html;
+                    tempText1.style.cssText = 'position:absolute; top:-9999px; left:-9999px; background:#fff; padding:20px;';
+                    document.body.appendChild(tempText1);
+                    var img2 = await captureElement(tempText1);
+                    await addImageToPdf(img2.dataUrl, img2.width, img2.height);
+                    document.body.removeChild(tempText1);
+                }
+
+                // ===== P3 (我們的表格) =====
+                loading.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:12px;"></i> 生成第 3 頁 (表格)...';
+                var img3 = await captureElement(pages[1]);
+                await addImageToPdf(img3.dataUrl, img3.width, img3.height);
+
+                // ===== P4 (原始 PDF 第 4 頁 或 Fallback) =====
+                if (originalImages && originalImages[1]) {
+                    await addImageToPdf(originalImages[1].dataUrl, originalImages[1].width, originalImages[1].height);
+                } else {
+                    var textPage2Html = `<div style="padding:20px; font-family:'Times New Roman', serif; font-size:11px; line-height:1.5; column-count:2; column-gap:40px; width:2400px; background:#fff; box-sizing:border-box;">
+                        <p><strong>A. Instructions</strong><br>Contractor<br>a. Complete the form and submit to the site supervisory staff within the first four working days of the succeeding month.</p>
+                        <p>b. Enter the number of workers engaged on the Site on each calendar day. Include only workers who have worked for at least three hours on that day.</p>
+                        <p>c. Include all construction workers employed by him and his sub-contractors, but not those by Nominated Sub-contractors. The number of workers engaged includes all levels of skill for a particular trade (see also Explanatory Note 2). Their wages are reflected in the range between the High and Low Daily Wage Rates.</p>
+                        <p>d. Enter the total number of hours of overtime during the month for the respective trades. For the purpose of this return, overtime shall mean working hours in excess of the normal working hours agreed between the employer and the employee. The Contractor should note the provisions in the Employment Ordinance governing employees' entitlement to statutory holidays, annual leave and rest days.</p>
+                        <p>e. Enter daily wage rates which include basic daily wages (employees' contributions to Mandatory Provident Fund (MPF) included) plus guaranteed allowances per day (e.g. meal and transportation allowances) and paid leave (if applicable). Overtime pay and employers' contributions to MPF should not be included.</p>
+                        <p>The average daily wage rate (Av.) should be a weighted value which can be obtained by dividing the total wage bill incurred for the trade concerned over the month by the total number of man-days employed for the trade concerned over the month. The total wage bill should exclude overtime pay and the employers' contributions to MPF. For monthly-paid workers, their monthly salary can be converted to daily wage rate by using the following method:<br>To calculate total yearly wage bill (a): = (Monthly salary + Monthly Guaranteed allowances) x 12 + Paid leave (if applicable)<br>Corresponding number of man-day (b): = [365 days - 12 (statutory holidays) - 52 (Sundays)]<br>Average daily wage rate = (a) / (b)</p>
+                        <p>The High (Low) "Daily Wage Rate" required to be entered in GFS27 forms means the average of the highest (lowest) rate in each trade division within a designated trade. For example, the High "Daily Wage Rate" of item 6 "Scaffolder" means the average of the highest rate in each trade division of "Scaffolder (Master)", "Bamboo Scaffolder" and "Metal Scaffolder".</p>
+                        <p>f. Be responsible for the accuracy of the data entered by him and, as far as practicable, provide supporting evidence if so required by the site supervisory staff.</p>
+                        <p>Nominated Sub-contractor<br>g. Complete and submit a separate return covering their workers as (a) to (f) above.</p>
+                        <p>Site Supervisory Staff<br>h. Check and sign the returns and forward them to the project office. Where more than one discipline of site supervisory staff, e.g. building works and building services, are involved, they should check entries for the trades under their purview and sign separately on the form.</p>
+                        <p>Project Office (Includes Representatives of Architect/Engineer/Supervising Officer/Maintenance Surveyor)<br>i. Consolidate all returns of their sites and deliver the returns to the Census and Statistics Department within the first two weeks of the succeeding month by e-mail.</p>
+                        <p>C&amp;SD<br>C&amp;SD accepts only GFS27 forms which have been properly signed by the site supervisory staff and are sent to C&amp;SD by the Project Office before the 18th day in the month following the reference month for compilation of the GFS27 statistics.</p>
+                        <p><strong>B. Explanatory Notes</strong></p>
+                        <p>1. GFS27 (Rev. 1/2017) incorporates the revised list of trades ("Trade List - Rev.") under the Construction Workers Registration Ordinance (Cap 583).</p>
+                        <p>2. Please refer to the Construction Industry Council website http://www.cic.hk/registration/DesignatedTrades.asp for trade codes and Schedule 1 to the Construction Workers Registration Ordinance (Cap 583) for skills descriptions for designated trade divisions in the revised list. C3xx/C3xxx and E3xx/E3xxx are series of trade codes for Skilled Workers for building and civil engineering disciplines, and E&amp;M disciplines respectively, with specific x/xxx for each individual trade. The corresponding series for Semi-skilled Workers are C4xx/C4xxx and E4xx/E4xxx. For example, C304 and C404 are trade codes for skilled bar bender &amp; fixer and semi-skilled bar bender &amp; fixer respectively. The entry for the no. of bar bender &amp; fixer in the return should therefore be the total no. of skilled and semi-skilled bar bender &amp; fixers. However, not all trades, e.g. Trackworker (C348), have the corresponding semi-skilled workers.</p>
+                        <p>3. Item 2 "Concretor" in the revised GFS27 covers trade code C3016 "Concrete and Grouting Worker (Master)", trade code C309 and C409 "Concretor" (Code C309 in the GFS27 (Rev. 1/2003)), trade code C308 "Concrete Repairer (Spalling Concrete)", trade code C342 "Shotcretor" and trade code C321 "Grouting Worker".</p>
+                        <p>4. Item 3 "Drainlayer" in the revised GFS27 covers trade code C3006 "Drain and Pipe Layer (Master)", trade code C314 and C414 "Drainlayer" (Code C314 in the GFS27 (Rev. 1/2003)) and trade code C331 "Pipelayer".</p>
+                        <p>5. Item 4 "Plumber" in the revised GFS27 covers trade code C338 and C438 "Plumber" (Code C338 and C438 in the GFS27 (Rev. 1/2003)) in installation and capital works.</p>
+                        <p>6. Item 6 "Scaffolder" in the revised GFS27 covers trade code C3019 and C4019 "Scaffolder (Master)", trade code C303 and C403 "Bamboo Scaffolder" (Code C303 and C403 in the GFS27 (Rev. 1/2003)) and trade code C327 and C427 "Metal Scaffolder".</p>
+                        <p>7. Item 7 "General Workers" refers to "Registered General Worker" which means a person whose name is entered in the Register of Construction Workers established under section 37(1)(a) of the Construction Workers Registration Ordinance (Cap 583) as a registered general worker.</p>
+                        <p>8. Item 8 "Carpenter (Formwork)" in the revised GFS27 covers trade code C306 "Carpenter (Fender)", trade code C307 and C407 "Carpenter (Formwork) (Master)" (Code C307 and C407 in the GFS27 (Rev. 1/2003)), trade code C307b and C407b "Carpenter (Formwork - Civil Construction)", trade code C307d "Carpenter (Formwork - Civil Construction) (Striking)", trade code C307a and C407a "Carpenter (Formwork - Building Construction)" and trade code C307c "Carpenter (Formwork - Building Construction) (Striking)".</p>
+                        <p>9. Item 9 "Joiner" in the revised GFS27 covers trade code C322 and C422 "Joiner" (Code C322 and C422 in the GFS27 (Rev. 1/2003)) and trade code C322a "Joiner (Assembling)".</p>
+                        <p>10. Item 10 "Plant &amp; Equipment Operator (General)" in the revised GFS27 covers trade code C320 and C420 "Ground Investigation Operator/Driller/Borer", trade code C333f "Plant and Equipment Operator (Fork-lift Truck)", trade code C333d "Plant and Equipment Operator (Mini-loader)", trade code C333e "Plant and Equipment Operator (Mini-loader (with Attachments))", trade code C333g "Plant and Equipment Operator (Grader)", trade code C357 "Plant and Equipment Operator (Suspended Working Platform)", trade code C356 "Plant and Equipment Operator (Demolition) - Excavator", trade code C333b "Plant and Equipment Operator (Excavator)", trade code C332 "Builder's Lift Operator", trade code C333a "Plant and Equipment Operator (Bulldozer)", trade code C334d "Plant and Equipment Operator (Truck-mounted Crane)", trade code C333h "Plant and Equipment Operator (Dumper)", trade code C333c "Plant and Equipment Operator (Loader)", trade code C333i "Plant and Equipment Operator (Locomotive)", trade code C333j "Plant and Equipment Operator (Compactor)" and trade code C333k "Plant and Equipment Operator (Scraper)".</p>
+                        <p>11. Item 11 "Truck Driver" in the revised GFS27 covers trade code C349 "Construction Goods Vehicle Driver (Master)", trade code C349c "Truck Driver (Medium Goods Vehicles)", trade code C349a "Truck Driver (Heavy Goods Vehicles)", trade code C349b "Truck Driver (Special Purpose Vehicles)" and trade code C349d "Truck Driver (Articulated Vehicles)".</p>
+                        <p>12. Item 12 "Flooring Worker" in the revised GFS27 covers trade code C316 and C416 "Floor Layer (Master)", trade code C316b and C416b "Floor Layer (Timber Flooring)" and trade code C316a and C416a "Floor Layer (PVC Flooring)".</p>
+                        <p>13. Item 13 "Plant &amp; Equipment Operator (Heavy)" in the revised GFS27 covers trade code C335 and C435 "Plant and Equipment Operator (Piling) (Master)", trade code C335b and C435b "Plant and Equipment Operator (Percussive Pile)", trade code C335a and C435a "Plant and Equipment Operator (Bored Pile)", trade code C334c "Plant and Equipment Operator (Tower Crane)", trade code C334a "Plant and Equipment Operator (Crawler-mounted Mobile Crane)", trade code C334e "Plant and Equipment Operator (Wheeled Telescopic Mobile Crane)", trade code C334b "Plant and Equipment Operator (Gantry Crane)", trade code C336a and C436a "Plant and Equipment Operator (Tunneling) - Jumbo Drilling", trade code C336c and C436c "Plant and Equipment Operator (Tunneling) - Segment Erection" and trade code C336d and C436d "Plant and Equipment Operator (Tunneling) - Tunnel Boring Machine".</p>
+                        <p>14. Item 15 "Metal Worker" in the revised GFS27 covers trade code C3010 and C4010 "Metal-steel Worker (Master)" and trade code C328 and C428 "Metal Worker" (Code C328 and C428 in the GFS27 (Rev. 1/2003)).</p>
+                        <p>15. Item 16 "Equipment and System Mechanic" in the revised GFS27 covers trade code E3036 and E4036 "Electronic Equipment Mechanic (Construction Work) (Master)", trade code E323 and E423 "Building Security System Mechanic", trade code E324 and E424 "Communication System Mechanic" and trade code CE310 and CE410 "Plant and Equipment Mechanic (Construction Work) (Master)".</p>
+                        <p>16. Item 17 "Piling Worker" in the revised GFS27 covers trade code C330 and C430 "Piling Operative (Master)", trade code C330b and C430b "Piling Operative (Percussive Pile)" and trade code C330a and C430a "Piling Operative (Bored Pile)".</p>
+                        <p>17. Item 18 "Waterproofing Worker" in the revised GFS27 covers trade code C301 "Waterproofing Worker (Master)", trade code C301c "Waterproofing Worker (Liquid Membrane)", trade code C301b and C401b "Waterproofing Worker (Burntype Felt)" and trade code C301a "Waterproofing Worker (Adhesive-type Felt)".</p>
+                        <p>18. Item 20 "Tiler" in the revised GFS27 covers trade code C347 and C447 "Tiler", trade code C347a and C447a "Tiler (Mosaic)" and trade code C347b and C447b "Tiler (Tile)".</p>
+                        <p>19. Item 21 "Demolition Worker" in the revised GFS27 covers trade code C312 "Demolition Worker (Master)", trade code C312a "Demolition Worker (Building)" and trade code C312b "Demolition Worker (Unauthorised Building Works)".</p>
+                        <p>20. Item 22 "Marine Construction Plant Operator" in the revised GFS27 covers trade code C325 and C425 "Marine Construction Plant Operator (Lifting) (Master)", trade code C325c and C425c "Marine Construction Plant Operator (Derrick)", trade code C325a and C425a "Marine Construction Plant Operator (Boom-grab Bucket)" and trade code C325b and C425b "Marine Construction Plant Operator (Boom-hook)".</p>
+                        <p>21. Item 24 "Curtain Wall and Glass Installer" in the revised GFS27 covers trade code C3021 and C4021 "Curtain Wall and Glass Panes Installer (Master)", trade code C319 and C419 "Glazier" (Code C319 in the GFS27 (Rev. 1/2003)) and trade code C311 and C411 "Curtain Wall Installer".</p>
+                        <p>22. Item 25 "Painter &amp; Decorator" in the revised GFS27 covers trade code C329 and C429 "Painter and Decorator (Master)" (Code C329 and C429 in the GFS27 (Rev. 1/2003)), trade code C329a "Painter and Decorator (Roller Painting)", trade code C329b "Painter and Decorator (Surface Filling)", trade code C329c "Painter and Decorator (Emulsion Painting)", trade code C329d "Painter and Decorator (Brushing Lacquering)", trade code C329e "Painter and Decorator (Synthetic Painting)", trade code C329f "Painter and Decorator (Clear Lacquering)", trade code C329g "Painter and Decorator (Texture-spray)", trade code C329h "Painter and Decorator (Metal Paint Spray)", trade code C329i "Painter and Decorator (Paperhanging)" and trade code C329j "Painter and Decorator (Sign Writing)".</p>
+                        <p>23. Item 26 "Plasterer" in the revised GFS27 covers trade code C3008 and C4008 "Cement Sand Mortar Worker (Master)", trade code C337 and C437 "Plasterer" (Code C337 and C437 in the GFS27 (Rev. 1/2003)) and trade code C337a and C437a "Plasterer (Floor)".</p>
+                        <p>24. Item 35 "Electrical Fitter (incl. Electrician)" in the revised GFS27 covers trade code E305a and E405a "Control Panel Assembler", trade code E305b and E405b "Electrical Wireman" and trade code E305 "Electrical Fitter" (Code E305 in the GFS27 (Rev. 1/2003)) in installation and capital works.</p>
+                        <p>25. Item 37 "Refrigeration/AC/Ventilation Mechanic" in the revised GFS27 covers trade code E314 and E414 "Refrigeration/AC/Ventilation Mechanic (Master)" (Code E314 and E414 in the GFS27 (Rev. 1/2003)), trade code E314e and E414e "Refrigeration/AC/Ventilation Mechanic (Water System)", trade code E314a and E414a "Refrigeration/AC/Ventilation Mechanic (Air System)", trade code E314c and E414c "Refrigeration/AC/Ventilation Mechanic (Thermal Insulation)", trade code E314b and E414b "Refrigeration/AC/Ventilation Mechanic (Electrical Control)" and trade code E314d and E414d "Refrigeration/AC/Ventilation Mechanic (Unitary System)" in installation and capital works.</p>
+                        <p>26. Item 38 "Fire Service Mechanic" in the revised GFS27 covers trade code E306 "Fire Service Mechanic (Master)" (Code E306 in the GFS27 (Rev. 1/2003)), trade code E306c "Fire Service Portable Equipment Fitter", trade code E306a and E406a "Fire Service Electrical Fitter" and trade code E306b and E406b "Fire Service Mechanical Fitter" in installation and capital works.</p>
+                        <p>27. Item 39 "Lift and Escalator Mechanic" in the revised GFS27 covers trade code E309 "Lift and Escalator Mechanic (Master)" (Code E309 in the GFS27 (Rev. 1/2003)), trade code E309a "Lift Mechanic" and trade code E309b "Escalator Mechanic".</p>
+                        <p>28. Item 40 "Building Services Maintenance Mechanic" in the revised GFS27 covers the repair and maintenance sectors of the following trades -<br>a. Refrigeration/AC/Ventilation Mechanic;<br>b. Electrical Fitter (incl. Electrician);<br>c. Fire Service Mechanic; and<br>d. Plumber.</p>
+                        <p>29. Trades available under the Construction Workers Registration Ordinance (Cap 583) but not specified in this form should be entered against "Others" in items 41 to 45 of the form.</p>
+                        <p>30. The following trades are not considered to be construction workers and should not be included in the return: mariners of vessels, contract car drivers, office attendants, amahs and watchmen.</p>
+                        <p>31. "Works Code" is used for classifying the main type of work covered in the contract, and is specified by the project office. Only one works code is to be entered and adopted throughout the whole contract. Nominated Sub-contractor shall also use the same works code in their returns. Where the Contractor or Nominated Sub-contractor has contract contains more than one works types, the works code for the dominant work type should be used.</p>
+                    </div>`;
+                    var tempText2 = document.createElement('div');
+                    tempText2.innerHTML = textPage2Html;
+                    tempText2.style.cssText = 'position:absolute; top:-9999px; left:-9999px; background:#fff; padding:20px;';
+                    document.body.appendChild(tempText2);
+                    var img4 = await captureElement(tempText2);
+                    await addImageToPdf(img4.dataUrl, img4.width, img4.height);
+                    document.body.removeChild(tempText2);
+                }
+
+                loading.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:12px;"></i> 儲存 PDF 檔案...';
                 pdf.save((currentDoc.id || 'GF527-2017') + '.pdf');
             } catch (e) {
                 console.error('PDF 下載失敗', e);

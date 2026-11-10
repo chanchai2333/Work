@@ -750,7 +750,7 @@ function renderGF527_2003View() {
         });
     });
 
-    /* ---------- 4. 綁定表格內所有輸入 ---------- */
+     /* ---------- 4. 綁定表格內所有輸入 ---------- */
     function bind(selector, keyFn) {
         view.querySelectorAll(selector).forEach(function (el) {
             el.addEventListener('input', function () {
@@ -759,7 +759,30 @@ function renderGF527_2003View() {
             });
         });
     }
-    bind('.gf5272003-day',      function (el) { return 'gf5272003_row_' + el.dataset.row + '_day_' + el.dataset.day; });
+
+    // ★ 單獨給 .gf5272003-day 加上 input 事件，處理自動加總
+    view.querySelectorAll('.gf5272003-day').forEach(function (el) {
+        el.addEventListener('input', function () {
+            var row = el.dataset.row;
+            formData['gf5272003_row_' + row + '_day_' + el.dataset.day] = el.value;
+
+            // 自動計算 Total Man-days
+            var sum = 0;
+            view.querySelectorAll('.gf5272003-day[data-row="' + row + '"]').forEach(function (dEl) {
+                var val = parseFloat(dEl.value);
+                if (!isNaN(val)) sum += val;
+            });
+            var mdEl = view.querySelector('.gf5272003-mandays[data-row="' + row + '"]');
+            if (mdEl) {
+                var finalVal = sum > 0 ? (Number.isInteger(sum) ? sum : sum.toFixed(2)) : '';
+                mdEl.value = finalVal;
+                formData['gf5272003_row_' + row + '_mandays'] = finalVal;
+            }
+            persistFormData();
+        });
+    });
+
+    // 其他欄位用原本的 bind 綁定
     bind('.gf5272003-mandays',  function (el) { return 'gf5272003_row_' + el.dataset.row + '_mandays'; });
     bind('.gf5272003-overtime', function (el) { return 'gf5272003_row_' + el.dataset.row + '_overtime'; });
     bind('.gf5272003-avg',      function (el) { return 'gf5272003_row_' + el.dataset.row + '_avg'; });
@@ -768,6 +791,19 @@ function renderGF527_2003View() {
     bind('.gf5272003-other-name', function (el) { return 'gf5272003_row_' + el.dataset.row + '_name'; });
     bind('.gf5272003-other-code', function (el) { return 'gf5272003_row_' + el.dataset.row + '_code'; });
 
+    // ★ 渲染完成後，初始化一次所有行的 Total Man-days
+    view.querySelectorAll('.gf5272003-mandays').forEach(function(mdEl) {
+        var row = mdEl.dataset.row;
+        var sum = 0;
+        view.querySelectorAll('.gf5272003-day[data-row="' + row + '"]').forEach(function(dEl) {
+            var val = parseFloat(dEl.value);
+            if (!isNaN(val)) sum += val;
+        });
+        var finalVal = sum > 0 ? (Number.isInteger(sum) ? sum : sum.toFixed(2)) : '';
+        mdEl.value = finalVal;
+        formData['gf5272003_row_' + row + '_mandays'] = finalVal;
+    });
+    
     pageWrapper.appendChild(view);
     currentPageObj = { pageNum: 1, container: view };
     updatePageInfo();
@@ -1069,7 +1105,7 @@ function renderGF527_2017View() {
         '</div>';
     view.appendChild(footer);
 
-    /* ---------- 6. 綁定輸入事件 ---------- */
+     /* ---------- 6. 綁定輸入事件 ---------- */
     function bind(selector, keyFn) {
         view.querySelectorAll(selector).forEach(function (el) {
             el.addEventListener('input', function () {
@@ -1078,7 +1114,30 @@ function renderGF527_2017View() {
             });
         });
     }
-    bind('.gf5272017-day',        function (el) { return 'gf5272017_row_' + el.dataset.row + '_day_' + el.dataset.day; });
+
+    // ★ 單獨給 .gf5272017-day 加上 input 事件，處理自動加總
+    view.querySelectorAll('.gf5272017-day').forEach(function (el) {
+        el.addEventListener('input', function () {
+            var row = el.dataset.row;
+            formData['gf5272017_row_' + row + '_day_' + el.dataset.day] = el.value;
+
+            // 自動計算 Total Man-days
+            var sum = 0;
+            view.querySelectorAll('.gf5272017-day[data-row="' + row + '"]').forEach(function (dEl) {
+                var val = parseFloat(dEl.value);
+                if (!isNaN(val)) sum += val;
+            });
+            var mdEl = view.querySelector('.gf5272017-mandays[data-row="' + row + '"]');
+            if (mdEl) {
+                var finalVal = sum > 0 ? (Number.isInteger(sum) ? sum : sum.toFixed(2)) : '';
+                mdEl.value = finalVal;
+                formData['gf5272017_row_' + row + '_mandays'] = finalVal;
+            }
+            persistFormData();
+        });
+    });
+
+    // 其他欄位用原本的 bind 綁定
     bind('.gf5272017-mandays',    function (el) { return 'gf5272017_row_' + el.dataset.row + '_mandays'; });
     bind('.gf5272017-overtime',   function (el) { return 'gf5272017_row_' + el.dataset.row + '_overtime'; });
     bind('.gf5272017-avg',        function (el) { return 'gf5272017_row_' + el.dataset.row + '_avg'; });
@@ -1086,9 +1145,19 @@ function renderGF527_2017View() {
     bind('.gf5272017-low',        function (el) { return 'gf5272017_row_' + el.dataset.row + '_low'; });
     bind('.gf5272017-other-name', function (el) { return 'gf5272017_row_' + el.dataset.row + '_name'; });
     bind('.gf5272017-other-code', function (el) { return 'gf5272017_row_' + el.dataset.row + '_code'; });
-    bind('.gf5272017-telno',      function (el) {
-        // row 屬性本身就是完整 key（gf5272017_row_46_telno）
-        return el.dataset.row;
+    bind('.gf5272017-telno',      function (el) { return el.dataset.row; });
+
+    // ★ 渲染完成後，初始化一次所有行的 Total Man-days
+    view.querySelectorAll('.gf5272017-mandays').forEach(function(mdEl) {
+        var row = mdEl.dataset.row;
+        var sum = 0;
+        view.querySelectorAll('.gf5272017-day[data-row="' + row + '"]').forEach(function(dEl) {
+            var val = parseFloat(dEl.value);
+            if (!isNaN(val)) sum += val;
+        });
+        var finalVal = sum > 0 ? (Number.isInteger(sum) ? sum : sum.toFixed(2)) : '';
+        mdEl.value = finalVal;
+        formData['gf5272017_row_' + row + '_mandays'] = finalVal;
     });
 
     pageWrapper.appendChild(view);
