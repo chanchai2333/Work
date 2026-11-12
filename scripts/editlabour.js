@@ -6143,8 +6143,12 @@ function captureFormDataFromDom() {
         currentDoc.statusHistory.push({
             from: oldStatus, to: 'draft',
             fromApproval: oldApproval, toApproval: 'rejected',
-            changedBy: userName, changedAt: nowIso, action: 'reject'
+            changedBy: userName, changedAt: nowIso, action: 'reject',
+            comment: window.__currentRejectComment || '' // ★ 補上這行，把留言存進去
         });
+        
+        // ★ 清空變數，以免影響下一次的拒絕
+        window.__currentRejectComment = null;
 
         currentDoc.status = 'draft';           // ★ 退回後狀態改為 Draft
         currentDoc.approvalStatus = 'rejected';

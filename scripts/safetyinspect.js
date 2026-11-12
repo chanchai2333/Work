@@ -299,6 +299,7 @@ document.addEventListener("DOMContentLoaded", function() {
             <td>
                 <button class="action-btn view-btn" data-id="${item.id}" title="View"><i class="fas fa-eye"></i></button>
                 <button class="action-btn edit-btn" data-id="${item.id}" title="Edit"><i class="fas fa-edit"></i></button>
+                ${item.approvalStatus === 'rejected' ? `<button class="action-btn view-comment-btn" data-id="${item.id}" title="View Rejection Comment" style="background: linear-gradient(135deg, #f39c12, #d35400); color: white;"><i class="fas fa-comment-dots"></i></button>` : ''}
                 ${generateSafetyStatusSelect(item.id)}
                 <button class="action-btn delete-btn" data-id="${item.id}" title="Delete"><i class="fas fa-trash"></i></button>
         `;
@@ -479,6 +480,39 @@ document.addEventListener("DOMContentLoaded", function() {
         const viewBtn = e.target.closest('.view-btn');
         const editBtn = e.target.closest('.edit-btn');
         const deleteBtn = e.target.closest('.delete-btn');
+        const viewCommentBtn = e.target.closest('.view-comment-btn'); // ★ 新增這行
+
+        // ★ 處理查看 Reject Comment
+        if (viewCommentBtn) {
+            const id = viewCommentBtn.dataset.id;
+            // 從後端抓取最新記錄以取得 statusHistory
+            fetch('/api/record?collection=inspection&id=' + encodeURIComponent(id), { cache: 'no-store' })
+                .then(res => res.ok ? res.json() : null)
+                .then(record => {
+                    if (!record) {
+                        alert('Could not load document details.');
+                        return;
+                    }
+                    let comment = '';
+                    if (Array.isArray(record.statusHistory)) {
+                        // 從最後一筆往前找，找到最新的 reject 動作
+                        for (let i = record.statusHistory.length - 1; i >= 0; i--) {
+                            if (record.statusHistory[i].action === 'reject') {
+                                comment = record.statusHistory[i].comment;
+                                break;
+                            }
+                        }
+                    }
+                    if (!comment) comment = "No specific comment provided.";
+                    
+                    const textEl = document.getElementById('reject-comment-view-text');
+                    if (textEl) textEl.textContent = comment;
+                    const modal = document.getElementById('reject-comment-view-modal');
+                    if (modal) modal.style.display = 'flex';
+                })
+                .catch(() => alert('Failed to load rejection comment.'));
+            return;
+        }
 
         if (viewBtn) {
             const id = viewBtn.getAttribute('data-id');
