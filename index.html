@@ -4,11 +4,29 @@
 <script>
 (function () {
   try {
+    // 1. 檢查是否已登入
     var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
-    if (s && s.isLoggedIn) { document.documentElement.style.visibility = 'visible'; return; }
-  } catch (e) {}
-  document.documentElement.style.visibility = 'hidden';
-  window.location.replace('login.html');
+    if (!s || !s.isLoggedIn) {
+        document.documentElement.style.visibility = 'hidden';
+        window.location.replace('login.html');
+        return;
+    }
+    
+    // 2. 檢查是否被標記為需要修改密碼
+    var pwdReq = sessionStorage.getItem('password_change_required');
+    if (pwdReq) {
+        document.documentElement.style.visibility = 'hidden';
+        alert('You must change your password first.');
+        window.location.replace('change-password.html');
+        return;
+    }
+
+    // 3. 通過檢查，顯示頁面
+    document.documentElement.style.visibility = 'visible';
+  } catch (e) {
+    document.documentElement.style.visibility = 'hidden';
+    window.location.replace('login.html');
+  }
 })();
 </script>
 

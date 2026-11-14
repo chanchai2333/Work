@@ -237,6 +237,30 @@ document.addEventListener('DOMContentLoaded', function () {
                     sessionStorage.setItem('dwss_session', JSON.stringify({ ...data.user, isLoggedIn: true }));
                     sessionStorage.setItem('current_user', JSON.stringify(data.user));
                     sessionStorage.setItem('currentProjectId', selectedProject);
+
+                    // ==========================================
+                    // ★ 強制排查日誌與攔截
+                    // ==========================================
+                    console.log("=== 1. 登入成功，準備檢查密碼 ===");
+                    console.log("=== 2. 後端回傳的用戶資料 ===", data.user);
+                    
+                    if (window.DWSS_PasswordLifecycle) {
+                        var status = window.DWSS_PasswordLifecycle.checkStatus(data.user);
+                        console.log("=== 3. 檢查結果 ===", status);
+                        
+                        if (status.required) {
+                            alert("【系統攔截】您需要修改密碼！\n原因：" + status.message);
+                            window.DWSS_PasswordLifecycle.enforce(data.user); 
+                            window.location.href = 'change-password.html'; 
+                            return; // 中斷，不進入首頁
+                        } else {
+                            console.log("=== ✅ 不需要改密碼，直接進入 ===");
+                        }
+                    } else {
+                        console.error("❌ 找不到 DWSS_PasswordLifecycle，請檢查 password-lifecycle.js 是否有正確載入！");
+                    }
+                    // ==========================================
+
                     window.location.href = 'index.html';
                 } else {
                     alert('Login failed.');
