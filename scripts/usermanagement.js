@@ -1176,16 +1176,31 @@
                     var userId = parseInt(this.getAttribute('data-id'), 10);
                     var user = self.users.find(function (u) { return u.id === userId; });
                     if (!user) return;
+                    
                     if (confirm('Are you sure you want to delete user "' + user.name + '"?\n\nThis action cannot be undone.')) {
-                        self.users = self.users.filter(function (u) { return u.id !== userId; });
+                        // 1. 先從前端畫面移除
+                        self.users = self.users.filter(function (u) { return String(u.id) !== String(userId); });
                         self.saveToStorage();
                         self.renderUserTable();
                         self.updateUserStats();
-                        alert('✅ User deleted successfully!');
+
+                        // 2. 真正發送請求給後端資料庫刪除
+                        fetch('/api/records/usersDb/' + userId, { method: 'DELETE' })
+                            .then(function(res) {
+                                if (res.ok) {
+                                    alert('✅ User deleted from database successfully!');
+                                } else {
+                                    alert('⚠️ User deleted locally, but server deletion failed.');
+                                }
+                            })
+                            .catch(function(err) {
+                                console.error(err);
+                                alert('⚠️ Network error. User deleted locally.');
+                            });
                     }
                 });
             });
-
+            
             document.querySelectorAll('.change-password-btn').forEach(function (btn) {
                 var newBtn = btn.cloneNode(true);
                 btn.parentNode.replaceChild(newBtn, btn);

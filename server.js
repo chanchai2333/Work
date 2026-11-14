@@ -437,6 +437,112 @@ app.post('/api/auth/change-password', async (req, res) => {
   }
 });
 
+// ---------- Forgot Password API ----------
+app.post('/api/auth/forgot-password', async (req, res) => {
+  if (!pool) return res.status(400).json({ error: 'no_database' });
+  const email = String((req.body && req.body.email) || '').trim().toLowerCase();
+  if (!email) return res.status(400).json({ error: 'missing_email' });
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT collection, record_id, data FROM records WHERE collection IN (?, ?)`,
+      ['usersDb', 'users']
+    );
+    
+    let matched = null;
+    for (const row of rows) {
+      const user = parseRecord(row.data);
+      if (user.email && String(user.email).toLowerCase() === email) {
+        matched = { row, user };
+        break;
+      }
+    }
+
+    if (!matched) {
+      return res.json({ ok: true, message: 'If the email exists, a reset link has been sent.' });
+    }
+
+    const token = require('crypto').randomBytes(32).toString('hex');
+    const expires = Date.now() + 30 * 60 * 1000;
+
+    await pool.query(
+      `UPDATE records SET data = JSON_SET(data, '$.resetToken', ?, '$.resetTokenExpires', ?),
+       version = version + 1 WHERE collection = ? AND record_id = ?`,
+      [token, expires, matched.row.collection, matched.row.record_id]
+    );
+
+    const resetLink = `http://localhost:${PORT}/reset-password.html?token=${token}`;
+    
+    console.log('\n======================================================');
+    console.log('📧 [Password Reset Request]');
+    console.log('User:', matched.user.username, '(', matched.user.email, ')');
+    console.log('Link:', resetLink);
+    console.log('======================================================\n');
+
+    res.json({ ok: true, message: 'If the email exists, a reset link has been sent.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---------- Reset Password API ----------
+app.post('/api/auth/reset-password', async (req, res) => {
+  if (!pool) return res.status(400).json({ error: 'no_database' });
+  const token = String((req.body && req.body.token) || '').trim();
+  const newPassword = String((req.body && req.body.newPassword) || '');
+
+  if (!token || !newPassword) {
+    return res.status(400).json({ error: 'missing_fields' });
+  }
+
+  try {
+    // 1. 找出擁有這個 Token 且尚未過期的用戶
+    const [rows] = await pool.query(
+      `SELECT collection, record_id, data FROM records WHERE collection IN (?, ?)`,
+      ['usersDb', 'users']
+    );
+
+    let matched = null;
+    const now = Date.now();
+    for (const row of rows) {
+      const user = parseRecord(row.data);
+      // 確保 Token 匹配且未過期
+      if (user.resetToken === token && Number(user.resetTokenExpires) > now) {
+        matched = { row, user };
+        break;
+      }
+    }
+
+    if (!matched) {
+      return res.status(400).json({ error: 'invalid_or_expired_token' });
+    }
+
+    // 2. 直接修改 JSON 物件，避免 JSON_SET 語法出錯
+    const updatedUser = matched.user;
+    updatedUser.password = newPassword;
+    updatedUser.passwordChanged = true;
+    updatedUser.passwordChangedAt = new Date().toISOString();
+    updatedUser.passwordExpiresAt = new Date(Date.now() + 90 * 86400000).toISOString();
+    updatedUser.resetToken = null;
+    updatedUser.resetTokenExpires = null;
+
+    // 3. 寫回資料庫
+    await pool.query(
+      `UPDATE records SET data = ?, version = version + 1 WHERE collection = ? AND record_id = ?`,
+      [JSON.stringify(updatedUser), matched.row.collection, matched.row.record_id]
+    );
+
+    console.log(`✅ [Reset Password] 成功為 ${updatedUser.username} (${updatedUser.email}) 更新密碼。新密碼為: ${newPassword}`);
+
+    res.json({ ok: true, message: 'Password reset successfully.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---------- List records in a collection ----------
 // ---------- List records in a collection ----------
 
 function fmtShort(d) {
