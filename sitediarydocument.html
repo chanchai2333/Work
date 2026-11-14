@@ -677,7 +677,7 @@
                     width: cols.responses.width, height: rowH + '%'
                 }, getFieldValue(pageNum, d, 'responses', pageData, isHoliday)));
 
-                overlay.appendChild(createTextField('r' + d + '_dsdSig', {
+                overlay.appendChild(createSignatureView('r' + d + '_dsdSig', {
                     left: cols.dsdSig.left, top: rowTopStr,
                     width: cols.dsdSig.width, height: rowH + '%'
                 }, pageData['r' + d + '_dsdSig']));
