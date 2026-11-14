@@ -292,7 +292,7 @@
     await seedIfEmpty('inspectionData', defaultInspections);
     await seedIfEmpty('wageData', defaultWages);
     await seedIfEmpty('labourWageData', defaultWages);
-    await seedIfEmpty('dwss_site_data_v9', defaultSites);
+    //await seedIfEmpty('dwss_site_data_v9', defaultSites);//
   }
 
   async function detectAndLoad() {

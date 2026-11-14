@@ -45,7 +45,6 @@ const AppConfig = {
         this.updateDateDisplay();
         // app.js 設定日期後，加這一行
         sessionStorage.setItem('globalDate', document.getElementById('current-date')?.textContent);
-        ``
     },
 
     applyTheme() {
@@ -114,4 +113,43 @@ document.addEventListener('DOMContentLoaded', () => {
     AppConfig.init();
     setupSidebarToggle();
 });
-``
+
+// ==========================================
+// ★ 全域 Footer 統一注入腳本
+// ==========================================
+(function() {
+    function injectGlobalFooter() {
+        // 1. 尋找頁面上是否已經有 footer
+        let footer = document.querySelector('footer');
+        
+        // 2. 如果沒有 footer，就動態建立一個
+        if (!footer) {
+            footer = document.createElement('footer');
+            // 嘗試放到 .main-content 裡面，若沒有則放到 body 底部
+            const target = document.querySelector('.main-content') || document.body;
+            target.appendChild(footer);
+        }
+        
+        // 3. 統一覆寫 Footer 內容 (這裡改成你想要的統一版本)
+        // 注意：我保留了 data-i18n 屬性，以相容你原本的語系切換功能
+        footer.innerHTML = `
+            <p data-i18n="copyright">&copy; AEL DWSS System. All rights reserved.</p>
+            <p data-i18n="platform">AEL DWSS Platform v0.0</p>
+        `;
+
+        // 4. 如果你的 language.js 不會自動監聽 DOM 變化，需手動觸發翻譯
+        // 假設你的 language.js 有暴露一個全域更新函數 (請依你實際情況修改函數名稱)
+        if (typeof window.updateLanguage === 'function') {
+            window.updateLanguage();
+        } else if (typeof window.applyLanguage === 'function') {
+            window.applyLanguage();
+        }
+    }
+
+    // 確保 DOM 載入完成後執行
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', injectGlobalFooter);
+    } else {
+        injectGlobalFooter();
+    }
+})();
