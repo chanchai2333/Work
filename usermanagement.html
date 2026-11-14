@@ -22,6 +22,7 @@
     <!-- 核心權限模組 -->
     <script src="scripts/permissions.js"></script>
     <!-- 密碼 / 電郵服務 -->
+    <script src="scripts/password.js"></script>
     <script src="scripts/password-lifecycle.js"></script>
     <script src="scripts/email-service.js"></script>
     <!-- 用戶管理 UI -->
@@ -54,6 +55,7 @@
         .role-supplier { background: #9b59b6; }
         .role-admin { background: #3498db; }
         .role-project_admin { background: #8e44ad; }
+        .role-engineer { background: #e67e22; }
 
         /* Column sort headers */
         #users-table thead th.sortable {
@@ -82,7 +84,6 @@
             color: #2563eb;
             opacity: 1;
         }
-
 
         .status-badge {
             padding: 4px 12px;
@@ -230,115 +231,6 @@
             background: white;
         }
 
-        /* ============================================================
-           Group Picker (checkbox list — replaces <select multiple>)
-           ============================================================ */
-        .team-picker {
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            background: #fff;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            max-height: 260px;
-            font-family: inherit;
-            font-size: 0.9rem;
-            box-sizing: border-box;
-        }
-        .team-picker * { box-sizing: border-box; }
-        .team-picker-header {
-            display: flex;
-            gap: 8px;
-            padding: 8px;
-            border-bottom: 1px solid #e5e7eb;
-            background: #f9fafb;
-            flex-shrink: 0;
-        }
-        .team-picker-header input[type="text"] {
-            flex: 1;
-            min-width: 0;
-            padding: 6px 10px;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            outline: none;
-            transition: border-color 0.15s, box-shadow 0.15s;
-        }
-        .team-picker-header input[type="text"]:focus {
-            border-color: #3498db;
-            box-shadow: 0 0 0 2px rgba(52,152,219,0.15);
-        }
-        .team-picker-header button {
-            padding: 6px 10px;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            background: #fff;
-            cursor: pointer;
-            font-size: 0.78rem;
-            font-weight: 600;
-            color: #4b5563;
-            white-space: nowrap;
-            transition: background 0.12s, border-color 0.12s;
-        }
-        .team-picker-header button:hover { background: #f3f4f6; border-color: #9ca3af; }
-        .team-picker-list {
-            flex: 1 1 auto;
-            overflow-y: auto;
-            padding: 6px;
-            min-height: 100px;
-        }
-        .team-picker-list::-webkit-scrollbar { width: 8px; }
-        .team-picker-list::-webkit-scrollbar-track { background: #f3f4f6; }
-        .team-picker-list::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-        .team-picker-list label {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 10px;
-            border-radius: 6px;
-            cursor: pointer;
-            user-select: none;
-            transition: background 0.12s;
-            margin: 0;
-        }
-        .team-picker-list label:hover { background: #f0f9ff; }
-        .team-picker-list label.checked { background: #dbeafe; }
-        .team-picker-list input[type="checkbox"] {
-            width: 16px; height: 16px; cursor: pointer;
-            accent-color: #2563eb; flex-shrink: 0; margin: 0;
-        }
-        .team-picker-list .user-name {
-            flex: 1; min-width: 0; overflow: hidden;
-            text-overflow: ellipsis; white-space: nowrap; color: #1f2937;
-        }
-        .team-picker-list .user-role {
-            font-size: 0.72rem; color: #6b7280; background: #f3f4f6;
-            padding: 2px 8px; border-radius: 10px; text-transform: uppercase;
-            letter-spacing: 0.3px; font-weight: 600; flex-shrink: 0;
-        }
-        .team-picker-list label.checked .user-role {
-            background: #bfdbfe; color: #1e40af;
-        }
-        .team-picker-empty {
-            padding: 20px 12px; text-align: center; color: #9ca3af;
-            font-style: italic; font-size: 0.85rem;
-        }
-        .team-picker-footer {
-            padding: 8px 12px; border-top: 1px solid #e5e7eb;
-            background: #f9fafb; font-size: 0.8rem; color: #4b5563;
-            display: flex; justify-content: space-between; align-items: center;
-            flex-shrink: 0;
-        }
-        .team-picker-footer .team-picker-count {
-            font-weight: 600; color: #2563eb;
-        }
-        .team-picker-footer .team-picker-hint {
-            font-size: 0.72rem; color: #9ca3af;
-        }
-
         @media (max-width: 768px) {
             .form-row-2 { grid-template-columns: 1fr; }
             .module-permission-row { grid-template-columns: 1fr; }
@@ -346,9 +238,6 @@
     </style>
 </head>
 <body>
-    <!-- ★ 移除原本寫死的側邊欄，交給 sidebar.js 動態生成 -->
-
-    <!-- 主內容 -->
     <div class="main-content">
         <div class="header">
             <h1>User Management</h1>
@@ -367,11 +256,12 @@
         </div>
 
         <div class="search-buttons">
-            <form id="search-form" action="#" method="get">
-                <input type="text" name="search" placeholder="Search users by name, email, or role..." />
+            <form id="search-form" action="#" method="get" onsubmit="return false;">
+                <input type="text" id="user-search-input" name="search" placeholder="Search users by name, email, username or role..." />
                 <button type="submit">Search</button>
             </form>
             <div class="nav-buttons">
+                <!-- 移除了頂部的 Change My Password 按鈕 -->
                 <button id="add-user-btn"><i class="fas fa-plus"></i> Add New User</button>
             </div>
         </div>
@@ -391,7 +281,7 @@
                     <i class="fas fa-edit" style="color:#e74c3c;"></i>
                     <div>
                         <strong>REC - AEL Joint Venture</strong> — Contractor<br>
-                        <span style="color:#64748b;">SA / SSA / RSO：可提交、編輯、上載文件</span>
+                        <span style="color:#64748b;">SA / SSA / RSO / Engineer：可提交、編輯、上載文件</span>
                     </div>
                 </li>
                 <li>
@@ -437,6 +327,7 @@
                     <button class="filter-toggle"><span>All Roles</span><i class="fas fa-chevron-down"></i></button>
                     <div class="filter-options">
                         <div class="filter-option active" data-filter="role" data-value="all">All Roles</div>
+                        <div class="filter-option" data-filter="role" data-value="engineer">Engineer (ENG)</div>
                         <div class="filter-option" data-filter="role" data-value="eg">Engineer Grade (EG)</div>
                         <div class="filter-option" data-filter="role" data-value="ig">Inspector Grade (IG)</div>
                         <div class="filter-option" data-filter="role" data-value="wsg">Works Supervisor (WSG)</div>
@@ -561,7 +452,6 @@
                             <div class="project-checkboxes" id="project-checkboxes-container"></div>
                         </div>
 
-
                         <div class="form-group">
                             <label>Module Permissions</label>
                             <div class="module-permissions-grid" id="module-permissions-grid"></div>
@@ -570,6 +460,32 @@
                         <div class="modal-actions">
                             <button type="button" class="btn btn-secondary" id="cancel-add-user">Cancel</button>
                             <button type="submit" class="btn" id="submit-user-btn">Add User</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Change My Password Modal -->
+            <div id="change-password-modal" class="modal" style="display: none; z-index: 10001;">
+                <div class="modal-content" style="max-width: 400px;">
+                    <h3><i class="fas fa-key"></i> Change My Password</h3>
+                    <form id="change-password-form">
+                        <div class="form-group">
+                            <label>Old Password</label>
+                            <input type="password" id="old-password-input" required placeholder="請輸入舊密碼">
+                        </div>
+                        <div class="form-group">
+                            <label>New Password</label>
+                            <input type="password" id="new-password-input" required placeholder="請輸入新密碼">
+                        </div>
+                        <div class="form-group">
+                            <label>Confirm New Password</label>
+                            <input type="password" id="confirm-password-input" required placeholder="請再次輸入新密碼">
+                        </div>
+                        <div class="modal-actions">
+                            <!-- 注意：這裡加上 type="button"，避免觸發表單提交 -->
+                            <button type="button" class="btn btn-secondary" id="cancel-change-password">Cancel</button>
+                            <button type="submit" class="btn" style="background:#3b82f6; color:#fff;">Update Password</button>
                         </div>
                     </form>
                 </div>
