@@ -3,6 +3,7 @@
 (function() {
     const TEAMS_KEY = 'ael_dwss_teams';
     const CONTRACTS_KEY = 'dwss_contracts';
+    const DELETED_CONTRACTS_KEY = 'ael_dwss_deleted_contracts'; // 記錄已刪除的合約
     // Must match User Management key so Teams sees the same accounts
     const USERS_KEY = 'dwss_users_db';
     const USERS_KEY_LEGACY = 'ael_dwss_users';
@@ -91,19 +92,12 @@
                     if (!u || u.id == null) return;
                     var id = String(u.id);
                     if (byId[id]) {
-                        // Keep seed identity/role, but NEVER wipe existing project assignments from storage
+                        // Keep seed identity/role, but use stored project assignments if present
                         if (!byId[id].email && u.email) byId[id].email = u.email;
                         if (!byId[id].username && u.username) byId[id].username = u.username;
-                        var seedPids = byId[id].projectIds || [];
-                        var storedPids = u.projectIds || [];
-                        var seen = {};
-                        var merged = [];
-                        seedPids.concat(storedPids).forEach(function (pid) {
-                            if (!pid || seen[pid]) return;
-                            seen[pid] = true;
-                            merged.push(pid);
-                        });
-                        byId[id].projectIds = merged;
+                        if (Array.isArray(u.projectIds)) {
+                            byId[id].projectIds = u.projectIds.slice();
+                        }
                         if (u.contractNo && !byId[id].contractNo) byId[id].contractNo = u.contractNo;
                     } else {
                         byId[id] = u;
@@ -119,19 +113,7 @@
             return normalizeUserId(a.id) - normalizeUserId(b.id);
         });
 
-
-        // Testing split: non-CMP default users on other contracts (not DE/2026/05)
-        var testProjectById = {
-            '2': ['DE/2024/06'],
-            '3': ['DE/2024/06'],
-            '4': ['DE/2025/07'],
-            '10': ['DE/2025/07']
-        };
-        users.forEach(function (u) {
-            var key = String(u.id);
-            if (testProjectById[key]) u.projectIds = testProjectById[key].slice();
-            if (u.role === 'admin') u.projectIds = []; // admin sees all at login
-        });
+        // ★ 已移除強制賦值（testProjectById），避免刪除合約後又被恢復
 
         // Keep both keys in sync so other pages stay consistent
         try {
@@ -142,30 +124,48 @@
 
     // ---------- Contracts (1 contract can have many teams) ----------
     function loadContracts() {
+        // 讀取已刪除的合約列表
+        var deletedContracts = [];
+        try {
+            var storedDeleted = localStorage.getItem(DELETED_CONTRACTS_KEY);
+            if (storedDeleted) {
+                var parsedDeleted = JSON.parse(storedDeleted);
+                if (Array.isArray(parsedDeleted)) deletedContracts = parsedDeleted.map(String);
+            }
+        } catch (e) {}
+        function isDeleted(code) {
+            return deletedContracts.indexOf(String(code)) !== -1;
+        }
+
         var stored = localStorage.getItem(CONTRACTS_KEY);
         if (stored) {
             try { contracts = JSON.parse(stored) || []; } catch (e) { contracts = []; }
         }
         if (!Array.isArray(contracts)) contracts = [];
+        // 過濾掉已刪除的合約
+        contracts = contracts.filter(function (c) {
+            var code = c.contractNo || c.id;
+            return code && !isDeleted(code);
+        });
 
         // Migrate: if teams have contractNo but contracts list empty, derive contracts
         if (!contracts.length) {
             var seen = {};
             (teams || []).forEach(function (tm) {
                 var c = tm.contractNo;
-                if (c && !seen[c]) {
+                if (c && !seen[c] && !isDeleted(c)) {
                     seen[c] = true;
-                    contracts.push({ id: c, contractNo: c, name: tm.name || c });
+                    contracts.push({ id: c, contractNo: c, name: c }); // 使用合約編號作為名稱
                 }
             });
         }
         if (!contracts.length) {
             // Safe defaults — do NOT wipe user project assignments
             contracts = [
-                { id: 'DE/2026/05', contractNo: 'DE/2026/05', name: 'DE202605 Main Works' },
+                { id: 'DE/2026/05', contractNo: 'DE/2026/05', name: 'DE/2026/05' },
                 { id: 'DE/2024/06', contractNo: 'DE/2024/06', name: 'DE/2024/06' },
                 { id: 'DE/2025/07', contractNo: 'DE/2025/07', name: 'DE/2025/07' }
-            ];
+            ].filter(function (c) { return !isDeleted(c.contractNo); });
         }
         // Merge existing project stores so testing contracts stay visible
         try {
@@ -176,9 +176,9 @@
                 if (!Array.isArray(arr)) return;
                 arr.forEach(function (p) {
                     var code = p.contractNo || p.id || p.code || p.name;
-                    if (!code) return;
-                    if (contracts.some(function (c) { return c.contractNo === code || c.id === code; })) return;
-                    contracts.push({ id: code, contractNo: code, name: p.name || code });
+                    if (!code || isDeleted(code)) return;
+                    if (contracts.some(function (c) { return (c.contractNo || c.id) === code; })) return;
+                    contracts.push({ id: code, contractNo: code, name: code });
                 });
             });
         } catch (e) {}
@@ -186,8 +186,8 @@
         try {
             (users || []).forEach(function (u) {
                 (u.projectIds || []).forEach(function (pid) {
-                    if (!pid) return;
-                    if (contracts.some(function (c) { return c.contractNo === pid || c.id === pid; })) return;
+                    if (!pid || isDeleted(pid)) return;
+                    if (contracts.some(function (c) { return (c.contractNo || c.id) === pid; })) return;
                     contracts.push({ id: pid, contractNo: pid, name: pid });
                 });
             });
@@ -196,20 +196,29 @@
             if (rawUsers) {
                 JSON.parse(rawUsers).forEach(function (u) {
                     (u.projectIds || []).forEach(function (pid) {
-                        if (!pid) return;
-                        if (contracts.some(function (c) { return c.contractNo === pid || c.id === pid; })) return;
+                        if (!pid || isDeleted(pid)) return;
+                        if (contracts.some(function (c) { return (c.contractNo || c.id) === pid; })) return;
                         contracts.push({ id: pid, contractNo: pid, name: pid });
                     });
                 });
             }
         } catch (e) {}
 
-        // Ensure default testing contracts always exist
-        ['DE/2026/05|DE202605 Main Works', 'DE/2024/06|DE/2024/06', 'DE/2025/07|DE/2025/07'].forEach(function (pair) {
-            var parts = pair.split('|');
-            var code = parts[0], nm = parts[1];
+        // Ensure default testing contracts always exist (unless explicitly deleted)
+        ['DE/2026/05', 'DE/2024/06', 'DE/2025/07'].forEach(function (code) {
+            if (isDeleted(code)) return;
             if (!contracts.some(function (c) { return (c.contractNo || c.id) === code; })) {
-                contracts.push({ id: code, contractNo: code, name: nm });
+                contracts.push({ id: code, contractNo: code, name: code });
+            }
+        });
+
+        // 修正 DE/2026/05 的名稱（如果被錯誤地設為團隊名稱）
+        contracts.forEach(function (c) {
+            var code = c.contractNo || c.id;
+            if (code === 'DE/2026/05') {
+                if (c.name === 'DE/2026/05' || c.name === 'DE/2026/05' || !c.name) {
+                    c.name = 'DE/2026/05';
+                }
             }
         });
 
@@ -242,44 +251,56 @@
                 teams = JSON.parse(stored);
                 teams.forEach(function (tm) {
                     if (!tm.memberIds) tm.memberIds = [];
-                    // legacy: if team was created as a "contract", keep contractNo
-                    if (!tm.contractNo && tm.name) {
-                        // leave empty — admin can assign
-                    }
                 });
             } catch (e) {
                 teams = [];
             }
         }
         if (!Array.isArray(teams)) teams = [];
-        // Do NOT replace existing teams with a single seed — preserves test data
+
+        // 讀取已刪除合約列表，避免 seed 已刪除的合約團隊
+        var deletedContracts = [];
+        try {
+            var rawDeleted = localStorage.getItem(DELETED_CONTRACTS_KEY);
+            if (rawDeleted) {
+                var arr = JSON.parse(rawDeleted);
+                if (Array.isArray(arr)) deletedContracts = arr.map(String);
+            }
+        } catch (e) {}
+        function isDeleted(code) {
+            return deletedContracts.indexOf(String(code)) !== -1;
+        }
+
         if (!teams.length) {
-            // CMP users (ids 11-20) assigned to one team under DE/2026/05
-            teams = [
-                { id: 1, name: 'CMP Main Team', contractNo: 'DE/2026/05', memberIds: [11, 12, 13, 14, 15, 16, 17, 18, 19, 20] },
-                { id: 2, name: 'Site Team B', contractNo: 'DE/2026/05', memberIds: [] }
-            ];
-            saveTeams();
+            // 只有當 DE/2026/05 未被刪除時才 seed 默認團隊
+            if (!isDeleted('DE/2026/05')) {
+                teams = [
+                    { id: 1, name: 'DE/2026/05', contractNo: 'DE/2026/05', memberIds: [11, 12, 13, 14, 15, 16, 17, 18, 19, 20] },
+                    { id: 2, name: 'Site Team B', contractNo: 'DE/2026/05', memberIds: [] }
+                ];
+                saveTeams();
+            }
         } else {
-            // Ensure CMP users sit on at least one DE/2026/05 team
-            var cmpIds = [11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
-            var hasCmp = teams.some(function (tm) {
-                return (tm.memberIds || []).some(function (id) { return cmpIds.indexOf(Number(id)) !== -1; });
-            });
-            if (!hasCmp) {
-                var target = teams.find(function (tm) { return tm.contractNo === 'DE/2026/05'; }) || teams[0];
-                if (target) {
-                    target.memberIds = (target.memberIds || []).concat(cmpIds);
-                    // unique
-                    var seen = {};
-                    target.memberIds = target.memberIds.filter(function (id) {
-                        var k = String(id);
-                        if (seen[k]) return false;
-                        seen[k] = true;
-                        return true;
-                    });
-                    if (!target.contractNo) target.contractNo = 'DE/2026/05';
-                    saveTeams();
+            // Ensure CMP users sit on at least one DE/2026/05 team (only if not deleted)
+            if (!isDeleted('DE/2026/05')) {
+                var cmpIds = [11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+                var hasCmp = teams.some(function (tm) {
+                    return (tm.memberIds || []).some(function (id) { return cmpIds.indexOf(Number(id)) !== -1; });
+                });
+                if (!hasCmp) {
+                    var target = teams.find(function (tm) { return tm.contractNo === 'DE/2026/05'; }) || teams[0];
+                    if (target) {
+                        target.memberIds = (target.memberIds || []).concat(cmpIds);
+                        var seen = {};
+                        target.memberIds = target.memberIds.filter(function (id) {
+                            var k = String(id);
+                            if (seen[k]) return false;
+                            seen[k] = true;
+                            return true;
+                        });
+                        if (!target.contractNo) target.contractNo = 'DE/2026/05';
+                        saveTeams();
+                    }
                 }
             }
         }
@@ -287,7 +308,6 @@
 
     function saveTeams() {
         localStorage.setItem(TEAMS_KEY, JSON.stringify(teams));
-        // Teams no longer overwrite the global project/contract list
     }
 
     function assignMembersToContract(memberIds, contractNo) {
@@ -311,7 +331,6 @@
         }
     }
 
-
     function updateStats() {
         const total = document.getElementById('total-teams-count');
         const active = document.getElementById('active-teams-count');
@@ -327,7 +346,6 @@
         var names = memberIds.map(function (id) {
             var u = findUserById(id);
             if (!u) return null;
-            // Do not show System Admin in members column
             if (u.role === 'admin') return null;
             var un = u.username ? ' (' + u.username + ')' : '';
             return u.name + un;
@@ -351,8 +369,6 @@
         const query = (filterText || '').trim().toLowerCase();
         const currentPid = getCurrentProjectId();
 
-        // Prefer users on current project; if none, show everyone
-        // Never list System Admin in team members (they have global access)
         let pool = users.filter(function (u) {
             if (u.role === 'admin') return false;
             return userInProject(u, currentPid);
@@ -504,9 +520,7 @@
         if (curPid && !currentIsSystemAdmin()) {
             viewList = teams.filter(function (tm) { return tm.contractNo === curPid; });
         } else if (curPid && currentIsSystemAdmin()) {
-            // Admin still can filter to current login contract for clarity
             viewList = teams.filter(function (tm) { return tm.contractNo === curPid; });
-            // If none match, show all so admin is not stuck
             if (!viewList.length) viewList = teams;
         }
 
@@ -566,17 +580,14 @@
         } catch (e) { return false; }
     }
 
-
     function fillContractSelect(selected) {
         var sel = document.getElementById('team-contract-select');
         if (!sel) return;
-        // Ensure contracts are loaded
         if (!contracts || !contracts.length) {
             try { loadContracts(); } catch (e) {}
         }
         sel.innerHTML = '<option value="">-- Select Contract --</option>';
 
-        // System Admin: all contracts. Project Admin: only their assigned contracts.
         var allowed = null;
         if (!currentIsSystemAdmin() && currentIsProjectAdmin()) {
             try {
@@ -599,7 +610,6 @@
             count++;
         });
 
-        // Always allow choosing a contract when adding/editing a team
         sel.disabled = false;
         sel.required = true;
 
@@ -620,7 +630,7 @@
         list.innerHTML = '';
         if (!users.length) loadUsers();
         users.forEach(function (u) {
-            if (u.role === 'admin') return; // not listed
+            if (u.role === 'admin') return;
             var uid = normalizeUserId(u.id);
             var label = document.createElement('label');
             label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid #f1f5f9;cursor:pointer;';
@@ -678,7 +688,6 @@
         document.getElementById('contract-no-input').readOnly = true;
         document.getElementById('contract-name-input').value = c.name || '';
         document.getElementById('contract-form').dataset.editing = c.contractNo || c.id;
-        // Pre-select users already assigned to this contract
         var assigned = users.filter(function (u) {
             return (u.projectIds || []).indexOf(contractNo) !== -1;
         }).map(function (u) { return u.id; });
@@ -707,10 +716,8 @@
             var c = contracts.find(function (x) { return (x.contractNo || x.id) === editing; });
             if (c) c.name = name;
         }
-        // Assign selected users to this contract (so it appears at login for them)
         var selectedUserIds = getContractSelectedUserIds();
         assignMembersToContract(selectedUserIds, no);
-        // If editing, also remove contract from unchecked users? Keep additive for safety.
         saveContracts();
         renderContractsTable();
         fillContractSelect();
@@ -736,7 +743,6 @@
                 localStorage.setItem(USERS_KEY_LEGACY, JSON.stringify(users));
             } catch (e) {}
         }
-        // Also scrub any other copy of users DB
         try {
             var raw = localStorage.getItem(USERS_KEY);
             if (raw) {
@@ -760,10 +766,22 @@
         if (linked.length) msg += '\n(' + linked.length + ' team(s) under this contract will be removed too.)';
         if (!confirm(msg)) return;
 
-        // Remove from every user so login list updates
+        // ★ 記錄已刪除合約，避免下次加載時被恢復
+        try {
+            var deleted = [];
+            var storedDeleted = localStorage.getItem(DELETED_CONTRACTS_KEY);
+            if (storedDeleted) {
+                var parsed = JSON.parse(storedDeleted);
+                if (Array.isArray(parsed)) deleted = parsed.map(String);
+            }
+            if (deleted.indexOf(String(contractNo)) === -1) {
+                deleted.push(String(contractNo));
+                localStorage.setItem(DELETED_CONTRACTS_KEY, JSON.stringify(deleted));
+            }
+        } catch (e) {}
+
         removeContractFromAllUsers(contractNo);
 
-        // Remove teams under this contract
         teams = teams.filter(function (tm) { return tm.contractNo !== contractNo; });
         saveTeams();
 
@@ -807,7 +825,6 @@
     }
 
     function openAddTeamModal() {
-        // System Admin or Project Admin can add a team under a contract
         if (!currentIsSystemAdmin() && !currentIsProjectAdmin()) {
             alert('You do not have permission to add a team.');
             return;
@@ -815,7 +832,6 @@
         editingTeamId = null;
         document.getElementById('modal-title').innerHTML = '<i class="fas fa-users"></i> Add New Team';
 
-        // Team name: always free text
         var nameInput = document.getElementById('team-name');
         if (nameInput) {
             nameInput.value = '';
@@ -824,12 +840,10 @@
             nameInput.placeholder = 'e.g. Site Team A';
         }
 
-        // Contract: choose from dropdown
         fillContractSelect('');
         var sel = document.getElementById('team-contract-select');
         if (sel) {
             sel.disabled = false;
-            // If Project Admin has only one contract, pre-select it (still visible/changeable if multiple)
             if (currentIsProjectAdmin() && !currentIsSystemAdmin()) {
                 try {
                     var u = window.DWSS_Permissions.getCurrentUser();
@@ -885,10 +899,8 @@
        ============================================================ */
     function saveTeam(e) {
         e.preventDefault();
-        // Team name = free text
         var nameEl = document.getElementById('team-name');
         var name = nameEl ? nameEl.value.trim() : '';
-        // Contract = chosen from dropdown
         var sel = document.getElementById('team-contract-select');
         var contractNo = sel && !sel.disabled ? String(sel.value || '').trim() : '';
         if (!contractNo) {
