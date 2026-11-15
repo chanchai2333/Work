@@ -4,7 +4,7 @@
  * - Per-record API with optimistic locking (version column)
  * - MariaDB when DB_PASSWORD is set; local/static mode otherwise
  */
-
+const nodemailer = require('nodemailer');
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
@@ -13,6 +13,17 @@ const mysql = require('mysql2/promise');
 const app = express();
 const PORT = process.env.PORT || 8080;
 const ROOT = __dirname;
+
+// 設定你的發信信箱
+const transporter = nodemailer.createTransport({
+  service: 'gmail', // 如果是公司信箱請填寫 host 和 port
+  auth: {
+    user: 'rstpsswrdvr@gmail.com', 
+    pass: 'oxazxugijxmvqubx' // 注意：這不是你的Gmail登入密碼，要去Google帳號安全性裡產生
+  },
+  debug: true, // 👈 新增這行，它會在終端機印出與 Gmail 伺服器的完整對話
+  logger: true // 👈 同時將調試信息記錄到控制台
+});
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -471,15 +482,45 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       [token, expires, matched.row.collection, matched.row.record_id]
     );
 
+    //const resetLink = `http://localhost:${PORT}/reset-password.html?token=${token}`;
+    //
+    //console.log('\n======================================================');
+    //console.log('📧 [Password Reset Request]');
+    //console.log('User:', matched.user.username, '(', matched.user.email, ')');
+    //console.log('Link:', resetLink);
+    //console.log('======================================================\n');
+//
+    //res.json({ ok: true, message: 'If the email exists, a reset link has been sent.' });
+
+        // 4. 產生重設連結
     const resetLink = `http://localhost:${PORT}/reset-password.html?token=${token}`;
     
-    console.log('\n======================================================');
-    console.log('📧 [Password Reset Request]');
-    console.log('User:', matched.user.username, '(', matched.user.email, ')');
-    console.log('Link:', resetLink);
-    console.log('======================================================\n');
+    // 5. 真正發送 Email
+    try {
+      await transporter.sendMail({
+        from: '"AEL DWSS System" <rstpsswrdvr@gmail.com>', // 👈 這裡也要換成你的 Gmail
+        to: matched.user.email, // 發送給該用戶的信箱
+        subject: 'AEL DWSS - 密碼重設請求 (Password Reset)',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>密碼重設請求</h2>
+            <p>親愛的 ${matched.user.username}，您好：</p>
+            <p>我們收到了您重設 AEL DWSS 系統密碼的請求。</p>
+            <p>請點擊下方的按鈕來設定新密碼（此連結將在 30 分鐘後失效）：</p>
+            <a href="${resetLink}" style="display:inline-block; padding:10px 20px; background-color:#3498db; color:white; text-decoration:none; border-radius:5px; margin: 15px 0;">重設我的密碼</a>
+            <p>或者複製以下連結到瀏覽器打開：<br><a href="${resetLink}">${resetLink}</a></p>
+            <p style="color:#888; font-size:12px; margin-top:30px;">如果您沒有要求重設密碼，請忽略此信件。您的帳號依然安全。</p>
+          </div>
+        `
+      });
+      console.log(`✅ [Mail] 重設密碼信件已成功發送至: ${matched.user.email}`);
+    } catch (mailError) {
+      console.error('❌ [Mail] 發信失敗:', mailError);
+      return res.status(500).json({ error: 'email_send_failed', message: '信件發送失敗，請聯絡管理員。' });
+    }
 
     res.json({ ok: true, message: 'If the email exists, a reset link has been sent.' });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
