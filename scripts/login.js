@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function loadContractNameMap() {
         var map = {};
         // Always include testing defaults
-        ['DE/2026/05', 'DE/2024/06', 'DE/2025/07'].forEach(function (id) {
+        ['DE/2026/05', 'DE/2025/02', 'DE/2025/09'].forEach(function (id) {
             map[id] = id;
         });
         ['dwss_contracts', 'dwss_projects', 'projects', 'ael_dwss_projects'].forEach(function (key) {

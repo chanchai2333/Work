@@ -99,10 +99,10 @@ async function seedDefaultUsers() {
   );
   const defaults = [
     { id: 1, name: 'Admin', email: 'admin@ael-dwss.com', username: 'admin', password: 'admin123', organization: 'SYSTEM_VENDOR', companyName: 'AEL - Associated Engineers Ltd.', role: 'admin', department: 'System Administration', projectIds: [], permissions: { level: 5, canChangeStatus: true, canManageUsers: true, name: 'Administrator' }, contractNo: 'Contract No. DE/2026/05' },
-    { id: 2, name: 'Kenneth Daluz', email: 'kenneth.daluz@dsd.gov.hk', username: 'kenneth', password: 'officer123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'eg', department: 'Engineer Grade', projectIds: ['DE/2024/06'], permissions: { level: 4, canChangeStatus: false, canManageUsers: false, name: 'Engineer Grade' }, contractNo: 'Contract No. DE/2024/06' },
-    { id: 3, name: 'TANG Chi Long, Gary', email: 'gcifang@dsd.gov.hk', username: 'garytang', password: 'aei123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'ig', department: 'Inspector Grade', projectIds: ['DE/2024/06'], permissions: { level: 3, canChangeStatus: true, canManageUsers: false, name: 'Inspector Grade' }, contractNo: 'Contract No. DE/2024/06' },
-    { id: 4, name: 'FUNG Wai Ching', email: 'wcfung04@dsd.gov.hk', username: 'wcfung', password: 'wsg123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'wsg', department: 'Works Supervisor Grade', projectIds: ['DE/2025/07'], permissions: { level: 3, canChangeStatus: true, canManageUsers: false, name: 'Works Supervisor Grade' }, contractNo: 'Contract No. DE/2025/07' },
-    { id: 10, name: 'CHA Chi Ming', email: 'cmcha02@dsd.gov.hk', username: 'cmcha', password: 'ig123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'ig', department: 'Inspector Grade', projectIds: ['DE/2025/07'], permissions: { level: 3, canChangeStatus: true, canManageUsers: false, name: 'Inspector Grade' }, contractNo: 'Contract No. DE/2025/07' },
+    { id: 2, name: 'Kenneth Daluz', email: 'kenneth.daluz@dsd.gov.hk', username: 'kenneth', password: 'officer123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'eg', department: 'Engineer Grade', projectIds: ['DE/2026/05'], permissions: { level: 4, canChangeStatus: false, canManageUsers: false, name: 'Engineer Grade' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 3, name: 'TANG Chi Long, Gary', email: 'gcifang@dsd.gov.hk', username: 'garytang', password: 'aei123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'ig', department: 'Inspector Grade', projectIds: ['DE/2026/05'], permissions: { level: 3, canChangeStatus: true, canManageUsers: false, name: 'Inspector Grade' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 4, name: 'FUNG Wai Ching', email: 'wcfung04@dsd.gov.hk', username: 'wcfung', password: 'wsg123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'wsg', department: 'Works Supervisor Grade', projectIds: ['DE/2026/05'], permissions: { level: 3, canChangeStatus: true, canManageUsers: false, name: 'Works Supervisor Grade' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 10, name: 'CHA Chi Ming', email: 'cmcha02@dsd.gov.hk', username: 'cmcha', password: 'ig123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'ig', department: 'Inspector Grade', projectIds: ['DE/2026/05'], permissions: { level: 3, canChangeStatus: true, canManageUsers: false, name: 'Inspector Grade' }, contractNo: 'Contract No. DE/2026/05' },
     // CMP User List DE202605
     { id: 11, name: 'Eddie Chan', email: 'eddiechan@de202605jv.com', username: 'eddiechan', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'project_admin', department: 'JV Representative (REC)', projectIds: ['DE/2026/05'], permissions: { level: 3, canChangeStatus: false, canManageUsers: true, name: 'Project Admin' }, contractNo: 'Contract No. DE/2026/05' },
     { id: 12, name: 'Nelson Ng', email: 'nelsonng@de202605jv.com', username: 'nelsonng', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'project_admin', department: 'JV Representative (AEL)', projectIds: ['DE/2026/05'], permissions: { level: 3, canChangeStatus: false, canManageUsers: true, name: 'Project Admin' }, contractNo: 'Contract No. DE/2026/05' },
@@ -144,7 +144,8 @@ async function seedDefaultUsers() {
     const alreadyChanged = existing.passwordChanged === true || existing.passwordChanged === 1 || existing.passwordChanged === 'true';
     // Always keep seed project assignments in sync for default accounts (login project list)
     let touched = false;
-    if (Array.isArray(user.projectIds)) {
+    if (Array.isArray(user.projectIds) 
+        && (!Array.isArray(existing.projectIds) || existing.projectIds.length === 0)) {
       existing.projectIds = user.projectIds.slice();
       if (user.contractNo) existing.contractNo = user.contractNo;
       if (user.role) existing.role = user.role;
@@ -1008,27 +1009,45 @@ app.post('/api/users/upsert', async (req, res) => {
   if (!pool) return res.status(400).json({ error: 'no_database' });
   const body = req.body || {};
   const username = String(body.username || '').trim();
-  if (!username) return res.status(400).json({ error: 'missing_username' });
+  const userId = body.id != null ? String(body.id) : '';
+
+  // ★ 修改 1：允許「只有 id」或「只有 username」，不再強制要求 username
+  if (!username && !userId) {
+    return res.status(400).json({ error: 'missing_username_or_id' });
+  }
+
   try {
     const [rows] = await pool.query(
       'SELECT collection, record_id, data FROM records WHERE collection IN (?, ?)',
       ['usersDb', 'users']
     );
+    
     let matched = null;
     for (const r of rows) {
       const u = parseRecord(r.data);
-      if (body.id != null && (String(r.record_id) === String(body.id) || String(u.id) === String(body.id))) {
+      // ★ 修改 2：優先匹配 id
+      if (userId && (String(r.record_id) === userId || String(u.id) === userId)) {
         matched = r; break;
       }
-      if (u.username && String(u.username).toLowerCase() === username.toLowerCase()) {
+      // 如果沒有 id 或找不到，才比對 username
+      if (username && u.username && String(u.username).toLowerCase() === username.toLowerCase()) {
         matched = r; break;
       }
     }
+
     const userData = Object.assign({}, matched ? parseRecord(matched.data) : {}, body);
-    userData.username = username;
-    if (!userData.id) userData.id = body.id || Date.now();
+    
+    // ★ 修改 3：如果前端沒傳 username，保留資料庫原本的 username，不要把它洗掉
+    if (username) {
+      userData.username = username;
+    } else if (matched) {
+      userData.username = parseRecord(matched.data).username;
+    }
+
+    if (!userData.id) userData.id = userId || Date.now();
     if (!userData.status) userData.status = 'online';
     if (!Array.isArray(userData.projectIds)) userData.projectIds = body.projectIds || [];
+
     // never wipe password if client omitted it on update
     if (matched) {
       const prev = parseRecord(matched.data);
@@ -1039,6 +1058,7 @@ app.post('/api/users/upsert', async (req, res) => {
       );
       return res.json({ ok: true, id: userData.id, updated: true });
     }
+
     if (!userData.password) userData.password = 'Welcome@123';
     const recordId = String(userData.id);
     await pool.query(

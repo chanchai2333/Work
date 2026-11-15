@@ -77,27 +77,11 @@
     });
 
     const url = '/api/records/' + coll + '/bulk' + (items.length === 0 ? '?allowEmpty=1' : '');
-    
-    // ★ 修復：加上 Session Token 驗證
-    const headers = { 'Content-Type': 'application/json' };
-    try {
-      const session = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
-      if (session.sessionToken) {
-        headers['x-session-token'] = session.sessionToken;
-      }
-    } catch (e) {}
-
     const res = await fetch(url, {
       method: 'POST',
-      headers: headers,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-
-    if (res.status === 401) {
-      alert('登入憑證已過期，請重新登入。');
-      location.href = 'login.html';
-      return false;
-    }
     if (res.status === 409) {
       alert('Another user changed this data. The page will reload.');
       location.reload();
@@ -193,7 +177,7 @@
       passwordExpiresAt: null
     };
     return [
-      Object.assign({}, base, { id: 1, name: 'Admin', email: 'admin@ael-dwss.com', username: 'admin', password: 'admin123', organization: 'SYSTEM_VENDOR', companyName: 'AEL - Associated Engineers Ltd.', role: 'admin', department: 'System Administration', projectIds: ['DE/2026/05'], permissions: { level: 5, canChangeStatus: true, canManageUsers: true, name: 'Administrator' } }),
+      Object.assign({}, base, { id: 1, name: 'Admin', email: 'admin@ael-dwss.com', username: 'admin', password: 'admin123', organization: 'SYSTEM_VENDOR', companyName: 'AEL - Associated Engineers Ltd.', role: 'admin', department: 'System Administration', projectIds: [], permissions: { level: 5, canChangeStatus: true, canManageUsers: true, name: 'Administrator' } }),
       Object.assign({}, base, { id: 2, name: 'Kenneth Daluz', email: 'kenneth.daluz@dsd.gov.hk', username: 'kenneth', password: 'officer123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'eg', department: 'Engineer Grade', projectIds: ['DE/2026/05'], permissions: { level: 4, canChangeStatus: false, canManageUsers: false, name: 'Engineer Grade' } }),
       Object.assign({}, base, { id: 3, name: 'TANG Chi Long, Gary', email: 'gcifang@dsd.gov.hk', username: 'garytang', password: 'aei123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'ig', department: 'Inspector Grade', projectIds: ['DE/2026/05'], permissions: { level: 3, canChangeStatus: true, canManageUsers: false, name: 'Inspector Grade' } }),
       Object.assign({}, base, { id: 4, name: 'FUNG Wai Ching', email: 'wcfung04@dsd.gov.hk', username: 'wcfung', password: 'wsg123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'wsg', department: 'Works Supervisor Grade', projectIds: ['DE/2026/05'], permissions: { level: 3, canChangeStatus: true, canManageUsers: false, name: 'Works Supervisor Grade' } }),

@@ -1,3 +1,29 @@
+    async function updateUserContractsAPI(userId, username, newProjectIds) {
+        try {
+            const session = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+            const res = await fetch('/api/users/upsert', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'x-session-token': session.sessionToken || ''
+                },
+                body: JSON.stringify({ 
+                    id: userId, 
+                    username: username, // ★ 補上 username
+                    projectIds: newProjectIds 
+                })
+            });
+            if (!res.ok) {
+                console.error('API Error:', await res.text());
+                return false;
+            }
+            return true;
+        } catch (e) {
+            console.error('Failed to update user contract:', userId, e);
+            return false;
+        }
+    }
+
 // teams.js - 团队管理
 (function() {
     const TEAMS_KEY = 'ael_dwss_teams';
@@ -19,10 +45,10 @@
     function seedUsers() {
         return [
             { id: 1,  name: 'Admin', email: 'admin@ael-dwss.com', username: 'admin', organization: 'SYSTEM_VENDOR', companyName: 'AEL - Associated Engineers Ltd.', role: 'admin', department: 'System Administration', projectIds: [] },
-            { id: 2,  name: 'Kenneth Daluz', email: 'kenneth.daluz@dsd.gov.hk', username: 'kenneth', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'eg', department: 'Engineer Grade', projectIds: ['DE/2024/06'] },
-            { id: 3,  name: 'TANG Chi Long, Gary', email: 'gcifang@dsd.gov.hk', username: 'garytang', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'ig', department: 'Inspector Grade', projectIds: ['DE/2024/06'] },
-            { id: 4,  name: 'FUNG Wai Ching', email: 'wcfung04@dsd.gov.hk', username: 'wcfung', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'wsg', department: 'Works Supervisor Grade', projectIds: ['DE/2025/07'] },
-            { id: 10, name: 'CHA Chi Ming', email: 'cmcha02@dsd.gov.hk', username: 'cmcha', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'ig', department: 'Inspector Grade', projectIds: ['DE/2025/07'] },
+            { id: 2,  name: 'Kenneth Daluz', email: 'kenneth.daluz@dsd.gov.hk', username: 'kenneth', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'eg', department: 'Engineer Grade', projectIds: ['DE/2026/05'] },
+            { id: 3,  name: 'TANG Chi Long, Gary', email: 'gcifang@dsd.gov.hk', username: 'garytang', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'ig', department: 'Inspector Grade', projectIds: ['DE/2026/05'] },
+            { id: 4,  name: 'FUNG Wai Ching', email: 'wcfung04@dsd.gov.hk', username: 'wcfung', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'wsg', department: 'Works Supervisor Grade', projectIds: ['DE/2026/05'] },
+            { id: 10, name: 'CHA Chi Ming', email: 'cmcha02@dsd.gov.hk', username: 'cmcha', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'ig', department: 'Inspector Grade', projectIds: ['DE/2026/05'] },
             { id: 11, name: 'Eddie Chan', email: 'eddiechan@de202605jv.com', username: 'eddiechan', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'project_admin', department: 'JV Representative (REC)', projectIds: ['DE/2026/05'] },
             { id: 12, name: 'Nelson Ng', email: 'nelsonng@de202605jv.com', username: 'nelsonng', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'project_admin', department: 'JV Representative (AEL)', projectIds: ['DE/2026/05'] },
             { id: 13, name: 'Jeff Wong', email: 'jeffwong@de202605jv.com', username: 'jeffwong', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'project_admin', department: 'Contract Manager, DE/2026/05', projectIds: ['DE/2026/05'] },
@@ -146,7 +172,7 @@
                 });
             });
         } catch (e) {}
-        ['DE/2026/05', 'DE/2024/06', 'DE/2025/07'].forEach(function (code) {
+        ['DE/2026/05', 'DE/2025/02', 'DE/2025/09'].forEach(function (code) {
             if (isContractDeleted(code)) return;
             if (!contracts.some(function (c) { return (c.contractNo || c.id) === code; })) {
                 contracts.push({ id: code, contractNo: code, name: code });
@@ -511,7 +537,7 @@
         renderContractUserPicker(assigned);
         document.getElementById('contract-modal').style.display = 'flex';
     }
-    function saveContract(e) {
+    async function saveContract(e) {
         e.preventDefault();
         if (!currentIsSystemAdmin()) { alert('Only System Admin can save a contract.'); return; }
         var no = document.getElementById('contract-no-input').value.trim();
@@ -519,6 +545,37 @@
         if (!no) { alert('Please enter Contract No.'); return; }
         if (!name) { alert('Please enter Contract Name.'); return; }
         var editing = document.getElementById('contract-form').dataset.editing || '';
+        
+        var selectedIds = getContractSelectedUserIds();
+        
+        var previouslyAssigned = users.filter(function (u) { 
+            return (u.projectIds || []).indexOf(no) !== -1; 
+        }).map(function (u) { return normalizeUserId(u.id); });
+
+        var promises = [];
+        
+        // 1. 將所有勾選的人加入專案
+        selectedIds.forEach(function(id) {
+            var u = findUserById(id);
+            if (u) {
+                if (!Array.isArray(u.projectIds)) u.projectIds = [];
+                if (u.projectIds.indexOf(no) === -1) u.projectIds.push(no);
+                promises.push(updateUserContractsAPI(u.id, u.username, u.projectIds));
+            }
+        });
+        
+        // 2. 將取消勾選的人從專案移除
+        previouslyAssigned.forEach(function(id) {
+            if (selectedIds.indexOf(id) === -1) {
+                var u = findUserById(id);
+                if (u && u.projectIds) {
+                    u.projectIds = u.projectIds.filter(function(pid) { return pid !== no; });
+                    promises.push(updateUserContractsAPI(u.id, u.username, u.projectIds));
+                }
+            }
+        });
+
+        // 保存合約本身
         if (!editing) {
             if (contracts.some(function (c) { return (c.contractNo || c.id).toLowerCase() === no.toLowerCase(); })) {
                 alert('Contract No. already exists: ' + no); return;
@@ -528,12 +585,23 @@
             var c = contracts.find(function (x) { return (x.contractNo || x.id) === editing; });
             if (c) c.name = name;
         }
-        assignMembersToContract(getContractSelectedUserIds(), no);
         saveContracts();
         renderContractsTable();
         fillContractSelect();
-        document.getElementById('contract-modal').style.display = 'none';
-        alert('Contract saved.');
+        
+        try {
+            localStorage.setItem(USERS_KEY, JSON.stringify(users));
+            localStorage.setItem(USERS_KEY_LEGACY, JSON.stringify(users));
+        } catch (e) {}
+
+        // 3. 等待所有 API 請求完成，並檢查是否成功
+        const results = await Promise.all(promises);
+        if (results.includes(false)) {
+            alert('⚠ 部分用戶的專案權限同步失敗，請檢查網路連線或 Console 錯誤。');
+        } else {
+            document.getElementById('contract-modal').style.display = 'none';
+            alert('✅ 合約與用戶權限已成功同步到伺服器。');
+        }
     }
     function removeContractFromAllUsers(contractNo) {
         if (!contractNo) return;
