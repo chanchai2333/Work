@@ -77,11 +77,27 @@
     });
 
     const url = '/api/records/' + coll + '/bulk' + (items.length === 0 ? '?allowEmpty=1' : '');
+    
+    // ★ 修復：加上 Session Token 驗證
+    const headers = { 'Content-Type': 'application/json' };
+    try {
+      const session = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+      if (session.sessionToken) {
+        headers['x-session-token'] = session.sessionToken;
+      }
+    } catch (e) {}
+
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: headers,
       body: JSON.stringify(payload)
     });
+
+    if (res.status === 401) {
+      alert('登入憑證已過期，請重新登入。');
+      location.href = 'login.html';
+      return false;
+    }
     if (res.status === 409) {
       alert('Another user changed this data. The page will reload.');
       location.reload();

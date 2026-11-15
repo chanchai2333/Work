@@ -1,10 +1,8 @@
-// teams.js - 团队管理（一个项目为一个团队）
-// ★ 改动：成员选择改为 checkbox 勾选列表（不需要 Ctrl/Shift）
+// teams.js - 团队管理
 (function() {
     const TEAMS_KEY = 'ael_dwss_teams';
     const CONTRACTS_KEY = 'dwss_contracts';
-    const DELETED_CONTRACTS_KEY = 'ael_dwss_deleted_contracts'; // 記錄已刪除的合約
-    // Must match User Management key so Teams sees the same accounts
+    const DELETED_CONTRACTS_KEY = 'ael_dwss_deleted_contracts';
     const USERS_KEY = 'dwss_users_db';
     const USERS_KEY_LEGACY = 'ael_dwss_users';
 
@@ -12,9 +10,11 @@
     let contracts = [];
     let users = [];
     let editingTeamId = null;
-
-    // 当前勾选的成员 ID 集合（normalize to number）
     let selectedMemberIds = new Set();
+
+    function isCloudMode() {
+        try { return !!(window.DWSS_Storage && window.DWSS_Storage.isCloud && window.DWSS_Storage.isCloud()); } catch (e) { return false; }
+    }
 
     function seedUsers() {
         return [
@@ -37,13 +37,7 @@
     }
 
     function roleLabel(role) {
-        var map = {
-            admin: 'System Admin',
-            project_admin: 'Project Admin',
-            eg: 'EG', ig: 'IG', wsg: 'WSG',
-            sa: 'Site Agent', ssa: 'Sub-Site Agent', rso: 'RSO',
-            subcontractor: 'Subcontractor', supplier: 'Supplier'
-        };
+        var map = { admin:'System Admin', project_admin:'Project Admin', eg:'EG', ig:'IG', wsg:'WSG', sa:'Site Agent', ssa:'Sub-Site Agent', rso:'RSO', subcontractor:'Subcontractor', supplier:'Supplier' };
         return map[role] || role || '—';
     }
 
@@ -61,27 +55,18 @@
     function userInProject(user, projectId) {
         if (!projectId) return true;
         if (user.role === 'admin') return true;
-        var pids = user.projectIds || [];
-        return pids.indexOf(projectId) !== -1;
+        return (user.projectIds || []).indexOf(projectId) !== -1;
     }
 
-    function normalizeUserId(id) {
-        var n = Number(id);
-        return isNaN(n) ? id : n;
-    }
-
+    function normalizeUserId(id) { var n = Number(id); return isNaN(n) ? id : n; }
     function findUserById(id) {
         var nid = normalizeUserId(id);
-        return users.find(function (u) {
-            return normalizeUserId(u.id) === nid;
-        });
+        return users.find(function (u) { return normalizeUserId(u.id) === nid; });
     }
 
-    // Load users from User Management storage (same key), merge seed so new CMP users always appear
     function loadUsers() {
         var byId = {};
         seedUsers().forEach(function (u) { byId[String(u.id)] = u; });
-
         function mergeFromKey(key) {
             var stored = localStorage.getItem(key);
             if (!stored) return;
@@ -92,12 +77,9 @@
                     if (!u || u.id == null) return;
                     var id = String(u.id);
                     if (byId[id]) {
-                        // Keep seed identity/role, but use stored project assignments if present
                         if (!byId[id].email && u.email) byId[id].email = u.email;
                         if (!byId[id].username && u.username) byId[id].username = u.username;
-                        if (Array.isArray(u.projectIds)) {
-                            byId[id].projectIds = u.projectIds.slice();
-                        }
+                        if (Array.isArray(u.projectIds)) byId[id].projectIds = u.projectIds.slice();
                         if (u.contractNo && !byId[id].contractNo) byId[id].contractNo = u.contractNo;
                     } else {
                         byId[id] = u;
@@ -105,133 +87,82 @@
                 });
             } catch (e) {}
         }
-
         mergeFromKey(USERS_KEY);
         mergeFromKey(USERS_KEY_LEGACY);
-
         users = Object.keys(byId).map(function (k) { return byId[k]; }).sort(function (a, b) {
             return normalizeUserId(a.id) - normalizeUserId(b.id);
         });
-
-        // ★ 已移除強制賦值（testProjectById），避免刪除合約後又被恢復
-
-        // Keep both keys in sync so other pages stay consistent
         try {
             localStorage.setItem(USERS_KEY, JSON.stringify(users));
             localStorage.setItem(USERS_KEY_LEGACY, JSON.stringify(users));
         } catch (e) {}
     }
 
-    // ---------- Contracts (1 contract can have many teams) ----------
-    function loadContracts() {
-        // 讀取已刪除的合約列表
-        var deletedContracts = [];
+    function getDeletedContracts() {
+        var arr = [];
         try {
-            var storedDeleted = localStorage.getItem(DELETED_CONTRACTS_KEY);
-            if (storedDeleted) {
-                var parsedDeleted = JSON.parse(storedDeleted);
-                if (Array.isArray(parsedDeleted)) deletedContracts = parsedDeleted.map(String);
-            }
+            var s = localStorage.getItem(DELETED_CONTRACTS_KEY);
+            if (s) { var p = JSON.parse(s); if (Array.isArray(p)) arr = p.map(String); }
         } catch (e) {}
-        function isDeleted(code) {
-            return deletedContracts.indexOf(String(code)) !== -1;
+        return arr;
+    }
+    function markContractDeleted(code) {
+        var arr = getDeletedContracts();
+        if (arr.indexOf(String(code)) === -1) {
+            arr.push(String(code));
+            try { localStorage.setItem(DELETED_CONTRACTS_KEY, JSON.stringify(arr)); } catch (e) {}
         }
+    }
+    function isContractDeleted(code) { return getDeletedContracts().indexOf(String(code)) !== -1; }
 
+    function loadContracts() {
         var stored = localStorage.getItem(CONTRACTS_KEY);
-        if (stored) {
-            try { contracts = JSON.parse(stored) || []; } catch (e) { contracts = []; }
-        }
+        if (stored) { try { contracts = JSON.parse(stored) || []; } catch (e) { contracts = []; } }
         if (!Array.isArray(contracts)) contracts = [];
-        // 過濾掉已刪除的合約
         contracts = contracts.filter(function (c) {
             var code = c.contractNo || c.id;
-            return code && !isDeleted(code);
+            return code && !isContractDeleted(code);
         });
-
-        // Migrate: if teams have contractNo but contracts list empty, derive contracts
-        if (!contracts.length) {
-            var seen = {};
-            (teams || []).forEach(function (tm) {
-                var c = tm.contractNo;
-                if (c && !seen[c] && !isDeleted(c)) {
-                    seen[c] = true;
-                    contracts.push({ id: c, contractNo: c, name: c }); // 使用合約編號作為名稱
-                }
-            });
-        }
-        if (!contracts.length) {
-            // Safe defaults — do NOT wipe user project assignments
-            contracts = [
-                { id: 'DE/2026/05', contractNo: 'DE/2026/05', name: 'DE/2026/05' },
-                { id: 'DE/2024/06', contractNo: 'DE/2024/06', name: 'DE/2024/06' },
-                { id: 'DE/2025/07', contractNo: 'DE/2025/07', name: 'DE/2025/07' }
-            ].filter(function (c) { return !isDeleted(c.contractNo); });
-        }
-        // Merge existing project stores so testing contracts stay visible
         try {
-            ['dwss_projects', 'projects', 'ael_dwss_projects', 'dwss_contracts'].forEach(function (key) {
+            ['dwss_projects', 'projects', 'ael_dwss_projects'].forEach(function (key) {
                 var raw = localStorage.getItem(key);
                 if (!raw) return;
                 var arr = JSON.parse(raw);
                 if (!Array.isArray(arr)) return;
                 arr.forEach(function (p) {
                     var code = p.contractNo || p.id || p.code || p.name;
-                    if (!code || isDeleted(code)) return;
+                    if (!code || isContractDeleted(code)) return;
                     if (contracts.some(function (c) { return (c.contractNo || c.id) === code; })) return;
                     contracts.push({ id: code, contractNo: code, name: code });
                 });
             });
         } catch (e) {}
-        // Recover contracts from every user's projectIds (other projects you assigned before)
         try {
             (users || []).forEach(function (u) {
                 (u.projectIds || []).forEach(function (pid) {
-                    if (!pid || isDeleted(pid)) return;
+                    if (!pid || isContractDeleted(pid)) return;
                     if (contracts.some(function (c) { return (c.contractNo || c.id) === pid; })) return;
                     contracts.push({ id: pid, contractNo: pid, name: pid });
                 });
             });
-            // Also scan stored user DB directly
-            var rawUsers = localStorage.getItem(USERS_KEY) || localStorage.getItem(USERS_KEY_LEGACY);
-            if (rawUsers) {
-                JSON.parse(rawUsers).forEach(function (u) {
-                    (u.projectIds || []).forEach(function (pid) {
-                        if (!pid || isDeleted(pid)) return;
-                        if (contracts.some(function (c) { return (c.contractNo || c.id) === pid; })) return;
-                        contracts.push({ id: pid, contractNo: pid, name: pid });
-                    });
-                });
-            }
         } catch (e) {}
-
-        // Ensure default testing contracts always exist (unless explicitly deleted)
         ['DE/2026/05', 'DE/2024/06', 'DE/2025/07'].forEach(function (code) {
-            if (isDeleted(code)) return;
+            if (isContractDeleted(code)) return;
             if (!contracts.some(function (c) { return (c.contractNo || c.id) === code; })) {
                 contracts.push({ id: code, contractNo: code, name: code });
             }
         });
-
-        // 修正 DE/2026/05 的名稱（如果被錯誤地設為團隊名稱）
         contracts.forEach(function (c) {
             var code = c.contractNo || c.id;
             if (code === 'DE/2026/05') {
-                if (c.name === 'DE/2026/05' || c.name === 'DE/2026/05' || !c.name) {
-                    c.name = 'DE/2026/05';
-                }
+                if (c.name === 'CMP Main Team' || c.name === 'DE202605 Main Works' || !c.name) c.name = 'DE/2026/05';
             }
         });
-
         saveContracts();
     }
 
     function saveContracts() {
         localStorage.setItem(CONTRACTS_KEY, JSON.stringify(contracts));
-        syncProjectsFromContracts();
-    }
-
-    function syncProjectsFromContracts() {
-        // Project list used by User Management / login = CONTRACTS, not teams
         var list = contracts.map(function (c) {
             var code = c.contractNo || c.id;
             return { id: code, code: code, name: c.name || code, contractNo: code };
@@ -243,64 +174,41 @@
         } catch (e) {}
     }
 
-    // ---------- Teams (belong to one contract) ----------
-    function loadTeams() {
+    // ★ 支持 skipSeed，避免雲端空資料時被本地 Seed 覆蓋
+    function loadTeams(skipSeed) {
         const stored = localStorage.getItem(TEAMS_KEY);
         if (stored) {
             try {
-                teams = JSON.parse(stored);
-                teams.forEach(function (tm) {
-                    if (!tm.memberIds) tm.memberIds = [];
-                });
-            } catch (e) {
-                teams = [];
-            }
+                teams = JSON.parse(stored) || [];
+                teams.forEach(function (tm) { if (!tm.memberIds) tm.memberIds = []; });
+            } catch (e) { teams = []; }
         }
         if (!Array.isArray(teams)) teams = [];
 
-        // 讀取已刪除合約列表，避免 seed 已刪除的合約團隊
-        var deletedContracts = [];
-        try {
-            var rawDeleted = localStorage.getItem(DELETED_CONTRACTS_KEY);
-            if (rawDeleted) {
-                var arr = JSON.parse(rawDeleted);
-                if (Array.isArray(arr)) deletedContracts = arr.map(String);
-            }
-        } catch (e) {}
-        function isDeleted(code) {
-            return deletedContracts.indexOf(String(code)) !== -1;
-        }
-
-        if (!teams.length) {
-            // 只有當 DE/2026/05 未被刪除時才 seed 默認團隊
-            if (!isDeleted('DE/2026/05')) {
-                teams = [
-                    { id: 1, name: 'DE/2026/05', contractNo: 'DE/2026/05', memberIds: [11, 12, 13, 14, 15, 16, 17, 18, 19, 20] },
-                    { id: 2, name: 'Site Team B', contractNo: 'DE/2026/05', memberIds: [] }
-                ];
-                saveTeams();
-            }
-        } else {
-            // Ensure CMP users sit on at least one DE/2026/05 team (only if not deleted)
-            if (!isDeleted('DE/2026/05')) {
-                var cmpIds = [11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
-                var hasCmp = teams.some(function (tm) {
-                    return (tm.memberIds || []).some(function (id) { return cmpIds.indexOf(Number(id)) !== -1; });
-                });
-                if (!hasCmp) {
-                    var target = teams.find(function (tm) { return tm.contractNo === 'DE/2026/05'; }) || teams[0];
-                    if (target) {
-                        target.memberIds = (target.memberIds || []).concat(cmpIds);
-                        var seen = {};
-                        target.memberIds = target.memberIds.filter(function (id) {
-                            var k = String(id);
-                            if (seen[k]) return false;
-                            seen[k] = true;
-                            return true;
-                        });
-                        if (!target.contractNo) target.contractNo = 'DE/2026/05';
-                        saveTeams();
-                    }
+        if (!teams.length && !skipSeed && !isContractDeleted('DE/2026/05')) {
+            teams = [
+                { id: 1, name: 'CMP Main Team', contractNo: 'DE/2026/05', memberIds: [11, 12, 13, 14, 15, 16, 17, 18, 19, 20] },
+                { id: 2, name: 'Site Team B', contractNo: 'DE/2026/05', memberIds: [] }
+            ];
+            saveTeams();
+        } else if (!skipSeed && !isContractDeleted('DE/2026/05')) {
+            var cmpIds = [11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+            var hasCmp = teams.some(function (tm) {
+                return (tm.memberIds || []).some(function (id) { return cmpIds.indexOf(Number(id)) !== -1; });
+            });
+            if (!hasCmp) {
+                var target = teams.find(function (tm) { return tm.contractNo === 'DE/2026/05'; }) || teams[0];
+                if (target) {
+                    target.memberIds = (target.memberIds || []).concat(cmpIds);
+                    var seen = {};
+                    target.memberIds = target.memberIds.filter(function (id) {
+                        var k = String(id);
+                        if (seen[k]) return false;
+                        seen[k] = true;
+                        return true;
+                    });
+                    if (!target.contractNo) target.contractNo = 'DE/2026/05';
+                    saveTeams();
                 }
             }
         }
@@ -308,6 +216,18 @@
 
     function saveTeams() {
         localStorage.setItem(TEAMS_KEY, JSON.stringify(teams));
+    }
+
+    // ★ 保存並等待 flush 的邏輯
+    function saveTeamsAndVerify(callback) {
+        saveTeams();
+        if (!isCloudMode() || !window.DWSS_Storage || typeof window.DWSS_Storage.flush !== 'function') {
+            callback(true);
+            return;
+        }
+        window.DWSS_Storage.flush(TEAMS_KEY).then(function (result) {
+            callback(result !== false);
+        }).catch(function () { callback(false); });
     }
 
     function assignMembersToContract(memberIds, contractNo) {
@@ -321,7 +241,6 @@
                 u.projectIds.push(contractNo);
                 changed = true;
             }
-            if (!u.contractNo) u.contractNo = 'Contract No. ' + contractNo;
         });
         if (changed) {
             try {
@@ -340,15 +259,12 @@
         if (contractsEl) contractsEl.textContent = contracts.length;
     }
 
-    // 根据成员 ID 数组返回名字列表
     function getMemberNames(memberIds) {
         if (!memberIds || !memberIds.length) return 'None';
         var names = memberIds.map(function (id) {
             var u = findUserById(id);
-            if (!u) return null;
-            if (u.role === 'admin') return null;
-            var un = u.username ? ' (' + u.username + ')' : '';
-            return u.name + un;
+            if (!u || u.role === 'admin') return null;
+            return u.name + (u.username ? ' (' + u.username + ')' : '');
         }).filter(Boolean);
         return names.length ? names.join(', ') : 'None';
     }
@@ -358,25 +274,15 @@
         return String(str).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
     }
 
-    /* ============================================================
-       MEMBER PICKER (checkbox list)
-       ============================================================ */
+    /* ============ MEMBER PICKER ============ */
     function renderMemberList(filterText) {
         const listEl = document.getElementById('team-members-list');
         if (!listEl) return;
-
         listEl.innerHTML = '';
         const query = (filterText || '').trim().toLowerCase();
         const currentPid = getCurrentProjectId();
-
-        let pool = users.filter(function (u) {
-            if (u.role === 'admin') return false;
-            return userInProject(u, currentPid);
-        });
-        if (!pool.length) {
-            pool = users.filter(function (u) { return u.role !== 'admin'; });
-        }
-
+        let pool = users.filter(function (u) { return u.role !== 'admin' && userInProject(u, currentPid); });
+        if (!pool.length) pool = users.filter(function (u) { return u.role !== 'admin'; });
         if (!pool.length) {
             const empty = document.createElement('div');
             empty.className = 'team-picker-empty';
@@ -385,7 +291,6 @@
             updateMemberCount();
             return;
         }
-
         let shown = 0;
         pool.forEach(function (user) {
             const name = user.name || '';
@@ -394,53 +299,38 @@
             const role = roleLabel(user.role);
             const pids = (user.projectIds || []).join(', ') || '—';
             if (!name && !username) return;
-
             const hay = (name + ' ' + username + ' ' + email + ' ' + role + ' ' + pids).toLowerCase();
             if (query && hay.indexOf(query) === -1) return;
             shown++;
-
             const uid = normalizeUserId(user.id);
             const label = document.createElement('label');
             if (selectedMemberIds.has(uid)) label.classList.add('checked');
-
             const cb = document.createElement('input');
             cb.type = 'checkbox';
             cb.value = String(user.id);
             cb.checked = selectedMemberIds.has(uid);
             cb.addEventListener('change', function () {
-                if (cb.checked) {
-                    selectedMemberIds.add(uid);
-                    label.classList.add('checked');
-                } else {
-                    selectedMemberIds.delete(uid);
-                    label.classList.remove('checked');
-                }
+                if (cb.checked) { selectedMemberIds.add(uid); label.classList.add('checked'); }
+                else { selectedMemberIds.delete(uid); label.classList.remove('checked'); }
                 updateMemberCount();
             });
-
             const nameSpan = document.createElement('span');
             nameSpan.className = 'user-name';
             nameSpan.innerHTML = (name || username) +
                 (username ? ' <code style="font-size:0.75rem;color:#64748b;font-weight:500;">@' + username + '</code>' : '') +
                 (email ? '<br><small style="color:#94a3b8;font-weight:400;">' + email + '</small>' : '');
-
             const roleSpan = document.createElement('span');
             roleSpan.className = 'user-role';
             roleSpan.textContent = role + (pids !== '—' ? ' · ' + pids : '');
-
-            label.appendChild(cb);
-            label.appendChild(nameSpan);
-            label.appendChild(roleSpan);
+            label.appendChild(cb); label.appendChild(nameSpan); label.appendChild(roleSpan);
             listEl.appendChild(label);
         });
-
         if (shown === 0) {
             const nm = document.createElement('div');
             nm.className = 'team-picker-empty';
             nm.textContent = 'No matching users for this search / project.';
             listEl.appendChild(nm);
         }
-
         updateMemberCount();
     }
 
@@ -448,82 +338,51 @@
         const el = document.getElementById('team-members-count');
         if (el) el.textContent = String(selectedMemberIds.size);
     }
-
-    function clearSelectedMembers() {
-        selectedMemberIds.clear();
-        renderMemberList('');
-    }
-
-    function setSelectedMembers(ids) {
-        selectedMemberIds = new Set((ids || []).map(normalizeUserId));
-        renderMemberList('');
-    }
-
-    function getSelectedMemberIds() {
-        return Array.from(selectedMemberIds);
-    }
+    function clearSelectedMembers() { selectedMemberIds.clear(); renderMemberList(''); }
+    function setSelectedMembers(ids) { selectedMemberIds = new Set((ids || []).map(normalizeUserId)); renderMemberList(''); }
+    function getSelectedMemberIds() { return Array.from(selectedMemberIds); }
 
     function setupMemberPickerEvents() {
         const searchEl = document.getElementById('team-members-search');
-        const allBtn   = document.getElementById('team-members-select-all');
+        const allBtn = document.getElementById('team-members-select-all');
         const clearBtn = document.getElementById('team-members-clear-all');
-
-        if (searchEl) {
-            searchEl.addEventListener('input', function () {
-                renderMemberList(searchEl.value);
+        if (searchEl) searchEl.addEventListener('input', function () { renderMemberList(searchEl.value); });
+        if (allBtn) allBtn.addEventListener('click', function () {
+            const q = (searchEl && searchEl.value || '').toLowerCase();
+            const currentPid = getCurrentProjectId();
+            users.forEach(function (u) {
+                if (u.role === 'admin') return;
+                if (currentPid && !userInProject(u, currentPid)) return;
+                const name = u.name || ''; const username = u.username || '';
+                if (!name && !username) return;
+                const hay = (name + ' ' + username + ' ' + (u.email || '')).toLowerCase();
+                if (q && hay.indexOf(q) === -1) return;
+                selectedMemberIds.add(normalizeUserId(u.id));
             });
-        }
-
-        if (allBtn) {
-            allBtn.addEventListener('click', function () {
-                const q = (searchEl && searchEl.value || '').toLowerCase();
-                const currentPid = getCurrentProjectId();
-                users.forEach(function (u) {
-                    if (u.role === 'admin') return;
-                    if (!userInProject(u, currentPid) && currentPid) return;
-                    const name = u.name || '';
-                    const username = u.username || '';
-                    if (!name && !username) return;
-                    const hay = (name + ' ' + username + ' ' + (u.email || '')).toLowerCase();
-                    if (q && hay.indexOf(q) === -1) return;
-                    selectedMemberIds.add(normalizeUserId(u.id));
-                });
-                renderMemberList(searchEl ? searchEl.value : '');
-            });
-        }
-
-        if (clearBtn) {
-            clearBtn.addEventListener('click', function () {
-                selectedMemberIds.clear();
-                renderMemberList(searchEl ? searchEl.value : '');
-            });
-        }
+            renderMemberList(searchEl ? searchEl.value : '');
+        });
+        if (clearBtn) clearBtn.addEventListener('click', function () {
+            selectedMemberIds.clear(); renderMemberList(searchEl ? searchEl.value : '');
+        });
     }
 
-    /* ============================================================
-       TABLE RENDERING
-       ============================================================ */
+    /* ============ TABLE RENDER ============ */
     function renderTeamsTable() {
         const tbody = document.getElementById('teams-table-body');
         const noResults = document.getElementById('no-results-message');
         if (!tbody) return;
         tbody.innerHTML = '';
-
         if (teams.length === 0) {
             if (noResults) noResults.style.display = 'block';
             return;
         }
         if (noResults) noResults.style.display = 'none';
-
         var viewList = teams;
         var curPid = getCurrentProjectId();
-        if (curPid && !currentIsSystemAdmin()) {
-            viewList = teams.filter(function (tm) { return tm.contractNo === curPid; });
-        } else if (curPid && currentIsSystemAdmin()) {
+        if (curPid) {
             viewList = teams.filter(function (tm) { return tm.contractNo === curPid; });
             if (!viewList.length) viewList = teams;
         }
-
         viewList.forEach(team => {
             const row = tbody.insertRow();
             row.innerHTML = `
@@ -540,42 +399,24 @@
                         html += '<button class="action-btn delete-team-btn" data-id="' + team.id + '" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;"><i class="fas fa-trash"></i> Delete</button>';
                     }
                     return html || '<span style="color:#94a3b8;font-size:0.75rem;">—</span>';
-                })()}</td>
-            `;
+                })()}</td>`;
         });
-
-        document.querySelectorAll('.edit-team-btn').forEach(btn => {
-            btn.addEventListener('click', () => openEditTeamModal(parseInt(btn.dataset.id)));
-        });
-        document.querySelectorAll('.delete-team-btn').forEach(btn => {
-            btn.addEventListener('click', () => deleteTeam(parseInt(btn.dataset.id)));
-        });
+        document.querySelectorAll('.edit-team-btn').forEach(btn => btn.addEventListener('click', () => openEditTeamModal(parseInt(btn.dataset.id))));
+        document.querySelectorAll('.delete-team-btn').forEach(btn => btn.addEventListener('click', () => deleteTeam(parseInt(btn.dataset.id))));
     }
 
-    /* ============================================================
-       MODAL OPEN / CLOSE
-       ============================================================ */
     function currentIsSystemAdmin() {
         try {
-            if (window.DWSS_Permissions && window.DWSS_Permissions.isAdmin) {
-                return !!window.DWSS_Permissions.isAdmin();
-            }
-            if (window.DWSS_Permissions && window.DWSS_Permissions.canCreateProjects) {
-                return !!window.DWSS_Permissions.canCreateProjects();
-            }
-            var u = window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser
-                ? window.DWSS_Permissions.getCurrentUser() : null;
+            if (window.DWSS_Permissions && window.DWSS_Permissions.isAdmin) return !!window.DWSS_Permissions.isAdmin();
+            if (window.DWSS_Permissions && window.DWSS_Permissions.canCreateProjects) return !!window.DWSS_Permissions.canCreateProjects();
+            var u = window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser ? window.DWSS_Permissions.getCurrentUser() : null;
             return !!(u && u.role === 'admin');
         } catch (e) { return false; }
     }
-
     function currentIsProjectAdmin() {
         try {
-            if (window.DWSS_Permissions && window.DWSS_Permissions.isProjectAdmin) {
-                return !!window.DWSS_Permissions.isProjectAdmin();
-            }
-            var u = window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser
-                ? window.DWSS_Permissions.getCurrentUser() : null;
+            if (window.DWSS_Permissions && window.DWSS_Permissions.isProjectAdmin) return !!window.DWSS_Permissions.isProjectAdmin();
+            var u = window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser ? window.DWSS_Permissions.getCurrentUser() : null;
             return !!(u && u.role === 'project_admin');
         } catch (e) { return false; }
     }
@@ -583,20 +424,15 @@
     function fillContractSelect(selected) {
         var sel = document.getElementById('team-contract-select');
         if (!sel) return;
-        if (!contracts || !contracts.length) {
-            try { loadContracts(); } catch (e) {}
-        }
+        if (!contracts || !contracts.length) { try { loadContracts(); } catch (e) {} }
         sel.innerHTML = '<option value="">-- Select Contract --</option>';
-
         var allowed = null;
         if (!currentIsSystemAdmin() && currentIsProjectAdmin()) {
             try {
-                var u = window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser
-                    ? window.DWSS_Permissions.getCurrentUser() : null;
+                var u = window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser ? window.DWSS_Permissions.getCurrentUser() : null;
                 allowed = (u && u.projectIds) ? u.projectIds.slice() : [];
             } catch (e) { allowed = []; }
         }
-
         var count = 0;
         contracts.forEach(function (c) {
             var code = c.contractNo || c.id;
@@ -609,10 +445,8 @@
             sel.appendChild(opt);
             count++;
         });
-
         sel.disabled = false;
         sel.required = true;
-
         if (!count) {
             var empty = document.createElement('option');
             empty.value = '';
@@ -635,36 +469,25 @@
             var label = document.createElement('label');
             label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid #f1f5f9;cursor:pointer;';
             var cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.className = 'contract-user-cb';
-            cb.value = String(u.id);
+            cb.type = 'checkbox'; cb.className = 'contract-user-cb'; cb.value = String(u.id);
             cb.checked = !!selectedSet[uid];
             var span = document.createElement('span');
             span.innerHTML = (u.name || u.username || '') +
                 (u.username ? ' <code style="font-size:0.75rem;color:#64748b;">@' + u.username + '</code>' : '') +
                 (u.role ? ' <small style="color:#94a3b8;">(' + roleLabel(u.role) + ')</small>' : '');
-            label.appendChild(cb);
-            label.appendChild(span);
+            label.appendChild(cb); label.appendChild(span);
             list.appendChild(label);
         });
-        if (!list.children.length) {
-            list.innerHTML = '<div style="padding:8px;color:#94a3b8;">No users available.</div>';
-        }
+        if (!list.children.length) list.innerHTML = '<div style="padding:8px;color:#94a3b8;">No users available.</div>';
     }
-
     function getContractSelectedUserIds() {
         var ids = [];
-        document.querySelectorAll('.contract-user-cb:checked').forEach(function (cb) {
-            ids.push(normalizeUserId(cb.value));
-        });
+        document.querySelectorAll('.contract-user-cb:checked').forEach(function (cb) { ids.push(normalizeUserId(cb.value)); });
         return ids;
     }
 
     function openAddContractModal() {
-        if (!currentIsSystemAdmin()) {
-            alert('Only System Admin can add a new contract.');
-            return;
-        }
+        if (!currentIsSystemAdmin()) { alert('Only System Admin can add a new contract.'); return; }
         var modal = document.getElementById('contract-modal');
         if (!modal) return;
         document.getElementById('contract-modal-title').innerHTML = '<i class="fas fa-file-contract"></i> Add New Contract';
@@ -675,12 +498,8 @@
         renderContractUserPicker([]);
         modal.style.display = 'flex';
     }
-
     function openEditContractModal(contractNo) {
-        if (!currentIsSystemAdmin()) {
-            alert('Only System Admin can edit a contract.');
-            return;
-        }
+        if (!currentIsSystemAdmin()) { alert('Only System Admin can edit a contract.'); return; }
         var c = contracts.find(function (x) { return (x.contractNo || x.id) === contractNo; });
         if (!c) return;
         document.getElementById('contract-modal-title').innerHTML = '<i class="fas fa-edit"></i> Edit Contract';
@@ -688,19 +507,13 @@
         document.getElementById('contract-no-input').readOnly = true;
         document.getElementById('contract-name-input').value = c.name || '';
         document.getElementById('contract-form').dataset.editing = c.contractNo || c.id;
-        var assigned = users.filter(function (u) {
-            return (u.projectIds || []).indexOf(contractNo) !== -1;
-        }).map(function (u) { return u.id; });
+        var assigned = users.filter(function (u) { return (u.projectIds || []).indexOf(contractNo) !== -1; }).map(function (u) { return u.id; });
         renderContractUserPicker(assigned);
         document.getElementById('contract-modal').style.display = 'flex';
     }
-
     function saveContract(e) {
         e.preventDefault();
-        if (!currentIsSystemAdmin()) {
-            alert('Only System Admin can save a contract.');
-            return;
-        }
+        if (!currentIsSystemAdmin()) { alert('Only System Admin can save a contract.'); return; }
         var no = document.getElementById('contract-no-input').value.trim();
         var name = document.getElementById('contract-name-input').value.trim();
         if (!no) { alert('Please enter Contract No.'); return; }
@@ -708,90 +521,49 @@
         var editing = document.getElementById('contract-form').dataset.editing || '';
         if (!editing) {
             if (contracts.some(function (c) { return (c.contractNo || c.id).toLowerCase() === no.toLowerCase(); })) {
-                alert('Contract No. already exists: ' + no);
-                return;
+                alert('Contract No. already exists: ' + no); return;
             }
             contracts.push({ id: no, contractNo: no, name: name });
         } else {
             var c = contracts.find(function (x) { return (x.contractNo || x.id) === editing; });
             if (c) c.name = name;
         }
-        var selectedUserIds = getContractSelectedUserIds();
-        assignMembersToContract(selectedUserIds, no);
+        assignMembersToContract(getContractSelectedUserIds(), no);
         saveContracts();
         renderContractsTable();
         fillContractSelect();
         document.getElementById('contract-modal').style.display = 'none';
-        alert('Contract saved. ' + (selectedUserIds.length ? (selectedUserIds.length + ' user(s) assigned.') : 'No users selected.'));
+        alert('Contract saved.');
     }
-
     function removeContractFromAllUsers(contractNo) {
         if (!contractNo) return;
         if (!users.length) loadUsers();
-        var changed = false;
         users.forEach(function (u) {
-            if (!u.projectIds || !u.projectIds.length) return;
-            var next = u.projectIds.filter(function (pid) { return pid !== contractNo; });
-            if (next.length !== u.projectIds.length) {
-                u.projectIds = next;
-                changed = true;
-            }
+            if (!u.projectIds) return;
+            u.projectIds = u.projectIds.filter(function (pid) { return pid !== contractNo; });
         });
-        if (changed) {
-            try {
-                localStorage.setItem(USERS_KEY, JSON.stringify(users));
-                localStorage.setItem(USERS_KEY_LEGACY, JSON.stringify(users));
-            } catch (e) {}
-        }
         try {
-            var raw = localStorage.getItem(USERS_KEY);
-            if (raw) {
-                var arr = JSON.parse(raw);
-                arr.forEach(function (u) {
-                    if (u.projectIds) u.projectIds = u.projectIds.filter(function (pid) { return pid !== contractNo; });
-                });
-                localStorage.setItem(USERS_KEY, JSON.stringify(arr));
-                localStorage.setItem(USERS_KEY_LEGACY, JSON.stringify(arr));
-            }
+            localStorage.setItem(USERS_KEY, JSON.stringify(users));
+            localStorage.setItem(USERS_KEY_LEGACY, JSON.stringify(users));
         } catch (e) {}
     }
-
     function deleteContract(contractNo) {
-        if (!currentIsSystemAdmin()) {
-            alert('Only System Admin can delete a contract.');
-            return;
-        }
+        if (!currentIsSystemAdmin()) { alert('Only System Admin can delete a contract.'); return; }
         var linked = teams.filter(function (tm) { return tm.contractNo === contractNo; });
         var msg = 'Delete contract ' + contractNo + '?\n\nThis will also remove it from all users\' login project lists';
         if (linked.length) msg += '\n(' + linked.length + ' team(s) under this contract will be removed too.)';
         if (!confirm(msg)) return;
-
-        // ★ 記錄已刪除合約，避免下次加載時被恢復
-        try {
-            var deleted = [];
-            var storedDeleted = localStorage.getItem(DELETED_CONTRACTS_KEY);
-            if (storedDeleted) {
-                var parsed = JSON.parse(storedDeleted);
-                if (Array.isArray(parsed)) deleted = parsed.map(String);
-            }
-            if (deleted.indexOf(String(contractNo)) === -1) {
-                deleted.push(String(contractNo));
-                localStorage.setItem(DELETED_CONTRACTS_KEY, JSON.stringify(deleted));
-            }
-        } catch (e) {}
-
+        markContractDeleted(contractNo);
         removeContractFromAllUsers(contractNo);
-
         teams = teams.filter(function (tm) { return tm.contractNo !== contractNo; });
-        saveTeams();
-
-        contracts = contracts.filter(function (c) { return (c.contractNo || c.id) !== contractNo; });
-        saveContracts();
-        renderContractsTable();
-        renderTeamsTable();
-        fillContractSelect();
-        updateStats();
-        alert('Contract ' + contractNo + ' deleted and removed from all users.');
+        saveTeamsAndVerify(function () {
+            contracts = contracts.filter(function (c) { return (c.contractNo || c.id) !== contractNo; });
+            saveContracts();
+            renderContractsTable();
+            renderTeamsTable();
+            fillContractSelect();
+            updateStats();
+        });
     }
 
     function renderContractsTable() {
@@ -801,9 +573,7 @@
         var curPid = getCurrentProjectId();
         var contractView = contracts;
         if (curPid && !currentIsSystemAdmin()) {
-            contractView = contracts.filter(function (c) {
-                return (c.contractNo || c.id) === curPid;
-            });
+            contractView = contracts.filter(function (c) { return (c.contractNo || c.id) === curPid; });
         }
         contractView.forEach(function (c) {
             var code = c.contractNo || c.id;
@@ -825,21 +595,11 @@
     }
 
     function openAddTeamModal() {
-        if (!currentIsSystemAdmin() && !currentIsProjectAdmin()) {
-            alert('You do not have permission to add a team.');
-            return;
-        }
+        if (!currentIsSystemAdmin() && !currentIsProjectAdmin()) { alert('You do not have permission to add a team.'); return; }
         editingTeamId = null;
         document.getElementById('modal-title').innerHTML = '<i class="fas fa-users"></i> Add New Team';
-
         var nameInput = document.getElementById('team-name');
-        if (nameInput) {
-            nameInput.value = '';
-            nameInput.readOnly = false;
-            nameInput.disabled = false;
-            nameInput.placeholder = 'e.g. Site Team A';
-        }
-
+        if (nameInput) { nameInput.value = ''; nameInput.readOnly = false; nameInput.disabled = false; nameInput.placeholder = 'e.g. Site Team A'; }
         fillContractSelect('');
         var sel = document.getElementById('team-contract-select');
         if (sel) {
@@ -852,90 +612,54 @@
                 } catch (e) {}
             }
         }
-
         clearSelectedMembers();
         var searchEl = document.getElementById('team-members-search');
         if (searchEl) searchEl.value = '';
         document.getElementById('team-modal').style.display = 'flex';
     }
-
     function openEditTeamModal(teamId) {
         const team = teams.find(t => t.id === teamId);
         if (!team) return;
-        if (!currentIsSystemAdmin() && !currentIsProjectAdmin()) {
-            alert('You do not have permission to edit this team.');
-            return;
-        }
+        if (!currentIsSystemAdmin() && !currentIsProjectAdmin()) { alert('You do not have permission to edit this team.'); return; }
         if (currentIsProjectAdmin() && !currentIsSystemAdmin()) {
             var u = window.DWSS_Permissions.getCurrentUser();
             var pids = (u && u.projectIds) || [];
             if (team.contractNo && pids.indexOf(team.contractNo) === -1) {
-                alert('You can only edit teams under your assigned contract.');
-                return;
+                alert('You can only edit teams under your assigned contract.'); return;
             }
         }
         editingTeamId = teamId;
         document.getElementById('modal-title').innerHTML = '<i class="fas fa-edit"></i> Edit Team';
-
         var nameInput = document.getElementById('team-name');
-        if (nameInput) {
-            nameInput.value = team.name || '';
-            nameInput.readOnly = false;
-            nameInput.disabled = false;
-        }
-
+        if (nameInput) { nameInput.value = team.name || ''; nameInput.readOnly = false; nameInput.disabled = false; }
         fillContractSelect(team.contractNo || '');
         var sel = document.getElementById('team-contract-select');
         if (sel) sel.disabled = false;
-
         setSelectedMembers(team.memberIds || []);
         var searchEl = document.getElementById('team-members-search');
         if (searchEl) searchEl.value = '';
         document.getElementById('team-modal').style.display = 'flex';
     }
 
-    /* ============================================================
-       SAVE / DELETE
-       ============================================================ */
     function saveTeam(e) {
         e.preventDefault();
         var nameEl = document.getElementById('team-name');
         var name = nameEl ? nameEl.value.trim() : '';
         var sel = document.getElementById('team-contract-select');
         var contractNo = sel && !sel.disabled ? String(sel.value || '').trim() : '';
-        if (!contractNo) {
-            var cnoEl = document.getElementById('team-contract-no');
-            if (cnoEl) contractNo = String(cnoEl.value || '').trim();
-        }
-        if (!contractNo) {
-            alert('Please choose a contract from the list.');
-            if (sel) sel.focus();
-            return;
-        }
-        if (!name) {
-            alert('Please type a team name.');
-            if (nameEl) nameEl.focus();
-            return;
-        }
-
+        if (!contractNo) { alert('Please choose a contract from the list.'); if (sel) sel.focus(); return; }
+        if (!name) { alert('Please type a team name.'); if (nameEl) nameEl.focus(); return; }
         const selectedIds = getSelectedMemberIds().filter(function (id) {
             var u = findUserById(id);
             return !u || u.role !== 'admin';
         });
-
         if (editingTeamId === null) {
-            if (!currentIsSystemAdmin() && !currentIsProjectAdmin()) {
-                alert('You do not have permission to add a team.');
-                return;
-            }
+            if (!currentIsSystemAdmin() && !currentIsProjectAdmin()) { alert('You do not have permission to add a team.'); return; }
             const newId = teams.length ? Math.max.apply(null, teams.map(function (x) { return x.id; })) + 1 : 1;
             teams.push({ id: newId, name: name, contractNo: contractNo, memberIds: selectedIds });
             assignMembersToContract(selectedIds, contractNo);
         } else {
-            if (!currentIsSystemAdmin() && !currentIsProjectAdmin()) {
-                alert('You do not have permission to update this team.');
-                return;
-            }
+            if (!currentIsSystemAdmin() && !currentIsProjectAdmin()) { alert('You do not have permission to update this team.'); return; }
             const team = teams.find(t => t.id === editingTeamId);
             if (team) {
                 team.name = name;
@@ -944,141 +668,138 @@
                 assignMembersToContract(selectedIds, team.contractNo || contractNo);
             }
         }
-
-        saveTeams();
-        renderTeamsTable();
-        renderContractsTable();
-        updateStats();
-        document.getElementById('team-modal').style.display = 'none';
-        alert('Team saved.');
+        
+        saveTeamsAndVerify(function (ok) {
+            if (!ok) {
+                alert('⚠ Team save failed. Please check your internet connection or session.');
+                return;
+            }
+            renderTeamsTable();
+            renderContractsTable();
+            updateStats();
+            document.getElementById('team-modal').style.display = 'none';
+        });
     }
 
     function deleteTeam(teamId) {
-        if (!currentIsSystemAdmin()) {
-            alert('Only System Admin can delete a project.');
-            return;
-        }
-        if (confirm('Are you sure you want to delete this team?')) {
-            teams = teams.filter(t => t.id !== teamId);
-            saveTeams();
+        if (!currentIsSystemAdmin()) { alert('Only System Admin can delete a project.'); return; }
+        if (!confirm('Are you sure you want to delete this team?')) return;
+        teams = teams.filter(t => t.id !== teamId);
+        saveTeamsAndVerify(function (ok) {
+            if (!ok) alert('⚠ Team delete failed. Please check your connection.');
             renderTeamsTable();
             updateStats();
-            alert('Team deleted successfully.');
-        }
+        });
     }
 
     function refreshTable() {
         loadUsers();
-        loadTeams();
+        loadTeams(true); // 刷新時強制不 seed 覆蓋
         loadContracts();
         renderContractsTable();
         renderTeamsTable();
         updateStats();
     }
 
-    /* ============================================================
-       SEARCH
-       ============================================================ */
     function setupSearch() {
         const form = document.getElementById('search-form');
         if (!form) return;
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             const keyword = form.querySelector('input').value.trim().toLowerCase();
-            if (!keyword) {
-                renderTeamsTable();
-                return;
-            }
+            if (!keyword) { renderTeamsTable(); return; }
             const filtered = teams.filter(t => t.name.toLowerCase().includes(keyword));
             const tbody = document.getElementById('teams-table-body');
             const noResults = document.getElementById('no-results-message');
             if (!tbody) return;
             tbody.innerHTML = '';
-            if (filtered.length === 0) {
-                if (noResults) noResults.style.display = 'block';
-                return;
-            }
+            if (filtered.length === 0) { if (noResults) noResults.style.display = 'block'; return; }
             if (noResults) noResults.style.display = 'none';
             filtered.forEach(team => {
                 const row = tbody.insertRow();
                 row.innerHTML = `
-                    <td>${team.id}</td>
-                    <td><code>${escapeHtml(team.contractNo || '—')}</code></td>
-                    <td>${escapeHtml(team.name)}</td>
-                    <td>${escapeHtml(getMemberNames(team.memberIds))}</td>
+                    <td>${team.id}</td><td><code>${escapeHtml(team.contractNo || '—')}</code></td>
+                    <td>${escapeHtml(team.name)}</td><td>${escapeHtml(getMemberNames(team.memberIds))}</td>
                     <td class="action-buttons">${(function(){
                         var html = '';
-                        if (currentIsSystemAdmin() || currentIsProjectAdmin()) {
-                            html += '<button class="action-btn edit-team-btn" data-id="' + team.id + '"><i class="fas fa-edit"></i> Edit</button>';
-                        }
-                        if (currentIsSystemAdmin()) {
-                            html += '<button class="action-btn delete-team-btn" data-id="' + team.id + '" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;"><i class="fas fa-trash"></i> Delete</button>';
-                        }
-                        return html || '<span style="color:#94a3b8;font-size:0.75rem;">—</span>';
-                    })()}</td>
-                `;
+                        if (currentIsSystemAdmin() || currentIsProjectAdmin()) html += '<button class="action-btn edit-team-btn" data-id="' + team.id + '"><i class="fas fa-edit"></i> Edit</button>';
+                        if (currentIsSystemAdmin()) html += '<button class="action-btn delete-team-btn" data-id="' + team.id + '" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;"><i class="fas fa-trash"></i> Delete</button>';
+                        return html || '—';
+                    })()}</td>`;
             });
-            document.querySelectorAll('.edit-team-btn').forEach(btn => {
-                btn.addEventListener('click', () => openEditTeamModal(parseInt(btn.dataset.id)));
-            });
-            document.querySelectorAll('.delete-team-btn').forEach(btn => {
-                btn.addEventListener('click', () => deleteTeam(parseInt(btn.dataset.id)));
-            });
+            document.querySelectorAll('.edit-team-btn').forEach(btn => btn.addEventListener('click', () => openEditTeamModal(parseInt(btn.dataset.id))));
+            document.querySelectorAll('.delete-team-btn').forEach(btn => btn.addEventListener('click', () => deleteTeam(parseInt(btn.dataset.id))));
         });
     }
 
-    /* ============================================================
-       INIT
-       ============================================================ */
     function init() {
-        loadUsers();
-        loadTeams();
-        loadContracts();
+        function doInit(skipSeed) {
+            loadUsers();
+            loadTeams(skipSeed);
+            loadContracts();
+            setupMemberPickerEvents();
+            renderMemberList('');
+            renderTeamsTable();
+            updateStats();
+            setupSearch();
 
-        setupMemberPickerEvents();
-        renderMemberList('');
-
-        renderTeamsTable();
-        updateStats();
-        setupSearch();
-
-        var addTeamBtn = document.getElementById('add-team-btn');
-        if (addTeamBtn) {
-            if (!currentIsSystemAdmin() && !currentIsProjectAdmin()) {
-                addTeamBtn.style.display = 'none';
-            } else {
-                addTeamBtn.addEventListener('click', openAddTeamModal);
+            var addTeamBtn = document.getElementById('add-team-btn');
+            if (addTeamBtn) {
+                if (!currentIsSystemAdmin() && !currentIsProjectAdmin()) addTeamBtn.style.display = 'none';
+                else addTeamBtn.addEventListener('click', openAddTeamModal);
             }
-        }
-        var addContractBtn = document.getElementById('add-contract-btn');
-        if (addContractBtn) {
-            if (!currentIsSystemAdmin()) {
-                addContractBtn.style.display = 'none';
-            } else {
-                addContractBtn.addEventListener('click', openAddContractModal);
+            var addContractBtn = document.getElementById('add-contract-btn');
+            if (addContractBtn) {
+                if (!currentIsSystemAdmin()) addContractBtn.style.display = 'none';
+                else addContractBtn.addEventListener('click', openAddContractModal);
             }
-        }
-        var cancelContractBtn = document.getElementById('cancel-contract-btn');
-        if (cancelContractBtn) {
-            cancelContractBtn.addEventListener('click', function () {
-                var m = document.getElementById('contract-modal');
-                if (m) m.style.display = 'none';
+            var cancelContractBtn = document.getElementById('cancel-contract-btn');
+            if (cancelContractBtn) cancelContractBtn.addEventListener('click', function () {
+                var m = document.getElementById('contract-modal'); if (m) m.style.display = 'none';
             });
+            var contractForm = document.getElementById('contract-form');
+            if (contractForm) contractForm.addEventListener('submit', saveContract);
+            renderContractsTable();
+            fillContractSelect();
+            document.querySelector('.refresh-btn')?.addEventListener('click', refreshTable);
+            document.getElementById('cancel-team-btn')?.addEventListener('click', () => {
+                document.getElementById('team-modal').style.display = 'none';
+            });
+            document.getElementById('team-form')?.addEventListener('submit', saveTeam);
+            const modal = document.getElementById('team-modal');
+            if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
         }
-        var contractForm = document.getElementById('contract-form');
-        if (contractForm) contractForm.addEventListener('submit', saveContract);
-        renderContractsTable();
-        fillContractSelect();
-        document.querySelector('.refresh-btn')?.addEventListener('click', refreshTable);
-        document.getElementById('cancel-team-btn')?.addEventListener('click', () => {
-            document.getElementById('team-modal').style.display = 'none';
-        });
-        document.getElementById('team-form')?.addEventListener('submit', saveTeam);
 
-        const modal = document.getElementById('team-modal');
-        if (modal) {
-            modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+        function waitForCloudThenInit() {
+            if (!window.DWSS_Storage || typeof window.DWSS_Storage.isCloud !== 'function') {
+                doInit(false);
+                return;
+            }
+            var attempts = 0;
+            function poll() {
+                attempts++;
+                var isCloud = false;
+                try { isCloud = window.DWSS_Storage.isCloud(); } catch (e) {}
+                if (isCloud) {
+                    var c = null;
+                    try { c = window.DWSS_Storage.getCache ? window.DWSS_Storage.getCache(TEAMS_KEY) : null; } catch (e) {}
+                    if (Array.isArray(c)) {
+                        var isActuallyCloud = isCloudMode();
+                        // 如果雲端資料 > 0，則 skipSeed = true；如果是空，則 skipSeed = false 允許初始化。
+                        doInit(isActuallyCloud && c.length > 0);
+                        return;
+                    }
+                    if (attempts > 500) { doInit(true); return; }
+                    setTimeout(poll, 30);
+                } else if (attempts > 150) {
+                    doInit(false);
+                } else {
+                    setTimeout(poll, 30);
+                }
+            }
+            setTimeout(poll, 30);
         }
+        waitForCloudThenInit();
     }
 
     document.addEventListener('DOMContentLoaded', init);
