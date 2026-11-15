@@ -1,0 +1,903 @@
+// ===== Safety Inspection Document Viewer (PDF.js + Annotations) =====
+(function() {
+    'use strict';
+
+    // ---------- 全局变量 ----------
+    let pdfDoc = null;
+    let currentPage = 1;
+    let totalPages = 0;
+    let annotations = [];
+    let currentDocId = null;
+    let safetyFormData = null;
+    let documentData = null; // ★ 保存原始文檔數據，用於 Fallback
+    
+    const renderScale = 2.0; 
+    let zoomLevel = 1.0;     
+    const ZOOM_MIN = 0.5;
+    const ZOOM_MAX = 3.0;
+    const ZOOM_STEP = 0.2;
+
+    // ---------- DOM 引用 ----------
+    const pdfCanvas = document.getElementById('pdf-canvas');
+    const annoCanvas = document.getElementById('annotation-canvas');
+    const textContainer = document.getElementById('text-annotation-container');
+    const ctx = pdfCanvas ? pdfCanvas.getContext('2d') : null;
+    const annoCtx = annoCanvas ? annoCanvas.getContext('2d') : null;
+    const loadingEl = document.getElementById('pdf-loading');
+    const errorEl = document.getElementById('pdf-error');
+    const noPdfEl = document.getElementById('no-pdf-message');
+    const controlsEl = document.getElementById('pdf-controls');
+    const currentPageSpan = document.getElementById('pdf-current-page');
+    const totalPagesSpan = document.getElementById('pdf-total-pages');
+    const printBtn = document.getElementById('print-pdf-btn');
+    const downloadBtn = document.getElementById('download-pdf-btn');
+    
+    const zoomLevelEl = document.getElementById('zoom-level');
+    const zoomOutBtn = document.getElementById('zoom-out-btn');
+    const zoomInBtn = document.getElementById('zoom-in-btn');
+    const zoomResetBtn = document.getElementById('zoom-reset-btn');
+
+    // ========================================
+    // ★ Safety Inspection 固定表單 Layout (完全對齊編輯頁)
+    // ========================================
+    var SAFETY_LAYOUT = {
+        typeCheckboxes: {
+            1: [
+                { key: 'weekly', left: '23.72%', top: '16.30%', width: '1.08%', height: '0.89%' },
+                { key: 'daily',  left: '33.14%', top: '16.30%', width: '1.16%', height: '0.89%' },
+                { key: 'adhoc',  left: '40.60%', top: '16.30%', width: '1.17%', height: '0.83%' }
+            ],
+        },
+        header: {
+            '*': {
+                Project:    { left: '53.00%', top: '4.50%',  width: '33.00%', height: '6.30%', multiline: true },
+                ContractNo: { left: '53.64%', top: '11.00%', width: '29.58%', height: '1.51%' },
+            },
+            1: {
+                location:  { left: '15.72%', top: '17.90%', width: '31.00%', height: '1.5%' },
+                taskOrder: { left: '60.64%', top: '17.90%', width: '28.5%', height: '1.5%' },
+                date:      { left: '13.50%', top: '19.20%', width: '33.00%', height: '1.59%' },
+                time:      { left: '53.30%', top: '19.20%', width: '36.00%', height: '1.59%' },
+            },
+            7: {
+                Detail:  { left: '7.22%', top: '51.15%', width: '80.92%', height: '20.00%', multiline: true},
+                Inspectedbyname1:  { left: '12.72%', top: '76.05%', width: '20.92%', height: '3.59%', multiline: true},
+                Inspectedbypos1:   { left: '14.72%', top: '80.0%',  width: '18.92%', height: '3.59%', multiline: true},
+                Inspectedbysign1:  { left: '15.22%', top: '84.5%', width: '18.92%', height: '4.5%', sign: true },
+                Inspectedbyname2:  { left: '40.72%', top: '76.05%', width: '20.92%', height: '3.59%', multiline: true},
+                Inspectedbypos2:   { left: '42.72%', top: '80.0%',  width: '18.92%', height: '3.59%', multiline: true},
+                Inspectedbysign2:  { left: '42.72%', top: '84.5%', width: '18.92%', height: '4.5%', sign: true },
+                Witnessbyname1:    { left: '70.72%', top: '76.05%', width: '20.92%', height: '3.59%', multiline: true},
+                Witnessbypos1:     { left: '72.72%', top: '80.0%',  width: '18.92%', height: '3.59%', multiline: true},
+                Witnessbysign1:    { left: '72.72%', top: '84.5%', width: '18.92%', height: '4.5%', sign: true },
+            },
+            8: {
+                PhotoNo1a: { left: '59.64%', top: '17.50%', width: '29.58%', height: '1.71%' },
+                location1: { left: '59.64%', top: '19.50%', width: '29.58%', height: '1.71%' },
+                Description1: { left: '59.64%', top: '21.50%', width: '29.58%', height: '13.30%', multiline: true },
+                PhotoNo1b: { left: '59.64%', top: '34.50%', width: '29.58%', height: '1.71%'},
+                Action1: { left: '59.64%', top: '36.50%',  width: '30.00%', height: '5.30%', multiline: true },
+                Reportedby1: { left: '59.64%', top: '41.50%', width: '29.58%', height: '3.71%' },
+                Completiondate1: { left: '59.64%', top: '46.00%',  width: '30.00%', height: '5.30%', multiline: true },
+                PhotoNo2a: { left: '59.64%', top: '53.00%', width: '29.58%', height: '1.71%' },
+                location2: { left: '59.64%', top: '55.00%', width: '29.58%', height: '1.71%' },
+                Description2: { left: '59.64%', top: '56.50%', width: '29.58%', height: '13.30%', multiline: true },
+                PhotoNo2b: { left: '59.64%', top: '70.50%', width: '29.58%', height: '1.71%'},
+                Action2: { left: '59.64%', top: '72.50%',  width: '30.00%', height: '5.30%', multiline: true },
+                Reportedby2: { left: '59.64%', top: '77.50%', width: '29.58%', height: '3.71%' },
+                Completiondate2: { left: '59.64%', top: '81.00%',  width: '30.00%', height: '5.30%', multiline: true },
+                Photo1: { left: '7.00%', top: '17.50%', width: '38.00%', height: '17.50%', image: true },
+                Photo2: { left: '7.00%', top: '35.00%', width: '38.00%', height: '16.00%', image: true },
+                Photo3: { left: '7.00%', top: '52.70%', width: '38.00%', height: '17.50%', image: true },
+                Photo4: { left: '7.00%', top: '70.50%', width: '38.00%', height: '16.00%', image: true },
+            }
+        },
+        ratingColumns: {
+            A:     { left: '63.67%', width: '5.00%' },
+            B:     { left: '69.55%', width: '5.00%' },
+            C:     { left: '75.33%', width: '5.00%' },
+            'N/A': { left: '82.91%', width: '5.00%' }
+        },
+        sections: [
+            { letter: 'A',   page: 1, startY: '26.95%', rowHeight: '2.18%', cellHeight: '2.40%', itemCount: 13 },
+            { letter: 'B',   page: 1, startY: '59.00%', rowHeight: '1.65%', cellHeight: '1.50%', itemCount: 9 },
+            { letter: 'C.i1to3', page: 1, startY: '77.00%', rowHeight: '2.18%', cellHeight: '2.12%', itemCount: 3 },
+            { letter: 'C.i4', page: 1, startY: '83.92%', rowHeight: '2.18%', cellHeight: '2.12%', itemCount: 1 },
+            { letter: 'C.i5', page: 1, startY: '87.50%', rowHeight: '2.18%', cellHeight: '2.12%', itemCount: 1 },
+            { letter: 'C.i6', page: 1, startY: '89.50%', rowHeight: '2.18%', cellHeight: '2.12%', itemCount: 1 },
+            { letter: 'C.ii1to4', page: 2, startY: '14.40%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'C.ii5to6', page: 2, startY: '23.00%', rowHeight: '4.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'C.ii7to8', page: 2, startY: '30.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'C.ii9', page: 2, startY: '36.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'C.ii10', page: 2, startY: '38.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'C.iii1to2', page: 2, startY: '43.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'C.iii3', page: 2, startY: '49.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'C.iii4to7', page: 2, startY: '52.90%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'C.iii8', page: 2, startY: '63.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'C.iii9to10', page: 2, startY: '66.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'D.1to4', page: 2, startY: '74.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'D.5', page: 2, startY: '83.90%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'D.6to9', page: 2, startY: '86.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'D.10to12', page: 3, startY: '14.10%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 3 },
+            { letter: 'D.13to14', page: 3, startY: '20.70%', rowHeight: '4.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'D.15', page: 3, startY: '29.70%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'E.1to4', page: 3, startY: '36.80%', rowHeight: '4.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'E.5to6', page: 3, startY: '53.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'E.7', page: 3, startY: '59.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'E.8to10', page: 3, startY: '63.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 3 },
+            { letter: 'E.11', page: 3, startY: '70.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'E.12', page: 3, startY: '73.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'E.13to16', page: 3, startY: '75.80%', rowHeight: '3.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'F.1to2', page: 4, startY: '17.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'F.3', page: 4, startY: '22.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'F.4to8', page: 4, startY: '24.50%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 5 },
+            { letter: 'F.9', page: 4, startY: '36.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'G.1', page: 4, startY: '43.00%', rowHeight: '2.18%', cellHeight: '15.18%', itemCount: 1 },
+            { letter: 'G.2to3', page: 4, startY: '58.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'G.4', page: 4, startY: '64.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'G.5', page: 4, startY: '67.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'G.6', page: 4, startY: '71.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'H.1to4', page: 5, startY: '17.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'H.5', page: 5, startY: '27.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'H.6', page: 5, startY: '29.50%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'I.1to10', page: 5, startY: '35.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 10 },
+            { letter: 'J.1to5', page: 5, startY: '60.20%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 6 },
+            { letter: 'J.7', page: 5, startY: '73.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'J.8', page: 5, startY: '76.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'J.9', page: 5, startY: '80.00%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'J.10', page: 5, startY: '82.80%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'K.1to3', page: 6, startY: '17.20%', rowHeight: '3.38%', cellHeight: '2.18%', itemCount: 3 },
+            { letter: 'K.4', page: 6, startY: '26.50%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'L.1to2', page: 6, startY: '33.50%', rowHeight: '4.18%', cellHeight: '2.18%', itemCount: 2 },
+            { letter: 'L.3to6', page: 6, startY: '40.80%', rowHeight: '2.58%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'L.7', page: 6, startY: '50.80%', rowHeight: '2.58%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'M.1', page: 6, startY: '57.50%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 1 },
+            { letter: 'M.2to5', page: 6, startY: '59.70%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 4 },
+            { letter: 'N.1to6', page: 6, startY: '71.90%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 6 },
+            { letter: 'O.1to5', page: 7, startY: '17.30%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 5 },
+            { letter: 'P.1to7', page: 7, startY: '31.30%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 7 },
+        ]
+    };
+
+    function getStatusText(status) {
+        const map = {
+            'draft': 'Draft',
+            'submitted-ig': 'Submitted to IG',
+            'closed': 'IG Endorsed',
+            'reopen': 'Reopened',
+            'cancelled': 'Cancelled'
+        };
+        return map[status] || status || 'Draft';
+    }
+
+    // ---------- 輔助函數 ----------
+    function syncGlobalDate() {
+        const stored = sessionStorage.getItem('globalDate');
+        const span = document.querySelector('.date-display span');
+        if (stored && span) span.textContent = stored;
+        else if (span) {
+            span.textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+    }
+
+    // ========================================
+    // ★ 注入唯讀表單內容 (隱藏所有框框與背景)
+    // ========================================
+    function ensureReadOnlyStyle() {
+        if (document.getElementById('safety-readonly-style')) return;
+        var style = document.createElement('style');
+        style.id = 'safety-readonly-style';
+        style.textContent =
+            '.pdf-checkbox-readonly {' +
+                'display:flex;align-items:center;justify-content:center;' +
+                'color:#0a1a5c;font-weight:bold;font-size:calc(14px * var(--pdf-zoom-scale, 1)) !important;' + 
+                'box-sizing:border-box;background:transparent !important;border:none !important;' + 
+                'font-family: Arial, sans-serif;' +
+            '}' +
+            '.pdf-checkbox-readonly.checked { ' +
+                'color: #0a1a5c;' +
+            '}' +
+            '.pdf-field-readonly {' +
+                'font-family: Arial;color:#0a1a5c;font-size:calc(11px * var(--pdf-zoom-scale, 1)) !important;' +
+                'padding:1px 4px;box-sizing:border-box;overflow:hidden;' +
+                'display:flex;align-items:center;' +
+                'border:none !important;' + 
+                'background:transparent !important;' + 
+            '}' +
+            '.pdf-image-readonly, .pdf-sign-readonly {' +
+                'object-fit:contain;display:block;' +
+            '}';
+        document.head.appendChild(style);
+    }
+
+    function createReadOnlyOverlay(pageNum, formData) {
+        ensureReadOnlyStyle();
+        
+        var overlay = document.createElement('div');
+        overlay.className = 'safety-form-overlay';
+        overlay.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;z-index:50;pointer-events:none;';
+        
+        // 1. Type checkboxes
+        var pageTypeCbs = SAFETY_LAYOUT.typeCheckboxes[pageNum] || [];
+        if (formData && formData.type) {
+            pageTypeCbs.forEach(function (cb) {
+                if (formData.type === cb.key) {
+                    var el = document.createElement('div');
+                    el.className = 'pdf-checkbox-readonly checked';
+                    el.style.cssText = 'position:absolute;left:'+cb.left+';top:'+cb.top+';width:'+cb.width+';height:'+cb.height+';';
+                    el.innerHTML = '✓';
+                    overlay.appendChild(el);
+                }
+            });
+        }
+        
+        // 2. Header
+        var pageHeaderDefaults = SAFETY_LAYOUT.header['*'] || {};
+        var pageHeaderOverride = SAFETY_LAYOUT.header[pageNum] || {};
+        var pageHeader = Object.assign({}, pageHeaderDefaults, pageHeaderOverride);
+        
+        Object.keys(pageHeader).forEach(function (key) {
+            var f = pageHeader[key];
+            var val = formData && formData.header && formData.header[key];
+            
+            // ★ Fallback：如果表單沒資料，嘗試從 doc 基本資訊抓取
+            if (!val && documentData) {
+                if (key === 'ContractNo') {
+                    val = documentData.project || sessionStorage.getItem('currentProjectId');
+                } else if (key === 'location') {
+                    val = documentData.site;
+                } else if (key === 'taskOrder') {
+                    val = documentData.id;
+                } else if (key === 'date') {
+                    var d = documentData.date || '';
+                    if (d.match(/^\d{2}-[A-Za-z]{3}-\d{4}$/)) {
+                        const parts = d.split('-');
+                        const monthMap = { 'Jan':'01','Feb':'02','Mar':'03','Apr':'04','May':'05','Jun':'06',
+                                           'Jul':'07','Aug':'08','Sep':'09','Oct':'10','Nov':'11','Dec':'12' };
+                        const month = monthMap[parts[1]] || '01';
+                        d = `${parts[2]}-${month}-${parts[0]}`;
+                    }
+                    val = d;
+                }
+            }
+
+            if (val) {
+                var el;
+                if (f.sign === true || f.type === 'sign') {
+                    el = document.createElement('img');
+                    el.src = val; 
+                    el.className = 'pdf-sign-readonly';
+                    el.style.cssText = 'position:absolute;left:'+f.left+';top:'+f.top+';width:'+(f.width||'10%')+';height:'+(f.height||'3%')+';';
+                } else if (f.image === true || f.type === 'image') {
+                    el = document.createElement('img');
+                    el.src = val; 
+                    el.className = 'pdf-image-readonly';
+                    el.style.cssText = 'position:absolute;left:'+f.left+';top:'+f.top+';width:'+(f.width||'10%')+';height:'+(f.height||'5%')+';';
+                } else {
+                    el = document.createElement('div');
+                    el.textContent = val;
+                    el.className = 'pdf-field-readonly';
+                    el.style.cssText = 'position:absolute;left:'+f.left+';top:'+f.top+';width:'+(f.width||'8%')+';height:'+(f.height||'1.8%')+';';
+                }
+                overlay.appendChild(el);
+            }
+        });
+        
+        // 3. Ratings
+        if (formData && formData.ratings) {
+            SAFETY_LAYOUT.sections.forEach(function (section) {
+                if (section.page !== pageNum) return;
+                var startY = parseFloat(section.startY);
+                var rowH = parseFloat(section.rowHeight);
+                var cellH = parseFloat(section.cellHeight);
+                
+                for (var i = 0; i < section.itemCount; i++) {
+                    var top = (startY + i * rowH) + '%';
+                    var rowKey = section.letter + '_' + i;
+                    var selectedRating = formData.ratings[rowKey];
+                    if (selectedRating) {
+                        var col = SAFETY_LAYOUT.ratingColumns[selectedRating];
+                        if (col) {
+                            var el = document.createElement('div');
+                            el.className = 'pdf-checkbox-readonly checked';
+                            el.style.cssText = 'position:absolute;left:'+col.left+';top:'+top+';width:'+col.width+';height:'+cellH+'%;';
+                            el.innerHTML = '✓';
+                            overlay.appendChild(el);
+                        }
+                    }
+                }
+            });
+        }
+        
+        return overlay;
+    }
+
+    function injectReadOnlyFormFields(pageNum, formData) {
+        var wrapper = document.getElementById('pdf-canvas-wrapper');
+        if (!wrapper) return;
+        
+        var oldOverlay = wrapper.querySelector('.safety-form-overlay');
+        if (oldOverlay) oldOverlay.remove();
+        
+        var overlay = createReadOnlyOverlay(pageNum, formData);
+        if (overlay) {
+            overlay.style.setProperty('--pdf-zoom-scale', zoomLevel);
+            wrapper.appendChild(overlay);
+        }
+    }
+
+    // ---------- 绘制非文本注释 ----------
+    function drawAnnotation(anno, scale) {
+        if (!annoCtx) return;
+        const ctx = annoCtx;
+
+        switch (anno.type) {
+            case 'highlight':
+                ctx.save();
+                ctx.globalAlpha = (anno.opacity || 100) / 100 * 0.4;
+                ctx.strokeStyle = anno.color || '#3498db';
+                ctx.lineWidth = (anno.size || 3) * scale;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                if (anno.points && anno.points.length > 1) {
+                    ctx.beginPath();
+                    const first = anno.points[0];
+                    ctx.moveTo(first.x * scale, first.y * scale);
+                    for (let i = 1; i < anno.points.length; i++) {
+                        ctx.lineTo(anno.points[i].x * scale, anno.points[i].y * scale);
+                    }
+                    ctx.stroke();
+                }
+                ctx.restore();
+                break;
+            case 'rectangle':
+                ctx.save();
+                ctx.globalAlpha = (anno.opacity || 100) / 100;
+                ctx.strokeStyle = anno.color || '#3498db';
+                ctx.lineWidth = (anno.size || 3) * scale;
+                if (anno.startX !== undefined && anno.endX !== undefined) {
+                    const x = Math.min(anno.startX, anno.endX) * scale;
+                    const y = Math.min(anno.startY, anno.endY) * scale;
+                    const w = Math.abs(anno.endX - anno.startX) * scale;
+                    const h = Math.abs(anno.endY - anno.startY) * scale;
+                    ctx.strokeRect(x, y, w, h);
+                }
+                ctx.restore();
+                break;
+            case 'ellipse':
+                ctx.save();
+                ctx.globalAlpha = (anno.opacity || 100) / 100;
+                ctx.strokeStyle = anno.color || '#3498db';
+                ctx.lineWidth = (anno.size || 3) * scale;
+                if (anno.startX !== undefined && anno.endX !== undefined) {
+                    const cx = (anno.startX + anno.endX) / 2 * scale;
+                    const cy = (anno.startY + anno.endY) / 2 * scale;
+                    const rx = Math.abs(anno.endX - anno.startX) / 2 * scale;
+                    const ry = Math.abs(anno.endY - anno.startY) / 2 * scale;
+                    ctx.beginPath();
+                    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                ctx.restore();
+                break;
+            case 'arrow':
+                ctx.save();
+                ctx.globalAlpha = (anno.opacity || 100) / 100;
+                ctx.strokeStyle = anno.color || '#3498db';
+                ctx.fillStyle = anno.color || '#3498db';
+                ctx.lineWidth = (anno.size || 3) * scale;
+                if (anno.startX !== undefined && anno.endX !== undefined) {
+                    const fromX = anno.startX * scale;
+                    const fromY = anno.startY * scale;
+                    const toX = anno.endX * scale;
+                    const toY = anno.endY * scale;
+                    ctx.beginPath();
+                    ctx.moveTo(fromX, fromY);
+                    ctx.lineTo(toX, toY);
+                    ctx.stroke();
+                    const angle = Math.atan2(toY - fromY, toX - fromX);
+                    const headLen = 10 * scale / 2;
+                    ctx.beginPath();
+                    ctx.moveTo(toX, toY);
+                    ctx.lineTo(toX - headLen * Math.cos(angle - 0.5), toY - headLen * Math.sin(angle - 0.5));
+                    ctx.moveTo(toX, toY);
+                    ctx.lineTo(toX - headLen * Math.cos(angle + 0.5), toY - headLen * Math.sin(angle + 0.5));
+                    ctx.stroke();
+                }
+                ctx.restore();
+                break;
+            case 'line':
+                ctx.save();
+                ctx.globalAlpha = (anno.opacity || 100) / 100;
+                ctx.strokeStyle = anno.color || '#3498db';
+                ctx.lineWidth = (anno.size || 3) * scale;
+                if (anno.startX !== undefined && anno.endX !== undefined) {
+                    ctx.beginPath();
+                    ctx.moveTo(anno.startX * scale, anno.startY * scale);
+                    ctx.lineTo(anno.endX * scale, anno.endY * scale);
+                    ctx.stroke();
+                }
+                ctx.restore();
+                break;
+            default:
+                break;
+        }
+    }
+
+    function redrawAnnotations(scale) {
+        if (!annoCtx) return;
+        annoCtx.clearRect(0, 0, annoCanvas.width, annoCanvas.height);
+        annotations.forEach(anno => {
+            if (anno.type !== 'text') {
+                if (anno.page !== undefined && anno.page !== currentPage) return;
+                if (anno.page === undefined && currentPage !== 1) return;
+                
+                drawAnnotation(anno, scale);
+            }
+        });
+    }
+
+    // ---------- 渲染文本框 ----------
+    function renderTextAnnotations(scale) {
+        if (!textContainer) return;
+        textContainer.innerHTML = '';
+        const textAnnos = annotations.filter(a => a.type === 'text' && (a.page === currentPage || (a.page === undefined && currentPage === 1)));
+        
+        textAnnos.forEach(anno => {
+            const el = document.createElement('div');
+            el.className = 'text-annotation-view';
+            el.textContent = anno.text || '';
+            el.style.color = anno.color || '#000000';
+            el.style.opacity = (anno.opacity || 100) / 100;
+            el.style.fontSize = (anno.size * 4 * scale) + 'px'; 
+            el.style.left = (anno.x * scale) + 'px';
+            el.style.top = (anno.y * scale) + 'px';
+            textContainer.appendChild(el);
+        });
+    }
+
+    // ---------- 縮放邏輯 ----------
+    function updateZoomDisplay() {
+        if (zoomLevelEl) zoomLevelEl.textContent = Math.round(zoomLevel * 100) + '%';
+        if (zoomOutBtn) zoomOutBtn.disabled = zoomLevel <= ZOOM_MIN;
+        if (zoomInBtn) zoomInBtn.disabled = zoomLevel >= ZOOM_MAX;
+    }
+
+    function setZoom(newLevel) {
+        zoomLevel = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, newLevel));
+        updateZoomDisplay();
+        renderPage(currentPage);
+    }
+
+    function setupZoom() {
+        if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => setZoom(zoomLevel - ZOOM_STEP));
+        if (zoomInBtn) zoomInBtn.addEventListener('click', () => setZoom(zoomLevel + ZOOM_STEP));
+        if (zoomResetBtn) zoomResetBtn.addEventListener('click', () => setZoom(1.0));
+        updateZoomDisplay();
+    }
+
+    // ---------- 渲染頁面 ----------
+    function renderPage(pageNum) {
+        if (!pdfDoc) return Promise.reject('No PDF document');
+        return pdfDoc.getPage(pageNum).then(page => {
+            const viewport = page.getViewport({ scale: zoomLevel * renderScale });
+            const cssViewport = page.getViewport({ scale: zoomLevel });
+
+            pdfCanvas.width = viewport.width;
+            pdfCanvas.height = viewport.height;
+            annoCanvas.width = viewport.width;
+            annoCanvas.height = viewport.height;
+
+            const widthPx = cssViewport.width + 'px';
+            const heightPx = cssViewport.height + 'px';
+
+            pdfCanvas.style.width = widthPx;
+            pdfCanvas.style.height = heightPx;
+            annoCanvas.style.width = widthPx;
+            annoCanvas.style.height = heightPx;
+
+            const wrapper = document.getElementById('pdf-canvas-wrapper');
+            if (wrapper) {
+                wrapper.style.width = widthPx;
+                wrapper.style.height = heightPx;
+                wrapper.style.setProperty('--pdf-zoom-scale', zoomLevel);
+            }
+
+            const renderContext = { canvasContext: ctx, viewport: viewport };
+            return page.render(renderContext).promise;
+        }).then(() => {
+            annoCanvas.style.left = '0px';
+            annoCanvas.style.top = '0px';
+
+            textContainer.style.left = '0px';
+            textContainer.style.top = '0px';
+            textContainer.style.width = pdfCanvas.style.width;
+            textContainer.style.height = pdfCanvas.style.height;
+
+            currentPageSpan.textContent = pageNum;
+            currentPage = pageNum;
+
+            injectReadOnlyFormFields(pageNum, safetyFormData);
+
+            redrawAnnotations(zoomLevel * renderScale);
+            renderTextAnnotations(zoomLevel); 
+            
+        }).catch(err => {
+            console.error('Render page error:', err);
+            throw err;
+        });
+    }
+
+    async function loadDocument() {
+        var params = new URLSearchParams(location.search);
+        var id = params.get('id');
+        if (!id) {
+            loadingEl.style.display = 'none';
+            errorEl.textContent = 'No document selected. Please go back and select a record.';
+            errorEl.style.display = 'block';
+            return;
+        }
+        
+        try {
+            var res = await fetch('/api/records/inspection/' + encodeURIComponent(id), { cache: 'no-store' });
+            if (res.ok) documentData = await res.json();
+        } catch (e) {}
+        
+        if (!documentData || !documentData.id) {
+            loadingEl.style.display = 'none';
+            errorEl.textContent = 'Record not found in the database.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        currentDocId = documentData.id;
+        document.getElementById('docId').textContent = documentData.id || 'N/A';
+        document.getElementById('docTitle').textContent = `${documentData.site || ''} - Safety Inspection`;
+        document.getElementById('docSite').textContent = documentData.site || 'N/A';
+        document.getElementById('docDate').textContent = documentData.date || 'N/A';
+        document.getElementById('docAuthor').textContent = documentData.inspector || documentData.submittedBy || 'N/A';
+        
+        const statusEl = document.getElementById('docStatus');
+        if (statusEl) {
+            statusEl.textContent = getStatusText(documentData.status);
+            statusEl.className = `doc-status status-${documentData.status || 'draft'}`;
+        }
+
+        // ★ 優先從資料庫讀取，若無則從 sessionStorage 的暫存中讀取（防止未點擊保存直接查看）
+        safetyFormData = documentData.safetyFormData;
+        
+        if (!safetyFormData) {
+            try {
+                var localDocStr = sessionStorage.getItem('editDocument');
+                if (localDocStr) {
+                    var localDoc = JSON.parse(localDocStr);
+                    if (localDoc && localDoc.id === id) {
+                        safetyFormData = localDoc.safetyFormData;
+                    }
+                }
+            } catch (e) {}
+        }
+
+        annotations = documentData.annotations || [];
+        if (!annotations.length) {
+            try {
+                var localAnnoStr = sessionStorage.getItem('editDocument');
+                if (localAnnoStr) {
+                    var localAnnoDoc = JSON.parse(localAnnoStr);
+                    if (localAnnoDoc && localAnnoDoc.id === id && localAnnoDoc.annotations) {
+                        annotations = localAnnoDoc.annotations;
+                    }
+                }
+            } catch(e){}
+        }
+
+        let pdfSrc = documentData.pdfData || documentData.pdfUrl || null;
+
+        if (!pdfSrc && window.SAFETY_INSPECTION_BASE64) {
+            console.log('[SafetyDoc] 使用 Safety Inspection 固定模板');
+            pdfSrc = 'data:application/pdf;base64,' + window.SAFETY_INSPECTION_BASE64;
+        }
+
+        if (!pdfSrc) {
+            loadingEl.style.display = 'none';
+            noPdfEl.style.display = 'block';
+            printBtn.style.display = 'none';
+            downloadBtn.style.display = 'none';
+            console.warn('[SafetyDoc] 找不到 PDF 資料，請確認 SafetyInspection-data.js 是否正確載入。');
+            return;
+        }
+
+        let pdfSource;
+        if (typeof pdfSrc === 'string' && pdfSrc.startsWith('data:application/pdf;base64,')) {
+            pdfSource = { url: pdfSrc };
+        } else if (typeof pdfSrc === 'string' && pdfSrc.length > 1000 && !pdfSrc.startsWith('http')) {
+            try {
+                const binary = atob(pdfSrc);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                pdfSource = { data: bytes };
+            } catch (e) {
+                loadingEl.style.display = 'none';
+                errorEl.textContent = 'Invalid PDF data (Base64 decode failed).';
+                errorEl.style.display = 'block';
+                return;
+            }
+        } else {
+            pdfSource = { url: pdfSrc };
+        }
+
+        loadingEl.style.display = 'flex';
+        errorEl.style.display = 'none';
+        noPdfEl.style.display = 'none';
+        printBtn.style.display = 'none';
+        downloadBtn.style.display = 'none';
+
+        pdfjsLib.getDocument(pdfSource).promise.then(pdf => {
+            pdfDoc = pdf;
+            totalPages = pdf.numPages;
+            totalPagesSpan.textContent = totalPages;
+            currentPage = 1;
+            controlsEl.style.display = 'flex';
+            loadingEl.style.display = 'none';
+            
+            printBtn.style.display = 'inline-flex';
+            downloadBtn.style.display = 'inline-flex';
+
+            return renderPage(currentPage);
+        }).catch(err => {
+            console.error('PDF loading error:', err);
+            loadingEl.style.display = 'none';
+            errorEl.textContent = 'Failed to load PDF: ' + (err.message || 'Unknown error');
+            errorEl.style.display = 'block';
+            printBtn.style.display = 'none';
+            downloadBtn.style.display = 'none';
+        });
+    }
+
+    async function generateAnnotatedPDF() {
+        const wrapper = document.getElementById('pdf-canvas-wrapper');
+        if (!wrapper) {
+            alert('PDF content not available.');
+            throw new Error('No wrapper');
+        }
+
+        const originalZoom = zoomLevel;
+        zoomLevel = 1.0;
+        updateZoomDisplay();
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+            orientation: 'p',
+            unit: 'mm',
+            format: 'a4',
+            compress: true
+        });
+
+        let firstPage = true;
+
+        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+            await renderPage(pageNum);
+            await new Promise(resolve => requestAnimationFrame(resolve));
+
+            const canvas = await html2canvas(wrapper, {
+                scale: 2.0,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false
+            });
+
+            const imgData = canvas.toDataURL('image/jpeg', 0.85);
+            const imgWidth = 210;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            if (firstPage) {
+                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
+                firstPage = false;
+            } else {
+                pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
+            }
+        }
+
+        zoomLevel = originalZoom;
+        updateZoomDisplay();
+        await renderPage(currentPage);
+
+        return pdf;
+    }
+
+    async function saveAsPDF(pdf) {
+        if (window.showSaveFilePicker) {
+            try {
+                const blob = pdf.output('blob');
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: 'safety_inspection_with_annotations.pdf',
+                    types: [{
+                        description: 'PDF Document',
+                        accept: { 'application/pdf': ['.pdf'] }
+                    }]
+                });
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                return;
+            } catch (err) {
+                console.warn('Save file picker failed, falling back to default download.', err);
+            }
+        }
+        pdf.save('safety_inspection_with_annotations.pdf');
+    }
+
+    async function printPDF() {
+        if (!pdfDoc) {
+            alert('PDF not loaded yet.');
+            return;
+        }
+
+        const originalText = loadingEl ? loadingEl.innerHTML : '';
+        if (loadingEl) {
+            loadingEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparing Print...';
+            loadingEl.style.display = 'flex';
+        }
+
+        const originalZoom = zoomLevel;
+        zoomLevel = 1.0;
+        updateZoomDisplay();
+
+        try {
+            let printContainer = document.getElementById('print-only-container');
+            if (!printContainer) {
+                printContainer = document.createElement('div');
+                printContainer.id = 'print-only-container';
+                printContainer.style.display = 'none';
+                document.body.appendChild(printContainer);
+            }
+            printContainer.innerHTML = '';
+
+            for (let i = 1; i <= totalPages; i++) {
+                const page = await pdfDoc.getPage(i);
+                const viewport = page.getViewport({ scale: 2.5 });
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                const ctx2 = canvas.getContext('2d');
+                
+                ctx2.fillStyle = '#ffffff';
+                ctx2.fillRect(0, 0, canvas.width, canvas.height);
+                
+                await page.render({ canvasContext: ctx2, viewport: viewport }).promise;
+                const imgUrl = canvas.toDataURL('image/jpeg', 0.95);
+
+                const pageWrap = document.createElement('div');
+                pageWrap.className = 'print-page';
+
+                const img = document.createElement('img');
+                img.src = imgUrl;
+                pageWrap.appendChild(img);
+
+                const overlay = createReadOnlyOverlay(i, safetyFormData);
+                if (overlay) pageWrap.appendChild(overlay);
+
+                printContainer.appendChild(pageWrap);
+            }
+
+            let styleEl = document.getElementById('dynamic-print-style');
+            if (styleEl) styleEl.remove();
+            
+            styleEl = document.createElement('style');
+            styleEl.id = 'dynamic-print-style';
+            styleEl.textContent = `
+                @media print {
+                    @page { size: A4 portrait; margin: 0; }
+                    html, body {
+                        margin: 0 !important; padding: 0 !important;
+                        background: #fff !important;
+                        width: auto !important; height: auto !important;
+                        overflow: visible !important;
+                    }
+                    body > *:not(#print-only-container) {
+                        display: none !important;
+                    }
+                    #print-only-container {
+                        display: block !important;
+                        width: 100% !important;
+                    }
+                    #print-only-container .print-page {
+                        page-break-after: always;
+                        break-after: page;
+                        width: 210mm;
+                        height: 297mm;
+                        margin: 0 auto;
+                        position: relative;
+                        overflow: hidden;
+                        background: #fff;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    #print-only-container .print-page:last-child {
+                        page-break-after: auto;
+                        break-after: auto;
+                    }
+                    #print-only-container .print-page img {
+                        max-width: 100%; max-height: 100%;
+                        object-fit: contain;
+                    }
+                    #print-only-container .print-page .safety-form-overlay {
+                        position: absolute;
+                        top: 0; left: 0;
+                        width: 100%; height: 100%;
+                        --pdf-zoom-scale: 1 !important; 
+                    }
+                }
+            `;
+            document.head.appendChild(styleEl);
+
+            setTimeout(() => {
+                window.print();
+                
+                setTimeout(async () => {
+                    if (printContainer) printContainer.innerHTML = '';
+                    if (styleEl) styleEl.remove();
+                    if (loadingEl) {
+                        loadingEl.innerHTML = originalText;
+                        loadingEl.style.display = 'none';
+                    }
+                    
+                    zoomLevel = originalZoom;
+                    updateZoomDisplay();
+                    await renderPage(currentPage);
+                }, 1000);
+            }, 500);
+
+        } catch (err) {
+            console.error('Print failed:', err);
+            alert('Print preparation failed: ' + err.message);
+            if (loadingEl) {
+                loadingEl.innerHTML = originalText;
+                loadingEl.style.display = 'none';
+            }
+            zoomLevel = originalZoom;
+            updateZoomDisplay();
+            await renderPage(currentPage);
+        }
+    }
+
+    function downloadPDF() {
+        generateAnnotatedPDF().then(pdf => {
+            saveAsPDF(pdf);
+        }).catch(err => {
+            alert('Download failed: ' + err.message);
+        });
+    }
+
+    function setupControls() {
+        document.getElementById('pdf-prev').addEventListener('click', () => {
+            if (currentPage > 1) renderPage(currentPage - 1);
+        });
+        document.getElementById('pdf-next').addEventListener('click', () => {
+            if (currentPage < totalPages) renderPage(currentPage + 1);
+        });
+    }
+
+    function bindEvents() {
+        const backBtn = document.getElementById('back-to-inspection-btn');
+        if (backBtn) {
+            backBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.href = 'safetyinspect.html';
+            });
+        }
+        if (printBtn) printBtn.addEventListener('click', printPDF);
+        if (downloadBtn) downloadBtn.addEventListener('click', downloadPDF);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        syncGlobalDate();
+        loadDocument();
+        setupControls();
+        setupZoom(); 
+        bindEvents();
+    });
+})();

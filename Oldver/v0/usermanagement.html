@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html style="visibility:hidden" lang="en">
+<head>
+<script>
+(function () {
+  try {
+    var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+    if (s && s.isLoggedIn) { document.documentElement.style.visibility = 'visible'; return; }
+  } catch (e) {}
+  document.documentElement.style.visibility = 'hidden';
+  window.location.replace('login.html');
+})();
+</script>
+
+    <script src="scripts/cloud-storage.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="user.management">User Management - AEL DWSS System</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- 核心權限模組 -->
+    <script src="scripts/permissions.js"></script>
+    <!-- 密碼 / 電郵服務 -->
+    <script src="scripts/password.js"></script>
+    <script src="scripts/password-lifecycle.js"></script>
+    <script src="scripts/email-service.js"></script>
+    <!-- 用戶管理 UI -->
+    <script src="scripts/usermanagement.js"></script>
+    <!-- 其他 -->
+    <script src="scripts/language.js"></script>
+    <script src="scripts/sidebar.js"></script>
+    <script src="scripts/app.js"></script>
+    <script src="scripts/auth-check.js"></script>
+    <!-- 帳戶鎖定 -->
+    <script src="scripts/ac-lock.js"></script>
+    <script src="scripts/locked-ac.js"></script>
+
+    <style>
+        .role-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: white;
+        }
+        .role-eg { background: #2c3e50; }
+        .role-ig { background: #16a085; }
+        .role-wsg { background: #27ae60; }
+        .role-sa { background: #e74c3c; }
+        .role-ssa { background: #c0392b; }
+        .role-rso { background: #d35400; }
+        .role-subcontractor { background: #f39c12; }
+        .role-supplier { background: #9b59b6; }
+        .role-admin { background: #3498db; }
+        .role-project_admin { background: #8e44ad; }
+        .role-engineer { background: #e67e22; }
+
+        /* Column sort headers */
+        #users-table thead th.sortable {
+            user-select: none;
+            white-space: nowrap;
+        }
+        #users-table thead th.sortable:hover {
+            background: #e2e8f0;
+        }
+        #users-table thead th.sortable .sort-icon::after {
+            content: '\f0dc'; /* fa-sort */
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            margin-left: 6px;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            opacity: 0.7;
+        }
+        #users-table thead th.sortable.sort-asc .sort-icon::after {
+            content: '\f0de'; /* fa-sort-up */
+            color: #2563eb;
+            opacity: 1;
+        }
+        #users-table thead th.sortable.sort-desc .sort-icon::after {
+            content: '\f0dd'; /* fa-sort-down */
+            color: #2563eb;
+            opacity: 1;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: white;
+        }
+        .status-online { background: #2ecc71; }
+        .status-offline { background: #95a5a6; }
+
+        .user-company {
+            font-size: 0.72rem;
+            color: #64748b;
+            margin-top: 3px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .user-company i {
+            font-size: 0.65rem;
+            color: #94a3b8;
+        }
+
+        .org-badge {
+            display: inline-flex;
+            flex-direction: column;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.72rem;
+            line-height: 1.3;
+            white-space: nowrap;
+        }
+        .org-badge strong { font-weight: 700; font-size: 0.78rem; }
+        .org-badge small { font-size: 0.65rem; opacity: 0.8; margin-top: 1px; }
+
+        .project-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: #e0f2fe;
+            color: #0c4a6e;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin: 2px;
+        }
+
+        .permissions-info {
+            margin-bottom: 20px;
+            padding: 18px 22px;
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            border-radius: 12px;
+            border-left: 4px solid #3498db;
+        }
+        .permissions-info h4 {
+            margin: 0 0 12px 0;
+            color: #2c3e50;
+            font-size: 1rem;
+        }
+        .permissions-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .permissions-list li {
+            padding: 6px 0;
+            font-size: 13px;
+            color: #475569;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .permissions-list li i { margin-top: 3px; flex-shrink: 0; }
+
+        .user-department {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 2px;
+        }
+
+        /* Modal form grid */
+        .form-row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .project-checkboxes {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 10px 14px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+        .project-checkboxes label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.88rem;
+            color: #334155;
+            cursor: pointer;
+        }
+        .project-checkboxes label:hover { color: #1d4ed8; }
+
+        .module-permissions-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 6px;
+            padding: 10px 14px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        .module-permission-row {
+            display: grid;
+            grid-template-columns: 1fr 150px;
+            gap: 12px;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .module-permission-row:last-child { border-bottom: none; }
+        .module-permission-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            color: #334155;
+            font-size: 0.88rem;
+        }
+        .module-permission-label i {
+            color: #64748b;
+            width: 18px;
+            text-align: center;
+        }
+        .module-permission-select {
+            padding: 6px 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            background: white;
+        }
+
+        @media (max-width: 768px) {
+            .form-row-2 { grid-template-columns: 1fr; }
+            .module-permission-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-content">
+        <div class="header">
+            <h1>User Management</h1>
+            <div class="header-controls">
+                <div class="user-date-row">
+                    <div class="date-display">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span id="current-date"></span>
+                    </div>
+                    <button class="user-btn">
+                        <i class="fas fa-user"></i> <span id="header-user-name">User</span>
+                    </button>
+                    <span id="permission-indicator"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="search-buttons">
+            <form id="search-form" action="#" method="get" onsubmit="return false;">
+                <input type="text" id="user-search-input" name="search" placeholder="Search users by name, email, username or role..." />
+                <button type="submit">Search</button>
+            </form>
+            <div class="nav-buttons">
+                <!-- 移除了頂部的 Change My Password 按鈕 -->
+                <button id="add-user-btn"><i class="fas fa-plus"></i> Add New User</button>
+            </div>
+        </div>
+
+        <!-- 權限說明 -->
+        <div class="permissions-info">
+            <h4><i class="fas fa-shield-alt"></i> DWSS Permission Levels — Contract No. DE/2024/12</h4>
+            <ul class="permissions-list">
+                <li>
+                    <i class="fas fa-check-circle" style="color:#16a085;"></i>
+                    <div>
+                        <strong>Drainage Services Department (DSD)</strong> — Service Manager<br>
+                        <span style="color:#64748b;">EG / IG / WSG：可審批、拒絕、批註、更改狀態</span>
+                    </div>
+                </li>
+                <li>
+                    <i class="fas fa-edit" style="color:#e74c3c;"></i>
+                    <div>
+                        <strong>REC - AEL Joint Venture</strong> — Contractor<br>
+                        <span style="color:#64748b;">SA / SSA / RSO / Engineer：可提交、編輯、上載文件</span>
+                    </div>
+                </li>
+                <li>
+                    <i class="fas fa-eye" style="color:#f39c12;"></i>
+                    <div>
+                        <strong>Subcontractor / Supplier</strong><br>
+                        <span style="color:#64748b;">只讀存取（按指派模組）</span>
+                    </div>
+                </li>
+                <li>
+                    <i class="fas fa-user-shield" style="color:#3498db;"></i>
+                    <div>
+                        <strong>AEL - Associated Engineers Ltd.</strong> — System Vendor<br>
+                        <span style="color:#64748b;">系統管理員，管理所有用戶、權限、系統設定</span>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- 用戶管理 -->
+        <div class="user-management-page">
+            <div class="user-stats">
+                <div class="stat-card"><div class="label">Total Users</div><div class="value" id="total-users-count">0</div></div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);"><div class="label">Full Access</div><div class="value" id="admin-users-count">0</div></div>
+                <div class="stat-card"><div class="label">Current Project</div><div class="value" id="current-project-label" style="font-size:1rem;">—</div></div>
+            </div>
+
+            <!-- 篩選器 -->
+            <div class="filters-section">
+                <div class="filter-group">
+                    <button class="filter-toggle"><span>All Organizations</span><i class="fas fa-chevron-down"></i></button>
+                    <div class="filter-options">
+                        <div class="filter-option active" data-filter="organization" data-value="all">All Organizations</div>
+                        <div class="filter-option" data-filter="organization" data-value="SERVICE_MANAGER">DSD — Drainage Services Department</div>
+                        <div class="filter-option" data-filter="organization" data-value="CONTRACTOR">REC-AEL — REC - AEL Joint Venture</div>
+                        <div class="filter-option" data-filter="organization" data-value="SUBCONTRACTOR">Subcontractor</div>
+                        <div class="filter-option" data-filter="organization" data-value="SUPPLIER">Supplier</div>
+                        <div class="filter-option" data-filter="organization" data-value="SYSTEM_VENDOR">AEL — Associated Engineers Ltd.</div>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <button class="filter-toggle"><span>All Roles</span><i class="fas fa-chevron-down"></i></button>
+                    <div class="filter-options">
+                        <div class="filter-option active" data-filter="role" data-value="all">All Roles</div>
+                        <div class="filter-option" data-filter="role" data-value="engineer">Engineer (ENG)</div>
+                        <div class="filter-option" data-filter="role" data-value="eg">Engineer Grade (EG)</div>
+                        <div class="filter-option" data-filter="role" data-value="ig">Inspector Grade (IG)</div>
+                        <div class="filter-option" data-filter="role" data-value="wsg">Works Supervisor (WSG)</div>
+                        <div class="filter-option" data-filter="role" data-value="sa">Site Agent (SA)</div>
+                        <div class="filter-option" data-filter="role" data-value="ssa">Sub-Site Agent (SSA)</div>
+                        <div class="filter-option" data-filter="role" data-value="rso">Safety Officer (RSO)</div>
+                        <div class="filter-option" data-filter="role" data-value="project_admin">Project Admin (PM)</div>
+                        <div class="filter-option" data-filter="role" data-value="subcontractor">Subcontractor</div>
+                        <div class="filter-option" data-filter="role" data-value="supplier">Supplier</div>
+                        <div class="filter-option" data-filter="role" data-value="admin">Administrator</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 用戶列表 -->
+            <div class="content-section">
+                <div class="table-header">
+                    <div class="table-title"><i class="fas fa-users"></i> User List</div>
+                    <div class="table-controls"><button class="action-btn refresh-btn"><i class="fas fa-sync-alt"></i> Refresh</button></div>
+                </div>
+                <div class="table-container">
+                    <table class="diary-table" id="users-table">
+                        <thead>
+                            <tr>
+                                <th width="18%" class="sortable sort-asc" data-sort="name">User Name &amp; Department <span class="sort-icon"></span></th>
+                                <th width="12%" class="sortable" data-sort="username">Login Username <span class="sort-icon"></span></th>
+                                <th width="16%" class="sortable" data-sort="email">Email Address <span class="sort-icon"></span></th>
+                                <th width="12%" class="sortable" data-sort="org">Organization <span class="sort-icon"></span></th>
+                                <th width="12%" class="sortable" data-sort="role">Role <span class="sort-icon"></span></th>
+                                <th width="15%" class="sortable" data-sort="project">Projects <span class="sort-icon"></span></th>
+                                <th width="15%">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body"></tbody>
+                    </table>
+                </div>
+                <div id="no-results-message" class="no-results" style="display: none;">
+                    <i class="fas fa-users-slash"></i>
+                    <h3>No users found</h3>
+                    <p>Try adjusting your filters or search terms</p>
+                </div>
+                <div class="pagination">
+                    <div class="pagination-info">Showing <span id="page-start">1</span>-<span id="page-end">10</span> of <span id="total-items">0</span> users</div>
+                    <div class="pagination-controls">
+                        <button class="pagination-btn" id="prev-page" disabled><i class="fas fa-chevron-left"></i></button>
+                        <button class="pagination-btn" id="next-page"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add/Edit Modal -->
+            <div id="add-user-modal" class="modal" style="display: none;">
+                <div class="modal-content" style="max-width: 720px; max-height: 90vh; overflow-y: auto;">
+                    <h3><i class="fas fa-user-plus"></i> <span id="modal-title-text">Add New User</span></h3>
+                    <form id="add-user-form">
+
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label for="input-user-name">Full Name <span style="color:red;">*</span></label>
+                                <input type="text" id="input-user-name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="input-user-email">Email Address <span style="color:red;">*</span></label>
+                                <input type="email" id="input-user-email" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label for="input-user-username">Username</label>
+                                <input type="text" id="input-user-username" placeholder="Auto from email if blank">
+                            </div>
+                            <div class="form-group">
+                                <label for="input-user-password">Password</label>
+                                <input type="text" id="input-user-password" placeholder="Default: Welcome@123">
+                            </div>
+                        </div>
+
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label for="input-user-organization">Organization <span style="color:red;">*</span></label>
+                                <select id="input-user-organization" required>
+                                    <option value="">-- Select Organization --</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="input-user-role">Role <span style="color:red;">*</span></label>
+                                <select id="input-user-role" required disabled>
+                                    <option value="">-- Select Organization First --</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label for="input-user-company">Company / Organisation Name</label>
+                                <input type="text" id="input-user-company" placeholder="Auto-filled from organization">
+                            </div>
+                            <div class="form-group">
+                                <label for="input-user-contract">Contract No.</label>
+                                <input type="text" id="input-user-contract" value="Contract No. DE/2024/12">
+                            </div>
+                        </div>
+
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label for="input-user-department">Department</label>
+                                <input type="text" id="input-user-department">
+                            </div>
+                            <div class="form-group">
+                                <label for="input-user-status" style="display:none;">Status</label>
+                                <select id="input-user-status" style="display:none;">
+                                    <option value="online" selected>Online</option>
+                                    <option value="offline">Offline</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- ★ Projects -->
+                        <div class="form-group">
+                            <label>Projects</label>
+                            <div class="project-checkboxes" id="project-checkboxes-container"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Module Permissions</label>
+                            <div class="module-permissions-grid" id="module-permissions-grid"></div>
+                        </div>
+
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary" id="cancel-add-user">Cancel</button>
+                            <button type="submit" class="btn" id="submit-user-btn">Add User</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Change My Password Modal -->
+            <div id="change-password-modal" class="modal" style="display: none; z-index: 10001;">
+                <div class="modal-content" style="max-width: 400px;">
+                    <h3><i class="fas fa-key"></i> Change My Password</h3>
+                    <form id="change-password-form">
+                        <div class="form-group">
+                            <label>Old Password</label>
+                            <input type="password" id="old-password-input" required placeholder="請輸入舊密碼">
+                        </div>
+                        <div class="form-group">
+                            <label>New Password</label>
+                            <input type="password" id="new-password-input" required placeholder="請輸入新密碼">
+                        </div>
+                        <div class="form-group">
+                            <label>Confirm New Password</label>
+                            <input type="password" id="confirm-password-input" required placeholder="請再次輸入新密碼">
+                        </div>
+                        <div class="modal-actions">
+                            <!-- 注意：這裡加上 type="button"，避免觸發表單提交 -->
+                            <button type="button" class="btn btn-secondary" id="cancel-change-password">Cancel</button>
+                            <button type="submit" class="btn" style="background:#3b82f6; color:#fff;">Update Password</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <footer>
+                <p>&copy; 2025 AEL DWSS System. All rights reserved.</p>
+                <p>Contract No. DE/2024/12 — REC - AEL Joint Venture</p>
+            </footer>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof DWSS_Auth !== 'undefined' && DWSS_Auth.updateHeaderUser) {
+                DWSS_Auth.updateHeaderUser();
+            }
+
+            // 日期
+            var storedDate = sessionStorage.getItem('globalDate');
+            var dateSpan = document.querySelector('.date-display span');
+            if (storedDate && dateSpan) dateSpan.textContent = storedDate;
+            else if (dateSpan) {
+                dateSpan.textContent = new Date().toLocaleDateString('en-US', {
+                    year: 'numeric', month: 'long', day: 'numeric'
+                });
+            }
+        });
+    </script>
+</body>
+</html>

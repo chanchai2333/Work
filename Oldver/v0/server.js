@@ -1,0 +1,1101 @@
+/**
+ * DWSS server – multi-user ready
+ * - Serves static files
+ * - Per-record API with optimistic locking (version column)
+ * - MariaDB when DB_PASSWORD is set; local/static mode otherwise
+ */
+const nodemailer = require('nodemailer');
+const express = require('express');
+const path = require('path');
+const fs = require('fs');
+const mysql = require('mysql2/promise');
+
+const app = express();
+const PORT = process.env.PORT || 8080;
+const ROOT = __dirname;
+
+// 設定你的發信信箱
+const transporter = nodemailer.createTransport({
+  service: 'gmail', // 如果是公司信箱請填寫 host 和 port
+  auth: {
+    user: 'rstpsswrdvr@gmail.com', 
+    pass: 'oxazxugijxmvqubx' // 注意：這不是你的Gmail登入密碼，要去Google帳號安全性裡產生
+  },
+  debug: true, // 👈 新增這行，它會在終端機印出與 Gmail 伺服器的完整對話
+  logger: true // 👈 同時將調試信息記錄到控制台
+});
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+let pool = null;
+const DB_CONFIG = {
+  host: process.env.DB_HOST || '127.0.0.1',
+  port: parseInt(process.env.DB_PORT || '3306', 10),
+  user: process.env.DB_USER || 'dwss',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'dwss',
+  waitForConnections: true,
+  connectionLimit: 4,
+  queueLimit: 0
+};
+
+async function initDb() {
+  if (!process.env.DB_PASSWORD) {
+    console.log('[DB] No DB_PASSWORD — static/local mode');
+    return;
+  }
+  try {
+    pool = mysql.createPool(DB_CONFIG);
+    const conn = await pool.getConnection();
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS records (
+        collection   VARCHAR(64)  NOT NULL,
+        record_id    VARCHAR(128) NOT NULL,
+        data         JSON         NOT NULL,
+        version      INT          NOT NULL DEFAULT 1,
+        updated_by   VARCHAR(128) DEFAULT NULL,
+        updated_at   TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (collection, record_id),
+        INDEX idx_collection (collection)
+      ) ENGINE=InnoDB
+    `);
+    conn.release();
+    await seedDefaultUsers();
+    console.log('[DB] MariaDB ready (multi-user records table)');
+  } catch (err) {
+    console.error('[DB] Connection failed:', err.message);
+    pool = null;
+  }
+}
+
+// ---------- Health ----------
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true, mode: pool ? 'cloud' : 'local', db: !!pool, multiUser: !!pool });
+});
+
+async function keepExistingPassword(collection, id, clean) {
+  if (collection !== 'usersDb' && collection !== 'users') return clean;
+  if (clean.password) return clean;
+  const [rows] = await pool.query(
+    'SELECT data FROM records WHERE collection = ? AND record_id = ?',
+    [collection, id]
+  );
+  if (!rows.length) return clean;
+  const current = typeof rows[0].data === 'string' ? JSON.parse(rows[0].data) : rows[0].data;
+  if (current && current.password) {
+    clean.password = current.password;
+    if (current.passwordChanged != null) clean.passwordChanged = current.passwordChanged;
+    if (current.passwordChangedAt) clean.passwordChangedAt = current.passwordChangedAt;
+    if (current.passwordExpiresAt) clean.passwordExpiresAt = current.passwordExpiresAt;
+  }
+  return clean;
+}
+
+async function seedDefaultUsers() {
+  const [rows] = await pool.query(
+    'SELECT record_id, data FROM records WHERE collection = ?',
+    ['usersDb']
+  );
+  const defaults = [
+    { id: 1, name: 'Admin', email: 'admin@ael-dwss.com', username: 'admin', password: 'admin123', organization: 'SYSTEM_VENDOR', companyName: 'AEL - Associated Engineers Ltd.', role: 'admin', department: 'System Administration', projectIds: [], permissions: { level: 5, canChangeStatus: true, canManageUsers: true, name: 'Administrator' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 2, name: 'Kenneth Daluz', email: 'kenneth.daluz@dsd.gov.hk', username: 'kenneth', password: 'officer123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'eg', department: 'Engineer Grade', projectIds: ['DE/2024/06'], permissions: { level: 4, canChangeStatus: false, canManageUsers: false, name: 'Engineer Grade' }, contractNo: 'Contract No. DE/2024/06' },
+    { id: 3, name: 'TANG Chi Long, Gary', email: 'gcifang@dsd.gov.hk', username: 'garytang', password: 'aei123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'ig', department: 'Inspector Grade', projectIds: ['DE/2024/06'], permissions: { level: 3, canChangeStatus: true, canManageUsers: false, name: 'Inspector Grade' }, contractNo: 'Contract No. DE/2024/06' },
+    { id: 4, name: 'FUNG Wai Ching', email: 'wcfung04@dsd.gov.hk', username: 'wcfung', password: 'wsg123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'wsg', department: 'Works Supervisor Grade', projectIds: ['DE/2025/07'], permissions: { level: 3, canChangeStatus: true, canManageUsers: false, name: 'Works Supervisor Grade' }, contractNo: 'Contract No. DE/2025/07' },
+    { id: 10, name: 'CHA Chi Ming', email: 'cmcha02@dsd.gov.hk', username: 'cmcha', password: 'ig123', organization: 'SERVICE_MANAGER', companyName: 'Drainage Services Department (DSD)', role: 'ig', department: 'Inspector Grade', projectIds: ['DE/2025/07'], permissions: { level: 3, canChangeStatus: true, canManageUsers: false, name: 'Inspector Grade' }, contractNo: 'Contract No. DE/2025/07' },
+    // CMP User List DE202605
+    { id: 11, name: 'Eddie Chan', email: 'eddiechan@de202605jv.com', username: 'eddiechan', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'project_admin', department: 'JV Representative (REC)', projectIds: ['DE/2026/05'], permissions: { level: 3, canChangeStatus: false, canManageUsers: true, name: 'Project Admin' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 12, name: 'Nelson Ng', email: 'nelsonng@de202605jv.com', username: 'nelsonng', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'project_admin', department: 'JV Representative (AEL)', projectIds: ['DE/2026/05'], permissions: { level: 3, canChangeStatus: false, canManageUsers: true, name: 'Project Admin' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 13, name: 'Jeff Wong', email: 'jeffwong@de202605jv.com', username: 'jeffwong', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'project_admin', department: 'Contract Manager, DE/2026/05', projectIds: ['DE/2026/05'], permissions: { level: 3, canChangeStatus: false, canManageUsers: true, name: 'Project Admin' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 14, name: 'Kan Cheung', email: 'kancheung@de202605jv.com', username: 'kancheung', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'sa', department: 'Site Agent', projectIds: ['DE/2026/05'], permissions: { level: 2, canChangeStatus: false, canManageUsers: false, name: 'Site Agent' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 15, name: 'Alan Wong', email: 'alanwong@de202605jv.com', username: 'alanwong', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'ssa', department: 'Sub-site Agent', projectIds: ['DE/2026/05'], permissions: { level: 2, canChangeStatus: false, canManageUsers: false, name: 'Sub-Site Agent' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 16, name: 'Marco Kong', email: 'marcokong@de202605jv.com', username: 'marcokong', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'ssa', department: 'Sub-site Agent', projectIds: ['DE/2026/05'], permissions: { level: 2, canChangeStatus: false, canManageUsers: false, name: 'Sub-Site Agent' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 17, name: 'Wong Chi Keung', email: 'keungwong@de202605jv.com', username: 'keungwong', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'ssa', department: 'Sub-site Agent', projectIds: ['DE/2026/05'], permissions: { level: 2, canChangeStatus: false, canManageUsers: false, name: 'Sub-Site Agent' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 18, name: 'Ivan Lee', email: 'ivanlee@de202605jv.com', username: 'ivanlee', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'ssa', department: 'Sub-site Agent', projectIds: ['DE/2026/05'], permissions: { level: 2, canChangeStatus: false, canManageUsers: false, name: 'Sub-Site Agent' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 19, name: 'Manklin Ho', email: 'manklinho@de202605jv.com', username: 'manklinho', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'rso', department: 'Safety Officer', projectIds: ['DE/2026/05'], permissions: { level: 2, canChangeStatus: false, canManageUsers: false, name: 'Registered Safety Officer' }, contractNo: 'Contract No. DE/2026/05' },
+    { id: 20, name: 'James Chan', email: 'jameschan@de202605jv.com', username: 'jameschan', password: 'Welcome@123', organization: 'CONTRACTOR', companyName: 'REC - AEL JV', role: 'ssa', department: 'Contract Supporting Engineer', projectIds: ['DE/2026/05'], permissions: { level: 2, canChangeStatus: false, canManageUsers: false, name: 'Sub-Site Agent' }, contractNo: 'Contract No. DE/2026/05' }
+    ].map(u => Object.assign({
+    status: 'online',
+    passwordChanged: false,
+    passwordChangedAt: null,
+    passwordExpiresAt: null
+  }, u));
+
+  const byId = {};
+  const byName = {};
+  rows.forEach(function (row) {
+    const user = parseRecord(row.data);
+    const entry = { row: row, user: user };
+    byId[String(row.record_id)] = entry;
+    if (user && user.username) byName[String(user.username).toLowerCase()] = entry;
+  });
+
+  for (const user of defaults) {
+    const current = byId[String(user.id)] || byName[String(user.username).toLowerCase()];
+    if (!current) {
+      await pool.query(
+        'INSERT INTO records (collection, record_id, data, version) VALUES (?, ?, ?, 1)',
+        ['usersDb', String(user.id), JSON.stringify(user)]
+      );
+      console.log('[DB] Added missing account', user.username);
+      continue;
+    }
+    const existing = current.user || {};
+    const alreadyChanged = existing.passwordChanged === true || existing.passwordChanged === 1 || existing.passwordChanged === 'true';
+    // Always keep seed project assignments in sync for default accounts (login project list)
+    let touched = false;
+    if (Array.isArray(user.projectIds)) {
+      existing.projectIds = user.projectIds.slice();
+      if (user.contractNo) existing.contractNo = user.contractNo;
+      if (user.role) existing.role = user.role;
+      touched = true;
+    }
+    if (!(alreadyChanged || (existing.password && existing.password !== user.password))) {
+      existing.password = user.password;
+      existing.username = user.username;
+      existing.status = existing.status || 'online';
+      touched = true;
+      console.log('[DB] Restored default password for', user.username, '->', user.password);
+    }
+    if (touched) {
+      await pool.query(
+        'UPDATE records SET data = ? WHERE collection = ? AND record_id = ?',
+        [JSON.stringify(existing), 'usersDb', current.row.record_id]
+      );
+      console.log('[DB] Synced projectIds for', user.username, existing.projectIds);
+    }
+  }
+}
+
+async function keepExistingPdf(collection, id, clean) {
+  const [rows] = await pool.query(
+    'SELECT data FROM records WHERE collection = ? AND record_id = ?',
+    [collection, id]
+  );
+  if (!rows.length) return clean;
+  const current = typeof rows[0].data === 'string' ? JSON.parse(rows[0].data) : rows[0].data;
+  if (!current) return clean;
+  // Keep heavy fields when the client sent a light list row
+  ['pdfData', 'annotations', 'formData', 'statusHistory'].forEach(function (key) {
+    if ((clean[key] == null || clean[key] === '' || (Array.isArray(clean[key]) && clean[key].length === 0 && current[key] && current[key].length)) && current[key]) {
+      clean[key] = current[key];
+    }
+  });
+  return clean;
+}
+
+function parseRecord(data) {
+  if (data == null) return {};
+  if (Buffer.isBuffer(data)) data = data.toString('utf8');
+  if (typeof data === 'string') {
+    try { return JSON.parse(data); } catch (e) { return {}; }
+  }
+  return data;
+}
+
+function stripSecrets(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  const copy = { ...obj };
+  delete copy.password;
+  return copy;
+}
+
+const activeSessions = new Map();
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+
+function sessionKey(user) {
+  return String(user.id || user.username || '').toLowerCase();
+}
+
+function createSession(user) {
+  const token = require('crypto').randomBytes(24).toString('hex');
+  const now = Date.now();
+  activeSessions.set(sessionKey(user), {
+    token,
+    username: user.username || user.name || '',
+    startedAt: now,
+    lastSeen: now
+  });
+  return token;
+}
+
+function activeSession(user) {
+  const key = sessionKey(user);
+  const current = activeSessions.get(key);
+  if (!current) return null;
+  if (Date.now() - current.lastSeen > SESSION_TIMEOUT_MS) {
+    activeSessions.delete(key);
+    return null;
+  }
+  return current;
+}
+
+function tokenFromRequest(req) {
+  const header = String(req.headers['x-session-token'] || '').trim();
+  if (header) return header;
+  if (req.body && req.body.sessionToken) return String(req.body.sessionToken).trim();
+  return '';
+}
+
+function requireActiveSession(req, res, next) {
+  // Local/static mode has no sessions
+  if (!pool) return next();
+  const token = tokenFromRequest(req);
+  if (!token) {
+    return res.status(401).json({ error: 'session_expired', message: 'You have been logged out.' });
+  }
+  for (const session of activeSessions.values()) {
+    if (session.token === token) {
+      if (Date.now() - session.lastSeen > SESSION_TIMEOUT_MS) {
+        for (const [k, s] of activeSessions.entries()) {
+          if (s.token === token) activeSessions.delete(k);
+        }
+        return res.status(401).json({ error: 'session_expired', message: 'Your session has expired.' });
+      }
+      session.lastSeen = Date.now();
+      return next();
+    }
+  }
+  return res.status(401).json({
+    error: 'logged_out_elsewhere',
+    message: 'You have been logged out because this account signed in from another browser or computer.'
+  });
+}
+
+app.post('/api/auth/login', async (req, res) => {
+  if (!pool) return res.status(400).json({ error: 'no_database' });
+  const username = String((req.body && req.body.username) || '').trim().toLowerCase();
+  const password = String((req.body && req.body.password) || '');
+  const projectId = (req.body && req.body.projectId) || '';
+  if (!username || !password) return res.status(400).json({ error: 'missing_credentials' });
+
+  try {
+    const [rows] = await pool.query(
+      'SELECT record_id, data, version FROM records WHERE collection IN (?, ?)',
+      ['usersDb', 'users']
+    );
+    let matched = null;
+    for (const row of rows) {
+      const user = parseRecord(row.data);
+      const names = [user.username, user.email, user.name].map(v => String(v || '').trim().toLowerCase());
+      if (names.includes(username) && String(user.password || '') === password) {
+        matched = user;
+        matched.id = matched.id || row.record_id;
+        matched._version = row.version;
+        break;
+      }
+    }
+    if (!matched) return res.status(401).json({ error: 'invalid_credentials' });
+    if (matched.status === 'offline') return res.status(403).json({ error: 'disabled' });
+
+    const isAdmin = matched.role === 'admin' || matched.userRole === 'admin';
+
+    // Allow the first call (which sends NO projectId) to succeed.
+    // Only enforce the project check when a projectId is actually provided.
+    if (!isAdmin) {
+      if (!Array.isArray(matched.projectIds) || matched.projectIds.length === 0) {
+        return res.status(403).json({ error: 'no_projects_assigned', projects: [] });
+      }
+      if (projectId) {
+        if (!matched.projectIds.includes(projectId)) {
+          return res.status(403).json({ error: 'no_project_access', projects: matched.projectIds });
+        }
+      }
+    }
+
+    const forceLogout = !!(req.body && req.body.forceLogout);
+    const existing = activeSession(matched);
+    if (existing && !forceLogout) {
+      return res.status(409).json({
+        error: 'already_logged_in',
+        message: 'This user is already logged in from another browser or computer. Log out there first.',
+        canForceLogout: true
+      });
+    }
+    if (existing && forceLogout) {
+      activeSessions.delete(sessionKey(matched));
+    }
+
+    const safe = stripSecrets(matched);
+    safe.sessionToken = createSession(matched);
+    res.json({ ok: true, user: safe });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/auth/verify', async (req, res) => {
+  if (!pool) return res.status(400).json({ error: 'no_database' });
+  const username = String((req.body && req.body.username) || '').trim().toLowerCase();
+  const password = String((req.body && req.body.password) || '');
+  if (!username || !password) return res.status(400).json({ error: 'missing_credentials' });
+  try {
+    const [rows] = await pool.query(
+      'SELECT data FROM records WHERE collection IN (?, ?)',
+      ['usersDb', 'users']
+    );
+    for (const row of rows) {
+      const user = parseRecord(row.data);
+      const names = [user.username, user.email, user.name].map(v => String(v || '').trim().toLowerCase());
+      if (names.includes(username) && String(user.password || '') === password) {
+        return res.json({ ok: true });
+      }
+    }
+    res.status(401).json({ error: 'invalid_credentials' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+app.get('/api/auth/online', (req, res) => {
+  const now = Date.now();
+  const online = [];
+  for (const [key, session] of activeSessions.entries()) {
+    if (now - session.lastSeen > SESSION_TIMEOUT_MS) {
+      activeSessions.delete(key);
+      continue;
+    }
+    online.push({
+      id: key,
+      username: session.username || '',
+      startedAt: session.startedAt,
+      lastSeen: session.lastSeen
+    });
+  }
+  res.json({ online });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  const token = String((req.body && req.body.sessionToken) || req.headers['x-session-token'] || '').trim();
+  if (token) {
+    for (const [key, session] of activeSessions.entries()) {
+      if (session.token === token) activeSessions.delete(key);
+    }
+  }
+  res.json({ ok: true });
+});
+
+app.post('/api/auth/heartbeat', (req, res) => {
+  const token = String((req.body && req.body.sessionToken) || '');
+  for (const session of activeSessions.values()) {
+    if (session.token === token) {
+      session.lastSeen = Date.now();
+      return res.json({ ok: true });
+    }
+  }
+  res.status(401).json({ error: 'session_expired' });
+});
+
+// ---------- Change password on the server ----------
+app.post('/api/auth/change-password', async (req, res) => {
+  if (!pool) return res.status(400).json({ error: 'no_database' });
+  const userId = String((req.body && req.body.userId) || '').trim();
+  const username = String((req.body && req.body.username) || '').trim().toLowerCase();
+  const currentPassword = String((req.body && req.body.currentPassword) || '');
+  const newPassword = String((req.body && req.body.newPassword) || '');
+  if ((!userId && !username) || !currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'missing_fields' });
+  }
+
+  try {
+    const [rows] = await pool.query(
+      'SELECT collection, record_id, data, version FROM records WHERE collection IN (?, ?)',
+      ['usersDb', 'users']
+    );
+    let matches = [];
+    for (const row of rows) {
+      const user = parseRecord(row.data);
+      const names = [user.username, user.email, user.name].map(v => String(v || '').trim().toLowerCase());
+      const idMatch = userId && (String(row.record_id) === userId || String(user.id) === userId);
+      const nameMatch = username && names.includes(username);
+      if (idMatch || nameMatch) matches.push({ row, user });
+    }
+    if (!matches.length) return res.status(404).json({ error: 'user_not_found' });
+    const withPassword = matches.find(m => String(m.user.password || '') === currentPassword);
+    if (!withPassword) return res.status(401).json({ error: 'current_password_incorrect' });
+    if (newPassword === currentPassword) return res.status(400).json({ error: 'same_password' });
+
+    const changedAt = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + 90 * 86400000).toISOString();
+    for (const matched of matches) {
+      await pool.query(
+        `UPDATE records
+         SET data = JSON_SET(data,
+               '$.password', ?,
+               '$.passwordChanged', true,
+               '$.passwordChangedAt', ?,
+               '$.passwordExpiresAt', ?),
+             version = version + 1
+         WHERE collection = ? AND record_id = ?`,
+        [newPassword, changedAt, expiresAt, matched.row.collection, matched.row.record_id]
+      );
+    }
+
+    const [check] = await pool.query(
+      'SELECT data FROM records WHERE collection = ? AND record_id = ?',
+      [withPassword.row.collection, withPassword.row.record_id]
+    );
+    const saved = check.length ? parseRecord(check[0].data) : null;
+    if (!saved || String(saved.password || '') !== newPassword) {
+      return res.status(500).json({ error: 'password_not_stored' });
+    }
+    res.json({ ok: true, user: stripSecrets(saved) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---------- Forgot Password API (發送 6 位驗證碼) ----------
+app.post('/api/auth/forgot-password', async (req, res) => {
+  if (!pool) return res.status(400).json({ error: 'no_database' });
+  const email = String((req.body && req.body.email) || '').trim().toLowerCase();
+  if (!email) return res.status(400).json({ error: 'missing_email' });
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT collection, record_id, data FROM records WHERE collection IN (?, ?)`,
+      ['usersDb', 'users']
+    );
+    
+    let matched = null;
+    for (const row of rows) {
+      const user = parseRecord(row.data);
+      if (user.email && String(user.email).toLowerCase() === email) {
+        matched = { row, user };
+        break;
+      }
+    }
+
+    if (!matched) {
+      // 防止探測 Email，即使找不到也回傳成功
+      return res.json({ ok: true, message: 'If the email exists, a code has been sent.' });
+    }
+
+    // 1. 產生 6 位數驗證碼
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = Date.now() + 10 * 60 * 1000; // 10 分鐘後過期
+
+    // 2. 存入資料庫
+    await pool.query(
+      `UPDATE records SET data = JSON_SET(data, '$.resetCode', ?, '$.resetCodeExpires', ?),
+       version = version + 1 WHERE collection = ? AND record_id = ?`,
+      [code, expires, matched.row.collection, matched.row.record_id]
+    );
+
+    // 3. 發送驗證碼 Email
+    try {
+      await transporter.sendMail({
+        from: '"AEL DWSS System" <rstpsswrdvr@gmail.com>', 
+        to: matched.user.email, 
+        subject: 'AEL DWSS - 密碼重設驗證碼 (Password Reset Code)',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; text-align: center;">
+            <h2>密碼重設驗證碼</h2>
+            <p>親愛的 ${matched.user.username}，您好：</p>
+            <p>您正在要求重設 AEL DWSS 系統的密碼。</p>
+            <p>請在網頁中輸入以下 6 位數驗證碼（此驗證碼將在 10 分鐘後失效）：</p>
+            <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #3498db; margin: 20px 0;">
+              ${code}
+            </div>
+            <p style="color:#888; font-size:12px; margin-top:30px;">如果您沒有要求重設密碼，請忽略此信件。</p>
+          </div>
+        `
+      });
+      console.log(`✅ [Mail] 驗證碼已成功發送至: ${matched.user.email}，驗證碼為: ${code}`);
+    } catch (mailError) {
+      console.error('❌ [Mail] 發信失敗:', mailError);
+      return res.status(500).json({ error: 'email_send_failed', message: '信件發送失敗，請聯絡管理員。' });
+    }
+
+    res.json({ ok: true, message: 'If the email exists, a code has been sent.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---------- 新增：驗證 6 位數代碼 API ----------
+app.post('/api/auth/verify-code', async (req, res) => {
+  if (!pool) return res.status(400).json({ error: 'no_database' });
+  const email = String((req.body && req.body.email) || '').trim().toLowerCase();
+  const code = String((req.body && req.body.code) || '').trim();
+
+  if (!email || !code) return res.status(400).json({ error: 'missing_fields' });
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT collection, record_id, data FROM records WHERE collection IN (?, ?)`,
+      ['usersDb', 'users']
+    );
+
+    let matched = null;
+    const now = Date.now();
+
+    for (const row of rows) {
+      const user = parseRecord(row.data);
+      if (user.email && String(user.email).toLowerCase() === email) {
+        if (user.resetCode === code && Number(user.resetCodeExpires) > now) {
+          matched = { row, user };
+        }
+        break;
+      }
+    }
+
+    if (!matched) {
+      return res.status(400).json({ error: 'invalid_code', message: '驗證碼錯誤或已過期。' });
+    }
+
+    // 驗證成功，產生一個一次性的 Token 給前端，讓前端去改密碼
+    const token = require('crypto').randomBytes(32).toString('hex');
+    const tokenExpires = Date.now() + 15 * 60 * 1000; // 15分鐘
+
+    await pool.query(
+      `UPDATE records SET data = JSON_SET(data, '$.resetToken', ?, '$.resetTokenExpires', ?, '$.resetCode', null, '$.resetCodeExpires', null),
+       version = version + 1 WHERE collection = ? AND record_id = ?`,
+      [token, tokenExpires, matched.row.collection, matched.row.record_id]
+    );
+
+    // 回傳 Token 給前端
+    res.json({ ok: true, token: token });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---------- Reset Password API ----------
+app.post('/api/auth/reset-password', async (req, res) => {
+  if (!pool) return res.status(400).json({ error: 'no_database' });
+  const token = String((req.body && req.body.token) || '').trim();
+  const newPassword = String((req.body && req.body.newPassword) || '');
+
+  if (!token || !newPassword) {
+    return res.status(400).json({ error: 'missing_fields' });
+  }
+
+  try {
+    // 1. 找出擁有這個 Token 且尚未過期的用戶
+    const [rows] = await pool.query(
+      `SELECT collection, record_id, data FROM records WHERE collection IN (?, ?)`,
+      ['usersDb', 'users']
+    );
+
+    let matched = null;
+    const now = Date.now();
+    for (const row of rows) {
+      const user = parseRecord(row.data);
+      // 確保 Token 匹配且未過期
+      if (user.resetToken === token && Number(user.resetTokenExpires) > now) {
+        matched = { row, user };
+        break;
+      }
+    }
+
+    if (!matched) {
+      return res.status(400).json({ error: 'invalid_or_expired_token' });
+    }
+
+    // 2. 直接修改 JSON 物件，避免 JSON_SET 語法出錯
+    const updatedUser = matched.user;
+    updatedUser.password = newPassword;
+    updatedUser.passwordChanged = true;
+    updatedUser.passwordChangedAt = new Date().toISOString();
+    updatedUser.passwordExpiresAt = new Date(Date.now() + 90 * 86400000).toISOString();
+    updatedUser.resetToken = null;
+    updatedUser.resetTokenExpires = null;
+
+    // 3. 寫回資料庫
+    await pool.query(
+      `UPDATE records SET data = ?, version = version + 1 WHERE collection = ? AND record_id = ?`,
+      [JSON.stringify(updatedUser), matched.row.collection, matched.row.record_id]
+    );
+
+    console.log(`✅ [Reset Password] 成功為 ${updatedUser.username} (${updatedUser.email}) 更新密碼。新密碼為: ${newPassword}`);
+
+    res.json({ ok: true, message: 'Password reset successfully.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---------- List records in a collection ----------
+// ---------- List records in a collection ----------
+
+function fmtShort(d) {
+  if (!d || isNaN(d.getTime())) return 'N/A';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = d.toLocaleString('en-US', { month: 'short' });
+  const year = String(d.getFullYear()).slice(-2);
+  return day + '-' + month + '-' + year;
+}
+
+function parseLooseDate(value) {
+  if (!value) return null;
+  const s = String(value).trim();
+  if (!s) return null;
+  // ISO or YYYY-MM-DD
+  let d = new Date(s);
+  if (!isNaN(d.getTime())) return d;
+  // DD-Mon-YYYY or DD/MM/YYYY
+  const m1 = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})$/);
+  if (m1) {
+    const y = m1[3].length === 2 ? 2000 + parseInt(m1[3], 10) : parseInt(m1[3], 10);
+    d = new Date(y, parseInt(m1[2], 10) - 1, parseInt(m1[1], 10));
+    if (!isNaN(d.getTime())) return d;
+  }
+  const m2 = s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2,4})$/);
+  if (m2) {
+    const months = { jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11 };
+    const y = m2[3].length === 2 ? 2000 + parseInt(m2[3], 10) : parseInt(m2[3], 10);
+    d = new Date(y, months[m2[2].toLowerCase()], parseInt(m2[1], 10));
+    if (!isNaN(d.getTime())) return d;
+  }
+  return null;
+}
+
+async function summariseCollection(collection, projectId, dateField, closedStatuses) {
+  const [rows] = await pool.query(
+    `SELECT JSON_UNQUOTE(JSON_EXTRACT(data, '$.status')) AS status,
+            JSON_UNQUOTE(JSON_EXTRACT(data, ?)) AS dt,
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.project')) AS project
+     FROM records WHERE collection = ?`,
+    ['$.' + dateField, collection]
+  );
+  const closedSet = new Set(closedStatuses.map(s => s.toLowerCase()));
+  let total = 0, closed = 0;
+  let lastSubmitted = null, lastPassed = null;
+  const monthly = {};
+  const years = new Set();
+  for (const row of rows) {
+    if (projectId && String(row.project || '') !== String(projectId)) continue;
+    total++;
+    const status = String(row.status || '').toLowerCase();
+    const isClosed = closedSet.has(status);
+    if (isClosed) closed++;
+    const d = parseLooseDate(row.dt);
+    if (d) {
+      if (!lastSubmitted || d > lastSubmitted) lastSubmitted = d;
+      if (isClosed && (!lastPassed || d > lastPassed)) lastPassed = d;
+      const y = String(d.getFullYear());
+      const m = d.getMonth();
+      years.add(y);
+      if (!monthly[y]) monthly[y] = [0,0,0,0,0,0,0,0,0,0,0,0];
+      monthly[y][m]++;
+    }
+  }
+  const percent = total > 0 ? Math.round((closed / total) * 100) : 0;
+  return {
+    total,
+    closed,
+    pending: total - closed,
+    percent,
+    lastSubmitted: lastSubmitted ? fmtShort(lastSubmitted) : 'N/A',
+    lastPassed: lastPassed ? fmtShort(lastPassed) : 'N/A',
+    years: Array.from(years).sort(),
+    monthly
+  };
+}
+
+app.get('/api/dashboard/summary', async (req, res) => {
+  if (!pool) return res.json({ diary: null, inspection: null, wage: null });
+  const projectId = String(req.query.projectId || '').trim();
+  try {
+    const [diary, inspection, wage] = await Promise.all([
+      summariseCollection('siteDiary', projectId, 'date', ['closed']),
+      summariseCollection('inspection', projectId, 'date', ['closed']),
+      summariseCollection('wage', projectId, 'periodStart', ['endorsed', 'closed'])
+    ]);
+    res.json({ diary, inspection, wage, generatedAt: Date.now() });
+  } catch (err) {
+    console.error('[dashboard]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+const LIST_FIELDS = [
+  'id','status','statusText','site','date','period','periodStart','periodEnd',
+  'submittedBy','inspector','type','typeText','project','approvalStatus',
+  'createdAt','author','siteName'
+];
+
+app.get('/api/records/:collection/list', async (req, res) => {
+  if (!pool) return res.json([]);
+  if (req.params.collection === 'usersDb' || req.params.collection === 'users') {
+    return res.status(403).json({ error: 'accounts_not_available_to_browser' });
+  }
+  try {
+    const extracts = LIST_FIELDS.map(f =>
+      `JSON_UNQUOTE(JSON_EXTRACT(data, '$.${f}')) AS ${f}`
+    ).join(', ');
+    const [rows] = await pool.query(
+      `SELECT record_id, ${extracts},
+              (JSON_EXTRACT(data, '$.pdfData') IS NOT NULL
+               AND JSON_TYPE(JSON_EXTRACT(data, '$.pdfData')) <> 'NULL'
+               AND JSON_UNQUOTE(JSON_EXTRACT(data, '$.pdfData')) <> '') AS has_pdf,
+              version, updated_by, updated_at
+       FROM records WHERE collection = ?`,
+      [req.params.collection]
+    );
+    const list = rows.map(r => {
+      const obj = { id: r.record_id };
+      LIST_FIELDS.forEach(f => {
+        if (r[f] != null && r[f] !== 'null') obj[f] = r[f];
+      });
+      obj._version = r.version;
+      obj._updatedBy = r.updated_by;
+      obj._updatedAt = r.updated_at;
+      obj.hasPdf = !!r.has_pdf;
+      return obj;
+    });
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/records/:collection', async (req, res) => {
+  if (!pool) return res.json([]);
+  if (req.params.collection === 'usersDb' || req.params.collection === 'users') {
+    return res.status(403).json({ error: 'accounts_not_available_to_browser' });
+  }
+  try {
+    const [rows] = await pool.query(
+      `SELECT record_id,
+              JSON_REMOVE(data, '$.pdfData') AS data,
+              (JSON_EXTRACT(data, '$.pdfData') IS NOT NULL
+               AND JSON_TYPE(JSON_EXTRACT(data, '$.pdfData')) <> 'NULL'
+               AND JSON_UNQUOTE(JSON_EXTRACT(data, '$.pdfData')) <> '') AS has_pdf,
+              version, updated_by, updated_at
+       FROM records WHERE collection = ?`,
+      [req.params.collection]
+    );
+    const list = rows.map(r => {
+      const obj = typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
+      obj._version = r.version;
+      obj._updatedBy = r.updated_by;
+      obj._updatedAt = r.updated_at;
+      obj.hasPdf = !!r.has_pdf;
+      return obj;
+    });
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/record', async (req, res) => {
+  if (!pool) return res.json(null);
+  const collection = String(req.query.collection || '');
+  const id = String(req.query.id || '');
+  if (!collection || !id) return res.status(400).json({ error: 'missing_id' });
+  if (collection === 'usersDb' || collection === 'users') {
+    return res.status(403).json({ error: 'accounts_not_available_to_browser' });
+  }
+  try {
+    const [rows] = await pool.query(
+      'SELECT data, version, updated_by, updated_at FROM records WHERE collection = ? AND record_id = ?',
+      [collection, id]
+    );
+    if (!rows.length) return res.status(404).json(null);
+    const r = rows[0];
+    const obj = typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
+    obj._version = r.version;
+    obj._updatedBy = r.updated_by;
+    obj._updatedAt = r.updated_at;
+    res.json(obj);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/record', requireActiveSession, async (req, res) => {
+  const collection = String(req.query.collection || '');
+  const id = String(req.query.id || '');
+  if (!collection || !id) return res.status(400).json({ error: 'missing_id' });
+  req.params.collection = collection;
+  req.params.id = id;
+  return saveRecord(req, res);
+});
+app.get('/api/records/:collection/:id', async (req, res) => {
+  if (!pool) return res.json(null);
+  if (req.params.collection === 'usersDb' || req.params.collection === 'users') {
+    return res.status(403).json({ error: 'accounts_not_available_to_browser' });
+  }
+  try {
+    const id = decodeURIComponent(req.params.id);
+    const [rows] = await pool.query(
+      'SELECT data, version, updated_by, updated_at FROM records WHERE collection = ? AND record_id = ?',
+      [req.params.collection, id]
+    );
+    if (!rows.length) return res.status(404).json(null);
+    const r = rows[0];
+    const obj = typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
+    obj._version = r.version;
+    obj._updatedBy = r.updated_by;
+    obj._updatedAt = r.updated_at;
+    if (req.params.collection === 'usersDb' || req.params.collection === 'users') {
+      delete obj.password;
+    }
+    res.json(obj);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---------- Create or update (optimistic lock) ----------
+async function saveRecord(req, res) {
+  if (!pool) return res.json({ ok: true, mode: 'local' });
+  const collection = req.params.collection;
+  const id = decodeURIComponent(req.params.id);
+  const body = req.body || {};
+  const expectedVersion = body._version || null;
+  const updatedBy = body._updatedBy || req.headers['x-user'] || null;
+
+  const clean = await keepExistingPdf(collection, id, await keepExistingPassword(collection, id, (() => {
+    const c = { ...body };
+    delete c._version;
+    delete c._updatedBy;
+    delete c._updatedAt;
+    return c;
+  })()));
+
+  try {
+    const [existing] = await pool.query(
+      'SELECT version FROM records WHERE collection = ? AND record_id = ?',
+      [collection, id]
+    );
+
+    if (existing.length) {
+      const current = existing[0].version;
+      if (expectedVersion != null && Number(expectedVersion) !== current) {
+        return res.status(409).json({
+          error: 'conflict',
+          message: 'Record was modified by someone else',
+          currentVersion: current
+        });
+      }
+      const newVersion = current + 1;
+      await pool.query(
+        'UPDATE records SET data = ?, version = ?, updated_by = ? WHERE collection = ? AND record_id = ?',
+        [JSON.stringify(clean), newVersion, updatedBy, collection, id]
+      );
+      return res.json({ ok: true, version: newVersion });
+    } else {
+      await pool.query(
+        'INSERT INTO records (collection, record_id, data, version, updated_by) VALUES (?, ?, ?, 1, ?)',
+        [collection, id, JSON.stringify(clean), updatedBy]
+      );
+      return res.json({ ok: true, version: 1 });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+app.put('/api/records/:collection/:id', requireActiveSession, saveRecord);
+
+// ---------- Delete ----------
+app.delete('/api/records/:collection/:id', requireActiveSession, async (req, res) => {
+  if (!pool) return res.json({ ok: true });
+  try {
+    await pool.query(
+      'DELETE FROM records WHERE collection = ? AND record_id = ?',
+      [req.params.collection, req.params.id]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---------- Bulk sync a collection (upsert + delete missing + conflict check) ----------
+app.post('/api/records/:collection/bulk', requireActiveSession, async (req, res) => {
+  if (!pool) return res.json({ ok: true });
+  const collection = req.params.collection;
+  const items = Array.isArray(req.body) ? req.body : [];
+
+  // Safety: refuse to wipe an entire collection with an empty payload
+  // unless the client explicitly confirms with ?allowEmpty=1
+  if (items.length === 0 && req.query.allowEmpty !== '1') {
+    return res.status(400).json({
+      error: 'empty_payload',
+      message: 'Refusing to replace collection with empty list. Pass ?allowEmpty=1 to confirm.'
+    });
+  }
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // Current records in DB
+    const [existingRows] = await conn.query(
+      'SELECT record_id, version FROM records WHERE collection = ?',
+      [collection]
+    );
+    const existing = {};
+    existingRows.forEach(r => { existing[r.record_id] = r.version; });
+
+    const incomingIds = new Set();
+
+    for (const item of items) {
+      const id = String(item.id || item.record_id || '');
+      if (!id) continue;
+      incomingIds.add(id);
+
+      const clean = await keepExistingPdf(collection, id, await keepExistingPassword(collection, id, (() => {
+        const c = { ...item };
+        delete c._version;
+        delete c._updatedBy;
+        delete c._updatedAt;
+        return c;
+      })()));
+
+      const expected = item._version != null ? Number(item._version) : null;
+
+      if (existing[id] !== undefined) {
+        // Conflict check
+        if (expected != null && expected !== existing[id]) {
+          await conn.rollback();
+          return res.status(409).json({
+            error: 'conflict',
+            message: 'Record ' + id + ' was modified by someone else',
+            recordId: id,
+            currentVersion: existing[id]
+          });
+        }
+        const newVer = existing[id] + 1;
+        await conn.query(
+          'UPDATE records SET data = ?, version = ?, updated_by = ? WHERE collection = ? AND record_id = ?',
+          [JSON.stringify(clean), newVer, item._updatedBy || null, collection, id]
+        );
+      } else {
+        await conn.query(
+          'INSERT INTO records (collection, record_id, data, version, updated_by) VALUES (?, ?, ?, 1, ?)',
+          [collection, id, JSON.stringify(clean), item._updatedBy || null]
+        );
+      }
+    }
+
+    // Delete records that are no longer in the incoming list
+    for (const oldId of Object.keys(existing)) {
+      if (!incomingIds.has(oldId)) {
+        await conn.query(
+          'DELETE FROM records WHERE collection = ? AND record_id = ?',
+          [collection, oldId]
+        );
+      }
+    }
+
+    await conn.commit();
+    res.json({ ok: true, count: items.length });
+  } catch (err) {
+    await conn.rollback();
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    conn.release();
+  }
+});
+
+
+app.post('/api/users/upsert', async (req, res) => {
+  if (!pool) return res.status(400).json({ error: 'no_database' });
+  const body = req.body || {};
+  const username = String(body.username || '').trim();
+  if (!username) return res.status(400).json({ error: 'missing_username' });
+  try {
+    const [rows] = await pool.query(
+      'SELECT collection, record_id, data FROM records WHERE collection IN (?, ?)',
+      ['usersDb', 'users']
+    );
+    let matched = null;
+    for (const r of rows) {
+      const u = parseRecord(r.data);
+      if (body.id != null && (String(r.record_id) === String(body.id) || String(u.id) === String(body.id))) {
+        matched = r; break;
+      }
+      if (u.username && String(u.username).toLowerCase() === username.toLowerCase()) {
+        matched = r; break;
+      }
+    }
+    const userData = Object.assign({}, matched ? parseRecord(matched.data) : {}, body);
+    userData.username = username;
+    if (!userData.id) userData.id = body.id || Date.now();
+    if (!userData.status) userData.status = 'online';
+    if (!Array.isArray(userData.projectIds)) userData.projectIds = body.projectIds || [];
+    // never wipe password if client omitted it on update
+    if (matched) {
+      const prev = parseRecord(matched.data);
+      if (!body.password && prev.password) userData.password = prev.password;
+      await pool.query(
+        'UPDATE records SET data = ?, version = version + 1 WHERE collection = ? AND record_id = ?',
+        [JSON.stringify(userData), matched.collection, matched.record_id]
+      );
+      return res.json({ ok: true, id: userData.id, updated: true });
+    }
+    if (!userData.password) userData.password = 'Welcome@123';
+    const recordId = String(userData.id);
+    await pool.query(
+      'INSERT INTO records (collection, record_id, data, version) VALUES (?, ?, ?, 1)',
+      ['usersDb', recordId, JSON.stringify(userData)]
+    );
+    res.json({ ok: true, id: userData.id, created: true });
+  } catch (e) {
+    console.error('[users/upsert]', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/users/set-password', async (req, res) => {
+  if (!pool) return res.status(400).json({ error: 'no_database' });
+  const userId = String(req.body.userId || '');
+  const newPassword = String(req.body.newPassword || '');
+  if (!userId || !newPassword) return res.status(400).json({ error: 'missing_fields' });
+
+  try {
+    const [rows] = await pool.query(
+      'SELECT collection, record_id, data FROM records WHERE collection IN (?, ?)',
+      ['usersDb', 'users']
+    );
+    const matched = rows.find(r => {
+      const u = parseRecord(r.data);
+      return String(r.record_id) === userId || String(u.id) === userId;
+    });
+    if (!matched) return res.status(404).json({ error: 'user_not_found' });
+
+    const changedAt = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + 90 * 86400000).toISOString();
+    await pool.query(
+      `UPDATE records SET data = JSON_SET(data,
+         '$.password', ?, '$.passwordChanged', true,
+         '$.passwordChangedAt', ?, '$.passwordExpiresAt', ?),
+         version = version + 1
+       WHERE collection = ? AND record_id = ?`,
+      [newPassword, changedAt, expiresAt, matched.collection, matched.record_id]
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ---------- Static ----------
+app.use(express.static(ROOT, { index: 'index.html', extensions: ['html'] }));
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  const file = path.join(ROOT, 'index.html');
+  if (fs.existsSync(file)) return res.sendFile(file);
+  res.status(404).send('Not found');
+});
+
+initDb().then(() => {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[DWSS] http://0.0.0.0:${PORT}  mode=${pool ? 'cloud/multi-user' : 'local'}`);
+  });
+});

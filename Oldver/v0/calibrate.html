@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Safety Inspection - 校準模式</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #f5f7fa;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            padding: 20px;
+        }
+        .header {
+            background: #fff;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 1.3rem; color: #2c3e50; }
+        .header .hint {
+            font-size: 0.85rem;
+            color: #e67e22;
+            background: #fffbe6;
+            padding: 8px 14px;
+            border-radius: 6px;
+            border-left: 3px solid #f39c12;
+        }
+        .pdf-container {
+            background: #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 500px;
+        }
+        #page-wrapper {
+            position: relative;
+            display: inline-block;
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        #pdf-canvas {
+            display: block;
+        }
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #3498db;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🎯 Safety Inspection — 校準模式</h1>
+        <div class="hint">
+            <i class="fas fa-info-circle"></i>
+            載入 PDF 後，貼入校準腳本，然後開始點位置
+        </div>
+    </div>
+
+    <div class="pdf-container">
+        <div id="page-wrapper">
+            <div class="loading" id="loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                正在載入 Safety Inspection PDF...
+            </div>
+            <canvas id="pdf-canvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        // ========================================
+        // ★ PDF 檔案路徑（你要改呢度）
+        // ========================================
+        var PDF_URL = 'Safety_Inspection_Report.pdf';
+        // ↑ 確保呢個 PDF 檔案喺同 calibrate.html 同一個資料夾
+
+        var canvas = document.getElementById('pdf-canvas');
+        var loading = document.getElementById('loading');
+        var wrapper = document.getElementById('page-wrapper');
+
+        var RENDER_SCALE = 2.0;
+        var DISPLAY_WIDTH = 1200;
+
+        function loadPdf() {
+            pdfjsLib.getDocument(PDF_URL).promise.then(function(pdf) {
+                return pdf.getPage(1).then(function(page) {
+                    var baseViewport = page.getViewport({ scale: 1.0 });
+                    var aspect = baseViewport.height / baseViewport.width;
+
+                    var displayWidth = DISPLAY_WIDTH;
+                    var displayHeight = displayWidth * aspect;
+
+                    var renderWidth = displayWidth * RENDER_SCALE;
+                    var scaleForRender = renderWidth / baseViewport.width;
+                    var renderViewport = page.getViewport({ scale: scaleForRender });
+
+                    canvas.width = renderViewport.width;
+                    canvas.height = renderViewport.height;
+                    canvas.style.width = displayWidth + 'px';
+                    canvas.style.height = displayHeight + 'px';
+
+                    var ctx = canvas.getContext('2d');
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+
+                    return page.render({
+                        canvasContext: ctx,
+                        viewport: renderViewport
+                    }).promise.then(function() {
+                        loading.style.display = 'none';
+                        console.log('[Calibrate] ✓ PDF 已載入');
+                        console.log('[Calibrate] 下一步：F12 → Console → 貼入校準腳本');
+                    });
+                });
+            }).catch(function(err) {
+                loading.innerHTML =
+                    '<i class="fas fa-exclamation-triangle" style="color:#e74c3c;font-size:32px;"></i><br><br>' +
+                    '<strong>無法載入 PDF</strong><br>' +
+                    '<small>錯誤：' + err.message + '</small><br><br>' +
+                    '<small>請確認 PDF 檔案路徑正確：<br><code>' + PDF_URL + '</code></small>';
+                console.error('[Calibrate] PDF 載入失敗:', err);
+            });
+        }
+
+        loadPdf();
+    })();
+    </script>
+
+</body>
+</html>

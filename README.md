@@ -15,21 +15,21 @@ node server.js
 
 Data stays in the browser `localStorage`. The Site Locations map and all existing features continue to work.
 
-## Cloud (Google Cloud e2-micro + MariaDB + HTTPS)
+## Cloud (Google Cloud T2D 1 vCPU / 4 GB + MariaDB + HTTPS)
 
-1. Point your domain’s A record to the e2-micro external IP.
+1. Point your domain’s A record to the VM external IP.
 2. Open firewall ports **80** and **443**.
 3. Copy the project to `/opt/dwss` on the VM.
 4. Run:
 
 ```bash
-sudo DOMAIN=your.domain.com bash deploy/setup-e2-micro.sh
+sudo DOMAIN=dwss.ael.hk bash deploy/setup.sh
 ```
 
 The script installs Node, MariaDB, nginx, and Let’s Encrypt (certbot).  
 It obtains a free certificate and configures HTTPS with automatic HTTP→HTTPS redirect.
 
-After setup the app is available at `https://your.domain.com`.  
+After setup the app is available at `https://dwss.ael.hk`.  
 The frontend detects the backend automatically and stores data in MariaDB. Local browser use is unaffected.
 
 ### Environment variables
@@ -43,11 +43,12 @@ The frontend detects the backend automatically and stores data in MariaDB. Local
 | DB_PASSWORD  | DB password          | (required)  |
 | DB_NAME      | Database name        | dwss        |
 
-### Notes for e2-micro
+### Notes for T2D (1 vCPU / 4 GB)
 
-- 1 GB RAM is tight. The setup uses a small connection pool.
-- If MariaDB fails to start, reduce `innodb_buffer_pool_size` in `/etc/mysql/mariadb.conf.d/50-server.cnf` to `64M`.
-- Change the default password after first login.
+- MariaDB `innodb_buffer_pool_size` is set to 1G (suitable for 4 GB RAM).
+- Node connection pool `connectionLimit` is 10.
+- Change the default database password after first login.
+- Domain example used in this package: dwss.ael.hk
 
 ## Storage
 
@@ -71,5 +72,5 @@ WHERE collection = 'siteDiary';
 - `package.json` — Node dependencies
 - `schema.sql` — MariaDB schema
 - `scripts/cloud-storage.js` — frontend adapter (localStorage ↔ API)
-- `deploy/setup-e2-micro.sh` — one-shot VM setup
+- `deploy/setup.sh` — one-shot VM setup
 - `deploy/dwss.service` — systemd unit

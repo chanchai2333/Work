@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Safety Inspection - Demo v3</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #f5f7fa;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            padding: 20px;
+        }
+        .header {
+            background: #fff;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+        .header h1 { font-size: 1.3rem; color: #2c3e50; margin-bottom: 6px; }
+        .header .hint { font-size: 0.85rem; color: #7f8c8d; }
+        .pdf-container {
+            background: #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 500px;
+        }
+        #page-wrapper {
+            position: relative;
+            display: inline-block;
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        #pdf-canvas { display: block; }
+
+        .pdf-form-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 30;
+            pointer-events: none;
+        }
+
+        /* 文字輸入框 */
+        .pdf-form-overlay .pdf-input {
+            position: absolute;
+            border: 1px solid rgba(52, 152, 219, 0.4);
+            background: rgba(255, 255, 255, 0.6);
+            outline: none;
+            font-family: Arial, sans-serif;
+            color: #0a1a5c;
+            font-size: 11px;
+            padding: 1px 4px;
+            box-sizing: border-box;
+            pointer-events: auto;
+            line-height: 1.2;
+            border-radius: 2px;
+            transition: background 0.12s, box-shadow 0.12s;
+        }
+        .pdf-form-overlay .pdf-input:hover {
+            background: rgba(52, 152, 219, 0.15);
+            box-shadow: inset 0 0 0 1px #3498db;
+        }
+        .pdf-form-overlay .pdf-input:focus {
+            background: rgba(255, 251, 234, 0.98);
+            box-shadow: inset 0 0 0 2px #3498db;
+            z-index: 2;
+        }
+
+        /* Checkbox */
+        .pdf-form-overlay .pdf-checkbox {
+            position: absolute;
+            pointer-events: auto;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border-radius: 2px;
+            transition: background 0.15s;
+        }
+        .pdf-form-overlay .pdf-checkbox:hover {
+            background: rgba(52, 152, 219, 0.25);
+            box-shadow: 0 0 0 2px #3498db;
+        }
+        .pdf-form-overlay .pdf-checkbox .tick {
+            font-size: 14px;
+            font-weight: 900;
+            color: #27ae60;
+            display: none;
+            line-height: 1;
+        }
+        .pdf-form-overlay .pdf-checkbox.checked .tick {
+            display: block;
+        }
+
+        /* 評分格 */
+        .pdf-form-overlay .rating-cell {
+            position: absolute;
+            pointer-events: auto;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border-radius: 2px;
+            transition: background 0.12s, box-shadow 0.12s;
+        }
+        .pdf-form-overlay .rating-cell:hover {
+            background: rgba(52, 152, 219, 0.18);
+            box-shadow: 0 0 0 1.5px #3498db;
+        }
+        .pdf-form-overlay .rating-cell .tick {
+            font-size: 18px;
+            font-weight: 900;
+            color: #27ae60;
+            display: none;
+            line-height: 1;
+        }
+        .pdf-form-overlay .rating-cell.active {
+            background: rgba(39, 174, 96, 0.18);
+            box-shadow: 0 0 0 1.5px #27ae60;
+        }
+        .pdf-form-overlay .rating-cell.active .tick {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🎯 Safety Inspection — Demo v3</h1>
+        <div class="hint">
+            Type checkbox + Header 輸入框 + 評分格 4 欄分開
+        </div>
+    </div>
+
+    <div class="pdf-container">
+        <div id="page-wrapper">
+            <canvas id="pdf-canvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        var PDF_URL = 'Safety_Inspection_Report.pdf'; // ← 改做你嘅 PDF 名
+        var RENDER_SCALE = 2.0;
+        var DISPLAY_WIDTH = 1200;
+
+        // ========================================
+        // ★ 根據你新校準嘅座標計算出嘅 Layout
+        // ========================================
+        var SAFETY_LAYOUT = {
+            typeCheckboxes: [
+                { key: 'weekly', left: '27.72%', top: '15.27%', width: '1.08%', height: '0.89%' },
+                { key: 'daily',  left: '37.14%', top: '15.27%', width: '1.16%', height: '0.89%' },
+                { key: 'adhoc',  left: '44.72%', top: '15.27%', width: '1.17%', height: '0.83%' }
+            ],
+            header: {
+                location:  { left: '18.72%', top: '16.57%', width: '31.92%', height: '1.59%' },
+                taskOrder: { left: '63.64%', top: '16.51%', width: '29.58%', height: '1.71%' },
+                date:      { left: '15.89%', top: '18.22%', width: '34.75%', height: '1.59%' },
+                time:      { left: '56.30%', top: '18.22%', width: '37.00%', height: '1.65%' }
+            },
+            ratingColumns: {
+                A:     { left: '67.47%', width: '6.48%' },
+                B:     { left: '73.95%', width: '6.48%' },
+                C:     { left: '80.43%', width: '6.48%' },
+                'N/A': { left: '86.91%', width: '6.48%' }
+            },
+            sections: [
+                { letter: 'A',   startY: '25.11%', rowHeight: '2.12%', cellHeight: '2.12%', itemCount: 13 },
+                { letter: 'B',   startY: '56.87%', rowHeight: '2.18%', cellHeight: '2.18%', itemCount: 9 },
+                { letter: 'C.i', startY: '79.92%', rowHeight: '2.12%', cellHeight: '2.12%', itemCount: 6 }
+            ]
+        };
+
+        var canvas = document.getElementById('pdf-canvas');
+        var wrapper = document.getElementById('page-wrapper');
+
+        var formData = {
+            type: '',
+            header: {},
+            ratings: {}
+        };
+
+        function loadPdf() {
+            pdfjsLib.getDocument(PDF_URL).promise.then(function(pdf) {
+                return pdf.getPage(1).then(function(page) {
+                    var baseViewport = page.getViewport({ scale: 1.0 });
+                    var aspect = baseViewport.height / baseViewport.width;
+
+                    var displayWidth = DISPLAY_WIDTH;
+                    var displayHeight = displayWidth * aspect;
+
+                    var renderWidth = displayWidth * RENDER_SCALE;
+                    var scaleForRender = renderWidth / baseViewport.width;
+                    var renderViewport = page.getViewport({ scale: scaleForRender });
+
+                    canvas.width = renderViewport.width;
+                    canvas.height = renderViewport.height;
+                    canvas.style.width = displayWidth + 'px';
+                    canvas.style.height = displayHeight + 'px';
+
+                    var ctx = canvas.getContext('2d');
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+
+                    return page.render({
+                        canvasContext: ctx,
+                        viewport: renderViewport
+                    }).promise.then(function() {
+                        injectFormFields();
+                    });
+                });
+            }).catch(function(err) {
+                alert('無法載入 PDF：' + err.message);
+                console.error(err);
+            });
+        }
+
+        function applyPosition(el, pos) {
+            el.style.position = 'absolute';
+            el.style.left = pos.left;
+            el.style.top = pos.top;
+            if (pos.width) el.style.width = pos.width;
+            if (pos.height) el.style.height = pos.height;
+        }
+
+        function injectFormFields() {
+            var overlay = document.createElement('div');
+            overlay.className = 'pdf-form-overlay';
+
+            // ====================
+            // 1. Type checkbox
+            // ====================
+            SAFETY_LAYOUT.typeCheckboxes.forEach(function(cb) {
+                var el = document.createElement('div');
+                el.className = 'pdf-checkbox';
+                el.dataset.type = cb.key;
+                applyPosition(el, cb);
+                el.innerHTML = '<span class="tick">✓</span>';
+
+                el.addEventListener('click', function() {
+                    var isChecked = el.classList.contains('checked');
+                    overlay.querySelectorAll('.pdf-checkbox').forEach(function(other) {
+                        other.classList.remove('checked');
+                    });
+                    if (!isChecked) {
+                        el.classList.add('checked');
+                        formData.type = cb.key;
+                    } else {
+                        formData.type = '';
+                    }
+                });
+
+                overlay.appendChild(el);
+            });
+
+            // ====================
+            // 2. Header 輸入框
+            // ====================
+            var headerLabels = {
+                location: 'Location',
+                taskOrder: 'Task Order No.',
+                date: 'Date',
+                time: 'Time'
+            };
+            Object.keys(SAFETY_LAYOUT.header).forEach(function(key) {
+                var field = SAFETY_LAYOUT.header[key];
+                var input = document.createElement('input');
+                input.type = (key === 'date') ? 'date' : (key === 'time') ? 'time' : 'text';
+                input.className = 'pdf-input';
+                input.placeholder = headerLabels[key];
+                input.dataset.fieldId = 'header_' + key;
+                applyPosition(input, field);
+                input.addEventListener('input', function() {
+                    formData.header[key] = input.value;
+                });
+                overlay.appendChild(input);
+            });
+
+            // ====================
+            // 3. 評分格
+            // ====================
+            var ratingKeys = ['A', 'B', 'C', 'N/A'];
+
+            SAFETY_LAYOUT.sections.forEach(function(section) {
+                var startY = parseFloat(section.startY);
+                var rowH = parseFloat(section.rowHeight);
+                var cellH = parseFloat(section.cellHeight);
+
+                for (var i = 0; i < section.itemCount; i++) {
+                    var top = startY + i * rowH;
+
+                    ratingKeys.forEach(function(rating) {
+                        var col = SAFETY_LAYOUT.ratingColumns[rating];
+                        var cell = document.createElement('div');
+                        cell.className = 'rating-cell';
+                        cell.dataset.key = section.letter + '_' + i;
+                        cell.dataset.rating = rating;
+                        cell.innerHTML = '<span class="tick">✓</span>';
+                        applyPosition(cell, {
+                            left: col.left,
+                            top: top + '%',
+                            width: col.width,
+                            height: cellH + '%'
+                        });
+
+                        cell.addEventListener('click', function() {
+                            var k = cell.dataset.key;
+                            var r = cell.dataset.rating;
+                            var wasActive = cell.classList.contains('active');
+
+                            overlay.querySelectorAll('.rating-cell[data-key="' + k + '"]').forEach(function(c) {
+                                c.classList.remove('active');
+                            });
+
+                            if (wasActive) {
+                                delete formData.ratings[k];
+                            } else {
+                                cell.classList.add('active');
+                                formData.ratings[k] = r;
+                            }
+                        });
+
+                        overlay.appendChild(cell);
+                    });
+                }
+            });
+
+            wrapper.appendChild(overlay);
+            console.log('[Demo v3] ✓ 表單已注入');
+        }
+
+        loadPdf();
+    })();
+    </script>
+
+</body>
+</html>

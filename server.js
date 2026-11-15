@@ -36,7 +36,7 @@ const DB_CONFIG = {
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'dwss',
   waitForConnections: true,
-  connectionLimit: 4,
+  connectionLimit: 10,
   queueLimit: 0
 };
 

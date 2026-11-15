@@ -1,0 +1,445 @@
+// ===== Site Diary Document Viewer (PDF.js + Annotations) =====
+(function () {
+    'use strict';
+
+    // ---------- 全局变量 ----------
+    let pdfDoc = null;
+    let currentPage = 1;
+    let totalPages = 0;
+    let annotations = [];
+    let currentDocId = null;
+
+    const baseScale = 1.0;
+    const renderScale = 2.0;
+
+    // ---------- DOM 引用（稍後在 DOMContentLoaded 指派） ----------
+    let pdfCanvas, annoCanvas, textContainer, ctx, annoCtx,
+        loadingEl, errorEl, noPdfEl, controlsEl,
+        currentPageSpan, totalPagesSpan, printBtn, downloadBtn;
+
+    // ---------- 辅助函数 ----------
+    function syncGlobalDate() {
+        const stored = sessionStorage.getItem('globalDate');
+        const span = document.querySelector('.date-display span');
+        if (stored && span) span.textContent = stored;
+        else if (span) {
+            span.textContent = new Date().toLocaleDateString('en-US', {
+                year: 'numeric', month: 'long', day: 'numeric'
+            });
+        }
+    }
+
+    function loadAnnotationsFromStorage(docId) {
+        const STORAGE_KEY = 'siteDiaryData';
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (!stored) return [];
+        try {
+            const diaryData = JSON.parse(stored);
+            const doc = diaryData.find(d => String(d.id) === String(docId));
+            return doc && doc.annotations ? doc.annotations : [];
+        } catch (e) {
+            console.error('Failed to load annotations:', e);
+            return [];
+        }
+    }
+
+    // ★★★ 從多個 sessionStorage key 讀取（含 fallback） ★★★
+    function getDocumentData() {
+        var keys = [
+            'currentDocument',
+            'viewDocument',
+            'editDocument',
+            'currentDiaryRecord',
+            'currentRecord',
+            'currentWageRecord'
+        ];
+        for (var i = 0; i < keys.length; i++) {
+            var raw = sessionStorage.getItem(keys[i]);
+            if (!raw) continue;
+            try {
+                var d = JSON.parse(raw);
+                if (d && d.id) {
+                    console.log('[sitediarydocument] loaded from key:', keys[i], '→ id:', d.id);
+                    return d;
+                }
+            } catch (e) { /* try next */ }
+        }
+        return null;
+    }
+
+    // ---------- 绘制非文本注释 ----------
+    function drawAnnotation(anno, scale) {
+        if (!annoCtx) return;
+        const ctx = annoCtx;
+
+        switch (anno.type) {
+            case 'highlight':
+                ctx.save();
+                ctx.globalAlpha = (anno.opacity || 100) / 100 * 0.4;
+                ctx.strokeStyle = anno.color || '#3498db';
+                ctx.lineWidth = (anno.size || 3) * scale;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                if (anno.points && anno.points.length > 1) {
+                    ctx.beginPath();
+                    const first = anno.points[0];
+                    ctx.moveTo(first.x * scale, first.y * scale);
+                    for (let i = 1; i < anno.points.length; i++) {
+                        ctx.lineTo(anno.points[i].x * scale, anno.points[i].y * scale);
+                    }
+                    ctx.stroke();
+                }
+                ctx.restore();
+                break;
+            case 'rectangle':
+                ctx.save();
+                ctx.globalAlpha = (anno.opacity || 100) / 100;
+                ctx.strokeStyle = anno.color || '#3498db';
+                ctx.lineWidth = (anno.size || 3) * scale;
+                if (anno.startX !== undefined && anno.endX !== undefined) {
+                    const x = Math.min(anno.startX, anno.endX) * scale;
+                    const y = Math.min(anno.startY, anno.endY) * scale;
+                    const w = Math.abs(anno.endX - anno.startX) * scale;
+                    const h = Math.abs(anno.endY - anno.startY) * scale;
+                    ctx.strokeRect(x, y, w, h);
+                }
+                ctx.restore();
+                break;
+            case 'ellipse':
+                ctx.save();
+                ctx.globalAlpha = (anno.opacity || 100) / 100;
+                ctx.strokeStyle = anno.color || '#3498db';
+                ctx.lineWidth = (anno.size || 3) * scale;
+                if (anno.startX !== undefined && anno.endX !== undefined) {
+                    const cx = (anno.startX + anno.endX) / 2 * scale;
+                    const cy = (anno.startY + anno.endY) / 2 * scale;
+                    const rx = Math.abs(anno.endX - anno.startX) / 2 * scale;
+                    const ry = Math.abs(anno.endY - anno.startY) / 2 * scale;
+                    ctx.beginPath();
+                    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                ctx.restore();
+                break;
+            case 'arrow':
+                ctx.save();
+                ctx.globalAlpha = (anno.opacity || 100) / 100;
+                ctx.strokeStyle = anno.color || '#3498db';
+                ctx.fillStyle = anno.color || '#3498db';
+                ctx.lineWidth = (anno.size || 3) * scale;
+                if (anno.startX !== undefined && anno.endX !== undefined) {
+                    const fromX = anno.startX * scale;
+                    const fromY = anno.startY * scale;
+                    const toX = anno.endX * scale;
+                    const toY = anno.endY * scale;
+                    ctx.beginPath();
+                    ctx.moveTo(fromX, fromY);
+                    ctx.lineTo(toX, toY);
+                    ctx.stroke();
+                    const angle = Math.atan2(toY - fromY, toX - fromX);
+                    const headLen = 10 * scale / 2;
+                    ctx.beginPath();
+                    ctx.moveTo(toX, toY);
+                    ctx.lineTo(toX - headLen * Math.cos(angle - 0.5), toY - headLen * Math.sin(angle - 0.5));
+                    ctx.moveTo(toX, toY);
+                    ctx.lineTo(toX - headLen * Math.cos(angle + 0.5), toY - headLen * Math.sin(angle + 0.5));
+                    ctx.stroke();
+                }
+                ctx.restore();
+                break;
+            case 'line':
+                ctx.save();
+                ctx.globalAlpha = (anno.opacity || 100) / 100;
+                ctx.strokeStyle = anno.color || '#3498db';
+                ctx.lineWidth = (anno.size || 3) * scale;
+                if (anno.startX !== undefined && anno.endX !== undefined) {
+                    ctx.beginPath();
+                    ctx.moveTo(anno.startX * scale, anno.startY * scale);
+                    ctx.lineTo(anno.endX * scale, anno.endY * scale);
+                    ctx.stroke();
+                }
+                ctx.restore();
+                break;
+            default:
+                break;
+        }
+    }
+
+    function redrawAnnotations(scale) {
+        if (!annoCtx) return;
+        annoCtx.clearRect(0, 0, annoCanvas.width, annoCanvas.height);
+        annotations.forEach(anno => {
+            if (anno.type !== 'text') {
+                if (anno.page !== undefined && anno.page !== currentPage) return;
+                if (anno.page === undefined && currentPage !== 1) return;
+                drawAnnotation(anno, scale);
+            }
+        });
+    }
+
+    function renderTextAnnotations(scale) {
+        if (!textContainer) return;
+        textContainer.innerHTML = '';
+        const textAnnos = annotations.filter(a =>
+            a.type === 'text' &&
+            (a.page === currentPage || (a.page === undefined && currentPage === 1))
+        );
+        textAnnos.forEach(anno => {
+            const el = document.createElement('div');
+            el.className = 'text-annotation-view';
+            el.textContent = anno.text || '';
+            el.style.color = anno.color || '#000000';
+            el.style.opacity = (anno.opacity || 100) / 100;
+            el.style.fontSize = (anno.size * 4 * scale) + 'px';
+            el.style.left = (anno.x * scale) + 'px';
+            el.style.top = (anno.y * scale) + 'px';
+            textContainer.appendChild(el);
+        });
+    }
+
+    function fitToWidth() {
+        return Promise.resolve();
+    }
+
+    function renderPage(pageNum) {
+        if (!pdfDoc) return Promise.reject('No PDF document');
+        return pdfDoc.getPage(pageNum).then(page => {
+            const viewport = page.getViewport({ scale: renderScale });
+            const cssViewport = page.getViewport({ scale: baseScale });
+
+            pdfCanvas.width = viewport.width;
+            pdfCanvas.height = viewport.height;
+            annoCanvas.width = viewport.width;
+            annoCanvas.height = viewport.height;
+
+            const widthPx = cssViewport.width + 'px';
+            const heightPx = cssViewport.height + 'px';
+
+            pdfCanvas.style.width = widthPx;
+            pdfCanvas.style.height = heightPx;
+            annoCanvas.style.width = widthPx;
+            annoCanvas.style.height = heightPx;
+
+            const renderContext = { canvasContext: ctx, viewport: viewport };
+            return page.render(renderContext).promise;
+        }).then(() => {
+            const offsetX = pdfCanvas.offsetLeft || 0;
+            const offsetY = pdfCanvas.offsetTop || 0;
+
+            annoCanvas.style.left = offsetX + 'px';
+            annoCanvas.style.top = offsetY + 'px';
+
+            textContainer.style.left = offsetX + 'px';
+            textContainer.style.top = offsetY + 'px';
+            textContainer.style.width = pdfCanvas.style.width;
+            textContainer.style.height = pdfCanvas.style.height;
+
+            currentPageSpan.textContent = pageNum;
+            currentPage = pageNum;
+
+            redrawAnnotations(renderScale);
+            renderTextAnnotations(baseScale);
+        }).catch(err => {
+            console.error('Render page error:', err);
+            throw err;
+        });
+    }
+
+    // ★★★ 用新的 fallback 讀取 ★★★
+    function loadDocument() {
+        var documentData = getDocumentData();
+
+        if (!documentData) {
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (errorEl) {
+                errorEl.textContent = 'No document data available. Please go back and select a record.';
+                errorEl.style.display = 'block';
+            }
+            return;
+        }
+
+        currentDocId = documentData.id;
+        var idEl = document.getElementById('docId');
+        if (idEl) idEl.textContent = documentData.id || 'N/A';
+        var titleEl = document.getElementById('docTitle');
+        if (titleEl) titleEl.textContent = (documentData.site || '') + ' - ' + (documentData.type || '');
+        var siteEl = document.getElementById('docSite');
+        if (siteEl) siteEl.textContent = documentData.site || 'N/A';
+        var dateEl = document.getElementById('docDate');
+        if (dateEl) dateEl.textContent = documentData.date || 'N/A';
+        var authorEl = document.getElementById('docAuthor');
+        if (authorEl) authorEl.textContent = documentData.submittedBy || 'N/A';
+        var statusEl = document.getElementById('docStatus');
+        if (statusEl) {
+            statusEl.textContent = documentData.statusText || 'Draft';
+            statusEl.className = 'doc-status';
+        }
+
+        annotations = documentData.annotations
+            || loadAnnotationsFromStorage(currentDocId);
+
+        let pdfSrc = documentData.pdfData || documentData.pdfUrl || null;
+        if (!pdfSrc) {
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (noPdfEl) noPdfEl.style.display = 'block';
+            if (printBtn) printBtn.style.display = 'none';
+            if (downloadBtn) downloadBtn.style.display = 'none';
+            return;
+        }
+
+        let pdfSource;
+        if (typeof pdfSrc === 'string' && pdfSrc.startsWith('data:application/pdf;base64,')) {
+            pdfSource = { url: pdfSrc };
+        } else if (typeof pdfSrc === 'string' && pdfSrc.length > 1000 && !pdfSrc.startsWith('http')) {
+            try {
+                const binary = atob(pdfSrc);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                pdfSource = { data: bytes };
+            } catch (e) {
+                if (loadingEl) loadingEl.style.display = 'none';
+                if (errorEl) {
+                    errorEl.textContent = 'Invalid PDF data (Base64 decode failed).';
+                    errorEl.style.display = 'block';
+                }
+                return;
+            }
+        } else {
+            pdfSource = { url: pdfSrc };
+        }
+
+        if (loadingEl) loadingEl.style.display = 'flex';
+        if (errorEl) errorEl.style.display = 'none';
+        if (noPdfEl) noPdfEl.style.display = 'none';
+        if (printBtn) printBtn.style.display = 'none';
+        if (downloadBtn) downloadBtn.style.display = 'none';
+
+        pdfjsLib.getDocument(pdfSource).promise.then(pdf => {
+            pdfDoc = pdf;
+            totalPages = pdf.numPages;
+            if (totalPagesSpan) totalPagesSpan.textContent = totalPages;
+            currentPage = 1;
+            if (controlsEl) controlsEl.style.display = 'flex';
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (printBtn) printBtn.style.display = 'inline-flex';
+            if (downloadBtn) downloadBtn.style.display = 'inline-flex';
+
+            return fitToWidth().then(() => renderPage(currentPage));
+        }).catch(err => {
+            console.error('PDF loading error:', err);
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (errorEl) {
+                errorEl.textContent = 'Failed to load PDF: ' + (err.message || 'Unknown error');
+                errorEl.style.display = 'block';
+            }
+            if (printBtn) printBtn.style.display = 'none';
+            if (downloadBtn) downloadBtn.style.display = 'none';
+        });
+    }
+
+    async function generateAnnotatedPDF() {
+        const wrapper = document.getElementById('pdf-canvas-wrapper');
+        if (!wrapper) { alert('PDF content not available.'); throw new Error('No wrapper'); }
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
+        let firstPage = true;
+
+        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+            await renderPage(pageNum);
+            await new Promise(resolve => requestAnimationFrame(resolve));
+            const canvas = await html2canvas(wrapper, {
+                scale: 2.0, useCORS: true, backgroundColor: '#ffffff', logging: false
+            });
+            const imgData = canvas.toDataURL('image/jpeg', 0.85);
+            const imgWidth = 210;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            if (firstPage) {
+                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
+                firstPage = false;
+            } else {
+                pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
+            }
+        }
+        await renderPage(1);
+        return pdf;
+    }
+
+    async function saveAsPDF(pdf) {
+        if (window.showSaveFilePicker) {
+            try {
+                const blob = pdf.output('blob');
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: 'document_with_annotations.pdf',
+                    types: [{ description: 'PDF Document', accept: { 'application/pdf': ['.pdf'] } }]
+                });
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                return;
+            } catch (err) {
+                console.warn('Save file picker failed, falling back to default download.', err);
+            }
+        }
+        pdf.save('document_with_annotations.pdf');
+    }
+
+    function printPDF() {
+        generateAnnotatedPDF().then(pdf => {
+            const pdfBlob = pdf.output('blob');
+            const url = URL.createObjectURL(pdfBlob);
+            const win = window.open(url, '_blank');
+            if (win) { win.onload = function () { win.print(); }; }
+            else { alert('Please allow pop-ups to print.'); }
+        }).catch(err => { alert('Print failed: ' + err.message); });
+    }
+
+    function downloadPDF() {
+        generateAnnotatedPDF()
+            .then(pdf => saveAsPDF(pdf))
+            .catch(err => alert('Download failed: ' + err.message));
+    }
+
+    function setupControls() {
+        const prevBtn = document.getElementById('pdf-prev');
+        const nextBtn = document.getElementById('pdf-next');
+        if (prevBtn) prevBtn.addEventListener('click', () => { if (currentPage > 1) renderPage(currentPage - 1); });
+        if (nextBtn) nextBtn.addEventListener('click', () => { if (currentPage < totalPages) renderPage(currentPage + 1); });
+    }
+
+    function bindEvents() {
+        const backBtn = document.getElementById('back-to-diary-btn');
+        if (backBtn) {
+            backBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                window.location.href = 'sitediary.html';
+            });
+        }
+        if (printBtn) printBtn.addEventListener('click', printPDF);
+        if (downloadBtn) downloadBtn.addEventListener('click', downloadPDF);
+    }
+
+    // ---------- ★ DOMContentLoaded: 拿 DOM refs + 啟動 ----------
+    document.addEventListener('DOMContentLoaded', function () {
+        pdfCanvas     = document.getElementById('pdf-canvas');
+        annoCanvas    = document.getElementById('annotation-canvas');
+        textContainer = document.getElementById('text-annotation-container');
+        ctx           = pdfCanvas  ? pdfCanvas.getContext('2d')  : null;
+        annoCtx       = annoCanvas ? annoCanvas.getContext('2d') : null;
+
+        loadingEl       = document.getElementById('pdf-loading');
+        errorEl         = document.getElementById('pdf-error');
+        noPdfEl         = document.getElementById('no-pdf-message');
+        controlsEl      = document.getElementById('pdf-controls');
+        currentPageSpan = document.getElementById('pdf-current-page');
+        totalPagesSpan  = document.getElementById('pdf-total-pages');
+        printBtn        = document.getElementById('print-pdf-btn');
+        downloadBtn     = document.getElementById('download-pdf-btn');
+
+        syncGlobalDate();
+        loadDocument();
+        setupControls();
+        bindEvents();
+    });
+})();
