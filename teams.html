@@ -369,14 +369,23 @@
         })();
     </script>
 
-    <!-- 日期同步 -->
+    <!-- 日期同步 & 強制顯示名字 -->
     <script>
-        (function() {
-            const storedDate = sessionStorage.getItem('globalDate');
-            const dateSpan = document.querySelector('.date-display span');
+        document.addEventListener('DOMContentLoaded', function() {
+            // ★ 強制顯示右上角名字
+            var s = {};
+            try { s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch(e) {}
+            var nameSpan = document.querySelector('.header-username');
+            if (nameSpan && s.name) {
+                nameSpan.textContent = s.name;
+            }
+
+            // 日期
+            var storedDate = sessionStorage.getItem('globalDate');
+            var dateSpan = document.querySelector('.date-display span');
             if (storedDate && dateSpan) dateSpan.textContent = storedDate;
             else if (dateSpan) dateSpan.textContent = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
-        })();
+        });
     </script>
 </body>
 </html>
