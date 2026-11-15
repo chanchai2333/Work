@@ -1,4 +1,4 @@
-    async function updateUserContractsAPI(userId, username, newProjectIds) {
+async function updateUserContractsAPI(userId, username, newProjectIds) {
         try {
             const session = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
             const res = await fetch('/api/users/upsert', {
@@ -489,10 +489,19 @@
         selectedIds.forEach(function (id) { selectedSet[id] = true; });
         list.innerHTML = '';
         if (!users.length) loadUsers();
+        
+        // 清空搜尋框
+        var searchInput = document.getElementById('contract-users-search');
+        if (searchInput) searchInput.value = '';
+
         users.forEach(function (u) {
             if (u.role === 'admin') return;
             var uid = normalizeUserId(u.id);
             var label = document.createElement('label');
+            
+            // ★ 加上 Class 供搜尋使用
+            label.className = 'contract-user-row'; 
+            
             label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid #f1f5f9;cursor:pointer;';
             var cb = document.createElement('input');
             cb.type = 'checkbox'; cb.className = 'contract-user-cb'; cb.value = String(u.id);
@@ -506,6 +515,7 @@
         });
         if (!list.children.length) list.innerHTML = '<div style="padding:8px;color:#94a3b8;">No users available.</div>';
     }
+    
     function getContractSelectedUserIds() {
         var ids = [];
         document.querySelectorAll('.contract-user-cb:checked').forEach(function (cb) { ids.push(normalizeUserId(cb.value)); });
@@ -524,38 +534,82 @@
         renderContractUserPicker([]);
         modal.style.display = 'flex';
     }
+
     function openEditContractModal(contractNo) {
-        if (!currentIsSystemAdmin()) { alert('Only System Admin can edit a contract.'); return; }
+        var isAdmin = currentIsSystemAdmin();
+        var isProjectAdmin = currentIsProjectAdmin();
+        if (!isAdmin && !isProjectAdmin) {
+            alert('You do not have permission to edit a contract.');
+            return;
+        }
         var c = contracts.find(function (x) { return (x.contractNo || x.id) === contractNo; });
         if (!c) return;
+
+        // ★ Project Admin 只能編輯自己被指派的合約
+        if (!isAdmin && isProjectAdmin) {
+            var cu = window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser
+                ? window.DWSS_Permissions.getCurrentUser() : null;
+            var pids = (cu && cu.projectIds) || [];
+            if (pids.indexOf(contractNo) === -1) {
+                alert('You can only edit contracts assigned to you.');
+                return;
+            }
+        }
+
         document.getElementById('contract-modal-title').innerHTML = '<i class="fas fa-edit"></i> Edit Contract';
         document.getElementById('contract-no-input').value = c.contractNo || c.id;
         document.getElementById('contract-no-input').readOnly = true;
         document.getElementById('contract-name-input').value = c.name || '';
         document.getElementById('contract-form').dataset.editing = c.contractNo || c.id;
-        var assigned = users.filter(function (u) { return (u.projectIds || []).indexOf(contractNo) !== -1; }).map(function (u) { return u.id; });
+
+        var assigned = users.filter(function (u) {
+            return (u.projectIds || []).indexOf(contractNo) !== -1;
+        }).map(function (u) { return u.id; });
+        
         renderContractUserPicker(assigned);
+
         document.getElementById('contract-modal').style.display = 'flex';
     }
+
     async function saveContract(e) {
         e.preventDefault();
-        if (!currentIsSystemAdmin()) { alert('Only System Admin can save a contract.'); return; }
+        var isAdmin = currentIsSystemAdmin();
+        var isProjectAdmin = currentIsProjectAdmin();
+        if (!isAdmin && !isProjectAdmin) {
+            alert('You do not have permission to save a contract.');
+            return;
+        }
+
         var no = document.getElementById('contract-no-input').value.trim();
         var name = document.getElementById('contract-name-input').value.trim();
         if (!no) { alert('Please enter Contract No.'); return; }
         if (!name) { alert('Please enter Contract Name.'); return; }
+
         var editing = document.getElementById('contract-form').dataset.editing || '';
-        
+
+        // ★ 如果是 Project Admin，先驗證他是否有權限編輯此合約
+        if (!isAdmin) {
+            if (!editing) { alert('You do not have permission to create a contract.'); return; }
+            var cu = window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser
+                ? window.DWSS_Permissions.getCurrentUser() : null;
+            var pids = (cu && cu.projectIds) || [];
+            if (pids.indexOf(editing) === -1) {
+                alert('You can only edit contracts assigned to you.');
+                return;
+            }
+        }
+
+        // === 以下是共同邏輯（System Admin 與 Project Admin 皆適用）===
+
         var selectedIds = getContractSelectedUserIds();
-        
-        var previouslyAssigned = users.filter(function (u) { 
-            return (u.projectIds || []).indexOf(no) !== -1; 
+        var previouslyAssigned = users.filter(function (u) {
+            return (u.projectIds || []).indexOf(no) !== -1;
         }).map(function (u) { return normalizeUserId(u.id); });
 
         var promises = [];
         
         // 1. 將所有勾選的人加入專案
-        selectedIds.forEach(function(id) {
+        selectedIds.forEach(function (id) {
             var u = findUserById(id);
             if (u) {
                 if (!Array.isArray(u.projectIds)) u.projectIds = [];
@@ -565,17 +619,17 @@
         });
         
         // 2. 將取消勾選的人從專案移除
-        previouslyAssigned.forEach(function(id) {
+        previouslyAssigned.forEach(function (id) {
             if (selectedIds.indexOf(id) === -1) {
                 var u = findUserById(id);
                 if (u && u.projectIds) {
-                    u.projectIds = u.projectIds.filter(function(pid) { return pid !== no; });
+                    u.projectIds = u.projectIds.filter(function (pid) { return pid !== no; });
                     promises.push(updateUserContractsAPI(u.id, u.username, u.projectIds));
                 }
             }
         });
 
-        // 保存合約本身
+        // 3. 保存合約本身
         if (!editing) {
             if (contracts.some(function (c) { return (c.contractNo || c.id).toLowerCase() === no.toLowerCase(); })) {
                 alert('Contract No. already exists: ' + no); return;
@@ -594,7 +648,7 @@
             localStorage.setItem(USERS_KEY_LEGACY, JSON.stringify(users));
         } catch (e) {}
 
-        // 3. 等待所有 API 請求完成，並檢查是否成功
+        // 4. 等待所有 API 請求完成
         const results = await Promise.all(promises);
         if (results.includes(false)) {
             alert('⚠ 部分用戶的專案權限同步失敗，請檢查網路連線或 Console 錯誤。');
@@ -603,6 +657,7 @@
             alert('✅ 合約與用戶權限已成功同步到伺服器。');
         }
     }
+
     function removeContractFromAllUsers(contractNo) {
         if (!contractNo) return;
         if (!users.length) loadUsers();
@@ -615,6 +670,7 @@
             localStorage.setItem(USERS_KEY_LEGACY, JSON.stringify(users));
         } catch (e) {}
     }
+    
     function deleteContract(contractNo) {
         if (!currentIsSystemAdmin()) { alert('Only System Admin can delete a contract.'); return; }
         var linked = teams.filter(function (tm) { return tm.contractNo === contractNo; });
@@ -643,14 +699,26 @@
         if (curPid && !currentIsSystemAdmin()) {
             contractView = contracts.filter(function (c) { return (c.contractNo || c.id) === curPid; });
         }
+        var isAdmin = currentIsSystemAdmin();
+        var isProjectAdmin = currentIsProjectAdmin();
         contractView.forEach(function (c) {
             var code = c.contractNo || c.id;
             var teamCount = teams.filter(function (tm) { return tm.contractNo === code; }).length;
             var row = tbody.insertRow();
-            var actions = currentIsSystemAdmin()
-                ? ('<button class="action-btn edit-contract-btn" data-cno="' + code + '"><i class="fas fa-edit"></i></button> ' +
-                   '<button class="action-btn delete-contract-btn" data-cno="' + code + '" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;"><i class="fas fa-trash"></i></button>')
-                : '—';
+
+            // ★ Project Admin 也可看到 Edit；Delete 僅限 System Admin
+            var actions = '';
+            if (isAdmin || isProjectAdmin) {
+                actions += '<button class="action-btn edit-contract-btn" data-cno="' + code +
+                           '"><i class="fas fa-edit"></i></button>';
+            }
+            if (isAdmin) {
+                actions += ' <button class="action-btn delete-contract-btn" data-cno="' + code +
+                           '" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;">' +
+                           '<i class="fas fa-trash"></i></button>';
+            }
+            if (!actions) actions = '—';
+
             row.innerHTML = '<td><code>' + escapeHtml(code) + '</code></td><td>' + escapeHtml(c.name || '') +
                 '</td><td>' + teamCount + ' team(s)</td><td>' + actions + '</td>';
         });
@@ -827,6 +895,49 @@
             });
             var contractForm = document.getElementById('contract-form');
             if (contractForm) contractForm.addEventListener('submit', saveContract);
+            
+            // 綁定合約使用者的搜尋與全選功能
+            var cSearch = document.getElementById('contract-users-search');
+            if (cSearch) {
+                cSearch.addEventListener('input', function() {
+                    var val = this.value.toLowerCase();
+                    var labels = document.querySelectorAll('.contract-user-row');
+                    labels.forEach(function(lbl) {
+                        lbl.style.display = lbl.textContent.toLowerCase().indexOf(val) > -1 ? 'flex' : 'none';
+                    });
+                });
+            }
+
+            var cAll = document.getElementById('contract-users-select-all');
+            if (cAll) {
+                cAll.addEventListener('click', function() {
+                    var labels = document.querySelectorAll('.contract-user-row');
+                    labels.forEach(function(lbl) {
+                        if (lbl.style.display !== 'none') {
+                            var cb = lbl.querySelector('input');
+                            if (cb && !cb.checked) {
+                                cb.checked = true;
+                                // 觸發 change 事件以確保樣式更新（如果有使用的話）
+                                cb.dispatchEvent(new Event('change'));
+                            }
+                        }
+                    });
+                });
+            }
+
+            var cClear = document.getElementById('contract-users-clear-all');
+            if (cClear) {
+                cClear.addEventListener('click', function() {
+                    var cbs = document.querySelectorAll('.contract-user-cb');
+                    cbs.forEach(function(cb) { 
+                        if (cb.checked) {
+                            cb.checked = false; 
+                            cb.dispatchEvent(new Event('change'));
+                        }
+                    });
+                });
+            }
+
             renderContractsTable();
             fillContractSelect();
             document.querySelector('.refresh-btn')?.addEventListener('click', refreshTable);
@@ -853,7 +964,6 @@
                     try { c = window.DWSS_Storage.getCache ? window.DWSS_Storage.getCache(TEAMS_KEY) : null; } catch (e) {}
                     if (Array.isArray(c)) {
                         var isActuallyCloud = isCloudMode();
-                        // 如果雲端資料 > 0，則 skipSeed = true；如果是空，則 skipSeed = false 允許初始化。
                         doInit(isActuallyCloud && c.length > 0);
                         return;
                     }
