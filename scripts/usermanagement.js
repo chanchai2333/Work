@@ -358,9 +358,9 @@
                                 html += '<button class="action-btn delete-user-btn" data-id="' + user.id + '" title="Delete" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;"><i class="fas fa-trash"></i></button>';
                             }
                             // 管理員如果是看自己，也給一個改密碼按鈕
-                            if (isSelf) {
+                            //if (isSelf) {
                                 html += '<button class="action-btn change-password-btn" data-id="' + user.id + '" title="Change My Password" style="background:#3b82f6;color:#fff;"><i class="fas fa-key"></i></button>';
-                            }
+                            //}
                             return html;
                         } else if (isSelf) {
                             // 普通用戶（任何 Role）：只要看自己，就只有改密碼按鈕
@@ -912,8 +912,27 @@
             }
         },
 
-        openChangePasswordModal: function () {
+        openChangePasswordModal: function (targetUserId) {
+            var cu = window.DWSS_Permissions.getCurrentUser();
+            if (!cu) return;
+            
             var modal = document.getElementById('change-password-modal');
+            var oldPwdInput = document.getElementById('old-password-input');
+            
+            // 判斷是否為「修改自己」的密碼
+            var isSelf = String(targetUserId) === String(cu.id) || (cu.username && String(targetUserId) === String(cu.username));
+            
+            if (isSelf) {
+                oldPwdInput.parentElement.style.display = 'block';
+                oldPwdInput.required = true;
+            } else {
+                // 管理員改別人密碼，不需要舊密碼
+                oldPwdInput.parentElement.style.display = 'none';
+                oldPwdInput.required = false;
+            }
+
+            this._targetUserId = targetUserId; // 記錄目前要改誰的密碼
+
             if (modal) {
                 document.getElementById('old-password-input').value = '';
                 document.getElementById('new-password-input').value = '';
@@ -928,46 +947,19 @@
             var oldPwd = document.getElementById('old-password-input').value;
             var newPwd = document.getElementById('new-password-input').value;
             var confirmPwd = document.getElementById('confirm-password-input').value;
-
             var cu = window.DWSS_Permissions.getCurrentUser();
             if (!cu) return;
 
-            var latestUsers = [];
-            try {
-                latestUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-            } catch(err) {}
+            var targetUserId = this._targetUserId || cu.id;
+            var isSelf = String(targetUserId) === String(cu.id) || (cu.username && String(targetUserId) === String(cu.username));
 
-            // 放寬比對條件，確保能找到自己 (嚴格避開 Email)
-            var user = latestUsers.find(function (u) { 
-                return (cu.id != null && String(u.id) === String(cu.id)) || 
-                       (u.username && cu.username && String(u.username).toLowerCase() === String(cu.username).toLowerCase());
-            });
-            
-            if (!user) {
-                user = this.users.find(function (u) { 
-                    return (cu.id != null && String(u.id) === String(cu.id)) || 
-                           (u.username && cu.username && String(u.username).toLowerCase() === String(cu.username).toLowerCase());
-                });
-            }
-            
-            if (!user) {
-                alert('User not found in database.');
-                return;
-            }
-
-            // 1. 驗證舊密碼
-            if (user.password !== oldPwd) {
-                alert('❌ Incorrect old password!');
-                return;
-            }
-
-            // 2. 驗證新密碼是否一致
+            // 1. 驗證兩次密碼是否一致
             if (newPwd !== confirmPwd) {
                 alert('❌ Passwords do not match!');
                 return;
             }
 
-            // 3. 驗證密碼強度 (使用 password.js)
+            // 2. 驗證密碼強度 (使用 password.js)
             if (window.DWSS_PasswordPolicy) {
                 var check = window.DWSS_PasswordPolicy.check(newPwd);
                 if (!check.valid) {
@@ -976,51 +968,63 @@
                 }
             }
 
-            // 4. 更新本地資料
-            user.password = newPwd;
-            if (window.DWSS_PasswordLifecycle) {
-                window.DWSS_PasswordLifecycle.updateMetadata(user); 
-            }
-            
-            var idx = this.users.findIndex(function(u) { 
-                return (user.id != null && String(u.id) === String(user.id)) || u.username === user.username; 
-            });
-            if (idx !== -1) {
-                this.users[idx] = user;
-            } else {
-                this.users.push(user);
-            }
-            
-            this.saveToStorage();
-
-            // 5. 同步到 Server
-            fetch('/api/users/upsert', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: user.id,
-                    username: user.username,
-                    password: newPwd,
-                    passwordChanged: user.passwordChanged,
-                    passwordChangedAt: user.passwordChangedAt,
-                    passwordExpiresAt: user.passwordExpiresAt
-                })
-            }).then(function(res) {
-                if (res.ok) {
+            if (isSelf) {
+                // ★ 修改自己：呼叫後端 change-password，由後端驗證舊密碼
+                fetch('/api/auth/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: cu.id,
+                        username: cu.username,
+                        currentPassword: oldPwd,
+                        newPassword: newPwd
+                    })
+                }).then(function(res) {
+                    if (!res.ok) {
+                        return res.json().then(function(err){ throw err; });
+                    }
+                    return res.json();
+                }).then(function() {
                     alert('✅ Password changed successfully! Please use it next time you log in.');
                     document.getElementById('change-password-modal').style.display = 'none';
-                } else {
-                    alert('❌ Failed to save to server.');
-                }
-            }).catch(function(err) {
-                console.error('Change password error:', err);
-                alert('❌ Network error while saving password.');
-            });
-
-            // 6. 更新 Session 狀態
-            cu.passwordChanged = true;
-            cu.password = newPwd;
-            sessionStorage.setItem('dwss_session', JSON.stringify(cu));
+                    
+                    // 更新 Session 狀態
+                    cu.passwordChanged = true;
+                    cu.password = newPwd;
+                    sessionStorage.setItem('dwss_session', JSON.stringify(cu));
+                    
+                    // 更新本地快取 (避免下次重整讀到舊的)
+                    var latestUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+                    var user = latestUsers.find(u => String(u.id) === String(cu.id));
+                    if (user) {
+                        user.password = newPwd;
+                        user.passwordChanged = true;
+                        localStorage.setItem(USERS_KEY, JSON.stringify(latestUsers));
+                    }
+                }).catch(function(err) {
+                    console.error(err);
+                    alert('❌ ' + (err.error === 'current_password_incorrect' ? 'Incorrect old password!' : 'Failed to change password.'));
+                });
+            } else {
+                // ★ 管理員修改他人密碼：呼叫後端 set-password，直接覆蓋
+                fetch('/api/users/set-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: targetUserId,
+                        newPassword: newPwd
+                    })
+                }).then(function(res) {
+                    if (!res.ok) throw new Error('Failed');
+                    return res.json();
+                }).then(function() {
+                    alert('✅ User password changed successfully!');
+                    document.getElementById('change-password-modal').style.display = 'none';
+                }).catch(function(err) {
+                    console.error(err);
+                    alert('❌ Failed to change password.');
+                });
+            }
         },
 
         handleSubmit: function () {
@@ -1205,7 +1209,7 @@
                 var newBtn = btn.cloneNode(true);
                 btn.parentNode.replaceChild(newBtn, btn);
                 newBtn.addEventListener('click', function () {
-                    self.openChangePasswordModal();
+                    self.openChangePasswordModal(this.getAttribute('data-id')); // 👈 傳入 user.id
                 });
             });
 
