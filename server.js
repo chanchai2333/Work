@@ -448,7 +448,7 @@ app.post('/api/auth/change-password', async (req, res) => {
   }
 });
 
-// ---------- Forgot Password API ----------
+// ---------- Forgot Password API (發送 6 位驗證碼) ----------
 app.post('/api/auth/forgot-password', async (req, res) => {
   if (!pool) return res.status(400).json({ error: 'no_database' });
   const email = String((req.body && req.body.email) || '').trim().toLowerCase();
@@ -470,57 +470,96 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     }
 
     if (!matched) {
-      return res.json({ ok: true, message: 'If the email exists, a reset link has been sent.' });
+      // 防止探測 Email，即使找不到也回傳成功
+      return res.json({ ok: true, message: 'If the email exists, a code has been sent.' });
     }
 
-    const token = require('crypto').randomBytes(32).toString('hex');
-    const expires = Date.now() + 30 * 60 * 1000;
+    // 1. 產生 6 位數驗證碼
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = Date.now() + 10 * 60 * 1000; // 10 分鐘後過期
 
+    // 2. 存入資料庫
     await pool.query(
-      `UPDATE records SET data = JSON_SET(data, '$.resetToken', ?, '$.resetTokenExpires', ?),
+      `UPDATE records SET data = JSON_SET(data, '$.resetCode', ?, '$.resetCodeExpires', ?),
        version = version + 1 WHERE collection = ? AND record_id = ?`,
-      [token, expires, matched.row.collection, matched.row.record_id]
+      [code, expires, matched.row.collection, matched.row.record_id]
     );
 
-    //const resetLink = `http://localhost:${PORT}/reset-password.html?token=${token}`;
-    //
-    //console.log('\n======================================================');
-    //console.log('📧 [Password Reset Request]');
-    //console.log('User:', matched.user.username, '(', matched.user.email, ')');
-    //console.log('Link:', resetLink);
-    //console.log('======================================================\n');
-//
-    //res.json({ ok: true, message: 'If the email exists, a reset link has been sent.' });
-
-        // 4. 產生重設連結
-    const resetLink = `http://localhost:${PORT}/reset-password.html?token=${token}`;
-    
-    // 5. 真正發送 Email
+    // 3. 發送驗證碼 Email
     try {
       await transporter.sendMail({
-        from: '"AEL DWSS System" <rstpsswrdvr@gmail.com>', // 👈 這裡也要換成你的 Gmail
-        to: matched.user.email, // 發送給該用戶的信箱
-        subject: 'AEL DWSS - 密碼重設請求 (Password Reset)',
+        from: '"AEL DWSS System" <rstpsswrdvr@gmail.com>', 
+        to: matched.user.email, 
+        subject: 'AEL DWSS - 密碼重設驗證碼 (Password Reset Code)',
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2>密碼重設請求</h2>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; text-align: center;">
+            <h2>密碼重設驗證碼</h2>
             <p>親愛的 ${matched.user.username}，您好：</p>
-            <p>我們收到了您重設 AEL DWSS 系統密碼的請求。</p>
-            <p>請點擊下方的按鈕來設定新密碼（此連結將在 30 分鐘後失效）：</p>
-            <a href="${resetLink}" style="display:inline-block; padding:10px 20px; background-color:#3498db; color:white; text-decoration:none; border-radius:5px; margin: 15px 0;">重設我的密碼</a>
-            <p>或者複製以下連結到瀏覽器打開：<br><a href="${resetLink}">${resetLink}</a></p>
-            <p style="color:#888; font-size:12px; margin-top:30px;">如果您沒有要求重設密碼，請忽略此信件。您的帳號依然安全。</p>
+            <p>您正在要求重設 AEL DWSS 系統的密碼。</p>
+            <p>請在網頁中輸入以下 6 位數驗證碼（此驗證碼將在 10 分鐘後失效）：</p>
+            <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #3498db; margin: 20px 0;">
+              ${code}
+            </div>
+            <p style="color:#888; font-size:12px; margin-top:30px;">如果您沒有要求重設密碼，請忽略此信件。</p>
           </div>
         `
       });
-      console.log(`✅ [Mail] 重設密碼信件已成功發送至: ${matched.user.email}`);
+      console.log(`✅ [Mail] 驗證碼已成功發送至: ${matched.user.email}，驗證碼為: ${code}`);
     } catch (mailError) {
       console.error('❌ [Mail] 發信失敗:', mailError);
       return res.status(500).json({ error: 'email_send_failed', message: '信件發送失敗，請聯絡管理員。' });
     }
 
-    res.json({ ok: true, message: 'If the email exists, a reset link has been sent.' });
+    res.json({ ok: true, message: 'If the email exists, a code has been sent.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
+// ---------- 新增：驗證 6 位數代碼 API ----------
+app.post('/api/auth/verify-code', async (req, res) => {
+  if (!pool) return res.status(400).json({ error: 'no_database' });
+  const email = String((req.body && req.body.email) || '').trim().toLowerCase();
+  const code = String((req.body && req.body.code) || '').trim();
+
+  if (!email || !code) return res.status(400).json({ error: 'missing_fields' });
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT collection, record_id, data FROM records WHERE collection IN (?, ?)`,
+      ['usersDb', 'users']
+    );
+
+    let matched = null;
+    const now = Date.now();
+
+    for (const row of rows) {
+      const user = parseRecord(row.data);
+      if (user.email && String(user.email).toLowerCase() === email) {
+        if (user.resetCode === code && Number(user.resetCodeExpires) > now) {
+          matched = { row, user };
+        }
+        break;
+      }
+    }
+
+    if (!matched) {
+      return res.status(400).json({ error: 'invalid_code', message: '驗證碼錯誤或已過期。' });
+    }
+
+    // 驗證成功，產生一個一次性的 Token 給前端，讓前端去改密碼
+    const token = require('crypto').randomBytes(32).toString('hex');
+    const tokenExpires = Date.now() + 15 * 60 * 1000; // 15分鐘
+
+    await pool.query(
+      `UPDATE records SET data = JSON_SET(data, '$.resetToken', ?, '$.resetTokenExpires', ?, '$.resetCode', null, '$.resetCodeExpires', null),
+       version = version + 1 WHERE collection = ? AND record_id = ?`,
+      [token, tokenExpires, matched.row.collection, matched.row.record_id]
+    );
+
+    // 回傳 Token 給前端
+    res.json({ ok: true, token: token });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
