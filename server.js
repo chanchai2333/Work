@@ -4,6 +4,8 @@
  * - Per-record API with optimistic locking (version column)
  * - MariaDB when DB_PASSWORD is set; local/static mode otherwise
  */
+require('dotenv').config();  // 👈 加上这一行，它会自动读取 .env 文件
+
 const nodemailer = require('nodemailer');
 const express = require('express');
 const path = require('path');
@@ -14,15 +16,18 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 const ROOT = __dirname;
 
-// 設定你的發信信箱
+
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // 如果是公司信箱請填寫 host 和 port
-  auth: {
-    user: 'rstpsswrdvr@gmail.com', 
-    pass: 'oxazxugijxmvqubx' // 注意：這不是你的Gmail登入密碼，要去Google帳號安全性裡產生
-  },
-  debug: true, // 👈 新增這行，它會在終端機印出與 Gmail 伺服器的完整對話
-  logger: true // 👈 同時將調試信息記錄到控制台
+    host: 'smtp.office365.com',
+    port: 587,
+    secure: false,                 // 587 端口必须为 false，由 STARTTLS 加密
+    auth: {
+        user: 'info@ael.hk',       // 完整邮箱地址
+        pass: process.env.SMTP_PASS
+    },
+    tls: {
+        rejectUnauthorized: false  // 测试时可暂时保留，正式环境建议移除
+    }
 });
 
 app.use(express.json({ limit: '50mb' }));
@@ -489,12 +494,13 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     // 3. 發送驗證碼 Email
     try {
       await transporter.sendMail({
-        from: '"AEL DWSS System" <rstpsswrdvr@gmail.com>', 
+        from: '"AEL DWSS" <info@ael.hk>', 
         to: matched.user.email, 
-        subject: 'AEL DWSS - 密碼重設驗證碼 (Password Reset Code)',
+        subject: 'AEL DWSS - Password Reset Code',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; text-align: center;">
-            <h2>密碼重設驗證碼</h2>
+            <h2>Password Reset Code</h2>
+            <p>This is an automatic generated email message, please DO NOT reply.</p>
             <p>親愛的 ${matched.user.username}，您好：</p>
             <p>您正在要求重設 AEL DWSS 系統的密碼。</p>
             <p>請在網頁中輸入以下 6 位數驗證碼（此驗證碼將在 10 分鐘後失效）：</p>

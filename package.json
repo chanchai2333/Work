@@ -8,9 +8,10 @@
     "dev": "node server.js"
   },
   "dependencies": {
+    "dotenv": "^18.0.10",
     "express": "^4.21.0",
     "mysql2": "^3.11.0",
-    "nodemailer": "^10.5.0"
+    "nodemailer": "^10.6.0"
   },
   "engines": {
     "node": ">=18"
