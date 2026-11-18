@@ -958,47 +958,34 @@ function renderGF527_2017View() {
 
     var tbody = document.createElement('tbody');
 
-    // ★ 核心修改：加入 idx 區分同一 Item No. 的不同子行
-    function buildDayCells(no, idx) {
+    // ★ 核心修改：不需要 idx，每个 Item 只有一套天数输入
+    function buildDayCellsMerged(no, rowSpan) {
         var html = '';
         for (var day = 1; day <= 31; day++) {
-            // 兼容舊數據
-            var v = formData['gf5272017_row_' + no + '_' + idx + '_day_' + day];
-            if (v === undefined && idx === 0) v = formData['gf5272017_row_' + no + '_day_' + day];
-            if (!v) v = '';
-
+            var v = formData['gf5272017_row_' + no + '_day_' + day] || '';
+            // ★ 每个单元格加 rowspan
             html +=
-                '<td class="day-col">' +
+                '<td class="day-col" rowspan="' + rowSpan + '">' +
                     '<input type="text" inputmode="numeric" maxlength="3" class="gf5272017-day" ' +
-                    'data-row="' + no + '" data-idx="' + idx + '" data-day="' + day + '" value="' + escHTML(v) + '">' +
+                    'data-row="' + no + '" data-day="' + day + '" value="' + escHTML(v) + '">' +
                 '</td>';
         }
         return html;
     }
     
-    function buildTailCells(no, idx) {
-        var md = formData['gf5272017_row_' + no + '_' + idx + '_mandays'];
-        var ot = formData['gf5272017_row_' + no + '_' + idx + '_overtime'];
-        var avg = formData['gf5272017_row_' + no + '_' + idx + '_avg'];
-        var high = formData['gf5272017_row_' + no + '_' + idx + '_high'];
-        var low = formData['gf5272017_row_' + no + '_' + idx + '_low'];
-
-        // 兼容舊數據
-        if (idx === 0) {
-            if (md === undefined) md = formData['gf5272017_row_' + no + '_mandays'];
-            if (ot === undefined) ot = formData['gf5272017_row_' + no + '_overtime'];
-            if (avg === undefined) avg = formData['gf5272017_row_' + no + '_avg'];
-            if (high === undefined) high = formData['gf5272017_row_' + no + '_high'];
-            if (low === undefined) low = formData['gf5272017_row_' + no + '_low'];
-        }
-        md = md || ''; ot = ot || ''; avg = avg || ''; high = high || ''; low = low || '';
+    function buildTailCellsMerged(no, rowSpan) {
+        var md = formData['gf5272017_row_' + no + '_mandays'] || '';
+        var ot = formData['gf5272017_row_' + no + '_overtime'] || '';
+        var avg = formData['gf5272017_row_' + no + '_avg'] || '';
+        var high = formData['gf5272017_row_' + no + '_high'] || '';
+        var low = formData['gf5272017_row_' + no + '_low'] || '';
 
         return '' +
-            '<td class="total-col"><input type="text" inputmode="numeric" class="gf5272017-mandays" data-row="' + no + '" data-idx="' + idx + '" value="' + escHTML(md) + '"></td>' +
-            '<td class="ot-col"><input type="text" inputmode="numeric" class="gf5272017-overtime" data-row="' + no + '" data-idx="' + idx + '" value="' + escHTML(ot) + '"></td>' +
-            '<td class="wage-col"><input type="text" inputmode="decimal" class="gf5272017-avg"  data-row="' + no + '" data-idx="' + idx + '" value="' + escHTML(avg) + '"></td>' +
-            '<td class="wage-col"><input type="text" inputmode="decimal" class="gf5272017-high" data-row="' + no + '" data-idx="' + idx + '" value="' + escHTML(high) + '"></td>' +
-            '<td class="wage-col"><input type="text" inputmode="decimal" class="gf5272017-low"  data-row="' + no + '" data-idx="' + idx + '" value="' + escHTML(low) + '"></td>';
+            '<td class="total-col" rowspan="' + rowSpan + '"><input type="text" inputmode="numeric" class="gf5272017-mandays" data-row="' + no + '" value="' + escHTML(md) + '"></td>' +
+            '<td class="ot-col" rowspan="' + rowSpan + '"><input type="text" inputmode="numeric" class="gf5272017-overtime" data-row="' + no + '" value="' + escHTML(ot) + '"></td>' +
+            '<td class="wage-col" rowspan="' + rowSpan + '"><input type="text" inputmode="decimal" class="gf5272017-avg"  data-row="' + no + '" value="' + escHTML(avg) + '"></td>' +
+            '<td class="wage-col" rowspan="' + rowSpan + '"><input type="text" inputmode="decimal" class="gf5272017-high" data-row="' + no + '" value="' + escHTML(high) + '"></td>' +
+            '<td class="wage-col" rowspan="' + rowSpan + '"><input type="text" inputmode="decimal" class="gf5272017-low"  data-row="' + no + '" value="' + escHTML(low) + '"></td>';
     }
 
     GF527_2017_TRADES.forEach(function (group) {
@@ -1013,21 +1000,23 @@ function renderGF527_2017View() {
                 var nm = formData['gf5272017_row_' + no + '_name'] || '';
                 var cd = formData['gf5272017_row_' + no + '_code'] || '';
                 var tr = document.createElement('tr');
+                
+                // Others 固定只有一行，直接渲染
                 tr.innerHTML =
-                    '<td class="cell-no">' + no + '</td>' +
-                    '<td colspan="2" style="padding:2px 4px;text-align:left;white-space:nowrap;font-size:10px;">' +
+                    '<td class="cell-no" rowspan="' + rowSpan + '">' + no + '</td>' +
+                    '<td colspan="2" style="padding:2px 4px;text-align:left;white-space:nowrap;font-size:10px;" rowspan="' + rowSpan + '">' +
                         'Others <sup>29</sup>: trade name - ' +
                         '<input type="text" class="gf5272017-other-name cell-other-input" data-row="' + no + '" ' +
                         'value="' + escHTML(nm) + '" style="width:55%;display:inline-block;">' +
                     '</td>' +
-                    '<td colspan="2" style="padding:2px 4px;text-align:left;white-space:nowrap;font-size:10px;">' +
+                    '<td colspan="2" style="padding:2px 4px;text-align:left;white-space:nowrap;font-size:10px;" rowspan="' + rowSpan + '">' +
                         'code - ' +
                         '<input type="text" class="gf5272017-other-code cell-other-input" data-row="' + no + '" ' +
                         'value="' + escHTML(cd) + '" style="width:65%;display:inline-block;">' +
                     '</td>' +
-                    buildDayCells(no, idx) +
-                    buildTailCells(no, idx) +
-                    '<td class="cell-no">' + no + '</td>';
+                    buildDayCellsMerged(no, rowSpan) +
+                    buildTailCellsMerged(no, rowSpan) +
+                    '<td class="cell-no" rowspan="' + rowSpan + '">' + no + '</td>';
                 tbody.appendChild(tr);
             });
             return;
@@ -1043,14 +1032,16 @@ function renderGF527_2017View() {
             }
 
             var orig = item.orig === 'ü' ? '✓' : item.orig;
+            // 前三列 (Division, Orig, Rev) 永遠每行獨立
             tr.innerHTML +=
                 '<td class="cell-division">' + escHTML(item.division) + '</td>' +
                 '<td class="cell-orig">' + escHTML(orig) + '</td>' +
-                '<td class="cell-rev">' + escHTML(item.rev) + '</td>' +
-                buildDayCells(no, idx) +
-                buildTailCells(no, idx);
+                '<td class="cell-rev">' + escHTML(item.rev) + '</td>';
 
             if (idx === 0) {
+                // ★ 核心修改：只有第一行渲染合并的天数数据
+                tr.innerHTML += buildDayCellsMerged(no, rowSpan);
+                tr.innerHTML += buildTailCellsMerged(no, rowSpan);
                 tr.innerHTML += '<td class="cell-no" rowspan="' + rowSpan + '">' + no + '</td>';
             }
 
@@ -1127,56 +1118,49 @@ function renderGF527_2017View() {
         });
     }
 
-    // ★ 核心修改：基於 data-row 和 data-idx 精確計算
+    // ★ 核心修改：每天的数据只根据 data-row (即 Item No.) 计算
     view.querySelectorAll('.gf5272017-day').forEach(function (el) {
         el.addEventListener('input', function () {
             var row = el.dataset.row;
-            var idx = el.dataset.idx;
-            formData['gf5272017_row_' + row + '_' + idx + '_day_' + el.dataset.day] = el.value;
+            formData['gf5272017_row_' + row + '_day_' + el.dataset.day] = el.value;
 
-            // 自動計算 Total Man-days
+            // 自动计算 Total Man-days
             var sum = 0;
-            view.querySelectorAll('.gf5272017-day[data-row="' + row + '"][data-idx="' + idx + '"]').forEach(function (dEl) {
+            view.querySelectorAll('.gf5272017-day[data-row="' + row + '"]').forEach(function (dEl) {
                 var val = parseFloat(dEl.value);
                 if (!isNaN(val)) sum += val;
             });
-            var mdEl = view.querySelector('.gf5272017-mandays[data-row="' + row + '"][data-idx="' + idx + '"]');
+            var mdEl = view.querySelector('.gf5272017-mandays[data-row="' + row + '"]');
             if (mdEl) {
-                var finalVal = sum > 0 ? (Number.isInteger(sum) ? sum : sum.toFixed(2)) : '';
+                var finalVal = sum > 0 ? (Math.round(sum * 100) / 100) : '';
                 mdEl.value = finalVal;
-                formData['gf5272017_row_' + row + '_' + idx + '_mandays'] = finalVal;
+                formData['gf5272017_row_' + row + '_mandays'] = finalVal;
             }
             persistFormData();
         });
     });
 
-    // 其他欄位用原本的 bind 綁定，加入 idx 區分
-    bind('.gf5272017-mandays',    function (el) { return 'gf5272017_row_' + el.dataset.row + '_' + el.dataset.idx + '_mandays'; });
-    bind('.gf5272017-overtime',   function (el) { return 'gf5272017_row_' + el.dataset.row + '_' + el.dataset.idx + '_overtime'; });
-    bind('.gf5272017-avg',        function (el) { return 'gf5272017_row_' + el.dataset.row + '_' + el.dataset.idx + '_avg'; });
-    bind('.gf5272017-high',       function (el) { return 'gf5272017_row_' + el.dataset.row + '_' + el.dataset.idx + '_high'; });
-    bind('.gf5272017-low',        function (el) { return 'gf5272017_row_' + el.dataset.row + '_' + el.dataset.idx + '_low'; });
+    bind('.gf5272017-mandays',    function (el) { return 'gf5272017_row_' + el.dataset.row + '_mandays'; });
+    bind('.gf5272017-overtime',   function (el) { return 'gf5272017_row_' + el.dataset.row + '_overtime'; });
+    bind('.gf5272017-avg',        function (el) { return 'gf5272017_row_' + el.dataset.row + '_avg'; });
+    bind('.gf5272017-high',       function (el) { return 'gf5272017_row_' + el.dataset.row + '_high'; });
+    bind('.gf5272017-low',        function (el) { return 'gf5272017_row_' + el.dataset.row + '_low'; });
     bind('.gf5272017-other-name', function (el) { return 'gf5272017_row_' + el.dataset.row + '_name'; });
     bind('.gf5272017-other-code', function (el) { return 'gf5272017_row_' + el.dataset.row + '_code'; });
     bind('.gf5272017-telno',      function (el) { return el.dataset.row; });
 
-    // ★ 渲染完成後，初始化一次所有行的 Total Man-days
+    // 初始化一次计算
     view.querySelectorAll('.gf5272017-mandays').forEach(function(mdEl) {
         var row = mdEl.dataset.row;
-        var idx = mdEl.dataset.idx;
         var sum = 0;
-        var hasData = false;
-        
-        view.querySelectorAll('.gf5272017-day[data-row="' + row + '"][data-idx="' + idx + '"]').forEach(function(dEl) {
+        view.querySelectorAll('.gf5272017-day[data-row="' + row + '"]').forEach(function(dEl) {
             var val = parseFloat(dEl.value);
-            if (!isNaN(val)) { sum += val; hasData = true; }
+            if (!isNaN(val)) sum += val;
         });
-        
-        // 如果以前有輸入過天數，就重新計算並覆蓋
-        if (hasData) {
-            var finalVal = sum > 0 ? (Number.isInteger(sum) ? sum : sum.toFixed(2)) : '';
+        if (sum > 0) {
+            var finalVal = Number.isInteger(sum) ? sum : sum.toFixed(2);
             mdEl.value = finalVal;
-            formData['gf5272017_row_' + row + '_' + idx + '_mandays'] = finalVal;
+            formData['gf5272017_row_' + row + '_mandays'] = finalVal;
         }
     });
 

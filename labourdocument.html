@@ -1489,8 +1489,6 @@
 
                 var rows = xmlDoc.getElementsByTagNameNS(ns, "row");
                 
-                // --- 輔助函數：取得 Cell 的文字 ---
-                // --- 輔助函數：取得 Cell 的文字 (修復富文本被截斷的問題) ---
                 function getNodeText(node) {
                     if (!node) return "";
                     var isNode = node.getElementsByTagNameNS(ns, "is")[0];
@@ -1498,9 +1496,7 @@
                     if (isNode) {
                         var tNodes = isNode.getElementsByTagNameNS(ns, "t");
                         var text = "";
-                        for (var i = 0; i < tNodes.length; i++) {
-                            text += tNodes[i].textContent;
-                        }
+                        for (var i = 0; i < tNodes.length; i++) text += tNodes[i].textContent;
                         return text;
                     } else if (vNode) {
                         return vNode.textContent;
@@ -1508,7 +1504,6 @@
                     return "";
                 }
 
-                // --- 輔助函數：尋找特定 Column 的 Cell (例如 A7, E143) ---
                 function findCellByRef(ref) {
                     var rowNum = ref.replace(/\D+/g, '');
                     for (var i = 0; i < rows.length; i++) {
@@ -1522,11 +1517,14 @@
                     return null;
                 }
 
-                // --- 輔助函數：精準寫入 Cell 並保留原樣式 ---
+                // ★ 核心修复：完美保留原有边框、居中样式，并将数字以文本写入，彻底杜绝 .0 和小数点问题
                 function setXmlCellByRef(ref, text, isNum) {
-                    if (text === undefined || text === null || String(text).trim() === '') return;
+                    if (text === undefined || text === null) return;
                     var strVal = String(text).trim();
-                    if (isNum && !isNaN(strVal)) strVal = String(Math.round(Number(strVal)));
+                    if (isNum && !isNaN(strVal) && strVal !== '') {
+                        // 四舍五入取整，防止浮点数精度问题带来的长小数
+                        strVal = String(Math.round(Number(strVal)));
+                    }
 
                     var rowNum = parseInt(ref.replace(/\D+/g, ''), 10);
                     var rowNode = null;
@@ -1538,6 +1536,7 @@
                         }
                     }
                     if (!rowNode) {
+                        if (strVal === '') return;
                         rowNode = xmlDoc.createElementNS(ns, "row");
                         rowNode.setAttribute("r", rowNum);
                         var sheetData = xmlDoc.getElementsByTagNameNS(ns, "sheetData")[0];
@@ -1554,15 +1553,22 @@
                     }
 
                     if (!cNode) {
+                        if (strVal === '') return;
                         cNode = xmlDoc.createElementNS(ns, "c");
                         cNode.setAttribute("r", ref);
                         rowNode.appendChild(cNode);
                     }
 
+                    // 取得原本的樣式（例如 s="123"），保留邊框、置中對齊
                     var originalStyle = cNode.getAttribute("s");
+                    
+                    // 清空原本的內容（移除公式或舊數據）
                     while (cNode.firstChild) cNode.removeChild(cNode.firstChild);
+                    
+                    // 把樣式加回去
                     if (originalStyle) cNode.setAttribute("s", originalStyle);
                     
+                    // 強制設定為純文本格式，這樣就算原本格式是 0.0，也絕對不會顯示 .0
                     cNode.setAttribute("t", "inlineStr");
                     var isNode = xmlDoc.createElementNS(ns, "is");
                     var tNode = xmlDoc.createElementNS(ns, "t");
@@ -1571,220 +1577,116 @@
                     cNode.appendChild(isNode);
                 }
 
-                // ============================================================
-                // 1. 寫入表頭 (Row 7)
-                // ============================================================
-                var dept = (formData['gf5272017_dept'] || '').trim();
-                var div = (formData['gf5272017_div'] || '').trim();
-                var month = (formData['gf5272017_month'] || '').trim();
-                var year = (formData['gf5272017_year'] || '').trim();
-                var cNo = (formData['gf5272017_contractNo'] || '').replace(/Contract No.*/, '').replace(':', '').trim();
-                var cTitle = (formData['gf5272017_contractTitle'] || '').replace(/Contract Title.*/, '').replace(':', '').trim();
-                var cont = (formData['gf5272017_contractor'] || '').replace(/Contractor.*/, '').replace(':', '').trim();
-                var wCode = (formData['gf5272017_worksCode'] || '').replace(/Works Code.*/, '').replace(':', '').trim();
+                // 1. 表頭
+                setXmlCellByRef('A7', 'Dept/Div : ' + (formData['gf5272017_dept'] || '') + ' / ' + (formData['gf5272017_div'] || '') + '    Month/Year: ' + (formData['gf5272017_month'] || '') + ' / ' + (formData['gf5272017_year'] || ''), false);
+                setXmlCellByRef('E7', (formData['gf5272017_contractNo'] || '').trim(), false);
+                setXmlCellByRef('M4', (formData['gf5272017_contractTitle'] || '').trim(), false);
+                setXmlCellByRef('X4', (formData['gf5272017_contractor'] || '').trim(), false);
+                setXmlCellByRef('AM7', (formData['gf5272017_worksCode'] || '').trim(), false);
 
-                // A7: 正則原位替換，保留下劃線排版，絕不截斷
-                var a7Node = findCellByRef('A7');
-                var a7Text = getNodeText(a7Node);
-                if (a7Text && a7Text.indexOf('Dept/Div') !== -1) {
-                    var newA7 = a7Text.replace(/Dept\/Div\s*:.*?(?=Month\/Year)/, 'Dept/Div : ' + dept + ' / ' + div + '    ');
-                    newA7 = newA7.replace(/Month\/Year\s*:.*/, 'Month/Year: ' + month + ' / ' + year);
-                    setXmlCellByRef('A7', newA7, false);
-                } else {
-                    setXmlCellByRef('A7', 'Dept/Div : ' + dept + ' / ' + div + '    Month/Year: ' + month + ' / ' + year, false);
-                }
-
-                // 其他表頭 (直接覆蓋合併格子的起始格，避免重複前綴)
-                setXmlCellByRef('E7', cNo, false);
-                setXmlCellByRef('M4', cTitle, false);
-                setXmlCellByRef('X4', cont, false);
-                setXmlCellByRef('AM7', wCode, false);
-
-                // ============================================================
-                // 打勾與清理圖形 (解決空框與位置太低)
-                // ============================================================
-                // ============================================================
-                // 打勾與清理 (解決變小、位置太低、殘留空框)
-                // ============================================================
-                var isChecked = formData['gf5272017_nominated'] === '1';
-                var tickChar = isChecked ? '☑' : '☐';
-
-                // 1. 嘗試從 drawing1.xml 中移除第 7 行的圖形 (解決上方灰框)
+                var tickChar = formData['gf5272017_nominated'] === '1' ? '☑' : '☐';
                 var drawingFile = zip.file('xl/drawings/drawing1.xml');
                 if (drawingFile) {
                     var drawingXml = await drawingFile.async('string');
                     var drawingDoc = parser.parseFromString(drawingXml, "text/xml");
-                    var anchors = Array.from(drawingDoc.getElementsByTagNameNS("*", "twoCellAnchor"))
-                        .concat(Array.from(drawingDoc.getElementsByTagNameNS("*", "oneCellAnchor")));
-                    
-                    var removedCount = 0;
+                    var anchors = Array.from(drawingDoc.getElementsByTagNameNS("*", "twoCellAnchor"));
                     for (var a = 0; a < anchors.length; a++) {
-                        var anchor = anchors[a];
-                        var fromNode = anchor.getElementsByTagNameNS("*", "from")[0];
+                        var fromNode = anchors[a].getElementsByTagNameNS("*", "from")[0];
                         if (fromNode) {
-                            var rowNode = fromNode.getElementsByTagNameNS("*", "row")[0];
-                            var colNode = fromNode.getElementsByTagNameNS("*", "col")[0];
-                            // 如果在第 7 行 (row=6) 且靠近 AD 欄 (col 約 29-30)
-                            if (rowNode && rowNode.textContent === '6' && colNode && parseInt(colNode.textContent) >= 27 && parseInt(colNode.textContent) <= 32) {
-                                if (anchor.parentNode) {
-                                    anchor.parentNode.removeChild(anchor);
-                                    removedCount++;
-                                }
+                            var rn = fromNode.getElementsByTagNameNS("*", "row")[0];
+                            var cn = fromNode.getElementsByTagNameNS("*", "col")[0];
+                            if (rn && rn.textContent === '6' && cn && parseInt(cn.textContent) >= 27 && parseInt(cn.textContent) <= 32) {
+                                anchors[a].parentNode.removeChild(anchors[a]);
                             }
                         }
                     }
-                    if (removedCount > 0) {
-                        var newDrawingXml = new XMLSerializer().serializeToString(drawingDoc);
-                        if (!newDrawingXml.startsWith('<?xml')) {
-                            newDrawingXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' + newDrawingXml;
-                        }
-                        zip.file('xl/drawings/drawing1.xml', newDrawingXml);
-                    }
+                    zip.file('xl/drawings/drawing1.xml', new XMLSerializer().serializeToString(drawingDoc));
                 }
+                setXmlCellByRef('AD7', '\n' + tickChar, false);
 
-                // 2. 覆寫 AD7 (保留原大小，透過空格提行位置)
-                var row7Node = rows[6];
-                if (row7Node) {
-                    var cNode = null;
-                    var cells7 = row7Node.getElementsByTagNameNS(ns, "c");
-                    for (var j = 0; j < cells7.length; j++) {
-                        if (cells7[j].getAttribute("r") === 'AD7') {
-                            cNode = cells7[j];
-                            break;
-                        }
-                    }
-                    
-                    if (!cNode) {
-                        cNode = xmlDoc.createElementNS(ns, "c");
-                        cNode.setAttribute("r", "AD7");
-                        row7Node.appendChild(cNode);
-                    }
-
-                    // 清除原有內容 (不管它是圖還是字，全部清空)
-                    while (cNode.firstChild) cNode.removeChild(cNode.firstChild);
-                    cNode.setAttribute("t", "inlineStr");
-                    
-                    var isNode = xmlDoc.createElementNS(ns, "is");
-                    var tNode = xmlDoc.createElementNS(ns, "t");
-                    // ★ 核心：使用 XML 空格換行來把它「頂」上去，不改變字體大小
-                    tNode.textContent = '\n' + tickChar; 
-                    tNode.setAttribute("xml:space", "preserve");
-                    isNode.appendChild(tNode);
-                    cNode.appendChild(isNode);
-                }
-
-                // ============================================================
-                // 2. 寫入 Items 1~40 (動態掃描 A 列)
-                // ============================================================
-
-
-                // ============================================================
-                // 2. 寫入 Items 1~40 (動態掃描 A 列)
-                // ============================================================
-                var itemRows = [];
+                // 2. 寫入 Items 1~40 (利用 A 列數字定位)
                 for (var i = 0; i < rows.length; i++) {
                     var rNum = parseInt(rows[i].getAttribute("r"), 10);
-                    if (rNum >= 138) continue; // 跳過 41-45 的專用行
+                    if (rNum < 10 || rNum >= 138) continue; 
                     
                     var aCell = findCellByRef('A' + rNum);
-                    if (aCell) {
-                        var txt = getNodeText(aCell);
-                        var numV = parseInt(txt, 10);
-                        if (!isNaN(numV) && numV >= 1 && numV <= 40 && String(numV) === txt) {
-                            itemRows.push({ r: rNum, no: numV });
-                        }
-                    }
-                }
-                itemRows.sort(function(a,b) { return a.r - b.r; });
-
-                for (var i = 0; i < itemRows.length; i++) {
-                    var cur = itemRows[i];
-                    var next = itemRows[i + 1];
-                    var span = next ? next.r - cur.r : 1;
+                    if (!aCell) continue;
                     
-                    var no = cur.no;
-                    for (var j = 0; j < span; j++) {
-                        var rowKey = no + '_' + j;
-                        var r = cur.r + j;
-
+                    var aVal = getNodeText(aCell).trim();
+                    var numV = parseInt(aVal, 10);
+                    
+                    if (!isNaN(numV) && numV >= 1 && numV <= 40) {
+                        var rowKey = numV;
+                        var sum = 0; 
+                        var hasVal = false;
+                        
                         for (var d = 1; d <= 31; d++) {
                             var v = formData['gf5272017_row_' + rowKey + '_day_' + d];
-                            if (v === undefined) v = formData['gf5272017_row_' + no + '_day_' + d];
-                            if (v !== undefined && v !== null && v !== '') setXmlCellByRef(XLSX.utils.encode_col(5 + (d - 1)) + r, v, true);
+                            if (v !== undefined && v !== null && v !== '' && !isNaN(v)) {
+                                sum += parseFloat(v);
+                                hasVal = true;
+                                setXmlCellByRef(XLSX.utils.encode_col(5 + (d - 1)) + rNum, v, true);
+                            } else {
+                                setXmlCellByRef(XLSX.utils.encode_col(5 + (d - 1)) + rNum, '', true);
+                            }
                         }
-                        var md = formData['gf5272017_row_' + rowKey + '_mandays'] || formData['gf5272017_row_' + no + '_mandays'];
-                        if (md !== undefined && md !== null && md !== '') setXmlCellByRef('AK' + r, md, true);
-                        var ot = formData['gf5272017_row_' + rowKey + '_overtime'] || formData['gf5272017_row_' + no + '_overtime'];
-                        if (ot !== undefined && ot !== null && ot !== '') setXmlCellByRef('AL' + r, ot, true);
-                        var avg = formData['gf5272017_row_' + rowKey + '_avg'] || formData['gf5272017_row_' + no + '_avg'];
-                        if (avg !== undefined && avg !== null && avg !== '') setXmlCellByRef('AM' + r, avg, true);
-                        var high = formData['gf5272017_row_' + rowKey + '_high'] || formData['gf5272017_row_' + no + '_high'];
-                        if (high !== undefined && high !== null && high !== '') setXmlCellByRef('AN' + r, high, true);
-                        var low = formData['gf5272017_row_' + rowKey + '_low'] || formData['gf5272017_row_' + no + '_low'];
-                        if (low !== undefined && low !== null && low !== '') setXmlCellByRef('AO' + r, low, true);
+                        
+                        // 寫入 Total Man-days (清除小數點)
+                        var md = hasVal ? Math.round(sum * 100) / 100 : '';
+                        setXmlCellByRef('AK' + rNum, md, true);
+
+                        // 寫入其他欄位
+                        var ot = formData['gf5272017_row_' + rowKey + '_overtime'];
+                        setXmlCellByRef('AL' + rNum, ot || '', true);
+
+                        var avg = formData['gf5272017_row_' + rowKey + '_avg'];
+                        setXmlCellByRef('AM' + rNum, avg || '', true);
+
+                        var high = formData['gf5272017_row_' + rowKey + '_high'];
+                        setXmlCellByRef('AN' + rNum, high || '', true);
+
+                        var low = formData['gf5272017_row_' + rowKey + '_low'];
+                        setXmlCellByRef('AO' + rNum, low || '', true);
                     }
                 }
 
-                // ============================================================
-                // 3. 寫入 Items 41~45 (寫死 138-142 行，填寫在 C 欄和 E 欄)
-                // ============================================================
+                // 3. 寫入 41~45 Others
                 for (var i = 0; i < 5; i++) {
                     var no = 41 + i;
                     var rNum = 138 + i;
-                    var rowKey = no + '_0';
-
-                    var nm = formData['gf5272017_row_' + rowKey + '_name'] || formData['gf5272017_row_' + no + '_name'] || '';
-                    var cd = formData['gf5272017_row_' + rowKey + '_code'] || formData['gf5272017_row_' + no + '_code'] || '';
                     
-                    // 填入 C 欄 (Others trade name) 和 E 欄 (Code-)
-                    setXmlCellByRef('C' + rNum, nm, false);
-                    setXmlCellByRef('E' + rNum, cd, false);
-
+                    setXmlCellByRef('C' + rNum, formData['gf5272017_row_' + no + '_name'] || '', false);
+                    setXmlCellByRef('E' + rNum, formData['gf5272017_row_' + no + '_code'] || '', false);
+                    
+                    var sum = 0; var hasVal = false;
                     for (var d = 1; d <= 31; d++) {
-                        var v = formData['gf5272017_row_' + rowKey + '_day_' + d];
-                        if (v === undefined) v = formData['gf5272017_row_' + no + '_day_' + d];
-                        if (v !== undefined && v !== null && v !== '') setXmlCellByRef(XLSX.utils.encode_col(5 + (d - 1)) + rNum, v, true);
+                        var v = formData['gf5272017_row_' + no + '_day_' + d];
+                        if (v !== undefined && v !== null && v !== '' && !isNaN(v)) {
+                            sum += parseFloat(v); hasVal = true;
+                            setXmlCellByRef(XLSX.utils.encode_col(5 + (d - 1)) + rNum, v, true);
+                        } else {
+                            setXmlCellByRef(XLSX.utils.encode_col(5 + (d - 1)) + rNum, '', true);
+                        }
                     }
-                    var md = formData['gf5272017_row_' + rowKey + '_mandays'] || formData['gf5272017_row_' + no + '_mandays'];
-                    if (md !== undefined && md !== null && md !== '') setXmlCellByRef('AK' + rNum, md, true);
-                    var ot = formData['gf5272017_row_' + rowKey + '_overtime'] || formData['gf5272017_row_' + no + '_overtime'];
-                    if (ot !== undefined && ot !== null && ot !== '') setXmlCellByRef('AL' + rNum, ot, true);
-                    var avg = formData['gf5272017_row_' + rowKey + '_avg'] || formData['gf5272017_row_' + no + '_avg'];
-                    if (avg !== undefined && avg !== null && avg !== '') setXmlCellByRef('AM' + rNum, avg, true);
-                    var high = formData['gf5272017_row_' + rowKey + '_high'] || formData['gf5272017_row_' + no + '_high'];
-                    if (high !== undefined && high !== null && high !== '') setXmlCellByRef('AN' + rNum, high, true);
-                    var low = formData['gf5272017_row_' + rowKey + '_low'] || formData['gf5272017_row_' + no + '_low'];
-                    if (low !== undefined && low !== null && low !== '') setXmlCellByRef('AO' + rNum, low, true);
+                    var md = hasVal ? Math.round(sum * 100) / 100 : '';
+                    setXmlCellByRef('AK' + rNum, md, true);
+                    setXmlCellByRef('AL' + rNum, formData['gf5272017_row_' + no + '_overtime'] || '', true);
+                    setXmlCellByRef('AM' + rNum, formData['gf5272017_row_' + no + '_avg'] || '', true);
+                    setXmlCellByRef('AN' + rNum, formData['gf5272017_row_' + no + '_high'] || '', true);
+                    setXmlCellByRef('AO' + rNum, formData['gf5272017_row_' + no + '_low'] || '', true);
                 }
 
-                // ============================================================
-                // 4. 寫入 Tel No (寫死 E143, E144，只寫數字)
-                // ============================================================
-                var tel46 = formData['gf5272017_row_46_telno'];
-                if (tel46) setXmlCellByRef('E143', tel46, false);
-                
-                var tel47 = formData['gf5272017_row_47_telno'];
-                if (tel47) setXmlCellByRef('E144', tel47, false);
+                // 4. Tel No
+                if (formData['gf5272017_row_46_telno']) setXmlCellByRef('E143', formData['gf5272017_row_46_telno'], false);
+                if (formData['gf5272017_row_47_telno']) setXmlCellByRef('E144', formData['gf5272017_row_47_telno'], false);
 
-                // ============================================================
                 // 5. 保存
-                // ============================================================
-                var serializer = new XMLSerializer();
-                var newSheetXml = serializer.serializeToString(xmlDoc);
-                if (!newSheetXml.startsWith('<?xml')) {
-                    newSheetXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' + newSheetXml;
-                }
-
-                zip.file('xl/worksheets/sheet1.xml', newSheetXml);
-
-                var outBlob = await zip.generateAsync({
-                    type: 'blob',
-                    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    compression: 'DEFLATE'
+                zip.file('xl/worksheets/sheet1.xml', new XMLSerializer().serializeToString(xmlDoc));
+                var outBlob = await zip.generateAsync({ 
+                    type: 'blob', 
+                    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
                 });
-
                 downloadBlob(outBlob, (currentDoc.id || 'GF527-2017') + '.xlsx');
-                console.log('[Excel-2017] ✓ 完美寫入');
 
             } catch (e) {
                 console.error('Excel 生成失敗', e);
@@ -2828,11 +2730,8 @@ async function exportGF5272003Excel() {
 
         async function exportGF5272017Pdf(isPrint) {
             var view = document.querySelector('.gf527-2017-view');
-            if (!view) { alert('找不到表格'); return; }
+            if (!view) { alert('找不到表格內容'); return; }
             
-            var pages = view.querySelectorAll('.pdf-custom-page');
-            if (pages.length < 2) { alert('表格渲染異常'); return; }
-
             var btn = document.getElementById('download-btn');
             var origHTML = btn ? btn.innerHTML : '';
             if (btn && !isPrint) { 
@@ -2851,12 +2750,13 @@ async function exportGF5272003Excel() {
                 var pdfHeight = pdf.internal.pageSize.getHeight(); 
                 var isFirstPage = true;
 
+                // ===== 載入原版 PDF 的說明頁 (Page 2 & 4) =====
                 var originalImages = null;
                 var b64_17 = window.GF527_2017_BASE64;
                 
                 if (b64_17 && b64_17.length > 100 && b64_17.substring(0, 12).indexOf('JVBERi0') === 0) {
                     try {
-                        loading.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:12px;"></i> 載入原始 PDF 文字頁...';
+                        loading.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:12px;"></i> 載入原始 PDF 說明頁...';
                         var blob = new Blob([base64ToUint8(b64_17)], { type: 'application/pdf' });
                         var ab = await blob.arrayBuffer();
                         var origPdf = await pdfjsLib.getDocument({ data: ab }).promise;
@@ -2866,7 +2766,6 @@ async function exportGF5272003Excel() {
                             var targetPages = [2, 4]; 
                             for (var i = 0; i < targetPages.length; i++) {
                                 var pNum = targetPages[i];
-                                loading.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:12px;"></i> 渲染原始 PDF 第 ' + pNum + ' 頁...';
                                 var page = await origPdf.getPage(pNum);
                                 var viewport = page.getViewport({ scale: 2.0 }); 
                                 var canvas = document.createElement('canvas');
@@ -2885,7 +2784,7 @@ async function exportGF5272003Excel() {
                             }
                         }
                     } catch (err) {
-                        console.warn('無法載入或渲染原始 PDF，將使用預設 HTML 文字頁', err);
+                        console.warn('無法載入或渲染原始 PDF 說明頁', err);
                     }
                 }
 
@@ -2903,64 +2802,96 @@ async function exportGF5272003Excel() {
                     isFirstPage = false;
                 }
 
+                // ★ 核心修復：加大視口與實際寬度，解決被截斷的問題
                 async function captureElement(element) {
                     var canvas = await html2canvas(element, {
-                        scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false,
-                        windowWidth: 2400, windowHeight: element.scrollHeight
+                        scale: 2, 
+                        useCORS: true, 
+                        backgroundColor: '#ffffff', 
+                        logging: false,
+                        windowWidth: 3200, // 給予足夠的虛擬瀏覽器寬度
+                        windowHeight: element.scrollHeight,
+                        width: element.scrollWidth,
+                        height: element.scrollHeight
                     });
                     return { dataUrl: canvas.toDataURL('image/jpeg', 0.95), width: canvas.width, height: canvas.height };
                 }
 
-                // ===== P1 =====
+                // ===== 動態切割大表格成 P1 和 P3 =====
+                // ===== 動態切割大表格成 P1 和 P3 =====
+                var viewClone = view.cloneNode(true);
+                viewClone.style.zoom = '1';
+                
+                // ★ 核心修復：移除強制寬度，改為 fit-content，讓表格自然撐開，避免右側多出不明黑線
+                viewClone.style.width = 'fit-content'; 
+                viewClone.style.position = 'absolute';
+                viewClone.style.left = '-9999px';
+                viewClone.style.top = '0';
+                viewClone.style.background = '#ffffff';
+                
+                // 強制解除外層容器的滾動條限制，讓表格能完整展示
+                var wrapEl = viewClone.querySelector('.gf527-2017-table-wrap');
+                if (wrapEl) {
+                    wrapEl.style.overflow = 'visible';
+                    wrapEl.style.width = 'fit-content';
+                }
+
+                document.body.appendChild(viewClone);
+
+                // 生成 P1 (移除 Item 18 及之後的行)
+                var cloneP1 = viewClone.cloneNode(true);
+                var tbodyP1 = cloneP1.querySelector('tbody');
+                var trsP1 = Array.from(tbodyP1.querySelectorAll('tr'));
+                for (var i = 0; i < trsP1.length; i++) {
+                    var itemNo = parseInt(trsP1[i].getAttribute('data-item'));
+                    if (!isNaN(itemNo) && itemNo >= 18) {
+                        tbodyP1.removeChild(trsP1[i]);
+                    }
+                }
+                document.body.appendChild(cloneP1);
+                
+                // 生成 P3 (移除 Item 1 到 17 的行)
+                var cloneP3 = viewClone.cloneNode(true);
+                var tbodyP3 = cloneP3.querySelector('tbody');
+                var trsP3 = Array.from(tbodyP3.querySelectorAll('tr'));
+                for (var i = 0; i < trsP3.length; i++) {
+                    var itemNo = parseInt(trsP3[i].getAttribute('data-item'));
+                    if (!isNaN(itemNo) && itemNo < 18) {
+                        tbodyP3.removeChild(trsP3[i]);
+                    }
+                }
+                document.body.appendChild(cloneP3);
+
+                // 給瀏覽器一點時間重新計算排版
+                await new Promise(function(r) { setTimeout(r, 200); });
+
+                // ===== P1 (表格上半部) =====
                 loading.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:12px;"></i> 生成第 1 頁 (表格)...';
-                var img1 = await captureElement(pages[0]);
+                var img1 = await captureElement(cloneP1);
                 await addImageToPdf(img1.dataUrl, img1.width, img1.height);
 
-                // ===== P2 =====
+                // ===== P2 (說明頁) =====
                 if (originalImages && originalImages[0]) {
                     await addImageToPdf(originalImages[0].dataUrl, originalImages[0].width, originalImages[0].height);
-                } else {
-                    // Fallback (維持原本代碼，此處省略以節省篇幅，請保留您原本的 textPage1Html 邏輯)
-                    // 為了簡潔，請自行保留原本的 var textPage1Html = ...
-                    var textPage1Html = `<div style="padding:20px; font-family:'Times New Roman', serif; font-size:11px; line-height:1.5; width:2400px; background:#fff; box-sizing:border-box;">
-                        <p><strong>11. Item 11 "Truck Driver"</strong> in the revised GFS27 covers trade code C349 "Construction Goods Vehicle Driver (Master)"...
-                        (請保留原本的說明文字)
-                    </div>`;
-                    var tempText1 = document.createElement('div');
-                    tempText1.innerHTML = textPage1Html;
-                    tempText1.style.cssText = 'position:absolute; top:-9999px; left:-9999px; background:#fff; padding:20px;';
-                    document.body.appendChild(tempText1);
-                    var img2 = await captureElement(tempText1);
-                    await addImageToPdf(img2.dataUrl, img2.width, img2.height);
-                    document.body.removeChild(tempText1);
                 }
 
-                // ===== P3 =====
+                // ===== P3 (表格下半部) =====
                 loading.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:12px;"></i> 生成第 3 頁 (表格)...';
-                var img3 = await captureElement(pages[1]);
+                var img3 = await captureElement(cloneP3);
                 await addImageToPdf(img3.dataUrl, img3.width, img3.height);
 
-                // ===== P4 =====
+                // ===== P4 (說明頁) =====
                 if (originalImages && originalImages[1]) {
                     await addImageToPdf(originalImages[1].dataUrl, originalImages[1].width, originalImages[1].height);
-                } else {
-                    // Fallback (維持原本代碼，此處省略，請保留您原本的 textPage2Html 邏輯)
-                    var textPage2Html = `<div style="padding:20px; font-family:'Times New Roman', serif; font-size:11px; line-height:1.5; column-count:2; column-gap:40px; width:2400px; background:#fff; box-sizing:border-box;">
-                        <p><strong>A. Instructions</strong>...
-                        (請保留原本的說明文字)
-                    </div>`;
-                    var tempText2 = document.createElement('div');
-                    tempText2.innerHTML = textPage2Html;
-                    tempText2.style.cssText = 'position:absolute; top:-9999px; left:-9999px; background:#fff; padding:20px;';
-                    document.body.appendChild(tempText2);
-                    var img4 = await captureElement(tempText2);
-                    await addImageToPdf(img4.dataUrl, img4.width, img4.height);
-                    document.body.removeChild(tempText2);
                 }
+
+                // 清理 DOM
+                if (viewClone.parentNode) viewClone.parentNode.removeChild(viewClone);
+                if (cloneP1.parentNode) cloneP1.parentNode.removeChild(cloneP1);
+                if (cloneP3.parentNode) cloneP3.parentNode.removeChild(cloneP3);
 
                 loading.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:12px;"></i> 準備列印/儲存...';
                 
-                // ★ 核心修正：判斷是列印還是下載
                 if (isPrint) {
                     var blobUrl = pdf.output('bloburl');
                     var printIframe = document.createElement('iframe');
@@ -2984,7 +2915,7 @@ async function exportGF5272003Excel() {
                 console.error('PDF 處理失敗', e);
                 alert('處理失敗: ' + e.message);
             } finally {
-                document.body.removeChild(loading);
+                if (loading.parentNode) document.body.removeChild(loading);
                 if (btn && !isPrint) { btn.disabled = false; btn.innerHTML = origHTML; }
             }
         }
@@ -3431,199 +3362,180 @@ async function exportGF5272003Excel() {
                 return '<span class="underline-text ' + (cls || '') + '">' + escapeHTML(v) + '&nbsp;</span>';
             }
 
-            function getHeaderHtml() {
-                return '<div class="top-meta">' +
-                        '<div>Original - by e-mail to C&amp;SD<br>Duplicate - to Project Office</div>' +
-                        '<div>Triplicate - filed as Site Record<br>Quadruplicate - kept by Contractor</div>' +
+            var hdr = document.createElement('div');
+            hdr.className = 'gf527-2017-header';
+            hdr.innerHTML =
+                '<div class="top-meta">' +
+                    '<div>Original - by e-mail to C&amp;SD<br>Duplicate - to Project Office</div>' +
+                    '<div>Triplicate - filed as Site Record<br>Quadruplicate - kept by Contractor</div>' +
+                '</div>' +
+                '<div class="title">Monthly Return of Site Labour Deployment and Wage Rates for Construction Works</div>' +
+                '<div class="info-row">' +
+                    '<div class="info-group"><label>Dept/Div :</label>' + hdrInput('dept', 'w-60') + ' / ' + hdrInput('div', 'w-60') + '</div>' +
+                    '<div class="info-group"><label>Month/Year:</label>' + hdrInput('month', 'w-30') + ' / ' + hdrInput('year', 'w-40') + '</div>' +
+                    '<div class="info-group"><label>Contract No. :</label>' + hdrInput('contractNo', 'w-150') + '</div>' +
+                    '<div class="info-group"><label>Contract Title :</label>' + hdrInput('contractTitle', 'w-350') + '</div>' +
+                    '<div class="info-group"><label>Contractor :</label>' + hdrInput('contractor', 'w-250') + '</div>' +
+                    '<div class="info-group" style="display:flex;align-items:center;gap:5px;">' +
+                        '<input type="checkbox" disabled ' + (formData['gf5272017_nominated'] === '1' ? 'checked' : '') + '>' +
+                        '<label style="margin:0;width:auto;"># Nominated Sub-contractor</label>' +
                     '</div>' +
-                    '<div class="title">Monthly Return of Site Labour Deployment and Wage Rates for Construction Works</div>' +
-                    '<div class="info-row">' +
-                        '<div class="info-group"><label>Dept/Div :</label>' + hdrInput('dept', 'w-60') + ' / ' + hdrInput('div', 'w-60') + '</div>' +
-                        '<div class="info-group"><label>Month/Year:</label>' + hdrInput('month', 'w-30') + ' / ' + hdrInput('year', 'w-40') + '</div>' +
-                        '<div class="info-group"><label>Contract No. :</label>' + hdrInput('contractNo', 'w-150') + '</div>' +
-                        '<div class="info-group"><label>Contract Title :</label>' + hdrInput('contractTitle', 'w-350') + '</div>' +
-                        '<div class="info-group"><label>Contractor :</label>' + hdrInput('contractor', 'w-250') + '</div>' +
-                        '<div class="info-group" style="display:flex;align-items:center;gap:5px;">' +
-                            '<input type="checkbox" disabled ' + (formData['gf5272017_nominated'] === '1' ? 'checked' : '') + '>' +
-                            '<label style="margin:0;width:auto;"># Nominated Sub-contractor</label>' +
-                        '</div>' +
-                        '<div class="info-group"><label>Works Code 31 :</label>' + hdrInput('worksCode', 'w-100') + '</div>' +
-                    '</div>';
+                    '<div class="info-group"><label>Works Code 31 :</label>' + hdrInput('worksCode', 'w-100') + '</div>' +
+                '</div>';
+            view.appendChild(hdr);
+
+            var wrap = document.createElement('div');
+            wrap.className = 'gf527-2017-table-wrap';
+            wrap.style.borderLeft = 'none';
+
+            var table = document.createElement('table');
+            table.className = 'gf527-2017-table';
+
+            var thead = document.createElement('thead');
+            var dayHeaders = '';
+            for (var d = 1; d <= 31; d++) dayHeaders += '<th class="day-col">' + d + '</th>';
+
+            thead.innerHTML =
+                '<tr>' +
+                    '<th rowspan="2" class="cell-no">Item<br>No.</th>' +
+                    '<th rowspan="2" class="cell-trade" style="text-align:center;">Trade</th>' +
+                    '<th rowspan="2" class="cell-division" style="text-align:center;">Trade Division</th>' +
+                    '<th colspan="2">Trade List <sup>1</sup></th>' +
+                    '<th colspan="31">Number of workers engaged on site on each calendar day <sup>b,c</sup></th>' +
+                    '<th rowspan="2" class="total-col">Total<br>Man-days</th>' +
+                    '<th rowspan="2" class="ot-col">Overtime <sup>d</sup><br>(hours)</th>' +
+                    '<th colspan="3">Daily Wage Rate ($) <sup>e</sup></th>' +
+                    '<th rowspan="2" class="cell-no">Item<br>No.</th>' +
+                '</tr>' +
+                '<tr>' +
+                    '<th class="cell-orig">Orig.</th>' +
+                    '<th class="cell-rev">Rev.<br>(Code <sup>2</sup>)</th>' +
+                    dayHeaders +
+                    '<th class="wage-col">Av.</th><th class="wage-col">High</th><th class="wage-col">Low</th>' +
+                '</tr>';
+            table.appendChild(thead);
+
+            var tbody = document.createElement('tbody');
+
+            function buildDayCellsMerged(no, rowSpan) {
+                var html = '';
+                for (var day = 1; day <= 31; day++) {
+                    var v = formData['gf5272017_row_' + no + '_day_' + day] || '';
+                    html += '<td class="day-col" rowspan="' + rowSpan + '">' + escapeHTML(v) + '</td>';
+                }
+                return html;
+            }
+            
+            function buildTailCellsMerged(no, rowSpan) {
+                var md = formData['gf5272017_row_' + no + '_mandays'] || '';
+                var ot = formData['gf5272017_row_' + no + '_overtime'] || '';
+                var avg = formData['gf5272017_row_' + no + '_avg'] || '';
+                var high = formData['gf5272017_row_' + no + '_high'] || '';
+                var low = formData['gf5272017_row_' + no + '_low'] || '';
+
+                return '' +
+                    '<td class="total-col" rowspan="' + rowSpan + '">' + escapeHTML(md) + '</td>' +
+                    '<td class="ot-col" rowspan="' + rowSpan + '">' + escapeHTML(ot) + '</td>' +
+                    '<td class="wage-col" rowspan="' + rowSpan + '">' + escapeHTML(avg) + '</td>' +
+                    '<td class="wage-col" rowspan="' + rowSpan + '">' + escapeHTML(high) + '</td>' +
+                    '<td class="wage-col" rowspan="' + rowSpan + '">' + escapeHTML(low) + '</td>';
             }
 
-            function buildTableForRange(startNo, endNo, includeSignatures) {
-                var table = document.createElement('table');
-                table.className = 'gf527-2017-table';
-                var thead = document.createElement('thead');
-                var dayHeaders = '';
-                for (var d = 1; d <= 31; d++) dayHeaders += '<th class="day-col">' + d + '</th>';
+            GF527_2017_TRADES.forEach(function (group) {
+                var no = group.no;
+                var trade = group.trade;
+                var items = group.items;
+                var rowSpan = items.length;
+                var isOther = items[0] && items[0].isOther;
 
-                thead.innerHTML =
-                    '<tr>' +
-                        '<th rowspan="2" class="cell-no">Item<br>No.</th>' +
-                        '<th rowspan="2" class="cell-trade" style="text-align:center;">Trade</th>' +
-                        '<th rowspan="2" class="cell-division" style="text-align:center;">Trade Division</th>' +
-                        '<th colspan="2">Trade List <sup>1</sup></th>' +
-                        '<th colspan="31">Number of workers engaged on site on each calendar day <sup>b,c</sup></th>' +
-                        '<th rowspan="2" class="total-col">Total<br>Man-days</th>' +
-                        '<th rowspan="2" class="ot-col">Overtime <sup>d</sup><br>(hours)</th>' +
-                        '<th colspan="3">Daily Wage Rate ($) <sup>e</sup></th>' +
-                        '<th rowspan="2" class="cell-no">Item<br>No.</th>' +
-                    '</tr>' +
-                    '<tr>' +
-                        '<th class="cell-orig">Orig.</th>' +
-                        '<th class="cell-rev">Rev.<br>(Code <sup>2</sup>)</th>' +
-                        dayHeaders +
-                        '<th class="wage-col">Av.</th><th class="wage-col">High</th><th class="wage-col">Low</th>' +
-                    '</tr>';
-                table.appendChild(thead);
-                var tbody = document.createElement('tbody');
-
-                function buildDayCells(rowKey, no) {
-                    var html = '';
-                    for (var day = 1; day <= 31; day++) {
-                        var v = formData['gf5272017_row_' + rowKey + '_day_' + day];
-                        if (v === undefined) v = formData['gf5272017_row_' + no + '_day_' + day] || '';
-                        // ★ 核心修改：強制轉整數
-                        if (v !== '' && !isNaN(v)) v = Math.round(Number(v));
-                        html += '<td class="day-col">' + escapeHTML(v) + '</td>';
-                    }
-                    return html;
-                }
-                function buildTailCells(rowKey, no) {
-                    var md = formData['gf5272017_row_' + rowKey + '_mandays'] || formData['gf5272017_row_' + no + '_mandays'] || '';
-                    var ot = formData['gf5272017_row_' + rowKey + '_overtime'] || formData['gf5272017_row_' + no + '_overtime'] || '';
-                    var avg = formData['gf5272017_row_' + rowKey + '_avg'] || formData['gf5272017_row_' + no + '_avg'] || '';
-                    var high = formData['gf5272017_row_' + rowKey + '_high'] || formData['gf5272017_row_' + no + '_high'] || '';
-                    var low = formData['gf5272017_row_' + rowKey + '_low'] || formData['gf5272017_row_' + no + '_low'] || '';
-                    
-                    // ★ 核心修改：強制轉整數
-                    if (md !== '' && !isNaN(md)) md = Math.round(Number(md));
-                    if (ot !== '' && !isNaN(ot)) ot = Math.round(Number(ot));
-                    if (avg !== '' && !isNaN(avg)) avg = Math.round(Number(avg));
-                    if (high !== '' && !isNaN(high)) high = Math.round(Number(high));
-                    if (low !== '' && !isNaN(low)) low = Math.round(Number(low));
-
-                    return '' +
-                        '<td class="total-col">' + escapeHTML(md) + '</td>' +
-                        '<td class="ot-col">' + escapeHTML(ot) + '</td>' +
-                        '<td class="wage-col">' + escapeHTML(avg) + '</td>' +
-                        '<td class="wage-col">' + escapeHTML(high) + '</td>' +
-                        '<td class="wage-col">' + escapeHTML(low) + '</td>';
-                }
-
-                GF527_2017_TRADES.forEach(function (group) {
-                    var no = group.no;
-                    if (no < startNo || no > endNo) return;
-
-                    var trade = group.trade;
-                    var items = group.items;
-                    var rowSpan = items.length;
-                    var isOther = items[0] && items[0].isOther;
-
-                    if (isOther) {
-                        var rowKey = no + '_0';
-                        var nm = formData['gf5272017_row_' + rowKey + '_name'] || formData['gf5272017_row_' + no + '_name'] || '';
-                        var cd = formData['gf5272017_row_' + rowKey + '_code'] || formData['gf5272017_row_' + no + '_code'] || '';
+                if (isOther) {
+                    items.forEach(function (item, idx) {
+                        var nm = formData['gf5272017_row_' + no + '_name'] || '';
+                        var cd = formData['gf5272017_row_' + no + '_code'] || '';
                         var tr = document.createElement('tr');
                         tr.innerHTML =
-                            '<td class="cell-no">' + no + '</td>' +
-                            '<td colspan="2" style="padding:2px 4px;text-align:left;white-space:nowrap;font-size:10px;">' +
-                                'Others <sup>29</sup>: trade name - ' + escapeHTML(nm) +
+                            '<td class="cell-no" rowspan="' + rowSpan + '">' + no + '</td>' +
+                            '<td colspan="2" rowspan="' + rowSpan + '" style="padding:2px 4px;text-align:left;white-space:nowrap;font-size:10px;">' +
+                                'Others <sup>29</sup>: trade name - ' +
+                                '<span style="flex:1; margin-left:4px; text-align:left;">' + escapeHTML(nm) + '</span>' +
                             '</td>' +
-                            '<td colspan="2" style="padding:2px 4px;text-align:left;white-space:nowrap;font-size:10px;">' +
-                                'code - ' + escapeHTML(cd) +
+                            '<td colspan="2" rowspan="' + rowSpan + '" style="padding:2px 4px;text-align:left;white-space:nowrap;font-size:10px;">' +
+                                'code - ' +
+                                '<span style="flex:1; margin-left:4px; text-align:left;">' + escapeHTML(cd) + '</span>' +
                             '</td>' +
-                            buildDayCells(rowKey, no) +
-                            buildTailCells(rowKey, no) +
-                            '<td class="cell-no">' + no + '</td>';
-                        tbody.appendChild(tr);
-                        return;
-                    }
-
-                    items.forEach(function (item, idx) {
-                        var rowKey = no + '_' + idx;
-                        var tr = document.createElement('tr');
-
-                        if (idx === 0) {
-                            tr.innerHTML += '<td class="cell-no" rowspan="' + rowSpan + '">' + no + '</td>';
-                            var formattedTrade = escapeHTML(trade).replace(/ (\d+)$/, ' <sup>$1</sup>');
-                            tr.innerHTML += '<td class="cell-trade" rowspan="' + rowSpan + '">' + formattedTrade + '</td>';
-                        }
-
-                        var orig = item.orig === 'ü' ? '✓' : item.orig;
-                        tr.innerHTML +=
-                            '<td class="cell-division">' + escapeHTML(item.division) + '</td>' +
-                            '<td class="cell-orig">' + escapeHTML(orig) + '</td>' +
-                            '<td class="cell-rev">' + escapeHTML(item.rev) + '</td>' +
-                            buildDayCells(rowKey, no) +
-                            buildTailCells(rowKey, no);
-
-                        if (idx === 0) {
-                            tr.innerHTML += '<td class="cell-no" rowspan="' + rowSpan + '">' + no + '</td>';
-                        }
-
+                            buildDayCellsMerged(no, rowSpan) +
+                            buildTailCellsMerged(no, rowSpan) +
+                            '<td class="cell-no" rowspan="' + rowSpan + '">' + no + '</td>';
                         tbody.appendChild(tr);
                     });
-                });
-
-                if (includeSignatures) {
-                    function buildSignatureRow(labelText, rowKey, telKey) {
-                        var sigVal = formData[rowKey + '_signature'] || '';
-                        var telVal = formData[telKey] || '';
-                        var sigHtml = (sigVal && sigVal.indexOf('data:image') === 0)
-                            ? '<img src="' + sigVal + '" style="max-width:100%;max-height:100%;object-fit:contain;">' : '';
-
-                        var rightCells = '';
-                        for (var d = 0; d < 31; d++) rightCells += '<td class="day-col" style="border-left: none !important; border-right: none !important;"></td>';
-                        rightCells += '<td class="total-col" style="border-left: none !important; border-right: none !important;"></td>';
-                        rightCells += '<td class="ot-col" style="border-left: none !important; border-right: none !important;"></td>';
-                        rightCells += '<td class="wage-col" style="border-left: none !important; border-right: none !important;"></td>';
-                        rightCells += '<td class="wage-col" style="border-left: none !important; border-right: none !important;"></td>';
-                        rightCells += '<td class="wage-col" style="border-left: none !important; border-right: none !important;"></td>';
-                        rightCells += '<td class="cell-no" style="border-left: none !important; border-right: 1px solid #000 !important;"></td>';
-
-                        return '' +
-                            '<tr>' +
-                                '<td colspan="3" style="text-align:left; padding:4px; border:1px solid #000 !important; vertical-align:middle;">' +
-                                    '<div style="display:flex; width:100%; align-items:center; height:22px;">' +
-                                        '<span style="white-space:nowrap; font-size:10px; padding-right:10px;">' + labelText + '</span>' +
-                                        '<div style="flex:1; height:100%; display:flex; align-items:center; justify-content:center;">' + sigHtml + '</div>' +
-                                    '</div>' +
-                                '</td>' +
-                                '<td colspan="2" style="text-align:left; padding:4px 8px; border:1px solid #000 !important; vertical-align:middle;">' +
-                                    '<div style="display:inline-flex; align-items:center; white-space:nowrap; font-size:10px;">' +
-                                        '<span style="margin-right:4px;">Tel. No.:</span><span>' + escapeHTML(telVal) + '</span>' +
-                                    '</div>' +
-                                '</td>' +
-                                rightCells +
-                            '</tr>';
-                    }
-                    tbody.innerHTML += buildSignatureRow('Completed by Agent of Contractor&nbsp;&nbsp;Name (in block letters) &amp; Signature:', 'gf5272017_row_46', 'gf5272017_row_46_telno');
-                    tbody.innerHTML += buildSignatureRow('Checked by IOW/COW&nbsp;&nbsp;Name (in block letters) &amp; Signature:', 'gf5272017_row_47', 'gf5272017_row_47_telno');
+                    return;
                 }
 
-                table.appendChild(tbody);
-                return table;
+                items.forEach(function (item, idx) {
+                    var tr = document.createElement('tr');
+                    tr.setAttribute('data-item', no); // ★ 添加这一行，用于后续切割表格
+                    if (idx === 0) {
+                        tr.innerHTML += '<td class="cell-no" rowspan="' + rowSpan + '">' + no + '</td>';
+                        var formattedTrade = escapeHTML(trade).replace(/ (\d+)$/, ' <sup>$1</sup>');
+                        tr.innerHTML += '<td class="cell-trade" rowspan="' + rowSpan + '">' + formattedTrade + '</td>';
+                    }
+
+                    var orig = item.orig === 'ü' ? '✓' : item.orig;
+                    tr.innerHTML +=
+                        '<td class="cell-division">' + escapeHTML(item.division) + '</td>' +
+                        '<td class="cell-orig">' + escapeHTML(orig) + '</td>' +
+                        '<td class="cell-rev">' + escapeHTML(item.rev) + '</td>';
+
+                    if (idx === 0) {
+                        tr.innerHTML += buildDayCellsMerged(no, rowSpan);
+                        tr.innerHTML += buildTailCellsMerged(no, rowSpan);
+                        tr.innerHTML += '<td class="cell-no" rowspan="' + rowSpan + '">' + no + '</td>';
+                    }
+
+                    tbody.appendChild(tr);
+                });
+            });
+
+            function buildSignatureRow(labelText, rowKey, telKey) {
+                var telVal = formData[telKey] || '';
+                return '' +
+                    '<tr>' +
+                        '<td colspan="3" style="text-align:left; padding:4px; border:1px solid #000 !important; vertical-align:middle;">' +
+                            '<div style="display:flex; width:100%; align-items:center; height:22px;">' +
+                                '<span style="white-space:nowrap; font-size:10px; padding-right:10px;">' + labelText + '</span>' +
+                                '<div style="flex:1; display:flex; align-items:center; justify-content:center; background:#f8fafc;"></div>' +
+                            '</div>' +
+                        '</td>' +
+                        '<td colspan="2" style="text-align:left; padding:4px 8px; border:1px solid #000 !important; vertical-align:middle;">' +
+                            '<div style="display:inline-flex; align-items:center; white-space:nowrap; font-size:10px;">' +
+                                '<span style="margin-right:4px;">Tel. No.:</span>' +
+                                '<span style="min-width:100px; border-bottom:1px solid #000;">' + escapeHTML(telVal) + '</span>' +
+                            '</div>' +
+                        '</td>' +
+                        '<td colspan="37" style="border: 1px solid transparent !important; border-top: 1px solid #000 !important; border-bottom: 1px solid #000 !important; border-right: 1px solid #000 !important; background: transparent;"></td>' +
+                    '</tr>';
             }
 
-            // --- 第 1 頁：1-17 ---
-            var p1 = document.createElement('div');
-            p1.className = 'pdf-custom-page';
-            var h1 = document.createElement('div'); h1.className = 'gf527-2017-header'; h1.innerHTML = getHeaderHtml(); p1.appendChild(h1);
-            var w1 = document.createElement('div'); w1.className = 'gf527-2017-table-wrap'; w1.appendChild(buildTableForRange(1, 17, false)); p1.appendChild(w1);
-            view.appendChild(p1);
+            tbody.innerHTML += buildSignatureRow('Completed by Agent of Contractor&nbsp;&nbsp;Name (in block letters) &amp; Signature:', 'gf5272017_row_46', 'gf5272017_row_46_telno');
+            tbody.innerHTML += buildSignatureRow('Checked by IOW/COW&nbsp;&nbsp;Name (in block letters) &amp; Signature:', 'gf5272017_row_47', 'gf5272017_row_47_telno');
 
-            // --- 第 2 頁：18-45 ---
-            var p2 = document.createElement('div');
-            p2.className = 'pdf-custom-page';
-            var h2 = document.createElement('div'); h2.className = 'gf527-2017-header'; h2.innerHTML = getHeaderHtml(); p2.appendChild(h2);
-            var w2 = document.createElement('div'); w2.className = 'gf527-2017-table-wrap'; w2.appendChild(buildTableForRange(18, 99, true)); p2.appendChild(w2);
-            view.appendChild(p2);
+            table.appendChild(tbody);
+            wrap.appendChild(table);
+            view.appendChild(wrap);
+
+            var footer = document.createElement('div');
+            footer.style.cssText = 'margin-top:5px;font-size:10px;font-family:"Times New Roman", SimSun, serif;color:#000;';
+            footer.innerHTML =
+                '<div style="text-align:center;margin-bottom:20px;font-weight:bold;"># Tick in the box only for a nominated sub-contractor</div>' +
+                '<div style="display:flex;align-items:center;">' +
+                    '<div style="width:150px;">G.F. 527 (Rev. 1-2017)</div>' +
+                    '<div style="flex:1;text-align:center;">Please refer to the overleaf for filling this return</div>' +
+                    '<div style="width:150px;"></div>' +
+                '</div>';
+            view.appendChild(footer);
 
             pageWrapper.appendChild(view);
-
-            view.style.zoom = zoomLevel; // ★ 新增這行
+            view.style.zoom = zoomLevel;
         }
 
     })();
