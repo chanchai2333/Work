@@ -10,7 +10,9 @@
     labourWageData: 'labourWage',
     dwss_site_data_v9: 'sites',
     ael_dwss_teams: 'teams',
-    dwss_user_groups: 'groups'
+    dwss_user_groups: 'groups',
+    dwss_contracts: 'contracts',
+    ael_dwss_deleted_contracts: 'deletedContracts'  
   };
 
   let cloudMode = false;
@@ -22,6 +24,15 @@
   function idOf(item) {
     return String(item && (item.id || item.record_id) || '');
   }
+
+  function getSessionToken() {
+  try {
+    var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+    return s.sessionToken || '';
+  } catch (e) {
+    return '';
+  }
+}
 
   function isDataKey(key) {
     return Object.prototype.hasOwnProperty.call(COLLECTIONS, key);
@@ -62,38 +73,55 @@
     return next;
   }
 
-  async function saveCollection(lsKey) {
-    if (!cloudMode || !isDataKey(lsKey)) return false;
-    const coll = COLLECTIONS[lsKey];
-    const items = Array.isArray(cache[lsKey]) ? cache[lsKey] : [];
-    const prevCount = versions[lsKey] ? Object.keys(versions[lsKey]).length : 0;
-    if (items.length === 0 && prevCount === 0) return true;
+async function saveCollection(lsKey) {
+  if (!cloudMode || !isDataKey(lsKey)) return false;
+  const coll = COLLECTIONS[lsKey];
+  const items = Array.isArray(cache[lsKey]) ? cache[lsKey] : [];
+  const prevCount = versions[lsKey] ? Object.keys(versions[lsKey]).length : 0;
+  if (items.length === 0 && prevCount === 0) return true;
 
-    const payload = items.map(function (item) {
-      const id = idOf(item);
-      return Object.assign({}, item, {
-        _version: (versions[lsKey] && versions[lsKey][id]) || null
-      });
+  const payload = items.map(function (item) {
+    const id = idOf(item);
+    return Object.assign({}, item, {
+      _version: (versions[lsKey] && versions[lsKey][id]) || null
     });
+  });
 
-    const url = '/api/records/' + coll + '/bulk' + (items.length === 0 ? '?allowEmpty=1' : '');
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    if (res.status === 409) {
-      alert('Another user changed this data. The page will reload.');
-      location.reload();
-      return false;
-    }
-    if (!res.ok) {
-      console.warn('[Storage] Save failed', lsKey, res.status);
-      return false;
-    }
-    await loadCollection(lsKey, coll);
-    return true;
+  const url = '/api/records/' + coll + '/bulk' + (items.length === 0 ? '?allowEmpty=1' : '');
+  const token = getSessionToken();
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-session-token': token            // ★ 关键修复
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (res.status === 401) {
+    console.warn('[Storage] Session expired while saving', coll);
+    // 通知外层，避免静默失败
+    try {
+      window.dispatchEvent(new CustomEvent('dwss:session-expired', {
+        detail: { collection: coll }
+      }));
+    } catch (e) {}
+    return false;
   }
+  if (res.status === 409) {
+    alert('Another user changed this data. The page will reload.');
+    location.reload();
+    return false;
+  }
+  if (!res.ok) {
+    let txt = '';
+    try { txt = await res.text(); } catch (e) {}
+    console.warn('[Storage] Save failed', lsKey, res.status, txt);
+    return false;
+  }
+  await loadCollection(lsKey, coll);
+  return true;
+}
 
   function clearDataFromLocalStorage() {
     Object.keys(COLLECTIONS).forEach(function (key) {
@@ -295,28 +323,29 @@
     //await seedIfEmpty('dwss_site_data_v9', defaultSites);//
   }
 
-  async function detectAndLoad() {
+async function detectAndLoad() {
     try {
-      const res = await fetch('/api/health', { cache: 'no-store' });
-      if (!res.ok) throw new Error('no api');
-      const info = await res.json();
-      if (!info.db) throw new Error('no database');
-      cloudMode = true;
-      console.log('[Storage] Database mode');
-      clearDataFromLocalStorage();
-      installCloudPatch();
-      installSessionBlock();
-      markReady();
+        const res = await fetch('/api/health', { cache: 'no-store' });
+        if (!res.ok) throw new Error('no api');
+        const info = await res.json();
+        if (!info.db) throw new Error('no database');
+        cloudMode = true;
+        console.log('[Storage] Database mode');
+        clearDataFromLocalStorage();
+        installCloudPatch();
+        installSessionBlock();
+        // ★ 不再在这里 markReady()
 
-      for (const lsKey of Object.keys(COLLECTIONS)) {
-        await loadCollection(lsKey, COLLECTIONS[lsKey]);
-      }
-      await seedDefaults();
+        for (const lsKey of Object.keys(COLLECTIONS)) {
+            await loadCollection(lsKey, COLLECTIONS[lsKey]);
+        }
+        await seedDefaults();
+        markReady();                            // ★ 所有 cache 加载完后才就绪
     } catch (e) {
-      console.error('[Storage] Database is required', e);
-      markReady();
+        console.error('[Storage] Database is required', e);
+        markReady();                            // 出错也要释放 waiters
     }
-  }
+}
 
   window.DWSS_Storage = {
     isCloud: function () { return cloudMode; },

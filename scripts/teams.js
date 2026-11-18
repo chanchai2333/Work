@@ -1,28 +1,28 @@
 async function updateUserContractsAPI(userId, username, newProjectIds) {
-        try {
-            const session = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
-            const res = await fetch('/api/users/upsert', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'x-session-token': session.sessionToken || ''
-                },
-                body: JSON.stringify({ 
-                    id: userId, 
-                    username: username, // ★ 補上 username
-                    projectIds: newProjectIds 
-                })
-            });
-            if (!res.ok) {
-                console.error('API Error:', await res.text());
-                return false;
-            }
-            return true;
-        } catch (e) {
-            console.error('Failed to update user contract:', userId, e);
+    try {
+        const session = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+        const res = await fetch('/api/users/upsert', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-session-token': session.sessionToken || ''
+            },
+            body: JSON.stringify({
+                id: userId,
+                username: username,
+                projectIds: newProjectIds
+            })
+        });
+        if (!res.ok) {
+            console.error('API Error:', await res.text());
             return false;
         }
+        return true;
+    } catch (e) {
+        console.error('Failed to update user contract:', userId, e);
+        return false;
     }
+}
 
 // teams.js - 团队管理
 (function() {
@@ -124,11 +124,20 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
         } catch (e) {}
     }
 
+    // ★ 兼容旧的字符串数组 & 新的对象数组
     function getDeletedContracts() {
         var arr = [];
         try {
             var s = localStorage.getItem(DELETED_CONTRACTS_KEY);
-            if (s) { var p = JSON.parse(s); if (Array.isArray(p)) arr = p.map(String); }
+            if (s) {
+                var p = JSON.parse(s);
+                if (Array.isArray(p)) {
+                    arr = p.map(function (x) {
+                        if (typeof x === 'string') return x;
+                        return String((x && (x.id || x.contractNo)) || '');
+                    }).filter(Boolean);
+                }
+            }
         } catch (e) {}
         return arr;
     }
@@ -136,59 +145,40 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
         var arr = getDeletedContracts();
         if (arr.indexOf(String(code)) === -1) {
             arr.push(String(code));
-            try { localStorage.setItem(DELETED_CONTRACTS_KEY, JSON.stringify(arr)); } catch (e) {}
+            var list = arr.map(function (c) { return { id: c, contractNo: c }; });
+            try { localStorage.setItem(DELETED_CONTRACTS_KEY, JSON.stringify(list)); } catch (e) {}
         }
     }
     function isContractDeleted(code) { return getDeletedContracts().indexOf(String(code)) !== -1; }
 
-    function loadContracts() {
+    // ★ seed 调用加 catch，避免 unhandled rejection
+    function loadContracts(skipSeed) {
         var stored = localStorage.getItem(CONTRACTS_KEY);
-        if (stored) { try { contracts = JSON.parse(stored) || []; } catch (e) { contracts = []; } }
+        if (stored) {
+            try { contracts = JSON.parse(stored) || []; } catch (e) { contracts = []; }
+        }
         if (!Array.isArray(contracts)) contracts = [];
+
         contracts = contracts.filter(function (c) {
             var code = c.contractNo || c.id;
             return code && !isContractDeleted(code);
         });
-        try {
-            ['dwss_projects', 'projects', 'ael_dwss_projects'].forEach(function (key) {
-                var raw = localStorage.getItem(key);
-                if (!raw) return;
-                var arr = JSON.parse(raw);
-                if (!Array.isArray(arr)) return;
-                arr.forEach(function (p) {
-                    var code = p.contractNo || p.id || p.code || p.name;
-                    if (!code || isContractDeleted(code)) return;
-                    if (contracts.some(function (c) { return (c.contractNo || c.id) === code; })) return;
-                    contracts.push({ id: code, contractNo: code, name: code });
-                });
-            });
-        } catch (e) {}
-        try {
-            (users || []).forEach(function (u) {
-                (u.projectIds || []).forEach(function (pid) {
-                    if (!pid || isContractDeleted(pid)) return;
-                    if (contracts.some(function (c) { return (c.contractNo || c.id) === pid; })) return;
-                    contracts.push({ id: pid, contractNo: pid, name: pid });
-                });
-            });
-        } catch (e) {}
-        ['DE/2026/05', 'DE/2025/02', 'DE/2025/09'].forEach(function (code) {
-            if (isContractDeleted(code)) return;
-            if (!contracts.some(function (c) { return (c.contractNo || c.id) === code; })) {
+
+        if (contracts.length === 0 && !skipSeed) {
+            ['DE/2026/05', 'DE/2025/02', 'DE/2025/09'].forEach(function (code) {
+                if (isContractDeleted(code)) return;
                 contracts.push({ id: code, contractNo: code, name: code });
-            }
-        });
-        contracts.forEach(function (c) {
-            var code = c.contractNo || c.id;
-            if (code === 'DE/2026/05') {
-                if (c.name === 'CMP Main Team' || c.name === 'DE202605 Main Works' || !c.name) c.name = 'DE/2026/05';
-            }
-        });
-        saveContracts();
+            });
+            saveContracts().catch(function (e) {
+                console.warn('[Contracts] seed save failed', e);
+            });
+        }
     }
 
+    // ★ 返回 Promise，讓調用方可 await
     function saveContracts() {
         localStorage.setItem(CONTRACTS_KEY, JSON.stringify(contracts));
+
         var list = contracts.map(function (c) {
             var code = c.contractNo || c.id;
             return { id: code, code: code, name: c.name || code, contractNo: code };
@@ -198,9 +188,13 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
             localStorage.setItem('projects', JSON.stringify(list));
             localStorage.setItem('ael_dwss_projects', JSON.stringify(list));
         } catch (e) {}
+
+        if (window.DWSS_Storage && typeof window.DWSS_Storage.flush === 'function') {
+            return window.DWSS_Storage.flush(CONTRACTS_KEY);
+        }
+        return Promise.resolve(true);
     }
 
-    // ★ 支持 skipSeed，避免雲端空資料時被本地 Seed 覆蓋
     function loadTeams(skipSeed) {
         const stored = localStorage.getItem(TEAMS_KEY);
         if (stored) {
@@ -244,7 +238,6 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
         localStorage.setItem(TEAMS_KEY, JSON.stringify(teams));
     }
 
-    // ★ 保存並等待 flush 的邏輯
     function saveTeamsAndVerify(callback) {
         saveTeams();
         if (!isCloudMode() || !window.DWSS_Storage || typeof window.DWSS_Storage.flush !== 'function') {
@@ -450,7 +443,7 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
     function fillContractSelect(selected) {
         var sel = document.getElementById('team-contract-select');
         if (!sel) return;
-        if (!contracts || !contracts.length) { try { loadContracts(); } catch (e) {} }
+        if (!contracts || !contracts.length) { try { loadContracts(true); } catch (e) {} }
         sel.innerHTML = '<option value="">-- Select Contract --</option>';
         var allowed = null;
         if (!currentIsSystemAdmin() && currentIsProjectAdmin()) {
@@ -489,8 +482,7 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
         selectedIds.forEach(function (id) { selectedSet[id] = true; });
         list.innerHTML = '';
         if (!users.length) loadUsers();
-        
-        // 清空搜尋框
+
         var searchInput = document.getElementById('contract-users-search');
         if (searchInput) searchInput.value = '';
 
@@ -498,10 +490,9 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
             if (u.role === 'admin') return;
             var uid = normalizeUserId(u.id);
             var label = document.createElement('label');
-            
-            // ★ 加上 Class 供搜尋使用
-            label.className = 'contract-user-row'; 
-            
+
+            label.className = 'contract-user-row';
+
             label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid #f1f5f9;cursor:pointer;';
             var cb = document.createElement('input');
             cb.type = 'checkbox'; cb.className = 'contract-user-cb'; cb.value = String(u.id);
@@ -515,7 +506,7 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
         });
         if (!list.children.length) list.innerHTML = '<div style="padding:8px;color:#94a3b8;">No users available.</div>';
     }
-    
+
     function getContractSelectedUserIds() {
         var ids = [];
         document.querySelectorAll('.contract-user-cb:checked').forEach(function (cb) { ids.push(normalizeUserId(cb.value)); });
@@ -545,7 +536,6 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
         var c = contracts.find(function (x) { return (x.contractNo || x.id) === contractNo; });
         if (!c) return;
 
-        // ★ Project Admin 只能編輯自己被指派的合約
         if (!isAdmin && isProjectAdmin) {
             var cu = window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser
                 ? window.DWSS_Permissions.getCurrentUser() : null;
@@ -565,14 +555,16 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
         var assigned = users.filter(function (u) {
             return (u.projectIds || []).indexOf(contractNo) !== -1;
         }).map(function (u) { return u.id; });
-        
+
         renderContractUserPicker(assigned);
 
         document.getElementById('contract-modal').style.display = 'flex';
     }
 
+    // ★ 完整重寫：先改記憶體 → await saveContracts → 再同步 users
     async function saveContract(e) {
         e.preventDefault();
+
         var isAdmin = currentIsSystemAdmin();
         var isProjectAdmin = currentIsProjectAdmin();
         if (!isAdmin && !isProjectAdmin) {
@@ -580,14 +572,13 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
             return;
         }
 
-        var no = document.getElementById('contract-no-input').value.trim();
+        var no   = document.getElementById('contract-no-input').value.trim();
         var name = document.getElementById('contract-name-input').value.trim();
-        if (!no) { alert('Please enter Contract No.'); return; }
+        if (!no)   { alert('Please enter Contract No.'); return; }
         if (!name) { alert('Please enter Contract Name.'); return; }
 
         var editing = document.getElementById('contract-form').dataset.editing || '';
 
-        // ★ 如果是 Project Admin，先驗證他是否有權限編輯此合約
         if (!isAdmin) {
             if (!editing) { alert('You do not have permission to create a contract.'); return; }
             var cu = window.DWSS_Permissions && window.DWSS_Permissions.getCurrentUser
@@ -599,16 +590,49 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
             }
         }
 
-        // === 以下是共同邏輯（System Admin 與 Project Admin 皆適用）===
+        // 備份記憶體，保存失敗時回滾
+        var contractsBackup = contracts.map(function (c) { return Object.assign({}, c); });
 
+        // 1) 先改記憶體
+        if (!editing) {
+            if (contracts.some(function (c) {
+                return (c.contractNo || c.id).toLowerCase() === no.toLowerCase();
+            })) {
+                alert('Contract No. already exists: ' + no);
+                return;
+            }
+            contracts.push({ id: no, contractNo: no, name: name });
+        } else {
+            var existing = contracts.find(function (x) { return (x.contractNo || x.id) === editing; });
+            if (existing) existing.name = name;
+        }
+
+        // 2) 真正寫入資料庫並 await 結果
+        var contractOk = false;
+        try {
+            contractOk = (await saveContracts()) !== false;
+        } catch (err) {
+            console.error('[Contracts] save failed', err);
+            contractOk = false;
+        }
+        if (!contractOk) {
+            contracts = contractsBackup;   // 回滾記憶體
+            alert('⚠ 合約同步到資料庫失敗。\n\n常見原因：\n1. Session 過期（30 分鐘無操作）\n2. 網路中斷\n\n請按 F5 重新整理後重試；若仍失敗，請重新登入。');
+            return;
+        }
+
+        // 3) 更新 UI
+        renderContractsTable();
+        fillContractSelect();
+
+        // 4) 同步 users 的 projectIds
         var selectedIds = getContractSelectedUserIds();
         var previouslyAssigned = users.filter(function (u) {
             return (u.projectIds || []).indexOf(no) !== -1;
         }).map(function (u) { return normalizeUserId(u.id); });
 
         var promises = [];
-        
-        // 1. 將所有勾選的人加入專案
+
         selectedIds.forEach(function (id) {
             var u = findUserById(id);
             if (u) {
@@ -617,8 +641,7 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
                 promises.push(updateUserContractsAPI(u.id, u.username, u.projectIds));
             }
         });
-        
-        // 2. 將取消勾選的人從專案移除
+
         previouslyAssigned.forEach(function (id) {
             if (selectedIds.indexOf(id) === -1) {
                 var u = findUserById(id);
@@ -629,64 +652,92 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
             }
         });
 
-        // 3. 保存合約本身
-        if (!editing) {
-            if (contracts.some(function (c) { return (c.contractNo || c.id).toLowerCase() === no.toLowerCase(); })) {
-                alert('Contract No. already exists: ' + no); return;
-            }
-            contracts.push({ id: no, contractNo: no, name: name });
-        } else {
-            var c = contracts.find(function (x) { return (x.contractNo || x.id) === editing; });
-            if (c) c.name = name;
-        }
-        saveContracts();
-        renderContractsTable();
-        fillContractSelect();
-        
         try {
             localStorage.setItem(USERS_KEY, JSON.stringify(users));
             localStorage.setItem(USERS_KEY_LEGACY, JSON.stringify(users));
         } catch (e) {}
 
-        // 4. 等待所有 API 請求完成
-        const results = await Promise.all(promises);
+        var results = await Promise.all(promises);
+        document.getElementById('contract-modal').style.display = 'none';
+
         if (results.includes(false)) {
-            alert('⚠ 部分用戶的專案權限同步失敗，請檢查網路連線或 Console 錯誤。');
+            alert('⚠ 合約已存到資料庫，但部分用戶的專案權限同步失敗，請稍後重新整理確認。');
         } else {
-            document.getElementById('contract-modal').style.display = 'none';
             alert('✅ 合約與用戶權限已成功同步到伺服器。');
         }
     }
 
-    function removeContractFromAllUsers(contractNo) {
+    async function removeContractFromAllUsers(contractNo) {
         if (!contractNo) return;
         if (!users.length) loadUsers();
+
+        var session = {};
+        try { session = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch(e){}
+
+        var promises = [];
+
         users.forEach(function (u) {
             if (!u.projectIds) return;
-            u.projectIds = u.projectIds.filter(function (pid) { return pid !== contractNo; });
+            if (u.projectIds.indexOf(contractNo) > -1) {
+                u.projectIds = u.projectIds.filter(function (pid) { return pid !== contractNo; });
+
+                promises.push(
+                    fetch('/api/users/upsert', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-session-token': session.sessionToken || ''
+                        },
+                        body: JSON.stringify({ id: u.id, username: u.username, projectIds: u.projectIds })
+                    }).then(function(r){ return r.ok; }).catch(function(){ return false; })
+                );
+            }
         });
+
         try {
             localStorage.setItem(USERS_KEY, JSON.stringify(users));
             localStorage.setItem(USERS_KEY_LEGACY, JSON.stringify(users));
         } catch (e) {}
+
+        if (promises.length) {
+            await Promise.all(promises);
+            console.log('✅ 已同步從 ' + promises.length + ' 個用戶的伺服器權限中移除 ' + contractNo);
+        }
     }
-    
-    function deleteContract(contractNo) {
+
+    // ★ deleteContract：先改記憶體 → await saveContracts → 再 saveTeams
+    async function deleteContract(contractNo) {
         if (!currentIsSystemAdmin()) { alert('Only System Admin can delete a contract.'); return; }
         var linked = teams.filter(function (tm) { return tm.contractNo === contractNo; });
         var msg = 'Delete contract ' + contractNo + '?\n\nThis will also remove it from all users\' login project lists';
         if (linked.length) msg += '\n(' + linked.length + ' team(s) under this contract will be removed too.)';
         if (!confirm(msg)) return;
+
         markContractDeleted(contractNo);
-        removeContractFromAllUsers(contractNo);
+
+        await removeContractFromAllUsers(contractNo);
+
+        // 同時清理 teams 和 contracts 記憶體
         teams = teams.filter(function (tm) { return tm.contractNo !== contractNo; });
-        saveTeamsAndVerify(function () {
-            contracts = contracts.filter(function (c) { return (c.contractNo || c.id) !== contractNo; });
-            saveContracts();
+        contracts = contracts.filter(function (c) { return (c.contractNo || c.id) !== contractNo; });
+
+        var contractOk = false;
+        try {
+            contractOk = (await saveContracts()) !== false;
+        } catch (e) {
+            contractOk = false;
+        }
+
+        saveTeamsAndVerify(function (teamsOk) {
             renderContractsTable();
             renderTeamsTable();
             fillContractSelect();
             updateStats();
+            if (!teamsOk || !contractOk) {
+                alert('⚠ 部分變更同步失敗（合約: ' + (contractOk ? 'OK' : '失敗') +
+                      '，團隊: ' + (teamsOk ? 'OK' : '失敗') +
+                      '）。請按 F5 重新整理確認。');
+            }
         });
     }
 
@@ -706,7 +757,6 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
             var teamCount = teams.filter(function (tm) { return tm.contractNo === code; }).length;
             var row = tbody.insertRow();
 
-            // ★ Project Admin 也可看到 Edit；Delete 僅限 System Admin
             var actions = '';
             if (isAdmin || isProjectAdmin) {
                 actions += '<button class="action-btn edit-contract-btn" data-cno="' + code +
@@ -753,6 +803,7 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
         if (searchEl) searchEl.value = '';
         document.getElementById('team-modal').style.display = 'flex';
     }
+
     function openEditTeamModal(teamId) {
         const team = teams.find(t => t.id === teamId);
         if (!team) return;
@@ -804,7 +855,7 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
                 assignMembersToContract(selectedIds, team.contractNo || contractNo);
             }
         }
-        
+
         saveTeamsAndVerify(function (ok) {
             if (!ok) {
                 alert('⚠ Team save failed. Please check your internet connection or session.');
@@ -828,10 +879,11 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
         });
     }
 
+    // ★ 刷新時絕不 seed contracts
     function refreshTable() {
         loadUsers();
-        loadTeams(true); // 刷新時強制不 seed 覆蓋
-        loadContracts();
+        loadTeams(true);
+        loadContracts(true);
         renderContractsTable();
         renderTeamsTable();
         updateStats();
@@ -871,8 +923,21 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
     function init() {
         function doInit(skipSeed) {
             loadUsers();
-            loadTeams(skipSeed);
-            loadContracts();
+
+            // ★ 分別判斷 teams 和 contracts 的 cache 是否已從 DB 加載
+            var teamsCache = null, contractsCache = null;
+            try {
+                if (window.DWSS_Storage && window.DWSS_Storage.getCache) {
+                    teamsCache = window.DWSS_Storage.getCache(TEAMS_KEY);
+                    contractsCache = window.DWSS_Storage.getCache(CONTRACTS_KEY);
+                }
+            } catch (e) {}
+
+            var teamsSkipSeed = !!skipSeed || (Array.isArray(teamsCache) && teamsCache.length > 0);
+            var contractsSkipSeed = Array.isArray(contractsCache) && contractsCache.length > 0;
+
+            loadTeams(teamsSkipSeed);
+            loadContracts(contractsSkipSeed);
             setupMemberPickerEvents();
             renderMemberList('');
             renderTeamsTable();
@@ -895,8 +960,7 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
             });
             var contractForm = document.getElementById('contract-form');
             if (contractForm) contractForm.addEventListener('submit', saveContract);
-            
-            // 綁定合約使用者的搜尋與全選功能
+
             var cSearch = document.getElementById('contract-users-search');
             if (cSearch) {
                 cSearch.addEventListener('input', function() {
@@ -917,7 +981,6 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
                             var cb = lbl.querySelector('input');
                             if (cb && !cb.checked) {
                                 cb.checked = true;
-                                // 觸發 change 事件以確保樣式更新（如果有使用的話）
                                 cb.dispatchEvent(new Event('change'));
                             }
                         }
@@ -929,9 +992,9 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
             if (cClear) {
                 cClear.addEventListener('click', function() {
                     var cbs = document.querySelectorAll('.contract-user-cb');
-                    cbs.forEach(function(cb) { 
+                    cbs.forEach(function(cb) {
                         if (cb.checked) {
-                            cb.checked = false; 
+                            cb.checked = false;
                             cb.dispatchEvent(new Event('change'));
                         }
                     });
@@ -959,12 +1022,15 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
                 attempts++;
                 var isCloud = false;
                 try { isCloud = window.DWSS_Storage.isCloud(); } catch (e) {}
+
                 if (isCloud) {
-                    var c = null;
-                    try { c = window.DWSS_Storage.getCache ? window.DWSS_Storage.getCache(TEAMS_KEY) : null; } catch (e) {}
-                    if (Array.isArray(c)) {
-                        var isActuallyCloud = isCloudMode();
-                        doInit(isActuallyCloud && c.length > 0);
+                    // ★ 等 markReady：此時所有 collection 已加載完
+                    var isReady = false;
+                    try { isReady = window.DWSS_Storage.ready && window.DWSS_Storage.ready(); } catch (e) {}
+                    if (isReady) {
+                        var c = null;
+                        try { c = window.DWSS_Storage.getCache(TEAMS_KEY); } catch (e) {}
+                        doInit(Array.isArray(c) && c.length > 0);
                         return;
                     }
                     if (attempts > 500) { doInit(true); return; }
@@ -977,7 +1043,19 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
             }
             setTimeout(poll, 30);
         }
+
         waitForCloudThenInit();
+
+        // ★ 監聽 session 過期事件，避免 401 靜默失敗
+        window.addEventListener('dwss:session-expired', function (e) {
+            var coll = (e && e.detail && e.detail.collection) || '';
+            console.warn('[Teams] session expired while saving', coll);
+            if (!window.__dwssSessionAlertShown) {
+                window.__dwssSessionAlertShown = true;
+                alert('你的登入已過期，請重新登入。');
+                setTimeout(function () { location.replace('login.html'); }, 50);
+            }
+        });
     }
 
     document.addEventListener('DOMContentLoaded', init);
