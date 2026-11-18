@@ -927,7 +927,7 @@ function renderGF527_2017View() {
     /* ---------- 2. 表格 ---------- */
     var wrap = document.createElement('div');
     wrap.className = 'gf527-2017-table-wrap';
-    wrap.style.borderLeft = 'none';  // 避免外框左線疊加
+    wrap.style.borderLeft = 'none';
 
     var table = document.createElement('table');
     table.className = 'gf527-2017-table';
@@ -958,30 +958,47 @@ function renderGF527_2017View() {
 
     var tbody = document.createElement('tbody');
 
-    function buildDayCells(no) {
+    // ★ 核心修改：加入 idx 區分同一 Item No. 的不同子行
+    function buildDayCells(no, idx) {
         var html = '';
         for (var day = 1; day <= 31; day++) {
-            var v = formData['gf5272017_row_' + no + '_day_' + day] || '';
+            // 兼容舊數據
+            var v = formData['gf5272017_row_' + no + '_' + idx + '_day_' + day];
+            if (v === undefined && idx === 0) v = formData['gf5272017_row_' + no + '_day_' + day];
+            if (!v) v = '';
+
             html +=
                 '<td class="day-col">' +
                     '<input type="text" inputmode="numeric" maxlength="3" class="gf5272017-day" ' +
-                    'data-row="' + no + '" data-day="' + day + '" value="' + escHTML(v) + '">' +
+                    'data-row="' + no + '" data-idx="' + idx + '" data-day="' + day + '" value="' + escHTML(v) + '">' +
                 '</td>';
         }
         return html;
     }
-    function buildTailCells(no) {
-        var md = formData['gf5272017_row_' + no + '_mandays'] || '';
-        var ot = formData['gf5272017_row_' + no + '_overtime'] || '';
-        var avg = formData['gf5272017_row_' + no + '_avg'] || '';
-        var high = formData['gf5272017_row_' + no + '_high'] || '';
-        var low = formData['gf5272017_row_' + no + '_low'] || '';
+    
+    function buildTailCells(no, idx) {
+        var md = formData['gf5272017_row_' + no + '_' + idx + '_mandays'];
+        var ot = formData['gf5272017_row_' + no + '_' + idx + '_overtime'];
+        var avg = formData['gf5272017_row_' + no + '_' + idx + '_avg'];
+        var high = formData['gf5272017_row_' + no + '_' + idx + '_high'];
+        var low = formData['gf5272017_row_' + no + '_' + idx + '_low'];
+
+        // 兼容舊數據
+        if (idx === 0) {
+            if (md === undefined) md = formData['gf5272017_row_' + no + '_mandays'];
+            if (ot === undefined) ot = formData['gf5272017_row_' + no + '_overtime'];
+            if (avg === undefined) avg = formData['gf5272017_row_' + no + '_avg'];
+            if (high === undefined) high = formData['gf5272017_row_' + no + '_high'];
+            if (low === undefined) low = formData['gf5272017_row_' + no + '_low'];
+        }
+        md = md || ''; ot = ot || ''; avg = avg || ''; high = high || ''; low = low || '';
+
         return '' +
-            '<td class="total-col"><input type="text" inputmode="numeric" class="gf5272017-mandays" data-row="' + no + '" value="' + escHTML(md) + '"></td>' +
-            '<td class="ot-col"><input type="text" inputmode="numeric" class="gf5272017-overtime" data-row="' + no + '" value="' + escHTML(ot) + '"></td>' +
-            '<td class="wage-col"><input type="text" inputmode="decimal" class="gf5272017-avg"  data-row="' + no + '" value="' + escHTML(avg) + '"></td>' +
-            '<td class="wage-col"><input type="text" inputmode="decimal" class="gf5272017-high" data-row="' + no + '" value="' + escHTML(high) + '"></td>' +
-            '<td class="wage-col"><input type="text" inputmode="decimal" class="gf5272017-low"  data-row="' + no + '" value="' + escHTML(low) + '"></td>';
+            '<td class="total-col"><input type="text" inputmode="numeric" class="gf5272017-mandays" data-row="' + no + '" data-idx="' + idx + '" value="' + escHTML(md) + '"></td>' +
+            '<td class="ot-col"><input type="text" inputmode="numeric" class="gf5272017-overtime" data-row="' + no + '" data-idx="' + idx + '" value="' + escHTML(ot) + '"></td>' +
+            '<td class="wage-col"><input type="text" inputmode="decimal" class="gf5272017-avg"  data-row="' + no + '" data-idx="' + idx + '" value="' + escHTML(avg) + '"></td>' +
+            '<td class="wage-col"><input type="text" inputmode="decimal" class="gf5272017-high" data-row="' + no + '" data-idx="' + idx + '" value="' + escHTML(high) + '"></td>' +
+            '<td class="wage-col"><input type="text" inputmode="decimal" class="gf5272017-low"  data-row="' + no + '" data-idx="' + idx + '" value="' + escHTML(low) + '"></td>';
     }
 
     GF527_2017_TRADES.forEach(function (group) {
@@ -992,8 +1009,7 @@ function renderGF527_2017View() {
         var isOther = items[0] && items[0].isOther;
 
         if (isOther) {
-            /* ---- Others 行：Trade 與 Division 合併，Orig 與 Rev 合併 ---- */
-            items.forEach(function () {
+            items.forEach(function (item, idx) {
                 var nm = formData['gf5272017_row_' + no + '_name'] || '';
                 var cd = formData['gf5272017_row_' + no + '_code'] || '';
                 var tr = document.createElement('tr');
@@ -1004,21 +1020,19 @@ function renderGF527_2017View() {
                         '<input type="text" class="gf5272017-other-name cell-other-input" data-row="' + no + '" ' +
                         'value="' + escHTML(nm) + '" style="width:55%;display:inline-block;">' +
                     '</td>' +
-                    // ★ 修改這裡：將 colspan 設為 2 (合併 Orig 和 Rev)，並加大輸入框寬度
                     '<td colspan="2" style="padding:2px 4px;text-align:left;white-space:nowrap;font-size:10px;">' +
                         'code - ' +
                         '<input type="text" class="gf5272017-other-code cell-other-input" data-row="' + no + '" ' +
                         'value="' + escHTML(cd) + '" style="width:65%;display:inline-block;">' +
                     '</td>' +
-                    buildDayCells(no) +
-                    buildTailCells(no) +
+                    buildDayCells(no, idx) +
+                    buildTailCells(no, idx) +
                     '<td class="cell-no">' + no + '</td>';
                 tbody.appendChild(tr);
             });
             return;
         }
 
-        /* ---- 一般 group：Item No. + Trade 以 rowspan 合併 ---- */
         items.forEach(function (item, idx) {
             var tr = document.createElement('tr');
 
@@ -1033,8 +1047,8 @@ function renderGF527_2017View() {
                 '<td class="cell-division">' + escHTML(item.division) + '</td>' +
                 '<td class="cell-orig">' + escHTML(orig) + '</td>' +
                 '<td class="cell-rev">' + escHTML(item.rev) + '</td>' +
-                buildDayCells(no) +
-                buildTailCells(no);
+                buildDayCells(no, idx) +
+                buildTailCells(no, idx);
 
             if (idx === 0) {
                 tr.innerHTML += '<td class="cell-no" rowspan="' + rowSpan + '">' + no + '</td>';
@@ -1044,34 +1058,29 @@ function renderGF527_2017View() {
         });
     });
 
-        function buildSignatureRow(labelText, rowKey, telKey) {
-            var telVal = formData[telKey] || '';
-            return '' +
-                '<tr>' +
-                    // 1. 左側文字與簽名區 (3欄)
-                    '<td colspan="3" style="text-align:left; padding:4px; border:1px solid #000 !important; vertical-align:middle;">' +
-                        '<div style="display:flex; width:100%; align-items:center; height:22px;">' +
-                            '<span style="white-space:nowrap; font-size:10px; padding-right:10px;">' + labelText + '</span>' +
-                            '<div class="table-sig-cell" data-field-id="' + rowKey + '_signature" ' +
-                                'style="flex:1; height:100%; display:flex; align-items:center; justify-content:center;' +
-                                'cursor:pointer; border:1px dashed #94a3b8; background:#f8fafc;"></div>' +
-                        '</div>' +
-                    '</td>' +
-                    
-                    // 2. Tel. No. 單獨佔 2 欄，與上方的 code 對齊，保留正常網格線
-                    '<td colspan="2" style="text-align:left; padding:4px 8px; border:1px solid #000 !important; vertical-align:middle;">' +
-                        '<div style="display:inline-flex; align-items:center; white-space:nowrap; font-size:10px;">' +
-                            '<span style="margin-right:4px;">Tel. No.:</span>' +
-                            '<input type="text" class="gf5272017-telno" data-row="' + telKey + '" ' +
-                                'value="' + escHTML(telVal) + '" ' +
-                                'style="width:100%; max-width:120px; border:none; background:transparent; outline:none; font-family:inherit; font-size:10px;">' +
-                        '</div>' +
-                    '</td>' +
-                    
-                    // 3. 右側的長格子 (剩餘 37 欄) 變為透明：移除左右邊框，只保留上下底線以防表格斷開
-                    '<td colspan="37" style="border: 1px solid transparent !important; border-top: 1px solid #000 !important; border-bottom: 1px solid #000 !important; border-right: 1px solid #000 !important; background: transparent;"></td>' +
-                '</tr>';
-        }
+    function buildSignatureRow(labelText, rowKey, telKey) {
+        var telVal = formData[telKey] || '';
+        return '' +
+            '<tr>' +
+                '<td colspan="3" style="text-align:left; padding:4px; border:1px solid #000 !important; vertical-align:middle;">' +
+                    '<div style="display:flex; width:100%; align-items:center; height:22px;">' +
+                        '<span style="white-space:nowrap; font-size:10px; padding-right:10px;">' + labelText + '</span>' +
+                        '<div class="table-sig-cell" data-field-id="' + rowKey + '_signature" ' +
+                            'style="flex:1; height:100%; display:flex; align-items:center; justify-content:center;' +
+                            'cursor:pointer; border:1px dashed #94a3b8; background:#f8fafc;"></div>' +
+                    '</div>' +
+                '</td>' +
+                '<td colspan="2" style="text-align:left; padding:4px 8px; border:1px solid #000 !important; vertical-align:middle;">' +
+                    '<div style="display:inline-flex; align-items:center; white-space:nowrap; font-size:10px;">' +
+                        '<span style="margin-right:4px;">Tel. No.:</span>' +
+                        '<input type="text" class="gf5272017-telno" data-row="' + telKey + '" ' +
+                            'value="' + escHTML(telVal) + '" ' +
+                            'style="width:100%; max-width:120px; border:none; background:transparent; outline:none; font-family:inherit; font-size:10px;">' +
+                    '</div>' +
+                '</td>' +
+                '<td colspan="37" style="border: 1px solid transparent !important; border-top: 1px solid #000 !important; border-bottom: 1px solid #000 !important; border-right: 1px solid #000 !important; background: transparent;"></td>' +
+            '</tr>';
+    }
 
     tbody.innerHTML += buildSignatureRow(
         'Completed by Agent of Contractor&nbsp;&nbsp;Name (in block letters) &amp; Signature:',
@@ -1108,7 +1117,7 @@ function renderGF527_2017View() {
         '</div>';
     view.appendChild(footer);
 
-     /* ---------- 6. 綁定輸入事件 ---------- */
+    /* ---------- 6. 綁定輸入事件 ---------- */
     function bind(selector, keyFn) {
         view.querySelectorAll(selector).forEach(function (el) {
             el.addEventListener('input', function () {
@@ -1118,34 +1127,35 @@ function renderGF527_2017View() {
         });
     }
 
-    // ★ 單獨給 .gf5272017-day 加上 input 事件，處理自動加總
+    // ★ 核心修改：基於 data-row 和 data-idx 精確計算
     view.querySelectorAll('.gf5272017-day').forEach(function (el) {
         el.addEventListener('input', function () {
             var row = el.dataset.row;
-            formData['gf5272017_row_' + row + '_day_' + el.dataset.day] = el.value;
+            var idx = el.dataset.idx;
+            formData['gf5272017_row_' + row + '_' + idx + '_day_' + el.dataset.day] = el.value;
 
             // 自動計算 Total Man-days
             var sum = 0;
-            view.querySelectorAll('.gf5272017-day[data-row="' + row + '"]').forEach(function (dEl) {
+            view.querySelectorAll('.gf5272017-day[data-row="' + row + '"][data-idx="' + idx + '"]').forEach(function (dEl) {
                 var val = parseFloat(dEl.value);
                 if (!isNaN(val)) sum += val;
             });
-            var mdEl = view.querySelector('.gf5272017-mandays[data-row="' + row + '"]');
+            var mdEl = view.querySelector('.gf5272017-mandays[data-row="' + row + '"][data-idx="' + idx + '"]');
             if (mdEl) {
                 var finalVal = sum > 0 ? (Number.isInteger(sum) ? sum : sum.toFixed(2)) : '';
                 mdEl.value = finalVal;
-                formData['gf5272017_row_' + row + '_mandays'] = finalVal;
+                formData['gf5272017_row_' + row + '_' + idx + '_mandays'] = finalVal;
             }
             persistFormData();
         });
     });
 
-    // 其他欄位用原本的 bind 綁定
-    bind('.gf5272017-mandays',    function (el) { return 'gf5272017_row_' + el.dataset.row + '_mandays'; });
-    bind('.gf5272017-overtime',   function (el) { return 'gf5272017_row_' + el.dataset.row + '_overtime'; });
-    bind('.gf5272017-avg',        function (el) { return 'gf5272017_row_' + el.dataset.row + '_avg'; });
-    bind('.gf5272017-high',       function (el) { return 'gf5272017_row_' + el.dataset.row + '_high'; });
-    bind('.gf5272017-low',        function (el) { return 'gf5272017_row_' + el.dataset.row + '_low'; });
+    // 其他欄位用原本的 bind 綁定，加入 idx 區分
+    bind('.gf5272017-mandays',    function (el) { return 'gf5272017_row_' + el.dataset.row + '_' + el.dataset.idx + '_mandays'; });
+    bind('.gf5272017-overtime',   function (el) { return 'gf5272017_row_' + el.dataset.row + '_' + el.dataset.idx + '_overtime'; });
+    bind('.gf5272017-avg',        function (el) { return 'gf5272017_row_' + el.dataset.row + '_' + el.dataset.idx + '_avg'; });
+    bind('.gf5272017-high',       function (el) { return 'gf5272017_row_' + el.dataset.row + '_' + el.dataset.idx + '_high'; });
+    bind('.gf5272017-low',        function (el) { return 'gf5272017_row_' + el.dataset.row + '_' + el.dataset.idx + '_low'; });
     bind('.gf5272017-other-name', function (el) { return 'gf5272017_row_' + el.dataset.row + '_name'; });
     bind('.gf5272017-other-code', function (el) { return 'gf5272017_row_' + el.dataset.row + '_code'; });
     bind('.gf5272017-telno',      function (el) { return el.dataset.row; });
@@ -1153,21 +1163,27 @@ function renderGF527_2017View() {
     // ★ 渲染完成後，初始化一次所有行的 Total Man-days
     view.querySelectorAll('.gf5272017-mandays').forEach(function(mdEl) {
         var row = mdEl.dataset.row;
+        var idx = mdEl.dataset.idx;
         var sum = 0;
-        view.querySelectorAll('.gf5272017-day[data-row="' + row + '"]').forEach(function(dEl) {
+        var hasData = false;
+        
+        view.querySelectorAll('.gf5272017-day[data-row="' + row + '"][data-idx="' + idx + '"]').forEach(function(dEl) {
             var val = parseFloat(dEl.value);
-            if (!isNaN(val)) sum += val;
+            if (!isNaN(val)) { sum += val; hasData = true; }
         });
-        var finalVal = sum > 0 ? (Number.isInteger(sum) ? sum : sum.toFixed(2)) : '';
-        mdEl.value = finalVal;
-        formData['gf5272017_row_' + row + '_mandays'] = finalVal;
+        
+        // 如果以前有輸入過天數，就重新計算並覆蓋
+        if (hasData) {
+            var finalVal = sum > 0 ? (Number.isInteger(sum) ? sum : sum.toFixed(2)) : '';
+            mdEl.value = finalVal;
+            formData['gf5272017_row_' + row + '_' + idx + '_mandays'] = finalVal;
+        }
     });
 
     pageWrapper.appendChild(view);
     currentPageObj = { pageNum: 1, container: view };
     updatePageInfo();
 
-        // ★ 新增這行：讓表格視圖支援縮放
     view.style.zoom = zoomLevel;
 }
     

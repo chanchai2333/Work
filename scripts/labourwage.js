@@ -1,7 +1,35 @@
-// labourwage.js - Labour Wage 頁面邏輯
+// labourwage.js - Labour Wage 頁面邏輯（整合安全取值、項目隔離、修復 Admin User/Unknown）
 document.addEventListener("DOMContentLoaded", function () {
     // ==================== 權限初始化 ====================
     DWSS_Auth.updateHeaderUser();
+
+    // ==================== ★ 安全取值 Helper（移植自 sitediary.js） ====================
+    function safe(v, fallback) {
+        if (v === undefined || v === null || v === '' || v === 'undefined' || v === 'null') return fallback;
+        return v;
+    }
+
+    function currentUserName() {
+        try {
+            var u = (DWSS_Auth && DWSS_Auth.getCurrentUser) ? DWSS_Auth.getCurrentUser() : null;
+            if (!u) return 'Unknown';
+            // 優先使用 userName/username，避免抓到 "Admin User" (name/fullName)
+            return safe(u.userName, safe(u.username, safe(u.name, safe(u.user_name, 'Unknown'))));
+        } catch (e) { return 'Unknown'; }
+    }
+
+    function currentRoleName() {
+        try {
+            var r = (DWSS_Auth && DWSS_Auth.getRoleName) ? DWSS_Auth.getRoleName() : null;
+            return safe(r, 'N/A');
+        } catch (e) { return 'N/A'; }
+    }
+
+    function canChangeStatusSafe() {
+        try {
+            return !!(DWSS_Auth && DWSS_Auth.canChangeStatus && DWSS_Auth.canChangeStatus());
+        } catch (e) { return false; }
+    }
 
     // ==================== 狀態映射 ====================
     const STATUS_TEXT_MAP = {
@@ -21,7 +49,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // ==================== 數據管理 ====================
     const STORAGE_KEY = 'wageData';
-
     let wageData = [];
     let currentFilters = { type: "all", status: "all", site: "all" };
 
@@ -53,35 +80,60 @@ document.addEventListener("DOMContentLoaded", function () {
         return sessionStorage.getItem('currentProjectId') || null;
     }
 
+    // ==================== ★ 記錄正規化 ====================
+    function normalizeRecord(item) {
+        if (!item || typeof item !== 'object') return null;
+
+        if (!item.submittedBy) {
+            item.submittedBy = safe(item.submitted_by, safe(item.submittedByName, safe(item.submitted_by_name, '')));
+        }
+        if (!item.site) {
+            item.site = safe(item.site_name, safe(item.siteName, ''));
+        }
+        if (!item.type) {
+            item.type = safe(item.document_type, safe(item.documentType, ''));
+        }
+        if (!item.typeText && item.type) {
+            if (item.type === 'GF527A') item.typeText = 'GF527A - Return on Construction Site Employment';
+            else if (item.type === 'GF527-2003') item.typeText = 'GF527 (2003) - Labour Wage';
+            else if (item.type === 'GF527-2017') item.typeText = 'GF527 (2017) - Labour Wage';
+        }
+
+        if (!item.status) item.status = 'draft';
+        
+        if (item.status === 'reopen') item.approvalStatus = 'pending';
+        else if (item.status === 'cancelled') item.approvalStatus = 'cancelled';
+        else if (!item.approvalStatus) item.approvalStatus = 'pending';
+
+        if (!Array.isArray(item.annotations)) item.annotations = [];
+        if (!Array.isArray(item.statusHistory)) item.statusHistory = [];
+        if (!item.hasOwnProperty('pdfData')) item.pdfData = null;
+
+        if (!item.project) {
+            if (item.id && item.id.indexOf('LRR/DE-2025-02') === 0) item.project = 'DE/2025/02';
+            else if (item.id && item.id.indexOf('LRR/DE-2025-09') === 0) item.project = 'DE/2025/09';
+            else if (item.id && item.id.indexOf('LRR/DE-2026-05') === 0) item.project = 'DE/2026/05';
+            else item.project = getCurrentProjectId() || 'DE/2026/05';
+        }
+        return item;
+    }
+
     // ==================== 載入 / 儲存 ====================
     function initWageData() {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored && stored !== 'null' && stored !== '[]') {
             try {
-                wageData = JSON.parse(stored);
-                let migrated = 0;
-                wageData.forEach(item => {
-                    if (!item.hasOwnProperty('pdfData')) item.pdfData = null;
-                    if (!item.hasOwnProperty('annotations')) item.annotations = [];
-                    if (!item.hasOwnProperty('statusHistory')) item.statusHistory = [];
-                    if (!item.status) item.status = 'draft';
-                    
-                    if (!item.project) {
-                        if (item.id && item.id.indexOf('LRR/DE-2025-02') === 0) item.project = 'DE/2025/02';
-                        else if (item.id && item.id.indexOf('LRR/DE-2025-09') === 0) item.project = 'DE/2025/09';
-                        else if (item.id && item.id.indexOf('LRR/DE-2026-05') === 0) item.project = 'DE/2026/05';
-                        else item.project = getCurrentProjectId() || 'DE/2026/05';
-                        migrated++;
-                    }
-                });
-                if (migrated > 0) saveData();
+                var raw = JSON.parse(stored);
+                if (!Array.isArray(raw)) raw = [];
+                wageData = raw.map(normalizeRecord).filter(Boolean);
+                saveData();
             } catch(e) {
                 console.error('[LabourWage] 資料解析失敗', e);
-                wageData = getAllDefaultRecords();
+                wageData = getAllDefaultRecords().map(normalizeRecord).filter(Boolean);
                 saveData();
             }
         } else {
-            wageData = getAllDefaultRecords();
+            wageData = getAllDefaultRecords().map(normalizeRecord).filter(Boolean);
             saveData();
         }
         renderWageTable();
@@ -167,9 +219,9 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function generateStatusSelect(recordId) {
-        if (window.DWSS_Auth && DWSS_Auth.canChangeStatus()) {
+        if (canChangeStatusSafe()) {
             return `
-                <select class="status-change-select" data-id="${recordId}" title="Change Status">
+                <select class="status-change-select" data-id="${safe(recordId, '')}" title="Change Status">
                     <option value="">📝 Change Status</option>
                     <option value="draft">Draft</option>
                     <option value="submitted-ig">Submit to IG</option>
@@ -183,7 +235,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function getStatusClass(status) { return STATUS_CLASS_MAP[status] || 'status-draft'; }
-    function getStatusText(status) { return STATUS_TEXT_MAP[status] || status || 'Draft'; }
+    function getStatusText(status) { return STATUS_TEXT_MAP[status] || safe(status, 'Draft'); }
 
     function readFileAsBase64(file) {
         return new Promise(function(resolve, reject) {
@@ -229,7 +281,7 @@ document.addEventListener("DOMContentLoaded", function () {
             (buckets[key] || (buckets[key] = [])).push(item);
         });
 
-        var userCanChangeStatus = window.DWSS_Auth && DWSS_Auth.canChangeStatus();
+        var userCanChangeStatus = canChangeStatusSafe();
 
         CATEGORIES.forEach(function (key) {
             var tbody = document.getElementById(TBODY_IDS[key]);
@@ -244,23 +296,30 @@ document.addEventListener("DOMContentLoaded", function () {
 
             items.forEach(function(item) {
                 var row = document.createElement('tr');
+                
+                var displayStatus = safe(item.status, 'draft');
+                var displayApproval = safe(item.approvalStatus, 'pending');
+                if (item.status === 'reopen') displayApproval = 'pending';
+                if (item.status === 'cancelled') displayApproval = 'cancelled';
+                var safeId = safe(item.id, '');
+
                 var approvalDisplay = '';
-                if (item.approvalStatus === 'approved') {
+                if (displayApproval === 'approved') {
                     approvalDisplay = '<span class="status-badge status-approved">✅ Approved</span>';
-                } else if (item.approvalStatus === 'rejected') {
+                } else if (displayApproval === 'rejected') {
                     approvalDisplay = '<span class="status-badge status-rejected">❌ Rejected</span>';
-                } else if (item.approvalStatus === 'cancelled') {
+                } else if (displayApproval === 'cancelled') {
                     approvalDisplay = '<span class="status-badge status-cancelled">🚫 Cancelled</span>';
                 } else {
                     approvalDisplay = '<span class="status-badge status-pending">⏳ Pending</span>';
                 }
 
                 var actionButtons = `
-                    <button class="action-btn view-btn" data-id="${item.id}" title="View"><i class="fas fa-eye"></i></button>
-                    <button class="action-btn edit-btn" data-id="${item.id}" title="Edit"><i class="fas fa-edit"></i></button>
-                    ${item.approvalStatus === 'rejected' ? `<button class="action-btn view-comment-btn" data-id="${item.id}" title="View Rejection Comment" style="background: linear-gradient(135deg, #f39c12, #d35400); color: white;"><i class="fas fa-comment-dots"></i></button>` : ''}
-                    ${generateStatusSelect(item.id)}
-                    <button class="action-btn delete-btn" data-id="${item.id}" title="Delete"><i class="fas fa-trash"></i></button>
+                    <button class="action-btn view-btn" data-id="${safeId}" title="View"><i class="fas fa-eye"></i></button>
+                    <button class="action-btn edit-btn" data-id="${safeId}" title="Edit"><i class="fas fa-edit"></i></button>
+                    ${item.approvalStatus === 'rejected' ? `<button class="action-btn view-comment-btn" data-id="${safeId}" title="View Rejection Comment" style="background: linear-gradient(135deg, #f39c12, #d35400); color: white;"><i class="fas fa-comment-dots"></i></button>` : ''}
+                    ${generateStatusSelect(safeId)}
+                    <button class="action-btn delete-btn" data-id="${safeId}" title="Delete"><i class="fas fa-trash"></i></button>
                 `;
 
                 if (!userCanChangeStatus) {
@@ -268,13 +327,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
 
                 row.innerHTML = `
-                    <td>${item.id}</td>
-                    <td>${item.typeText || item.type}</td>
-                    <td><span class="status-badge ${getStatusClass(item.status)}">${getStatusText(item.status)}</span></td>
+                    <td>${safe(item.id, '—')}</td>
+                    <td>${safe(item.typeText, safe(item.type, '—'))}</td>
+                    <td><span class="status-badge ${getStatusClass(displayStatus)}">${getStatusText(displayStatus)}</span></td>
                     <td>${approvalDisplay}</td>
-                    <td>${item.site}</td>
-                    <td>${item.period}</td>
-                    <td>${item.submittedBy}</td>
+                    <td>${safe(item.site, '—')}</td>
+                    <td>${safe(item.period, '—')}</td>
+                    <td>${safe(item.submittedBy, '—')}</td>
                     <td class="action-buttons">${actionButtons}</td>
                 `;
                 tbody.appendChild(row);
@@ -328,18 +387,19 @@ document.addEventListener("DOMContentLoaded", function () {
         if (newStatus === 'cancelled') newApproval = 'cancelled';
         if (newStatus === 'closed') newApproval = 'approved';
 
-        var user = window.DWSS_Auth ? DWSS_Auth.getCurrentUser() : { userName: 'Unknown' };
+        // ★ 使用 currentUserName / currentRoleName，避免寫入 Unknown
+        var userName = currentUserName();
+        var roleName = currentRoleName();
 
         if (confirm(
             '⚠️ Change Status Confirmation\n\n' +
             'Document ID: ' + recordId + '\n' +
             'From: ' + oldStatusText + '\n' +
-            'To: ' + newStatusText + '\n\n' +
+            'To: ' + newStatusText + '\n' +
+            'Changed by: ' + userName + ' (' + roleName + ')\n\n' +
             'Are you sure you want to change the status?'
         )) {
             var now = new Date().toISOString();
-            var userName = user ? user.userName : 'Unknown';
-            var roleName = window.DWSS_Auth ? DWSS_Auth.getRoleName() : '';
 
             if (!Array.isArray(record.statusHistory)) record.statusHistory = [];
             record.statusHistory.push({
@@ -387,12 +447,10 @@ document.addEventListener("DOMContentLoaded", function () {
         const viewBtn = e.target.closest('.view-btn');
         const editBtn = e.target.closest('.edit-btn');
         const deleteBtn = e.target.closest('.delete-btn');
-        const viewCommentBtn = e.target.closest('.view-comment-btn'); // ★ 新增這行
+        const viewCommentBtn = e.target.closest('.view-comment-btn'); 
 
-        // ★ 處理查看 Reject Comment
         if (viewCommentBtn) {
             const id = viewCommentBtn.dataset.id;
-            // 從後端抓取最新記錄以取得 statusHistory
             fetch('/api/record?collection=wage&id=' + encodeURIComponent(id), { cache: 'no-store' })
                 .then(res => res.ok ? res.json() : null)
                 .then(record => {
@@ -402,7 +460,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     }
                     let comment = '';
                     if (Array.isArray(record.statusHistory)) {
-                        // 從最後一筆往前找，找到最新的 reject 動作
                         for (let i = record.statusHistory.length - 1; i >= 0; i--) {
                             if (record.statusHistory[i].action === 'reject') {
                                 comment = record.statusHistory[i].comment;
@@ -524,15 +581,11 @@ document.addEventListener("DOMContentLoaded", function () {
                     DWSS_Auth.autoFillSubmittedBy('input-submitted-by');
                 }
 
-                // ★ 額外兜底：如果還是 undefined，強制從 sessionStorage 抓
+                // ★ 修改：強制用 currentUserName() 覆蓋，避免被填入 name/fullName (如 Admin User)
                 var submitInput = document.getElementById('input-submitted-by');
-                if (submitInput && (!submitInput.value || submitInput.value === 'undefined')) {
-                    try {
-                        var session = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
-                        submitInput.value = session.userName || session.fullName || 'Admin User';
-                    } catch(e) {
-                        submitInput.value = 'Admin User';
-                    }
+                var uname = currentUserName();
+                if (uname && uname !== 'Unknown' && submitInput) {
+                    submitInput.value = uname;
                 }
                 
                 // 設定預設年份
@@ -553,7 +606,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 if (source.type) document.getElementById('input-type').value = source.type;
                 if (source.site) document.getElementById('input-site').value = source.site;
-                if (source.submittedBy) document.getElementById('input-submitted-by').value = source.submittedBy;
+                // 備註：如果從舊文件複製，Submitted By 預設仍保留當前使用者，不覆蓋
+                // if (source.submittedBy) document.getElementById('input-submitted-by').value = source.submittedBy;
 
                 // ★ 解析 Period 並填入單一月份與年份
                 if (source.period) {
@@ -594,30 +648,23 @@ document.addEventListener("DOMContentLoaded", function () {
                 var site = document.getElementById('input-site').value.trim();
                 var submittedBy = document.getElementById('input-submitted-by').value;
                 
-                // ★ 讀取單一月份與年份
                 var targetMonth = document.getElementById('input-period-month').value;
                 var targetYear = document.getElementById('input-period-year').value;
 
-                // 組合出 YYYY-MM-DD
                 var periodStart = targetYear + '-' + targetMonth + '-01';
-                // 計算所選月份的最後一天
                 var endDay = new Date(targetYear, parseInt(targetMonth), 0).getDate();
                 var periodEnd = targetYear + '-' + targetMonth + '-' + String(endDay).padStart(2, '0');
 
                 var pdfData = null;
                 var copiedFormData = {};
                 
-                // ★ 關鍵修正：處理 PDF 與表單數據複製
                 var file = fileInput.files[0];
                 if (file) {
-                    // 使用者有上傳新檔案
                     try { pdfData = await readFileAsBase64(file); }
                     catch (err) { alert('Failed to read PDF file.'); return; }
                 } else if (copyFromSelect && copyFromSelect.value) {
-                    // 使用者選擇從舊文件複製
                     var sourceId = copyFromSelect.value;
                     try {
-                        // 必須向後端請求「完整」的單筆資料，因為列表 API 沒有 formData
                         var detailRes = await fetch('/api/records/wage/' + encodeURIComponent(sourceId), { cache: 'no-store' });
                         if (detailRes.ok) {
                             var sourceRecord = await detailRes.json();
@@ -627,13 +674,11 @@ document.addEventListener("DOMContentLoaded", function () {
                             if (sourceRecord.formData) {
                                 copiedFormData = JSON.parse(JSON.stringify(sourceRecord.formData));
 
-                                // ★ 強制清空 GF527A 的簽名與名字區塊 (ai27 ~ ai30)
                                 if (copiedFormData['ai27'] !== undefined) copiedFormData['ai27'] = '';
                                 if (copiedFormData['ai28'] !== undefined) copiedFormData['ai28'] = '';
                                 if (copiedFormData['ai29'] !== undefined) copiedFormData['ai29'] = '';
                                 if (copiedFormData['ai30'] !== undefined) copiedFormData['ai30'] = '';
 
-                                // ★ 強制清空 GF527-2017 的 Completed by 區塊 (g17_1451 ~ g17_1459)
                                 if (copiedFormData['g17_1451'] !== undefined) copiedFormData['g17_1451'] = '';
                                 if (copiedFormData['g17_1452'] !== undefined) copiedFormData['g17_1452'] = '';
                                 if (copiedFormData['g17_1453'] !== undefined) copiedFormData['g17_1453'] = '';
@@ -644,7 +689,6 @@ document.addEventListener("DOMContentLoaded", function () {
                                 if (copiedFormData['g17_1458'] !== undefined) copiedFormData['g17_1458'] = '';
                                 if (copiedFormData['g17_1459'] !== undefined) copiedFormData['g17_1459'] = '';
 
-                                // ★ 強制清空 GF527-2003 的 Completed by 區塊 (gf_1913 ~ gf_1922)
                                 if (copiedFormData['gf_1913'] !== undefined) copiedFormData['gf_1913'] = '';
                                 if (copiedFormData['gf_1914'] !== undefined) copiedFormData['gf_1914'] = '';
                                 if (copiedFormData['gf_1915'] !== undefined) copiedFormData['gf_1915'] = '';
@@ -655,7 +699,6 @@ document.addEventListener("DOMContentLoaded", function () {
                                 if (copiedFormData['gf_1920'] !== undefined) copiedFormData['gf_1920'] = '';
                                 if (copiedFormData['gf_1921'] !== undefined) copiedFormData['gf_1921'] = '';
                                 if (copiedFormData['gf_1922'] !== undefined) copiedFormData['gf_1922'] = '';
-                    
                             }
                         }
                     } catch (err) {
@@ -686,7 +729,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     typeText = "GF527 (2017) - Labour Wage";
                 }
 
-                // 格式化 Period 字串 (ex: 01-Sep-2025 to 30-Sep-2025)
                 function fmt(dStr) {
                     var d = new Date(dStr);
                     var day = String(d.getDate()).padStart(2, '0');
@@ -696,7 +738,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
                 var periodStr = fmt(periodStart) + ' to ' + fmt(periodEnd);
 
-                var newWage = {
+                var newWage = normalizeRecord({
                     id: newId,
                     type: type,
                     typeText: typeText,
@@ -706,13 +748,13 @@ document.addEventListener("DOMContentLoaded", function () {
                     submittedBy: submittedBy,
                     project: getCurrentProjectId(),
                     pdfData: pdfData,
-                    formData: copiedFormData, // ★ 這裡就會有完整的表單內容了
+                    formData: copiedFormData,
                     annotations: [],
                     statusHistory: [],
                     createdAt: new Date().toISOString()
-                };
+                });
 
-                wageData.push(newWage);
+                wageData.unshift(newWage); // 將新記錄加到最前面
                 saveData();
                 var saved = false;
               
@@ -737,7 +779,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     return;
                 }
                 
-                // ★ 新增成功後，直接跳轉到編輯頁面
                 window.location.href = 'editlabour.html?id=' + encodeURIComponent(newId);
             });
         }
@@ -761,8 +802,9 @@ document.addEventListener("DOMContentLoaded", function () {
             if (!res.ok) return;
             const list = await res.json();
             if (!Array.isArray(list)) return;
-            wageData = list;
-            window.__dwssWageRecords = list;
+            // ★ 用 normalizeRecord 規範化，避免 undefined
+            wageData = list.map(normalizeRecord).filter(Boolean);
+            window.__dwssWageRecords = wageData;
             try {
                 var snap = JSON.parse(sessionStorage.getItem('dwss_page_counts') || '{}');
                 snap.wage = String(getProjectData().length);

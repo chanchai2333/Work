@@ -3,14 +3,43 @@ document.addEventListener("DOMContentLoaded", function() {
     // ---------- 權限檢查 ----------
     DWSS_Auth.updateHeaderUser();
 
+    // ==================== ★ 安全取值 Helper（參考 sitediary.js） ====================
+    function safe(v, fallback) {
+        if (v === undefined || v === null || v === '' || v === 'undefined' || v === 'null') return fallback;
+        return v;
+    }
+
+    function currentUserName() {
+        try {
+            var u = (DWSS_Auth && DWSS_Auth.getCurrentUser) ? DWSS_Auth.getCurrentUser() : null;
+            if (!u) return 'Unknown';
+            return safe(u.userName, safe(u.username, safe(u.name, safe(u.user_name, 'Unknown'))));
+        } catch (e) { return 'Unknown'; }
+    }
+
+    function currentRoleName() {
+        try {
+            var r = (DWSS_Auth && DWSS_Auth.getRoleName) ? DWSS_Auth.getRoleName() : null;
+            return safe(r, 'N/A');
+        } catch (e) { return 'N/A'; }
+    }
+
+    function canChangeStatusSafe() {
+        try {
+            return !!(DWSS_Auth && DWSS_Auth.canChangeStatus && DWSS_Auth.canChangeStatus());
+        } catch (e) { return false; }
+    }
+
     // ---------- 數據管理 ----------
     const STORAGE_KEY = 'inspectionData';
 
     let inspectionData = [];
 
     // 安全檢查狀態映射（對齊流程圖：沒有 submit to WSG）
+    // ★ 補上 'submitted'，避免 getStatusText 回傳原始字串
     const SAFETY_STATUS_MAP = {
         'draft': 'Draft',
+        'submitted': 'Inspector Submitted',
         'submitted-ig': 'Submit to IG',
         'closed': 'IG Endorsed',
         'reopen': 'Reopened',
@@ -53,47 +82,55 @@ document.addEventListener("DOMContentLoaded", function() {
         return sessionStorage.getItem('currentProjectId') || null;
     }
 
+    // ==================== ★ 記錄正規化（參考 sitediary.js） ====================
+    function normalizeRecord(item) {
+        if (!item || typeof item !== 'object') return null;
+
+        // 欄位別名修復，避免渲染出 undefined
+        if (!item.inspector) {
+            item.inspector = safe(
+                item.inspectedBy,
+                safe(item.inspected_by, safe(item.inspectorName, safe(item.submittedBy, '')))
+            );
+        }
+        if (!item.site) {
+            item.site = safe(item.site_name, safe(item.siteName, ''));
+        }
+        if (!item.date) {
+            item.date = safe(item.inspectionDate, safe(item.inspection_date, safe(item.createdAt, '')));
+        }
+
+        if (!item.status) item.status = 'draft';
+        // 舊資料自動修復：submitted-wsg → submitted
+        if (item.status === 'submitted-wsg') item.status = 'submitted';
+
+        if (item.status === 'reopen') item.approvalStatus = 'pending';
+        else if (item.status === 'cancelled') item.approvalStatus = 'cancelled';
+        else if (!item.approvalStatus) item.approvalStatus = 'pending';
+
+        if (!Array.isArray(item.annotations)) item.annotations = [];
+        if (!Array.isArray(item.statusHistory)) item.statusHistory = [];
+        if (!item.hasOwnProperty('pdfData')) item.pdfData = null;
+
+        if (!item.project) {
+            if (item.id && item.id.indexOf('SSR/WSI/DE-2025-02') === 0) item.project = 'DE/2025/02';
+            else if (item.id && item.id.indexOf('SSR/WSI/DE-2025-09') === 0) item.project = 'DE/2025/09';
+            else if (item.id && item.id.indexOf('SSR/WSI/DE-2026-05') === 0) item.project = 'DE/2026/05';
+            else item.project = getCurrentProjectId() || 'DE/2026/05';
+        }
+
+        return item;
+    }
+
     // ---------- 載入 / 儲存 ----------
     function loadData() {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
             try {
-                inspectionData = JSON.parse(stored);
-                let migrated = 0;
-                inspectionData.forEach(item => {
-                    if (!item.hasOwnProperty('pdfData')) item.pdfData = null;
-                    if (!item.hasOwnProperty('annotations')) item.annotations = [];
-                    if (!item.hasOwnProperty('statusHistory')) item.statusHistory = [];
-
-                    // ★ 舊資料自動修復：將 submitted-wsg 轉為 submitted
-                    if (item.status === 'submitted-wsg') {
-                        item.status = 'submitted';
-                    }
-
-                    if (item.status === 'reopen') {
-                        item.approvalStatus = 'pending';
-                    } else if (item.status === 'cancelled') {
-                        item.approvalStatus = 'cancelled';
-                    } else if (!item.approvalStatus) {
-                        item.approvalStatus = 'pending';
-                    }
-
-                    if (!item.project) {
-                        if (item.id && item.id.indexOf('SSR/WSI/DE-2025-02') === 0) {
-                            item.project = 'DE/2025/02';
-                        } else if (item.id && item.id.indexOf('SSR/WSI/DE-2025-09') === 0) {
-                            item.project = 'DE/2025/09';
-                        } else if (item.id && item.id.indexOf('SSR/WSI/DE-2026-05') === 0) {
-                            item.project = 'DE/2026/05';
-                        } else {
-                            item.project = getCurrentProjectId() || 'DE/2026/05';
-                        }
-                        migrated++;
-                    }
-                });
-                if (migrated > 0) {
-                    console.log('[SafetyInspect] ✓ 已為 ' + migrated + ' 筆舊記錄補上 project');
-                }
+                var raw = JSON.parse(stored);
+                if (!Array.isArray(raw)) raw = [];
+                raw.forEach(normalizeRecord);
+                inspectionData = raw.filter(Boolean);
                 saveData();
             } catch(e) {
                 console.error('[SafetyInspect] 資料解析失敗，使用預設', e);
@@ -156,11 +193,12 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function getStatusText(status) {
+        if (!status) return '—';
         return SAFETY_STATUS_MAP[status] || status;
     }
 
     function getSiteType(siteName) {
-        const lower = siteName.toLowerCase();
+        const lower = String(siteName || '').toLowerCase();
         if (lower.includes('treatment')) return 'treatment';
         if (lower.includes('pipeline')) return 'pipeline';
         if (lower.includes('reservoir')) return 'reservoir';
@@ -211,9 +249,9 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // ---------- 生成狀態更改下拉選單 ----------
     function generateSafetyStatusSelect(recordId) {
-        if (DWSS_Auth.canChangeStatus()) {
+        if (canChangeStatusSafe()) {
             return `
-                <select class="status-change-select" data-id="${recordId}" title="Change Status">
+                <select class="status-change-select" data-id="${safe(recordId, '')}" title="Change Status">
                     <option value="">📝 Change Status</option>
                     <option value="draft">Draft</option>
                     <option value="submitted-ig">Submitted to IG</option>
@@ -255,11 +293,10 @@ document.addEventListener("DOMContentLoaded", function() {
         return diffDays > OVERDUE_DAYS;
     }
 
-    // 替換原本的 categorize 函數
     function categorize(item) {
         var s = (item && item.status) || 'draft';
         if (s === 'draft') return isOverdue(item) ? 'overdue' : 'other';
-        if (s === 'submitted-ig') return 'pending';
+        if (s === 'submitted-ig' || s === 'submitted') return 'pending';
         if (s === 'closed' || s === 'cancelled') return 'closed';
         return 'other'; // reopen
     }
@@ -286,22 +323,23 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    // ★ 行渲染
+    // ★ 行渲染（所有欄位都用 safe 包裹，避免 undefined）
     function buildRow(item, userCanChangeStatus) {
         const row = document.createElement('tr');
-        var displayStatus = item.status || 'draft';
-        
-        var displayApproval = item.approvalStatus || 'pending';
+        var displayStatus = safe(item.status, 'draft');
+        var safeId = safe(item.id, '');
+
+        var displayApproval = safe(item.approvalStatus, 'pending');
         if (item.status === 'reopen') displayApproval = 'pending';
         if (item.status === 'cancelled') displayApproval = 'cancelled';
 
         let actionButtons = `
             <td>
-                <button class="action-btn view-btn" data-id="${item.id}" title="View"><i class="fas fa-eye"></i></button>
-                <button class="action-btn edit-btn" data-id="${item.id}" title="Edit"><i class="fas fa-edit"></i></button>
-                ${item.approvalStatus === 'rejected' ? `<button class="action-btn view-comment-btn" data-id="${item.id}" title="View Rejection Comment" style="background: linear-gradient(135deg, #f39c12, #d35400); color: white;"><i class="fas fa-comment-dots"></i></button>` : ''}
-                ${generateSafetyStatusSelect(item.id)}
-                <button class="action-btn delete-btn" data-id="${item.id}" title="Delete"><i class="fas fa-trash"></i></button>
+                <button class="action-btn view-btn" data-id="${safeId}" title="View"><i class="fas fa-eye"></i></button>
+                <button class="action-btn edit-btn" data-id="${safeId}" title="Edit"><i class="fas fa-edit"></i></button>
+                ${item.approvalStatus === 'rejected' ? `<button class="action-btn view-comment-btn" data-id="${safeId}" title="View Rejection Comment" style="background: linear-gradient(135deg, #f39c12, #d35400); color: white;"><i class="fas fa-comment-dots"></i></button>` : ''}
+                ${generateSafetyStatusSelect(safeId)}
+                <button class="action-btn delete-btn" data-id="${safeId}" title="Delete"><i class="fas fa-trash"></i></button>
         `;
 
         if (!userCanChangeStatus) {
@@ -321,18 +359,18 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         row.innerHTML = `
-            <td>${item.id}</td>
-            <td><span class="status-badge status-${displayStatus}">${getStatusText(displayStatus)}</span></td>
+            <td>${safe(item.id, '—')}</td>
+            <td><span class="status-badge status-${safe(displayStatus, 'draft')}">${getStatusText(displayStatus)}</span></td>
             <td>${approvalDisplay}</td>
-            <td>${item.site}</td>
-            <td>${formatDisplayDate(item.date)}</td>
-            <td>${item.inspector}</td>
+            <td>${safe(item.site, '—')}</td>
+            <td>${safe(formatDisplayDate(item.date), '—')}</td>
+            <td>${safe(item.inspector, '—')}</td>
             ${actionButtons}
         `;
         return row;
     }
 
-    // ★ 渲染表格（四分類）- 已更新順序為 Open, Pending, Overdue, Closed
+    // ★ 渲染表格（四分類）
     function renderInspectionTable() {
         const CATEGORIES = ['other', 'pending', 'overdue', 'closed'];
         const TBODY_IDS = {
@@ -364,7 +402,7 @@ document.addEventListener("DOMContentLoaded", function() {
             (buckets[key] || (buckets[key] = [])).push(item);
         });
 
-        const userCanChangeStatus = DWSS_Auth.canChangeStatus();
+        const userCanChangeStatus = canChangeStatusSafe();
 
         CATEGORIES.forEach(function (key) {
             const tbody = document.getElementById(TBODY_IDS[key]);
@@ -388,7 +426,6 @@ document.addEventListener("DOMContentLoaded", function() {
             bindSafetyStatusChangeEvents();
         }
 
-        // ★ 新增：重新渲染表格後，重新觸發所有搜尋框的過濾邏輯
         document.querySelectorAll('.category-search').forEach(function(input) {
             if (input.value.trim() !== '') {
                 input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -422,7 +459,7 @@ document.addEventListener("DOMContentLoaded", function() {
         const oldStatus = record.status || 'draft';
         const oldStatusText = getStatusText(oldStatus);
         const newStatusText = getStatusText(newStatus);
-        
+
         let oldApproval = record.approvalStatus || 'pending';
         let newApproval = 'pending';
         if (newStatus === 'cancelled') {
@@ -433,19 +470,19 @@ document.addEventListener("DOMContentLoaded", function() {
             newApproval = 'approved';
         }
 
-        const user = DWSS_Auth.getCurrentUser();
+        // ★ 使用 currentUserName / currentRoleName，避免寫入 Unknown
+        const userName = currentUserName();
+        const roleName = currentRoleName();
 
         if (confirm(
             '⚠️ Change Status Confirmation\n\n' +
             'Inspection ID: ' + recordId + '\n' +
             'From: ' + oldStatusText + '\n' +
             'To: ' + newStatusText + '\n' +
-            'Changed by: ' + (user ? user.userName : 'Unknown') + ' (' + DWSS_Auth.getRoleName() + ')\n\n' +
+            'Changed by: ' + userName + ' (' + roleName + ')\n\n' +
             'Are you sure you want to change the status?'
         )) {
             const now = new Date().toISOString();
-            const userName = user ? user.userName : 'Unknown';
-            const roleName = DWSS_Auth.getRoleName();
 
             if (!Array.isArray(record.statusHistory)) {
                 record.statusHistory = [];
@@ -480,12 +517,11 @@ document.addEventListener("DOMContentLoaded", function() {
         const viewBtn = e.target.closest('.view-btn');
         const editBtn = e.target.closest('.edit-btn');
         const deleteBtn = e.target.closest('.delete-btn');
-        const viewCommentBtn = e.target.closest('.view-comment-btn'); // ★ 新增這行
+        const viewCommentBtn = e.target.closest('.view-comment-btn');
 
         // ★ 處理查看 Reject Comment
         if (viewCommentBtn) {
             const id = viewCommentBtn.dataset.id;
-            // 從後端抓取最新記錄以取得 statusHistory
             fetch('/api/record?collection=inspection&id=' + encodeURIComponent(id), { cache: 'no-store' })
                 .then(res => res.ok ? res.json() : null)
                 .then(record => {
@@ -495,7 +531,6 @@ document.addEventListener("DOMContentLoaded", function() {
                     }
                     let comment = '';
                     if (Array.isArray(record.statusHistory)) {
-                        // 從最後一筆往前找，找到最新的 reject 動作
                         for (let i = record.statusHistory.length - 1; i >= 0; i--) {
                             if (record.statusHistory[i].action === 'reject') {
                                 comment = record.statusHistory[i].comment;
@@ -504,7 +539,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         }
                     }
                     if (!comment) comment = "No specific comment provided.";
-                    
+
                     const textEl = document.getElementById('reject-comment-view-text');
                     if (textEl) textEl.textContent = comment;
                     const modal = document.getElementById('reject-comment-view-modal');
@@ -607,10 +642,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 const statusSelect = document.getElementById('input-inspect-status');
                 if (statusSelect) {
-                    if (!DWSS_Auth.canChangeStatus()) {
-                            statusSelect.innerHTML = '<option value="submitted-ig">Submitted to IG</option>';
-                            statusSelect.value = 'submitted-ig';
-                            statusSelect.disabled = true;
+                    if (!canChangeStatusSafe()) {
+                        statusSelect.innerHTML = '<option value="submitted-ig">Submitted to IG</option>';
+                        statusSelect.value = 'submitted-ig';
+                        statusSelect.disabled = true;
 
                         let hint = document.getElementById('submit-only-hint');
                         if (!hint) {
@@ -620,23 +655,24 @@ document.addEventListener("DOMContentLoaded", function() {
                             hint.innerHTML = '<i class="fas fa-info-circle"></i> <strong>Submit Only Mode:</strong> You can only submit inspections. Status changes require Admin/Officer/AEI permission.';
                             statusSelect.parentNode.appendChild(hint);
                         }
-                        } else {
-                            statusSelect.innerHTML = `
-                                <option value="draft">Draft</option>
-                                <option value="submitted-ig">Submitted to IG</option>
-                                <option value="closed">IG Endorsed</option>
-                                <option value="reopen">Reopened</option>
-                                <option value="cancelled">Cancelled</option>
-                            `;
-                            statusSelect.disabled = false;
+                    } else {
+                        statusSelect.innerHTML = `
+                            <option value="draft">Draft</option>
+                            <option value="submitted-ig">Submitted to IG</option>
+                            <option value="closed">IG Endorsed</option>
+                            <option value="reopen">Reopened</option>
+                            <option value="cancelled">Cancelled</option>
+                        `;
+                        statusSelect.disabled = false;
                         const hint = document.getElementById('submit-only-hint');
                         if (hint) hint.remove();
                     }
                 }
 
-                const user = DWSS_Auth.getCurrentUser();
+                // ★ 使用 currentUserName，避免 undefined
+                const uname = currentUserName();
                 const inspectorInput = document.getElementById('input-inspect-by');
-                if (user && inspectorInput) inspectorInput.value = user.userName;
+                if (uname && uname !== 'Unknown' && inspectorInput) inspectorInput.value = uname;
             });
         }
         if (cancelBtn && modal) {
@@ -689,20 +725,22 @@ document.addEventListener("DOMContentLoaded", function() {
                     initialApproval = 'approved';
                 }
 
-                const newInspection = {
-                    id,
-                    status,
+                const newInspection = normalizeRecord({
+                    id: id,
+                    status: status,
                     approvalStatus: initialApproval,
-                    site,
-                    date,
-                    inspector,
+                    site: site,
+                    date: date,
+                    inspector: inspector,
                     project: getCurrentProjectId(),
                     pdfData: pdfData,
                     annotations: [],
                     statusHistory: []
-                };
+                });
+
                 inspectionData.unshift(newInspection);
                 saveData();
+
                 var saved = false;
                 try {
                     var res = await fetch('/api/record?collection=inspection&id=' + encodeURIComponent(id), {
@@ -727,8 +765,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     alert('Inspection was not saved to the database. Please try again.');
                     return;
                 }
-                
-                // ★ 修改這裡：存檔成功後直接跳轉到編輯頁
+
                 window.location.href = 'editsafetypdf.html?id=' + encodeURIComponent(id);
             });
         }
@@ -753,8 +790,9 @@ document.addEventListener("DOMContentLoaded", function() {
             if (!res.ok) return;
             const list = await res.json();
             if (Array.isArray(list)) {
-                inspectionData = list;
-                window.__dwssSafetyRecords = list;
+                // ★ 用 normalizeRecord 規範化，避免 undefined
+                inspectionData = list.map(normalizeRecord).filter(Boolean);
+                window.__dwssSafetyRecords = inspectionData;
                 try {
                     var snap = JSON.parse(sessionStorage.getItem('dwss_page_counts') || '{}');
                     snap.safety = String(getProjectData().length);
@@ -770,6 +808,7 @@ document.addEventListener("DOMContentLoaded", function() {
     async function init() {
         await loadFromDatabase();
         if (!inspectionData.length) loadData();
+        window.__dwssSafetyRecords = inspectionData;
         renderInspectionTable();
         setupFilterEvents();
         setupAddInspectionModal();
