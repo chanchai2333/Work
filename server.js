@@ -1010,6 +1010,41 @@ app.post('/api/records/:collection/bulk', requireActiveSession, async (req, res)
   }
 });
 
+// ---------- Safe user list (passwords stripped) ----------
+app.get('/api/users/list', requireActiveSession, async (req, res) => {
+  if (!pool) return res.json([]);
+  try {
+    const [rows] = await pool.query(
+      'SELECT record_id, data, version, updated_by, updated_at, collection FROM records WHERE collection IN (?, ?)',
+      ['usersDb', 'users']
+    );
+    // 以 username 或 id 去重，保留 version 較高的
+    const byKey = {};
+    rows.forEach(r => {
+      const obj = parseRecord(r.data);
+      if (!obj) return;
+      const key = String(obj.username || obj.id || r.record_id).toLowerCase();
+      const existing = byKey[key];
+      if (!existing || (r.version || 0) > (existing._version || 0)) {
+        delete obj.password;
+        delete obj.resetCode;
+        delete obj.resetCodeExpires;
+        delete obj.resetToken;
+        delete obj.resetTokenExpires;
+        obj.id = obj.id != null ? obj.id : r.record_id;
+        obj._version = r.version;
+        obj._updatedBy = r.updated_by;
+        obj._updatedAt = r.updated_at;
+        byKey[key] = obj;
+      }
+    });
+    const list = Object.values(byKey);
+    res.json(list);
+  } catch (err) {
+    console.error('[users/list]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.post('/api/users/upsert', async (req, res) => {
   if (!pool) return res.status(400).json({ error: 'no_database' });
@@ -1017,61 +1052,65 @@ app.post('/api/users/upsert', async (req, res) => {
   const username = String(body.username || '').trim();
   const userId = body.id != null ? String(body.id) : '';
 
-  // ★ 修改 1：允許「只有 id」或「只有 username」，不再強制要求 username
   if (!username && !userId) {
     return res.status(400).json({ error: 'missing_username_or_id' });
   }
 
   try {
     const [rows] = await pool.query(
-      'SELECT collection, record_id, data FROM records WHERE collection IN (?, ?)',
+      'SELECT collection, record_id, data, version FROM records WHERE collection IN (?, ?)',
       ['usersDb', 'users']
     );
-    
-    let matched = null;
+
+    // 找出所有匹配的記錄（可能有重複）
+    const matches = [];
     for (const r of rows) {
       const u = parseRecord(r.data);
-      // ★ 修改 2：優先匹配 id
-      if (userId && (String(r.record_id) === userId || String(u.id) === userId)) {
-        matched = r; break;
-      }
-      // 如果沒有 id 或找不到，才比對 username
-      if (username && u.username && String(u.username).toLowerCase() === username.toLowerCase()) {
-        matched = r; break;
+      const idMatch = userId && (String(r.record_id) === userId || String(u.id) === userId);
+      const nameMatch = username && u.username && String(u.username).toLowerCase() === username.toLowerCase();
+      if (idMatch || nameMatch) {
+        matches.push(r);
       }
     }
 
-    const userData = Object.assign({}, matched ? parseRecord(matched.data) : {}, body);
-    
-    // ★ 修改 3：如果前端沒傳 username，保留資料庫原本的 username，不要把它洗掉
-    if (username) {
-      userData.username = username;
-    } else if (matched) {
-      userData.username = parseRecord(matched.data).username;
+    if (matches.length === 0) {
+      // 新建
+      const userData = Object.assign({}, body);
+      if (!userData.id) userData.id = userId || Date.now();
+      if (!userData.username) userData.username = username;
+      if (!userData.status) userData.status = 'online';
+      if (!userData.password) userData.password = 'Welcome@123';
+      if (!Array.isArray(userData.projectIds)) userData.projectIds = body.projectIds || [];
+      const recordId = String(userData.id);
+      await pool.query(
+        'INSERT INTO records (collection, record_id, data, version) VALUES (?, ?, ?, 1)',
+        ['usersDb', recordId, JSON.stringify(userData)]
+      );
+      return res.json({ ok: true, id: userData.id, created: true });
     }
 
-    if (!userData.id) userData.id = userId || Date.now();
-    if (!userData.status) userData.status = 'online';
-    if (!Array.isArray(userData.projectIds)) userData.projectIds = body.projectIds || [];
-
-    // never wipe password if client omitted it on update
-    if (matched) {
+    // 更新所有匹配的記錄，確保 projectIds 同步
+    let updated = 0;
+    for (const matched of matches) {
       const prev = parseRecord(matched.data);
+      const userData = Object.assign({}, prev, body);
+      if (username) userData.username = username;
+      else userData.username = prev.username;
+      if (!userData.id) userData.id = prev.id || matched.record_id;
+      if (!userData.status) userData.status = 'online';
+      if (!Array.isArray(userData.projectIds)) userData.projectIds = body.projectIds || prev.projectIds || [];
+      // 保留密碼
       if (!body.password && prev.password) userData.password = prev.password;
+
       await pool.query(
         'UPDATE records SET data = ?, version = version + 1 WHERE collection = ? AND record_id = ?',
         [JSON.stringify(userData), matched.collection, matched.record_id]
       );
-      return res.json({ ok: true, id: userData.id, updated: true });
+      updated++;
     }
 
-    if (!userData.password) userData.password = 'Welcome@123';
-    const recordId = String(userData.id);
-    await pool.query(
-      'INSERT INTO records (collection, record_id, data, version) VALUES (?, ?, ?, 1)',
-      ['usersDb', recordId, JSON.stringify(userData)]
-    );
-    res.json({ ok: true, id: userData.id, created: true });
+    console.log('[users/upsert] updated', updated, 'record(s) for', username || userId, 'projectIds=', body.projectIds);
+    res.json({ ok: true, id: userId || username, updated: updated });
   } catch (e) {
     console.error('[users/upsert]', e);
     res.status(500).json({ error: e.message });

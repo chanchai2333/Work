@@ -24,6 +24,7 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
     }
 }
 
+
 // teams.js - 团队管理
 (function() {
     const TEAMS_KEY = 'ael_dwss_teams';
@@ -90,38 +91,87 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
         return users.find(function (u) { return normalizeUserId(u.id) === nid; });
     }
 
-    function loadUsers() {
-        var byId = {};
-        seedUsers().forEach(function (u) { byId[String(u.id)] = u; });
-        function mergeFromKey(key) {
-            var stored = localStorage.getItem(key);
-            if (!stored) return;
-            try {
-                var parsed = JSON.parse(stored);
-                if (!Array.isArray(parsed)) return;
-                parsed.forEach(function (u) {
-                    if (!u || u.id == null) return;
-                    var id = String(u.id);
-                    if (byId[id]) {
-                        if (!byId[id].email && u.email) byId[id].email = u.email;
-                        if (!byId[id].username && u.username) byId[id].username = u.username;
-                        if (Array.isArray(u.projectIds)) byId[id].projectIds = u.projectIds.slice();
-                        if (u.contractNo && !byId[id].contractNo) byId[id].contractNo = u.contractNo;
-                    } else {
-                        byId[id] = u;
-                    }
-                });
-            } catch (e) {}
-        }
-        mergeFromKey(USERS_KEY);
-        mergeFromKey(USERS_KEY_LEGACY);
-        users = Object.keys(byId).map(function (k) { return byId[k]; }).sort(function (a, b) {
-            return normalizeUserId(a.id) - normalizeUserId(b.id);
-        });
+function loadUsers() {
+    var byId = {};
+    seedUsers().forEach(function (u) { byId[String(u.id)] = u; });
+    function mergeFromKey(key) {
+        var stored = localStorage.getItem(key);
+        if (!stored) return;
         try {
-            localStorage.setItem(USERS_KEY, JSON.stringify(users));
-            localStorage.setItem(USERS_KEY_LEGACY, JSON.stringify(users));
+            var parsed = JSON.parse(stored);
+            if (!Array.isArray(parsed)) return;
+            parsed.forEach(function (u) {
+                if (!u || u.id == null) return;
+                var id = String(u.id);
+                if (byId[id]) {
+                    // Prefer server/local data over seed for most fields
+                    Object.assign(byId[id], u);
+                } else {
+                    byId[id] = u;
+                }
+            });
         } catch (e) {}
+    }
+    mergeFromKey(USERS_KEY);
+    mergeFromKey(USERS_KEY_LEGACY);
+    users = Object.keys(byId).map(function (k) { return byId[k]; }).sort(function (a, b) {
+        return normalizeUserId(a.id) - normalizeUserId(b.id);
+    });
+    try {
+        localStorage.setItem(USERS_KEY, JSON.stringify(users));
+        localStorage.setItem(USERS_KEY_LEGACY, JSON.stringify(users));
+    } catch (e) {}
+}
+
+    // ★ 從伺服器載入完整用戶列表（與 User Management 共用同一來源）
+    async function loadUsersFromServer() {
+        var token = '';
+        try {
+            var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+            token = s.sessionToken || '';
+        } catch (e) {}
+
+        try {
+            var res = await fetch('/api/users/list', {
+                cache: 'no-store',
+                headers: token ? { 'x-session-token': token } : {}
+            });
+            if (!res.ok) {
+                console.warn('[Teams] /api/users/list failed', res.status);
+                return false;
+            }
+            var rows = await res.json();
+            if (!Array.isArray(rows) || !rows.length) return false;
+
+            var byId = {};
+            users.forEach(function (u) {
+                if (u && u.id != null) byId[String(u.id)] = u;
+            });
+
+            rows.forEach(function (u) {
+                if (!u || u.id == null) return;
+                var id = String(u.id);
+                var local = byId[id];
+                if (local && local.password && !u.password) {
+                    u.password = local.password;
+                }
+                byId[id] = u;
+            });
+
+            users = Object.keys(byId).map(function (k) { return byId[k]; })
+                .sort(function (a, b) { return normalizeUserId(a.id) - normalizeUserId(b.id); });
+
+            try {
+                localStorage.setItem(USERS_KEY, JSON.stringify(users));
+                localStorage.setItem(USERS_KEY_LEGACY, JSON.stringify(users));
+            } catch (e) {}
+
+            console.log('[Teams] Loaded', users.length, 'users from server');
+            return true;
+        } catch (err) {
+            console.warn('[Teams] loadUsersFromServer error', err);
+            return false;
+        }
     }
 
     // ★ 兼容旧的字符串数组 & 新的对象数组
@@ -149,6 +199,16 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
             try { localStorage.setItem(DELETED_CONTRACTS_KEY, JSON.stringify(list)); } catch (e) {}
         }
     }
+    function unmarkContractDeleted(code) {
+        var arr = getDeletedContracts();
+        var idx = arr.indexOf(String(code));
+        if (idx !== -1) {
+            arr.splice(idx, 1);
+            var list = arr.map(function (c) { return { id: c, contractNo: c }; });
+            try { localStorage.setItem(DELETED_CONTRACTS_KEY, JSON.stringify(list)); } catch (e) {}
+            console.log('[Contracts] unmarked deleted:', code);
+        }
+    }
     function isContractDeleted(code) { return getDeletedContracts().indexOf(String(code)) !== -1; }
 
     // ★ seed 调用加 catch，避免 unhandled rejection
@@ -158,6 +218,23 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
             try { contracts = JSON.parse(stored) || []; } catch (e) { contracts = []; }
         }
         if (!Array.isArray(contracts)) contracts = [];
+
+        // ★ 合併本地暫存的合約（防止伺服器覆蓋後消失）
+        try {
+            var pending = JSON.parse(localStorage.getItem('dwss_contracts_pending') || '[]');
+            if (Array.isArray(pending)) {
+                pending.forEach(function (p) {
+                    var code = p.contractNo || p.id;
+                    if (!code) return;
+                    var exists = contracts.some(function (c) { return (c.contractNo || c.id) === code; });
+                    if (!exists) {
+                        // ★ 即使被標記刪除，只要在 pending 就強制加回並取消刪除標記
+                        if (isContractDeleted(code)) unmarkContractDeleted(code);
+                        contracts.push(p);
+                    }
+                });
+            }
+        } catch (e) {}
 
         contracts = contracts.filter(function (c) {
             var code = c.contractNo || c.id;
@@ -178,6 +255,11 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
     // ★ 返回 Promise，讓調用方可 await
     function saveContracts() {
         localStorage.setItem(CONTRACTS_KEY, JSON.stringify(contracts));
+
+        // ★ 同時寫入暫存 key（不受 cloud-storage 覆蓋）
+        try {
+            localStorage.setItem('dwss_contracts_pending', JSON.stringify(contracts));
+        } catch (e) {}
 
         var list = contracts.map(function (c) {
             var code = c.contractNo || c.id;
@@ -513,7 +595,8 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
         return ids;
     }
 
-    function openAddContractModal() {
+    async function openAddContractModal() {
+        await loadUsersFromServer();
         if (!currentIsSystemAdmin()) { alert('Only System Admin can add a new contract.'); return; }
         var modal = document.getElementById('contract-modal');
         if (!modal) return;
@@ -526,7 +609,8 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
         modal.style.display = 'flex';
     }
 
-    function openEditContractModal(contractNo) {
+    async function openEditContractModal(contractNo) {
+        await loadUsersFromServer();
         var isAdmin = currentIsSystemAdmin();
         var isProjectAdmin = currentIsProjectAdmin();
         if (!isAdmin && !isProjectAdmin) {
@@ -601,6 +685,8 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
                 alert('Contract No. already exists: ' + no);
                 return;
             }
+            // ★ 如果之前被刪除過，先從刪除清單移除
+            unmarkContractDeleted(no);
             contracts.push({ id: no, contractNo: no, name: name });
         } else {
             var existing = contracts.find(function (x) { return (x.contractNo || x.id) === editing; });
@@ -780,7 +866,7 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
         });
     }
 
-    function openAddTeamModal() {
+    async function openAddTeamModal() {
         if (!currentIsSystemAdmin() && !currentIsProjectAdmin()) { alert('You do not have permission to add a team.'); return; }
         editingTeamId = null;
         document.getElementById('modal-title').innerHTML = '<i class="fas fa-users"></i> Add New Team';
@@ -804,7 +890,7 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
         document.getElementById('team-modal').style.display = 'flex';
     }
 
-    function openEditTeamModal(teamId) {
+    async function openEditTeamModal(teamId) {
         const team = teams.find(t => t.id === teamId);
         if (!team) return;
         if (!currentIsSystemAdmin() && !currentIsProjectAdmin()) { alert('You do not have permission to edit this team.'); return; }
@@ -880,7 +966,8 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
     }
 
     // ★ 刷新時絕不 seed contracts
-    function refreshTable() {
+   async function refreshTable() {
+    await loadUsersFromServer();
         loadUsers();
         loadTeams(true);
         loadContracts(true);
@@ -924,6 +1011,13 @@ async function updateUserContractsAPI(userId, username, newProjectIds) {
         function doInit(skipSeed) {
             loadUsers();
 
+            loadUsersFromServer().then(function (ok) {
+                if (ok) {
+                    renderContractsTable();
+                    renderTeamsTable();
+                    updateStats();
+                }
+            });
             // ★ 分別判斷 teams 和 contracts 的 cache 是否已從 DB 加載
             var teamsCache = null, contractsCache = null;
             try {

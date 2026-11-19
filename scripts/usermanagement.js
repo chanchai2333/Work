@@ -135,6 +135,24 @@
             }
 
             this.loadFromServer().then(function () {
+                console.log('[UM-v4] loaded', self.users.length, 'users from server');
+                var currentPid = null;
+                try {
+                    if (window.DWSS_Permissions && typeof window.DWSS_Permissions.getCurrentProject === 'function') {
+                        currentPid = window.DWSS_Permissions.getCurrentProject();
+                    } else {
+                        currentPid = sessionStorage.getItem('currentProjectId');
+                    }
+                } catch (e) { currentPid = sessionStorage.getItem('currentProjectId'); }
+                if (currentPid === 'ALL') currentPid = null;
+                var matched = self.users.filter(function (u) {
+                    if (!currentPid) return true;
+                    if (u.role === 'admin' && (!u.projectIds || !u.projectIds.length)) return true;
+                    return (u.projectIds || []).indexOf(currentPid) !== -1;
+                });
+                console.log('[UM-v4] current project =', currentPid, ', matched users =', matched.length);
+                matched.forEach(function (u) { console.log('  matched:', u.username, u.projectIds); });
+                self.users.slice(0, 8).forEach(function (u) { console.log('  sample:', u.username, u.projectIds); });
                 self.renderUserTable();
                 self.updateUserStats();
             });
@@ -174,41 +192,51 @@
             this.saveToStorage();
         },
 
-        loadFromServer: function () {
-            var self = this;
-            return fetch('/api/records/usersDb', { cache: 'no-store' })
-                .then(function (res) { return res.ok ? res.json() : null; })
-                .then(function (body) {
-                    var rows = (body && (body.records || body.data || body)) || [];
-                    if (!Array.isArray(rows) || !rows.length) return;
-                    
-                    var byId = {};
-                    self.users.forEach(function (u) { byId[String(u.id)] = u; });
-                    
-                    rows.forEach(function (row) {
-                        var u = row.data || row;
-                        if (typeof u === 'string') {
-                            try { u = JSON.parse(u); } catch (e) { return; }
-                        }
-                        if (!u || (!u.id && !u.username)) return;
-                        
-                        var id = String(u.id != null ? u.id : u.username);
-                        var localUser = byId[id];
+loadFromServer: function () {
+    var self = this;
+    var token = '';
+    try {
+        var s = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+        token = s.sessionToken || '';
+    } catch (e) {}
 
-                        // 如果本地密碼已改過，而伺服器傳回舊密碼，以本地為準！
-                        if (localUser && localUser.passwordChanged && !u.passwordChanged) {
-                            u.password = localUser.password;
-                            u.passwordChanged = localUser.passwordChanged;
-                        }
-                        
-                        byId[id] = u;
-                    });
-                    
-                    self.users = Object.keys(byId).map(function (k) { return byId[k]; });
-                    self.saveToStorage();
-                })
-                .catch(function () {});
-        },
+    return fetch('/api/users/list', {
+        cache: 'no-store',
+        headers: token ? { 'x-session-token': token } : {}
+    })
+        .then(function (res) {
+            if (!res.ok) {
+                console.warn('[UserManagement] users/list failed', res.status);
+                return null;
+            }
+            return res.json();
+        })
+        .then(function (rows) {
+            if (!Array.isArray(rows) || !rows.length) return;
+
+            var byId = {};
+            self.users.forEach(function (u) {
+                if (u && u.id != null) byId[String(u.id)] = u;
+            });
+
+            rows.forEach(function (u) {
+                if (!u || u.id == null) return;
+                var id = String(u.id);
+                var localUser = byId[id];
+                if (localUser && localUser.password && localUser.passwordChanged && !u.password) {
+                    u.password = localUser.password;
+                }
+                byId[id] = u;
+            });
+
+            self.users = Object.keys(byId).map(function (k) { return byId[k]; })
+                .sort(function (a, b) { return (a.id || 0) - (b.id || 0); });
+            self.saveToStorage();
+        })
+        .catch(function (err) {
+            console.warn('[UserManagement] loadFromServer error', err);
+        });
+},
 
         saveToStorage: function () {
             try { localStorage.setItem(USERS_KEY, JSON.stringify(this.users)); }
