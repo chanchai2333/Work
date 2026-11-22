@@ -477,7 +477,17 @@ document.addEventListener('DOMContentLoaded', function () {
         if (newStatus === 'cancelled') newApproval = 'cancelled';
         else if (newStatus === 'reopen') newApproval = 'pending';
 
-        const userName = currentUserName();
+        const userName = (function () {
+            var n = currentUserName();
+            if (n && n !== 'Unknown') return n;
+            try {
+                var sess = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+                n = sess.name || sess.userName || sess.username || sess.user_name || '';
+                if (n) return n;
+            } catch (e) {}
+            console.warn('[SiteDiary] status change: could not resolve user name');
+            return 'Unknown';
+        })();
         const roleName = currentRoleName();
 
         if (confirm(

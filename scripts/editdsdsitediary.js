@@ -1230,7 +1230,7 @@
 
         var sessionData = {};
         try { sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch (e) {}
-        var userName = sessionData.userName || currentDoc.submittedBy || 'Unknown';
+        var userName = sessionData.name || sessionData.userName || sessionData.username || currentDoc.submittedBy || 'Unknown';
         var userRole = (sessionData.permissions && sessionData.permissions.name)
                        || sessionData.userRole
                        || sessionData.role
@@ -1296,7 +1296,7 @@
 
         if (!confirm('Approve this document?\n\n' + actionLabel)) return;
 
-        var userName = sessionData.userName || 'Unknown';
+        var userName = sessionData.name || sessionData.userName || sessionData.username || 'Unknown';
         var userRole = (sessionData.permissions && sessionData.permissions.name) || '';
         var nowIso = new Date().toISOString();
 
@@ -1343,7 +1343,7 @@
         }
         if (!confirm('Reject this document?\n\nThe status will be reset to Draft and you can edit and re-submit.')) return;
 
-        var userName = sessionData.userName || 'Unknown';
+        var userName = sessionData.name || sessionData.userName || sessionData.username || 'Unknown';
         var userRole = (sessionData.permissions && sessionData.permissions.name) || '';
         var nowIso = new Date().toISOString();
         var oldStatus = currentDoc.status || 'draft';
