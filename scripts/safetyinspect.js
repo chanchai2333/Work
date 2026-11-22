@@ -471,7 +471,17 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         // ★ 使用 currentUserName / currentRoleName，避免寫入 Unknown
-        const userName = currentUserName();
+        const userName = (function () {
+            var n = currentUserName();
+            if (n && n !== 'Unknown') return n;
+            try {
+                var sess = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+                n = sess.name || sess.userName || sess.username || sess.user_name || '';
+                if (n) return n;
+            } catch (e) {}
+            console.warn('[SafetyInspect] status change: could not resolve user name');
+            return 'Unknown';
+        })();
         const roleName = currentRoleName();
 
         if (confirm(
