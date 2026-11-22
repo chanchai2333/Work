@@ -6048,7 +6048,7 @@ function captureFormDataFromDom() {
         captureFormDataFromDom();
         var sessionData = {};
         try { sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch (e) {}
-        var userName = sessionData.userName || currentDoc.submittedBy || 'Unknown';
+        var userName = sessionData.name || sessionData.userName || sessionData.username || currentDoc.submittedBy || 'Unknown';
 
         var oldStatus = currentDoc.status || 'draft';
         var oldApproval = currentDoc.approvalStatus || 'pending';
@@ -6103,7 +6103,7 @@ function captureFormDataFromDom() {
 
         if (!confirm('Approve this document?\n\n' + actionLabel)) return;
 
-        var userName = sessionData.userName || 'Unknown';
+        var userName = sessionData.name || sessionData.userName || sessionData.username || 'Unknown';
         var nowIso = new Date().toISOString();
 
         if (!Array.isArray(currentDoc.statusHistory)) currentDoc.statusHistory = [];
@@ -6134,7 +6134,7 @@ function captureFormDataFromDom() {
         }
         if (!confirm('Reject this document?\n\nStatus will reset to "Draft" so the contractor can revise.')) return;
 
-        var userName = sessionData.userName || 'Unknown';
+        var userName = sessionData.name || sessionData.userName || sessionData.username || 'Unknown';
         var nowIso = new Date().toISOString();
         var oldStatus = currentDoc.status || 'draft';
         var oldApproval = currentDoc.approvalStatus || 'pending';

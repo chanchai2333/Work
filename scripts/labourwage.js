@@ -388,7 +388,17 @@ document.addEventListener("DOMContentLoaded", function () {
         if (newStatus === 'closed') newApproval = 'approved';
 
         // ★ 使用 currentUserName / currentRoleName，避免寫入 Unknown
-        var userName = currentUserName();
+        var userName = (function () {
+            var n = currentUserName();
+            if (n && n !== 'Unknown') return n;
+            try {
+                var sess = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
+                n = sess.name || sess.userName || sess.username || sess.user_name || '';
+                if (n) return n;
+            } catch (e) {}
+            console.warn('[LabourWage] status change: could not resolve user name');
+            return 'Unknown';
+        })();
         var roleName = currentRoleName();
 
         if (confirm(
