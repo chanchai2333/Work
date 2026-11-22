@@ -1188,29 +1188,8 @@ html, body {
                             <div class="kpi-value" id="diary-last-submitted">N/A</div>
                         </div>
                         <div class="kpi-row">
-                            <div class="kpi-label" data-i18n="last.passed">Last Passed</div>
-                            <div class="kpi-value" id="diary-last-passed">N/A</div>
-                        </div>
-                        <div class="kpi-row">
                             <div class="kpi-label" data-i18n="pending.close">Pending Close</div>
                             <div class="kpi-value" id="diary-pending-close">0</div>
-                        </div>
-                        <div class="kpi-row">
-                            <div class="kpi-label">% Closed</div>
-                            <div class="kpi-value" id="diary-closed-percent">0%</div>
-                        </div>
-                    </div>
-
-                    <div class="progress-section">
-                        <div class="progress-container">
-                            <div class="progress-bar" id="diary-progress-bar" style="width: 0%;"></div>
-                        </div>
-                        <div class="progress-labels">
-                            <span>0%</span>
-                            <span>25%</span>
-                            <span>50%</span>
-                            <span>75%</span>
-                            <span>100%</span>
                         </div>
                     </div>
                 </div>
@@ -1248,29 +1227,8 @@ html, body {
                             <div class="kpi-value" id="inspection-last-submitted">N/A</div>
                         </div>
                         <div class="kpi-row">
-                            <div class="kpi-label" data-i18n="last.passed">Last Passed</div>
-                            <div class="kpi-value" id="inspection-last-passed">N/A</div>
-                        </div>
-                        <div class="kpi-row">
                             <div class="kpi-label" data-i18n="pending.close">Pending Close</div>
                             <div class="kpi-value" id="inspection-pending-close">0</div>
-                        </div>
-                        <div class="kpi-row">
-                            <div class="kpi-label">% Closed</div>
-                            <div class="kpi-value" id="inspection-closed-percent">0%</div>
-                        </div>
-                    </div>
-
-                    <div class="progress-section">
-                        <div class="progress-container">
-                            <div class="progress-bar" id="inspection-progress-bar" style="width: 0%;"></div>
-                        </div>
-                        <div class="progress-labels">
-                            <span>0%</span>
-                            <span>25%</span>
-                            <span>50%</span>
-                            <span>75%</span>
-                            <span>100%</span>
                         </div>
                     </div>
                 </div>
@@ -1308,29 +1266,8 @@ html, body {
                             <div class="kpi-value" id="wage-last-submitted">N/A</div>
                         </div>
                         <div class="kpi-row">
-                            <div class="kpi-label" data-i18n="last.passed">Last Passed</div>
-                            <div class="kpi-value" id="wage-last-passed">N/A</div>
-                        </div>
-                        <div class="kpi-row">
                             <div class="kpi-label" data-i18n="pending.close">Pending Close</div>
                             <div class="kpi-value" id="wage-pending-close">0</div>
-                        </div>
-                        <div class="kpi-row">
-                            <div class="kpi-label">% Closed</div>
-                            <div class="kpi-value" id="wage-closed-percent">0%</div>
-                        </div>
-                    </div>
-
-                    <div class="progress-section">
-                        <div class="progress-container">
-                            <div class="progress-bar labour-wage" id="wage-progress-bar" style="width: 0%;"></div>
-                        </div>
-                        <div class="progress-labels">
-                            <span>0%</span>
-                            <span>25%</span>
-                            <span>50%</span>
-                            <span>75%</span>
-                            <span>100%</span>
                         </div>
                     </div>
                 </div>
@@ -2231,11 +2168,7 @@ html, body {
             set(prefix + '-total', mod.total);
             set(prefix + '-closed', mod.closed);
             set(prefix + '-pending-close', mod.pending);
-            set(prefix + '-closed-percent', mod.percent + '%');
             set(prefix + '-last-submitted', mod.lastSubmitted || 'N/A');
-            set(prefix + '-last-passed', mod.lastPassed || 'N/A');
-            var bar = document.getElementById(barId);
-            if (bar) bar.style.setProperty('width', mod.percent + '%', 'important');
         }
 
         function paintSummaryChart(canvasId, yearSelectId, mod, color) {
@@ -2262,6 +2195,8 @@ html, body {
             var data = (mod.monthly && mod.monthly[year]) ? mod.monthly[year] : [0,0,0,0,0,0,0,0,0,0,0,0];
             var existing = Chart.getChart(canvasId);
             if (existing) existing.destroy();
+            var maxVal = Math.max.apply(null, data);
+            var yMax = Math.max(5, Math.ceil(maxVal * 1.2));
             new Chart(canvas.getContext('2d'), {
                 type: 'line',
                 data: {
@@ -2276,44 +2211,130 @@ html, body {
                         pointBackgroundColor: color
                     }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            suggestedMax: yMax,
+                            ticks: { precision: 0, stepSize: 1 }
+                        }
+                    }
+                }
             });
         }
 
         function loadDashboardSummary() {
             var projectId = sessionStorage.getItem('currentProjectId') || '';
-            var url = '/api/dashboard/summary' + (projectId ? ('?projectId=' + encodeURIComponent(projectId)) : '');
-            fetch(url, { cache: 'no-store' })
-                .then(function (r) { return r.ok ? r.json() : null; })
-                .then(function (summary) {
-                    if (!summary || !summary.diary) { runDashboard(); return; }
-                    paintSummaryModule('diary', summary.diary, 'diary-progress-bar');
-                    paintSummaryModule('inspection', summary.inspection, 'inspection-progress-bar');
-                    paintSummaryModule('wage', summary.wage, 'wage-progress-bar');
-                    paintSummaryChart('siteDiaryChart', 'diary-year-select', summary.diary, '#3498db');
-                    paintSummaryChart('safetyInspectionChart', 'inspection-year-select', summary.inspection, '#e74c3c');
-                    paintSummaryChart('labourWageChart', 'wage-year-select', summary.wage, '#8e44ad');
-                    try {
-                        sessionStorage.setItem('dwss_dashboard_snap', JSON.stringify({
-                            filtered: true,
-                            diaryTotal: summary.diary.total,
-                            diaryClosed: summary.diary.closed,
-                            diaryPending: summary.diary.pending,
-                            diaryPercent: summary.diary.percent + '%',
-                            diaryLastSubmitted: summary.diary.lastSubmitted,
-                            diaryLastPassed: summary.diary.lastPassed,
-                            inspectionTotal: summary.inspection.total,
-                            inspectionClosed: summary.inspection.closed,
-                            inspectionPending: summary.inspection.pending,
-                            inspectionPercent: summary.inspection.percent + '%',
-                            wageTotal: summary.wage.total,
-                            wageClosed: summary.wage.closed,
-                            wagePending: summary.wage.pending,
-                            wagePercent: summary.wage.percent + '%'
-                        }));
-                    } catch (e) {}
-                })
-                .catch(function () { runDashboard(); });
+
+            function filterByProject(list) {
+                if (!Array.isArray(list)) return [];
+                if (!projectId) return list;
+                return list.filter(function (r) {
+                    if (!r) return false;
+                    var p = String(r.project || '');
+                    return p === projectId || p.indexOf(projectId) !== -1 || projectId.indexOf(p) !== -1;
+                });
+            }
+
+            function parseAnyDate(raw) {
+                if (!raw) return null;
+                var s = String(raw).trim();
+                var m1 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+                if (m1) return new Date(parseInt(m1[3],10), parseInt(m1[2],10)-1, parseInt(m1[1],10));
+                var m2 = s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})/);
+                if (m2) {
+                    var months = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+                    var mon = months[m2[2]];
+                    if (mon !== undefined) return new Date(parseInt(m2[3],10), mon, parseInt(m2[1],10));
+                }
+                var d = new Date(s);
+                return isNaN(d.getTime()) ? null : d;
+            }
+
+            function fmtDate(d) {
+                if (!d || isNaN(d.getTime())) return 'N/A';
+                return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+            }
+
+            function computeStats(records, dateFields) {
+                var total = records.length;
+                var closed = records.filter(function (r) { return r && (r.status === 'closed' || r.status === 'cancelled'); }).length;
+                var pending = total - closed;
+
+                // Only non-draft for submitted trend
+                var submittedRecs = records.filter(function (r) { return r && r.status && r.status !== 'draft'; });
+
+                var dates = submittedRecs.map(function (r) {
+                    for (var i = 0; i < dateFields.length; i++) {
+                        var d = parseAnyDate(r[dateFields[i]]);
+                        if (d) return d;
+                    }
+                    return parseAnyDate(r.createdAt);
+                }).filter(Boolean);
+
+                var lastSubmitted = 'N/A';
+                if (dates.length) {
+                    dates.sort(function (a, b) { return b - a; });
+                    lastSubmitted = fmtDate(dates[0]);
+                }
+
+                var yearSet = {};
+                dates.forEach(function (d) { yearSet[d.getFullYear()] = true; });
+                var years = Object.keys(yearSet).sort();
+                if (!years.length) years = [String(new Date().getFullYear())];
+
+                var monthly = {};
+                years.forEach(function (y) { monthly[y] = new Array(12).fill(0); });
+                dates.forEach(function (d) {
+                    var y = String(d.getFullYear());
+                    if (monthly[y]) monthly[y][d.getMonth()]++;
+                });
+
+                return {
+                    total: total,
+                    closed: closed,
+                    pending: pending,
+                    lastSubmitted: lastSubmitted,
+                    monthly: monthly,
+                    years: years
+                };
+            }
+
+            Promise.all([
+                fetch('/api/records/siteDiary', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; }),
+                fetch('/api/records/inspection/list', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; }),
+                fetch('/api/records/wage/list', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; })
+            ]).then(function (results) {
+                var diaryRecs = filterByProject(results[0]);
+                var inspectRecs = filterByProject(results[1]);
+                var wageRecs = filterByProject(results[2]);
+
+                var diaryStats = computeStats(diaryRecs, ['date', 'period', 'endDate', 'startDate']);
+                var inspectStats = computeStats(inspectRecs, ['date', 'inspectionDate']);
+                var wageStats = computeStats(wageRecs, ['period', 'periodStart', 'createdAt']);
+
+                paintSummaryModule('diary', diaryStats, null);
+                paintSummaryModule('inspection', inspectStats, null);
+                paintSummaryModule('wage', wageStats, null);
+
+                paintSummaryChart('siteDiaryChart', 'diary-year-select', diaryStats, '#3498db');
+                paintSummaryChart('safetyInspectionChart', 'inspection-year-select', inspectStats, '#e74c3c');
+                paintSummaryChart('labourWageChart', 'wage-year-select', wageStats, '#8e44ad');
+
+                window.__dwssDash = {
+                    siteDiaryData: diaryRecs,
+                    inspectionData: inspectRecs,
+                    wageData: wageRecs
+                };
+                if (window.renderOverdueChart) {
+                    var sel = document.getElementById('overdue-year-select');
+                    window.renderOverdueChart(sel ? sel.value : String(new Date().getFullYear()));
+                }
+            }).catch(function () {
+                runDashboard();
+            });
         }
 
         loadDashboardSummary();
@@ -2456,6 +2477,17 @@ html, body {
     // ==========================================
     function getWageDate(item) {
         if (!item) return null;
+        if (item.period) {
+            var s = String(item.period).trim();
+            var m = s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})/);
+            if (m) {
+                var months = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+                var mon = months[m[2]];
+                if (mon !== undefined) return new Date(parseInt(m[3],10), mon, parseInt(m[1],10));
+            }
+            var d0 = new Date(s);
+            if (!isNaN(d0.getTime())) return d0;
+        }
         if (item.periodStart) {
             var d = new Date(item.periodStart);
             if (!isNaN(d.getTime())) return d;
@@ -2567,6 +2599,7 @@ html, body {
             }
         });
     }
+    window.renderOverdueChart = renderOverdueChart;
 
     function initOverdueYearSelector() {
         const sel = document.getElementById('overdue-year-select');
