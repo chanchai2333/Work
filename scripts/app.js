@@ -85,7 +85,7 @@ function setupSidebarToggle() {
             // 這裡可以改成你想要的任何文字！
             footer.innerHTML = `
                 <p data-i18n="copyright">&copy; 2026 AEL DWSS System. All rights reserved. </p>
-                <p data-i18n="platform">AEL DWSS Platform v0.0.0</p>
+                <p data-i18n="platform">AEL DWSS Platform v0.0.1</p>
             `;
         });
         
