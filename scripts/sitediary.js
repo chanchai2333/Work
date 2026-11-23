@@ -365,7 +365,11 @@ document.addEventListener('DOMContentLoaded', function () {
         let actionButtons = `
             <td>
                 <button class="action-btn view-btn" data-id="${safeId}" title="View"><i class="fas fa-eye"></i></button>
-                <button class="action-btn edit-btn" data-id="${safeId}" title="Edit"><i class="fas fa-edit"></i></button>
+                ${ (function() {
+                    var u = (window.DWSS_Auth && DWSS_Auth.getCurrentUser) ? DWSS_Auth.getCurrentUser() : null;
+                    if (u && u.role === 'rso') return '';
+                    return `<button class="action-btn edit-btn" data-id="${safeId}" title="Edit"><i class="fas fa-edit"></i></button>`;
+                })() }
                 ${item.approvalStatus === 'rejected' ? `<button class="action-btn view-comment-btn" data-id="${safeId}" title="View Rejection Comment" style="background: linear-gradient(135deg, #f39c12, #d35400); color: white;"><i class="fas fa-comment-dots"></i></button>` : ''}
                 ${generateDiaryStatusSelect(safeId)}
                 <button class="action-btn delete-btn" data-id="${safeId}" title="Delete"><i class="fas fa-trash"></i></button>
@@ -617,6 +621,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // ==================== 新增日記模態框 ====================
     function setupAddDiaryModal() {
         const addBtn = document.getElementById('add-diary-btn');
+        if (addBtn && window.DWSS_Auth && typeof DWSS_Auth.canAddModule === 'function' && !DWSS_Auth.canAddModule('sitediary')) {
+            addBtn.style.display = 'none';
+        }
         const modal = document.getElementById('add-diary-modal');
         const cancelBtn = document.getElementById('cancel-add-diary');
         const form = document.getElementById('add-diary-form');
@@ -631,32 +638,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (idInput) idInput.value = generateNextDiaryId();
 
                 const statusSelect = document.getElementById('input-status');
-                if (statusSelect) {
-                    if (!canChangeStatusSafe()) {
-                        statusSelect.innerHTML = '<option value="submitted-wsg">Submitted to WSG</option>';
-                        statusSelect.value = 'submitted-wsg';
-                        statusSelect.disabled = true;
-                        let hint = document.getElementById('submit-only-hint');
-                        if (!hint) {
-                            hint = document.createElement('div');
-                            hint.id = 'submit-only-hint';
-                            hint.style.cssText = 'color: #856404; background: #fff3cd; padding: 10px; border-radius: 6px; margin: 10px 0; font-size: 0.85rem;';
-                            hint.innerHTML = '<i class="fas fa-info-circle"></i> <strong>Submit Only Mode:</strong> You can only submit diaries. Status changes require Admin/Officer/AEI permission.';
-                            statusSelect.parentNode.appendChild(hint);
-                        }
-                    } else {
-                        statusSelect.innerHTML = `
-                            <option value="draft">Draft</option>
-                            <option value="submitted-wsg">Submitted to WSG</option>
-                            <option value="submitted-ig">Submitted to IG</option>
-                            <option value="closed">Closed</option>
-                            <option value="reopen">Reopen</option>
-                            <option value="cancelled">Cancelled</option>
-                        `;
-                        statusSelect.disabled = false;
-                        const hint = document.getElementById('submit-only-hint');
-                        if (hint) hint.remove();
-                    }
+                if (statusSelect && window.DWSS_Auth && typeof DWSS_Auth.adjustFormStatusOptions === 'function') {
+                    DWSS_Auth.adjustFormStatusOptions('input-status');
                 }
 
                 const uname = currentUserName();

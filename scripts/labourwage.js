@@ -316,7 +316,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 var actionButtons = `
                     <button class="action-btn view-btn" data-id="${safeId}" title="View"><i class="fas fa-eye"></i></button>
-                    <button class="action-btn edit-btn" data-id="${safeId}" title="Edit"><i class="fas fa-edit"></i></button>
+                    ${ (function() {
+                        var u = (window.DWSS_Auth && DWSS_Auth.getCurrentUser) ? DWSS_Auth.getCurrentUser() : null;
+                        if (u && u.role === 'rso') return '';
+                        return `<button class="action-btn edit-btn" data-id="${safeId}" title="Edit"><i class="fas fa-edit"></i></button>`;
+                    })() }
                     ${item.approvalStatus === 'rejected' ? `<button class="action-btn view-comment-btn" data-id="${safeId}" title="View Rejection Comment" style="background: linear-gradient(135deg, #f39c12, #d35400); color: white;"><i class="fas fa-comment-dots"></i></button>` : ''}
                     ${generateStatusSelect(safeId)}
                     <button class="action-btn delete-btn" data-id="${safeId}" title="Delete"><i class="fas fa-trash"></i></button>
@@ -388,17 +392,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (newStatus === 'closed') newApproval = 'approved';
 
         // ★ 使用 currentUserName / currentRoleName，避免寫入 Unknown
-        var userName = (function () {
-            var n = currentUserName();
-            if (n && n !== 'Unknown') return n;
-            try {
-                var sess = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
-                n = sess.name || sess.userName || sess.username || sess.user_name || '';
-                if (n) return n;
-            } catch (e) {}
-            console.warn('[LabourWage] status change: could not resolve user name');
-            return 'Unknown';
-        })();
+        var userName = currentUserName();
         var roleName = currentRoleName();
 
         if (confirm(
@@ -551,6 +545,9 @@ document.addEventListener("DOMContentLoaded", function () {
     // ==================== 新增 Wage 模態框 ====================
     function setupAddWageModal() {
         var addWageBtn = document.getElementById('add-wage-btn');
+        if (addWageBtn && window.DWSS_Auth && typeof DWSS_Auth.canAddModule === 'function' && !DWSS_Auth.canAddModule('labourwage')) {
+            addWageBtn.style.display = 'none';
+        }
         var modal = document.getElementById('add-wage-modal');
         var cancelBtn = document.getElementById('cancel-add-wage');
         var addForm = document.getElementById('add-wage-form');

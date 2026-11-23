@@ -471,17 +471,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         // ★ 使用 currentUserName / currentRoleName，避免寫入 Unknown
-        const userName = (function () {
-            var n = currentUserName();
-            if (n && n !== 'Unknown') return n;
-            try {
-                var sess = JSON.parse(sessionStorage.getItem('dwss_session') || '{}');
-                n = sess.name || sess.userName || sess.username || sess.user_name || '';
-                if (n) return n;
-            } catch (e) {}
-            console.warn('[SafetyInspect] status change: could not resolve user name');
-            return 'Unknown';
-        })();
+        const userName = currentUserName();
         const roleName = currentRoleName();
 
         if (confirm(
@@ -651,32 +641,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (idInput) idInput.value = generateNextSafetyId();
 
                 const statusSelect = document.getElementById('input-inspect-status');
-                if (statusSelect) {
-                    if (!canChangeStatusSafe()) {
-                        statusSelect.innerHTML = '<option value="submitted-ig">Submitted to IG</option>';
-                        statusSelect.value = 'submitted-ig';
-                        statusSelect.disabled = true;
-
-                        let hint = document.getElementById('submit-only-hint');
-                        if (!hint) {
-                            hint = document.createElement('div');
-                            hint.id = 'submit-only-hint';
-                            hint.style.cssText = 'color: #856404; background: #fff3cd; padding: 10px; border-radius: 6px; margin: 10px 0; font-size: 0.85rem;';
-                            hint.innerHTML = '<i class="fas fa-info-circle"></i> <strong>Submit Only Mode:</strong> You can only submit inspections. Status changes require Admin/Officer/AEI permission.';
-                            statusSelect.parentNode.appendChild(hint);
-                        }
-                    } else {
-                        statusSelect.innerHTML = `
-                            <option value="draft">Draft</option>
-                            <option value="submitted-ig">Submitted to IG</option>
-                            <option value="closed">IG Endorsed</option>
-                            <option value="reopen">Reopened</option>
-                            <option value="cancelled">Cancelled</option>
-                        `;
-                        statusSelect.disabled = false;
-                        const hint = document.getElementById('submit-only-hint');
-                        if (hint) hint.remove();
-                    }
+                if (statusSelect && window.DWSS_Auth && typeof DWSS_Auth.adjustFormStatusOptions === 'function') {
+                    DWSS_Auth.adjustFormStatusOptions('input-inspect-status');
                 }
 
                 // ★ 使用 currentUserName，避免 undefined

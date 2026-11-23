@@ -1381,12 +1381,18 @@
         var approveBtn = document.getElementById('approve-btn');
         var rejectBtn = document.getElementById('reject-btn');
         var submitBtn = document.getElementById('submit-btn');
+        var addPagesBtn = document.getElementById('add-pages-btn');
         var sessionData = {};
         try { sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch (e) {}
         var canApprove = sessionData.permissions && sessionData.permissions.canChangeStatus;
 
         var statusNow = (currentDoc && currentDoc.status) || 'draft';
         var approvalNow = (currentDoc && currentDoc.approvalStatus) || 'pending';
+
+        var isDraft = (statusNow === 'draft' || statusNow === 'reopen' || !statusNow);
+        if (addPagesBtn) {
+            addPagesBtn.style.display = isDraft ? 'inline-flex' : 'none';
+        }
 
         var canClickApprove = (approvalNow === 'pending')
                            && (statusNow === 'submitted-wsg' || statusNow === 'submitted-ig');

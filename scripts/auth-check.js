@@ -306,20 +306,10 @@ var DWSS_Auth = {
         var statusSelect = document.getElementById(statusSelectId);
         if (!statusSelect) return;
 
-        if (!this.canChangeStatus()) {
-            statusSelect.innerHTML = '<option value="submitted">Submitted</option>';
-            statusSelect.value = 'submitted';
-            statusSelect.disabled = true;
+        var user = this.getCurrentUser();
+        var isSystemAdmin = user && (user.role === 'admin' || user.userRole === 'admin');
 
-            var hint = document.getElementById('submit-only-hint');
-            if (!hint) {
-                hint = document.createElement('div');
-                hint.id = 'submit-only-hint';
-                hint.style.cssText = 'color: #856404; background: #fff3cd; padding: 10px; border-radius: 6px; margin: 10px 0; font-size: 0.85rem;';
-                hint.innerHTML = '<i class="fas fa-info-circle"></i> <strong>Submit Only Mode:</strong> You can only submit records. Status changes require IG/WSG permission.';
-                statusSelect.parentNode.appendChild(hint);
-            }
-        } else {
+        if (isSystemAdmin) {
             statusSelect.innerHTML =
                 '<option value="draft">Draft</option>' +
                 '<option value="submitted-wsg">Submitted to WSG</option>' +
@@ -327,11 +317,26 @@ var DWSS_Auth = {
                 '<option value="closed">Closed</option>' +
                 '<option value="reopen">Reopen</option>' +
                 '<option value="cancelled">Cancelled</option>';
+            statusSelect.value = 'draft';
             statusSelect.disabled = false;
-
-            var hint2 = document.getElementById('submit-only-hint');
-            if (hint2) hint2.remove();
+        } else {
+            statusSelect.innerHTML = '<option value="draft">Draft</option>';
+            statusSelect.value = 'draft';
+            statusSelect.disabled = true;
         }
+
+        var hint = document.getElementById('submit-only-hint');
+        if (hint) hint.remove();
+    },
+
+    canAddModule: function(moduleId) {
+        var user = this.getCurrentUser();
+        if (!user) return false;
+        if (user.role === 'admin') return true;
+        if (user.role === 'rso') {
+            return moduleId === 'safetyinspect' || moduleId === 'safety';
+        }
+        return true;
     },
 
     autoFillSubmittedBy: function(inputId) {
