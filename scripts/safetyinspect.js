@@ -285,20 +285,34 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function isOverdue(item) {
-        if (!item || item.status !== 'draft') return false;
-        var d = parseInspectionDate(item);
-        if (!d) return false;
+        if (!item) return false;
+        var s = item.status || 'draft';
+        if (s !== 'submitted-ig' && s !== 'submitted') return false;
+        var submittedAt = null;
+        if (Array.isArray(item.statusHistory)) {
+            for (var i = item.statusHistory.length - 1; i >= 0; i--) {
+                var h = item.statusHistory[i];
+                if (h && (h.to === 'submitted-ig' || h.to === 'submitted') && h.changedAt) {
+                    submittedAt = new Date(h.changedAt);
+                    break;
+                }
+            }
+        }
+        if (!submittedAt || isNaN(submittedAt.getTime())) {
+            submittedAt = item.submittedAt ? new Date(item.submittedAt) : (item.createdAt ? new Date(item.createdAt) : null);
+        }
+        if (!submittedAt || isNaN(submittedAt.getTime())) return false;
         var now = new Date();
-        var diffDays = (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24);
-        return diffDays > OVERDUE_DAYS;
+        var diffDays = (now.getTime() - submittedAt.getTime()) / (1000 * 60 * 60 * 24);
+        return diffDays > 14;
     }
 
     function categorize(item) {
         var s = (item && item.status) || 'draft';
-        if (s === 'draft') return isOverdue(item) ? 'overdue' : 'other';
-        if (s === 'submitted-ig' || s === 'submitted') return 'pending';
+        if (s === 'draft' || s === 'reopen') return 'other';
+        if (s === 'submitted-ig' || s === 'submitted') return isOverdue(item) ? 'overdue' : 'pending';
         if (s === 'closed' || s === 'cancelled') return 'closed';
-        return 'other'; // reopen
+        return 'other';
     }
 
     // ---------- 渲染和統計 ----------
@@ -336,10 +350,25 @@ document.addEventListener("DOMContentLoaded", function() {
         let actionButtons = `
             <td>
                 <button class="action-btn view-btn" data-id="${safeId}" title="View"><i class="fas fa-eye"></i></button>
-                <button class="action-btn edit-btn" data-id="${safeId}" title="Edit"><i class="fas fa-edit"></i></button>
+                ${ (function() {
+                    var u = (window.DWSS_Auth && DWSS_Auth.getCurrentUser) ? DWSS_Auth.getCurrentUser() : null;
+                    var s = item.status || 'draft';
+                    if (u && u.role === 'eg') return '';
+                    if (s === 'closed' || s === 'cancelled') return '';
+                    return `<button class="action-btn edit-btn" data-id="${safeId}" title="Edit"><i class="fas fa-edit"></i></button>`;
+                })() }
                 ${item.approvalStatus === 'rejected' ? `<button class="action-btn view-comment-btn" data-id="${safeId}" title="View Rejection Comment" style="background: linear-gradient(135deg, #f39c12, #d35400); color: white;"><i class="fas fa-comment-dots"></i></button>` : ''}
                 ${generateSafetyStatusSelect(safeId)}
-                <button class="action-btn delete-btn" data-id="${safeId}" title="Delete"><i class="fas fa-trash"></i></button>
+                ${ (function() {
+                    var s = item.status || 'draft';
+                    var u = (window.DWSS_Auth && DWSS_Auth.getCurrentUser) ? DWSS_Auth.getCurrentUser() : null;
+                    if (s === 'closed' || s === 'cancelled') return '';
+                    if (u && u.role === 'eg') return '';
+                    if (s === 'submitted-ig' || s === 'submitted') {
+                        return `<button class="action-btn withdraw-btn" data-id="${safeId}" title="Withdraw" style="background: linear-gradient(135deg, #f39c12, #d35400); color: white;"><i class="fas fa-undo"></i></button>`;
+                    }
+                    return `<button class="action-btn delete-btn" data-id="${safeId}" title="Delete"><i class="fas fa-trash"></i></button>`;
+                })() }
         `;
 
         if (!userCanChangeStatus) {
@@ -517,6 +546,7 @@ document.addEventListener("DOMContentLoaded", function() {
         const viewBtn = e.target.closest('.view-btn');
         const editBtn = e.target.closest('.edit-btn');
         const deleteBtn = e.target.closest('.delete-btn');
+        const withdrawBtn = e.target.closest('.withdraw-btn');
         const viewCommentBtn = e.target.closest('.view-comment-btn');
 
         // ★ 處理查看 Reject Comment
@@ -571,6 +601,30 @@ document.addEventListener("DOMContentLoaded", function() {
             }
 
             window.location.href = 'editsafetypdf.html?id=' + encodeURIComponent(doc.id);
+        }
+
+        if (withdrawBtn) {
+            const id = withdrawBtn.getAttribute('data-id');
+            if (!canAccessRecord(id)) { alert('❌ This record does not belong to your current project.'); return; }
+            if (confirm('Withdraw this document back to Draft?')) {
+                const doc = inspectionData.find(d => String(d.id) === String(id));
+                if (doc) {
+                    doc.status = 'draft';
+                    doc.approvalStatus = 'pending';
+                    if (!Array.isArray(doc.statusHistory)) doc.statusHistory = [];
+                    doc.statusHistory.push({
+                        changedAt: new Date().toISOString(),
+                        from: doc.status,
+                        to: 'draft',
+                        changedBy: currentUserName(),
+                        role: currentRoleName(),
+                        action: 'withdraw'
+                    });
+                    saveData();
+                    renderInspectionTable();
+                }
+            }
+            return;
         }
 
         if (deleteBtn) {

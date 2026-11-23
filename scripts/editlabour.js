@@ -6085,11 +6085,14 @@ function captureFormDataFromDom() {
         if (!currentDoc) return;
         var sessionData = {};
         try { sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch (e) {}
-        if (!sessionData.permissions || !sessionData.permissions.canChangeStatus) {
+        var statusNow = currentDoc.status || 'draft';
+        var canApprove = window.DWSS_Auth && typeof DWSS_Auth.canApproveStatus === 'function'
+            ? DWSS_Auth.canApproveStatus(statusNow)
+            : (sessionData.permissions && sessionData.permissions.canChangeStatus);
+        if (!canApprove) {
             alert('❌ You do not have permission to approve.'); return;
         }
 
-        var statusNow = currentDoc.status || 'draft';
         var approvalNow = currentDoc.approvalStatus || 'pending';
         var newStatus, newApproval, actionLabel;
 
@@ -6126,7 +6129,11 @@ function captureFormDataFromDom() {
         if (!currentDoc) return;
         var sessionData = {};
         try { sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch (e) {}
-        if (!sessionData.permissions || !sessionData.permissions.canChangeStatus) {
+        var statusNow = currentDoc.status || 'draft';
+        var canReject = window.DWSS_Auth && typeof DWSS_Auth.canApproveStatus === 'function'
+            ? DWSS_Auth.canApproveStatus(statusNow)
+            : (sessionData.permissions && sessionData.permissions.canChangeStatus);
+        if (!canReject) {
             alert('❌ You do not have permission to reject.'); return;
         }
         if (currentDoc.approvalStatus === 'approved') {
@@ -6167,10 +6174,13 @@ function captureFormDataFromDom() {
         var submitBtn  = document.getElementById('submit-btn');
         var sessionData = {};
         try { sessionData = JSON.parse(sessionStorage.getItem('dwss_session') || '{}'); } catch (e) {}
-        var canApprove = sessionData.permissions && sessionData.permissions.canChangeStatus;
 
         var statusNow = currentDoc ? currentDoc.status : 'draft';
         var approvalNow = currentDoc ? currentDoc.approvalStatus : 'pending';
+
+        var canApprove = window.DWSS_Auth && typeof DWSS_Auth.canApproveStatus === 'function' 
+            ? DWSS_Auth.canApproveStatus(statusNow) 
+            : (sessionData.permissions && sessionData.permissions.canChangeStatus);
 
         // ★ 只有 submitted-ig 且 pending 時才能 Approve/Reject
         var canClickApprove = (approvalNow === 'pending') && (statusNow === 'submitted-ig');

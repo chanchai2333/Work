@@ -27,8 +27,23 @@ var DWSS_Auth = {
     canChangeStatus: function() {
         var user = this.getCurrentUser();
         if (!user) return false;
-        if (user.role === 'admin' || user.role === 'ig' || user.role === 'wsg') return true;
+        if (user.role === 'admin') return true;
+        if (user.role === 'ig' || user.role === 'wsg') return true;
         return !!(user.permissions && user.permissions.canChangeStatus === true);
+    },
+
+    canApproveStatus: function(status) {
+        var user = this.getCurrentUser();
+        if (!user) return false;
+        if (user.role === 'admin') return true;
+        if (user.role === 'ig' && (status === 'submitted-ig' || status === 'submitted')) return true;
+        if (user.role === 'wsg' && status === 'submitted-wsg') return true;
+        return false;
+    },
+
+    isEngineerGrade: function() {
+        var user = this.getCurrentUser();
+        return !!(user && user.role === 'eg');
     },
 
     isAdmin: function() {
@@ -333,6 +348,7 @@ var DWSS_Auth = {
         var user = this.getCurrentUser();
         if (!user) return false;
         if (user.role === 'admin') return true;
+        if (user.role === 'eg') return false;
         if (user.role === 'rso') {
             return moduleId === 'safetyinspect' || moduleId === 'safety';
         }

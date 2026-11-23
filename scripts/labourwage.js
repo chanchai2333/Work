@@ -202,20 +202,34 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function isOverdue(item) {
-        if (!item || item.status !== 'draft') return false;
-        var d = parseLabourDate(item);
-        if (!d) return false;
+        if (!item) return false;
+        var s = item.status || 'draft';
+        if (s !== 'submitted-ig') return false;
+        var submittedAt = null;
+        if (Array.isArray(item.statusHistory)) {
+            for (var i = item.statusHistory.length - 1; i >= 0; i--) {
+                var h = item.statusHistory[i];
+                if (h && h.to === 'submitted-ig' && h.changedAt) {
+                    submittedAt = new Date(h.changedAt);
+                    break;
+                }
+            }
+        }
+        if (!submittedAt || isNaN(submittedAt.getTime())) {
+            submittedAt = item.submittedAt ? new Date(item.submittedAt) : (item.createdAt ? new Date(item.createdAt) : null);
+        }
+        if (!submittedAt || isNaN(submittedAt.getTime())) return false;
         var now = new Date();
-        var diffDays = (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24);
-        return diffDays > OVERDUE_DAYS;
+        var diffDays = (now.getTime() - submittedAt.getTime()) / (1000 * 60 * 60 * 24);
+        return diffDays > 14;
     }
 
     function categorize(item) {
         var s = (item && item.status) || 'draft';
-        if (s === 'draft') return isOverdue(item) ? 'overdue' : 'open';
-        if (s === 'submitted-ig') return 'pending';
+        if (s === 'draft' || s === 'reopen') return 'open';
+        if (s === 'submitted-ig') return isOverdue(item) ? 'overdue' : 'pending';
         if (s === 'closed' || s === 'cancelled') return 'closed';
-        return 'open'; // reopen
+        return 'open';
     }
 
     function generateStatusSelect(recordId) {
@@ -318,12 +332,24 @@ document.addEventListener("DOMContentLoaded", function () {
                     <button class="action-btn view-btn" data-id="${safeId}" title="View"><i class="fas fa-eye"></i></button>
                     ${ (function() {
                         var u = (window.DWSS_Auth && DWSS_Auth.getCurrentUser) ? DWSS_Auth.getCurrentUser() : null;
-                        if (u && u.role === 'rso') return '';
+                        var s = item.status || 'draft';
+                        if (u && (u.role === 'rso' || u.role === 'eg')) return '';
+                        if (s === 'closed' || s === 'cancelled') return '';
                         return `<button class="action-btn edit-btn" data-id="${safeId}" title="Edit"><i class="fas fa-edit"></i></button>`;
                     })() }
                     ${item.approvalStatus === 'rejected' ? `<button class="action-btn view-comment-btn" data-id="${safeId}" title="View Rejection Comment" style="background: linear-gradient(135deg, #f39c12, #d35400); color: white;"><i class="fas fa-comment-dots"></i></button>` : ''}
                     ${generateStatusSelect(safeId)}
-                    <button class="action-btn delete-btn" data-id="${safeId}" title="Delete"><i class="fas fa-trash"></i></button>
+                    ${ (function() {
+                        var s = item.status || 'draft';
+                        var u = (window.DWSS_Auth && DWSS_Auth.getCurrentUser) ? DWSS_Auth.getCurrentUser() : null;
+                        if (s === 'closed' || s === 'cancelled') return '';
+                        if (s === 'submitted-ig') {
+                            if (u && (u.role === 'rso' || u.role === 'eg')) return '';
+                            return `<button class="action-btn withdraw-btn" data-id="${safeId}" title="Withdraw" style="background: linear-gradient(135deg, #f39c12, #d35400); color: white;"><i class="fas fa-undo"></i></button>`;
+                        }
+                        if (u && (u.role === 'rso' || u.role === 'eg')) return '';
+                        return `<button class="action-btn delete-btn" data-id="${safeId}" title="Delete"><i class="fas fa-trash"></i></button>`;
+                    })() }
                 `;
 
                 if (!userCanChangeStatus) {
@@ -451,6 +477,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const viewBtn = e.target.closest('.view-btn');
         const editBtn = e.target.closest('.edit-btn');
         const deleteBtn = e.target.closest('.delete-btn');
+        const withdrawBtn = e.target.closest('.withdraw-btn');
         const viewCommentBtn = e.target.closest('.view-comment-btn'); 
 
         if (viewCommentBtn) {
@@ -496,6 +523,30 @@ document.addEventListener("DOMContentLoaded", function () {
             if (!record) { alert('Record not found'); return; }
             if (!canAccessRecord(wageId)) { alert('❌ This record does not belong to your current project.'); return; }
             window.location.href = 'editlabour.html?id=' + encodeURIComponent(record.id);
+        }
+
+        if (withdrawBtn) {
+            var wageId = withdrawBtn.getAttribute('data-id');
+            if (!canAccessRecord(wageId)) { alert('❌ This record does not belong to your current project.'); return; }
+            if (confirm('Withdraw this document back to Draft?')) {
+                var record = wageData.find(function(r) { return String(r.id) === String(wageId); });
+                if (record) {
+                    record.status = 'draft';
+                    record.approvalStatus = 'pending';
+                    if (!Array.isArray(record.statusHistory)) record.statusHistory = [];
+                    record.statusHistory.push({
+                        changedAt: new Date().toISOString(),
+                        from: record.status,
+                        to: 'draft',
+                        changedBy: currentUserName(),
+                        role: currentRoleName(),
+                        action: 'withdraw'
+                    });
+                    saveData();
+                    renderWageTable();
+                }
+            }
+            return;
         }
 
         if (deleteBtn) {
